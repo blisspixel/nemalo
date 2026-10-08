@@ -1,0 +1,7 @@
+/.agents/
+/.local/
+/bin/
+/coverage.out
+/coverage-*.out
+/dist/
+*.test
