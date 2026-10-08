@@ -10,6 +10,7 @@ import (
 
 	"github.com/blisspixel/nemalo/internal/assessment"
 	"github.com/blisspixel/nemalo/internal/config"
+	"github.com/blisspixel/nemalo/internal/content"
 	"github.com/blisspixel/nemalo/internal/discovery"
 	"github.com/blisspixel/nemalo/internal/inventory"
 	"github.com/blisspixel/nemalo/internal/library"
@@ -104,6 +105,10 @@ func (s Service) InitializeLibrary(ctx context.Context, root string) (library.St
 
 func (s Service) LibraryStatus(ctx context.Context, root string) (library.State, error) {
 	return library.LibraryStatus(ctx, root)
+}
+
+func (s Service) Content(ctx context.Context, req content.Request) (content.Result, error) {
+	return content.Get(ctx, req)
 }
 
 type Capability struct {

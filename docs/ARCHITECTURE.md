@@ -214,7 +214,13 @@ references. Invoke readers with argument arrays after an explicit open operation
 never render downloaded content during inventory. Rendering safety depends on the
 reader, separately from Nemalo's checks.
 
-Add bounded text extraction and search per supported format. Derived indexes key
+An initial [source-bound EPUB text service](CONTENT-ACCESS.md) is implemented in
+`internal/content`, using the canonical assessment container parser and shared
+application boundary. It is offline and stateless; callers own acknowledgement.
+Unsupported units are explicit and continuations never silently skip them.
+CLI/JSON expose it; TUI content access, MCP, PDF/audio ranges, and indexes remain planned.
+
+Expand bounded text extraction and search per supported format. Derived indexes key
 on asset hash and extractor version; rebuild them without modifying originals.
 Reference EPUB spine/fragment locations, PDF page locations, and audio track/time
 locations where supported. Record missing text or OCR rather than pretending an

@@ -101,6 +101,10 @@ decision 0006. The journal covers initialization only. Preserve explicit roots,
 retained corrupt state, canonical records, OS-held locks, and TUI write review.
 Never remove a lock file to release an active writer or treat initialization as
 content validation or production import/cleanup recovery.
+Source-bound text retrieval belongs in `internal/content`, exposed by `internal/app`;
+see `docs/CONTENT-ACCESS.md` and issue 1. Reuse assessment's container parser.
+Preserve stateless offline reads, exact-byte/extractor-bound references, explicit
+unsupported units, no silent continuation skips, and no inferred consumption.
 
 Test behavior and failure recovery, not just execution. Use synthetic fixtures;
 never personal downloads. Give cleanup, parser boundaries, scanner skips, and

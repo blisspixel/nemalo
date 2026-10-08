@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased source-bound EPUB access
+
+- Address the first Nemalo-owned slice of issue 1 with offline content units/read
+  CLI/JSON over shared services and the existing bounded EPUB container parser.
+- Revalidate exact source bytes; add versioned locators, deterministic continuation,
+  explicit unsupported document gaps, bounded errors, and no reading-history writes.
+- Test more than 300 actual retrieval cycles, retries, interleaved works, Unicode,
+  stanza breaks, stale references, changed/missing content, limits, and cancellation.
+  TUI reading, MCP, paper/audio ranges, and external caller integration remain open.
+
 ## Unreleased managed library initialization
 
 - Add explicit library init/status in CLI/JSON/TUI, stable library identity,

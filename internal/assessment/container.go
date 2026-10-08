@@ -18,6 +18,8 @@ import (
 	"golang.org/x/net/html"
 )
 
+var ErrLimit = errors.New("container inspection limit exceeded")
+
 type Checks struct {
 	Signature     string     `json:"signature"`
 	ZIPCRC        string     `json:"zip_crc"`
@@ -46,9 +48,31 @@ func Inspect(r io.ReaderAt, size int64, format string) (Checks, error) {
 }
 
 func InspectContext(ctx context.Context, r io.ReaderAt, size int64, format string) (Checks, error) {
+	return inspectContext(ctx, r, size, format, nil)
+}
+
+// EPUBDocument identifies an actual spine entry, not an inferred chapter. Data
+// is a bounded member body valid only during the visitor call.
+type EPUBDocument struct {
+	Package string
+	Path    string
+	Media   string
+	Linear  string
+	Index   int
+	Data    []byte
+}
+
+// VisitEPUB shares container/package validation with assessment. The visitor
+// must not publish results before the whole operation succeeds. No resources
+// are fetched, rendered, executed, or extracted to disk.
+func VisitEPUB(ctx context.Context, r io.ReaderAt, size int64, visit func(EPUBDocument) error) (Checks, error) {
+	return inspectContext(ctx, r, size, "epub", visit)
+}
+
+func inspectContext(ctx context.Context, r io.ReaderAt, size int64, format string, visit func(EPUBDocument) error) (Checks, error) {
 	c := Checks{Signature: "not_checked", ZIPCRC: "not_applicable", EPUBPackage: "not_applicable", Conformance: "not_checked", ContentReview: "not_checked"}
 	if size <= 0 || size > 256<<20 {
-		return c, errors.New("invalid asset size")
+		return c, errors.Join(ErrLimit, errors.New("invalid asset size"))
 	}
 	header := make([]byte, min(size, int64(8)))
 	if _, err := r.ReadAt(header, 0); err != nil {
@@ -77,7 +101,7 @@ func InspectContext(ctx context.Context, r io.ReaderAt, size int64, format strin
 			return c, errors.New("ZIP signature missing")
 		}
 		c.Signature = "zip"
-		if err := inspectEPUB(ctx, r, size, &c); err != nil {
+		if err := inspectEPUB(ctx, r, size, &c, visit); err != nil {
 			return c, err
 		}
 	default:
@@ -86,7 +110,7 @@ func InspectContext(ctx context.Context, r io.ReaderAt, size int64, format strin
 	return c, nil
 }
 
-func inspectEPUB(ctx context.Context, r io.ReaderAt, size int64, c *Checks) error {
+func inspectEPUB(ctx context.Context, r io.ReaderAt, size int64, c *Checks, visit func(EPUBDocument) error) error {
 	// Bound directory parsing before zip.NewReader can allocate per-member state.
 	metadata := &metadataReader{r: r, remaining: 2 << 20, limited: true}
 	z, err := zip.NewReader(metadata, size)
@@ -95,7 +119,7 @@ func inspectEPUB(ctx context.Context, r io.ReaderAt, size int64, c *Checks) erro
 		return err
 	}
 	if len(z.File) == 0 || len(z.File) > 10000 {
-		return errors.New("EPUB member count outside limits")
+		return errors.Join(ErrLimit, errors.New("EPUB member count outside limits"))
 	}
 	files := map[string]*zip.File{}
 	type htmlMeasurement struct {
@@ -114,7 +138,7 @@ func inspectEPUB(ctx context.Context, r io.ReaderAt, size int64, c *Checks) erro
 		}
 		files[f.Name] = f
 		if f.UncompressedSize64 > 32<<20 || expanded > 128<<20-f.UncompressedSize64 {
-			return errors.New("EPUB expanded size exceeds limit")
+			return errors.Join(ErrLimit, errors.New("EPUB expanded size exceeds limit"))
 		}
 		expanded += f.UncompressedSize64
 		body, err := f.Open()
@@ -169,7 +193,8 @@ func inspectEPUB(ctx context.Context, r io.ReaderAt, size int64, c *Checks) erro
 				Properties string `xml:"properties,attr"`
 			} `xml:"manifest>item"`
 			Spine []struct {
-				ID string `xml:"idref,attr"`
+				ID     string `xml:"idref,attr"`
+				Linear string `xml:"linear,attr"`
 			} `xml:"spine>itemref"`
 		}
 		if err := xml.Unmarshal(data, &pkg); err != nil || len(pkg.Items) == 0 || len(pkg.Spine) == 0 || len(pkg.Items) > 10000 || len(pkg.Spine) > 10000 {
@@ -177,6 +202,7 @@ func inspectEPUB(ctx context.Context, r io.ReaderAt, size int64, c *Checks) erro
 		}
 		ids := map[string]bool{}
 		text := map[string]int{}
+		documents := map[string]EPUBDocument{}
 		c.EPUB.Titles = append(c.EPUB.Titles, pkg.Titles...)
 		c.EPUB.Languages = append(c.EPUB.Languages, pkg.Languages...)
 		if len(pkg.Titles) == 0 || len(pkg.Languages) == 0 {
@@ -187,6 +213,7 @@ func inspectEPUB(ctx context.Context, r io.ReaderAt, size int64, c *Checks) erro
 				return errors.New("invalid EPUB manifest identity")
 			}
 			ids[item.ID] = true
+			documents[item.ID] = EPUBDocument{Package: entry.Path, Path: item.Href, Media: item.Media}
 			for _, property := range strings.Fields(item.Properties) {
 				if property == "scripted" {
 					c.Warnings = append(c.Warnings, "scripted manifest item declared")
@@ -205,6 +232,7 @@ func inspectEPUB(ctx context.Context, r io.ReaderAt, size int64, c *Checks) erro
 			if !fs.ValidPath(name) || files[name] == nil {
 				return fmt.Errorf("EPUB manifest references missing member %q", name)
 			}
+			documents[item.ID] = EPUBDocument{Package: entry.Path, Path: name, Media: item.Media}
 			if strings.HasPrefix(item.Media, "image/") {
 				c.EPUB.Images++
 			}
@@ -229,7 +257,7 @@ func inspectEPUB(ctx context.Context, r io.ReaderAt, size int64, c *Checks) erro
 			}
 		}
 		seenSpine := map[string]bool{}
-		for _, spine := range pkg.Spine {
+		for index, spine := range pkg.Spine {
 			if !ids[spine.ID] {
 				return errors.New("EPUB spine references missing manifest item")
 			}
@@ -238,6 +266,19 @@ func inspectEPUB(ctx context.Context, r io.ReaderAt, size int64, c *Checks) erro
 				continue
 			}
 			seenSpine[spine.ID] = true
+			if visit != nil {
+				d := documents[spine.ID]
+				d.Index, d.Linear = index, spine.Linear
+				if d.Media == "application/xhtml+xml" || d.Media == "text/html" {
+					d.Data, err = member(files, d.Path, 32<<20)
+					if err != nil {
+						return err
+					}
+				}
+				if err := visit(d); err != nil {
+					return err
+				}
+			}
 			if n, ok := text[spine.ID]; ok {
 				c.EPUB.ReadingOrderDocuments++
 				c.EPUB.TextCharacters += n
@@ -261,7 +302,7 @@ type metadataReader struct {
 func (r *metadataReader) ReadAt(p []byte, off int64) (int, error) {
 	if r.limited {
 		if len(p) > r.remaining {
-			return 0, errors.New("EPUB ZIP metadata read budget exceeded")
+			return 0, errors.Join(ErrLimit, errors.New("EPUB ZIP metadata read budget exceeded"))
 		}
 		r.remaining -= len(p)
 	}
@@ -330,8 +371,11 @@ func htmlFactsContext(ctx context.Context, data []byte) (int, bool, error) {
 
 func member(files map[string]*zip.File, name string, limit uint64) ([]byte, error) {
 	f := files[name]
-	if f == nil || f.UncompressedSize64 > limit {
+	if f == nil {
 		return nil, fmt.Errorf("EPUB member missing or too large: %q", name)
+	}
+	if f.UncompressedSize64 > limit {
+		return nil, errors.Join(ErrLimit, fmt.Errorf("EPUB member too large: %q", name))
 	}
 	r, err := f.Open()
 	if err != nil {

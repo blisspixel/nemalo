@@ -8,7 +8,8 @@ needed for the application, tests, or first-party tooling.
 ## Current operations
 
 `help`, `version`, `doctor`, `search`, `evaluate`, `inspect`, `check`, `library snapshot`,
-`library list`, `library audit`, `library init`, `library status`, and `tui` are implemented.
+`library list`, `library audit`, `library init`, `library status`, `content units`,
+`content read`, and `tui` are implemented.
 Search defaults to Open Library work metadata; `--source archive` selects Internet
 Archive text/audio item search. Neither search resolves download permissions.
 Only explicit query terms, paging/field parameters, and client identification go to
@@ -33,12 +34,15 @@ Limits, errors, and cancellation produce an incomplete result and nonzero exit.
 Inventory performs no security scan; tool availability in `doctor` is not scan evidence.
 Filesystem operations can still block on a stalled device; this is not a sandbox.
 
-The TUI exposes these same services with session-scoped forms/results, selectable
+The TUI exposes search, evaluation, inventory, checks, and library services with session-scoped forms/results, selectable
 search/holdings, adaptive detail panes, and complete report access. It makes no
 startup network request. Source text and paths are escaped; reports are wrapped
 at grapheme boundaries without discarding original evidence. Scopes and scanner
 cloud policy remain explicit. See the [terminal guide](TUI.md) for keyboard
 controls, budgets, paging, appearance, and application-view captures.
+Content retrieval currently uses CLI/JSON and shared services; its TUI and MCP
+interfaces remain planned. See [source-bound access](CONTENT-ACCESS.md) for the
+implemented format subset, byte/continuation contracts, bounds, and issue 1 scope.
 
 JSON mode uses schema version 1 and exit codes 0
 (success), 1 (failed/incomplete operation), and 2 (usage/configuration error).

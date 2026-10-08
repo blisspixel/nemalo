@@ -19,6 +19,7 @@ AI service. Future agent interfaces will use the same application services.
   measurements, with optional installed antivirus.
 - Save portable catalog snapshots, browse holdings, and audit changed/missing files.
 - Initialize library control state with locking and resumable initialization.
+- Retrieve bounded EPUB text with source-bound locators and continuation in CLI/JSON.
 - Use CLI, versioned JSON, or an interactive terminal interface.
 
 Production downloading, archive intake, checked publication, import recovery,
@@ -54,6 +55,7 @@ OS window capture. See [terminal guide and discovery view](docs/TUI.md).
 | [Roadmap](ROADMAP.md) | Milestones, release gates, and implemented versus planned work |
 | [Operation and development](docs/DEVELOPMENT.md) | Commands, configuration, bounds, safety limits, and verification |
 | [Terminal guide](docs/TUI.md) | Navigation, browsing, keyboard shortcuts, and screenshots |
+| [Content access](docs/CONTENT-ACCESS.md) | EPUB excerpts, exact continuation, unsupported gaps, and remaining access work |
 | [Architecture](docs/ARCHITECTURE.md) | Shared services, data protection, recovery, and decisions |
 | [Sources](docs/SOURCES.md) | Provider directory, rights, and integration constraints |
 | [Agent integration](docs/AGENT-INTEGRATION.md) | Planned MCP and Agent Plugins boundaries |

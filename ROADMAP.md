@@ -309,10 +309,19 @@ Acceptance:
 
 These are cross-cutting workstreams, not optional product add-ons:
 
+An initial offline EPUB retrieval slice is implemented through shared Go services
+and CLI/JSON. [Content access](docs/CONTENT-ACCESS.md) records exact locators,
+continuation, unsupported gaps, limits, evidence, and remaining acceptance from
+[issue 1](https://github.com/blisspixel/nemalo/issues/1). TUI reading, MCP, PDF/audio
+ranges, and the external caller adapter remain open; the full issue is not complete.
+
 - Initial local access: resolve a stable library ID to exact assets/provenance,
   export/open in an explicitly configured reader, and report changed/missing files.
 - Content access: bounded format-specific extraction, full-text search, and locators
   for citations; unsupported extraction stays explicit. Derived indexes are rebuildable.
+  Preserve actual source order and natural-unit evidence; distinguish result caps
+  from end-of-unit/source. Bind references to bytes and extractor configuration.
+  Retrieval never advances consumption state or substitutes summaries for sources.
 - Collections: declarative intent plus resolved edition/version/recording and asset
   records. Repeated acquisition is idempotent; updates show a diff before changes.
 - Preservation: manifests, backup/restore documentation, journal recovery, and

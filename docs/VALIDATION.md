@@ -225,6 +225,27 @@ resuming a synced initialization intent, corrupt journals, and unsafe control
 entries. This is evidence for initialization recovery only. Content publication,
 import recovery, cleanup recovery, and power-loss durability remain unvalidated.
 
+## Source-bound EPUB retrieval on 2026-10-08
+
+Native Windows CLI/JSON listed reading-order units for five existing Gutenberg
+EPUBs: *西遊記*, *The Upanishads*, *Alice's Adventures in Wonderland*, *Thus Spake
+Zarathustra*, and *Introduction to Mathematical Philosophy*. Each exposed supported
+text plus one or two explicitly unsupported cover/layout units. The first supported
+unit was selected explicitly. Each book returned a 256-byte-bounded excerpt,
+byte-identical retry, and adjacent continuation with the same source-bound identity.
+Before/after SHA-256 checks confirmed unchanged originals. Reports and excerpt text
+remain outside Git in the validation report directory.
+
+The synthetic suite executes 1,365 actual retrieval calls across three fixture works
+with retries, interleaved work selection, serialized/restored references, Unicode,
+stanza breaks, and exact source-order assertions. Separate cases cover unsupported
+gaps without silent skipping, malformed content, changed/missing sources, stale
+references, budgets, and cancellation. A short local extraction fuzz run completed
+12,650 inputs without a reported failure. This is bounded evidence, not exhaustive
+fuzzing, conformance, safe rendering, or proof that content was read. Paper/audio
+retrieval, caller-owned acknowledgement/crash handling, TUI reading, MCP, and the
+actual external Kilo tool path remain unimplemented and unvalidated here.
+
 ## Source contracts reviewed on 2026-10-08
 
 - Gutenberg [robot policy](https://www.gutenberg.org/policy/robot_access.html),

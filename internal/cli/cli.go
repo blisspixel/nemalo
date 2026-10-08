@@ -14,6 +14,7 @@ import (
 	"github.com/blisspixel/nemalo/internal/app"
 	"github.com/blisspixel/nemalo/internal/assessment"
 	"github.com/blisspixel/nemalo/internal/config"
+	"github.com/blisspixel/nemalo/internal/content"
 	"github.com/blisspixel/nemalo/internal/discovery"
 	"github.com/blisspixel/nemalo/internal/inventory"
 	"github.com/blisspixel/nemalo/internal/library"
@@ -45,6 +46,10 @@ Usage: nemalo <command> [options]
                       Initialize local control state in an existing explicit folder
   library status DIRECTORY
                       Read control identity and journal state without creating files
+  content units CATALOG --root DIRECTORY --asset sha256:HASH
+                      List supported EPUB reading-order documents, offline
+  content read CATALOG --root DIRECTORY --asset sha256:HASH
+                      Retrieve bounded source text with exact continuation, offline
   version             Show the development version
   help                Show this help
 
@@ -56,6 +61,8 @@ Check options: --scan, --expected-bytes N, --expected-sha256 HASH
 Library snapshot options: --output FILE, --assess (local health/EPUB metadata)
 Library list options: --query TEXT, --format all|epub|pdf|mp3, --limit 10, --offset 0
 Library audit options: --root DIRECTORY
+Content read options: --unit 0, --text-offset 0, --max-bytes 4096, --cursor TOKEN
+Content extraction is plain text, not rendered layout or acknowledgement of reading.
 Snapshot/audit also accept inventory max-* limits. Snapshots hash all regular files,
 account for excluded links, refuse incomplete inventories, and never overwrite.
 Audit always requires an explicit root; the catalog cannot authorize a scan.
@@ -94,7 +101,7 @@ func Execute(ctx context.Context, args []string, out, errOut io.Writer, service 
 	command := args[0]
 	action := ""
 	arguments := args[1:]
-	if command == "library" && len(arguments) > 0 {
+	if (command == "library" || command == "content") && len(arguments) > 0 {
 		action = arguments[0]
 		arguments = arguments[1:]
 		if action == "--help" || action == "-h" {
@@ -116,6 +123,12 @@ func Execute(ctx context.Context, args []string, out, errOut io.Writer, service 
 	format := flags.String("format", "all", "exact holdings filename suffix filter")
 	auditRoot := flags.String("root", "", "explicit audit root")
 	assess := flags.Bool("assess", false, "include local health facts without antivirus")
+	contentRequest := content.Request{SchemaVersion: 1}
+	flags.StringVar(&contentRequest.AssetID, "asset", "", "exact catalog asset ID")
+	flags.IntVar(&contentRequest.Unit, "unit", 0, "zero-based reading-order document")
+	flags.IntVar(&contentRequest.Offset, "text-offset", 0, "zero-based UTF-8 text byte offset")
+	flags.IntVar(&contentRequest.MaxBytes, "max-bytes", 4096, "maximum returned text bytes")
+	flags.StringVar(&contentRequest.Cursor, "cursor", "", "source-bound continuation token")
 	flags.BoolVar(&checkOptions.Scan, "scan", false, "invoke installed antivirus")
 	flags.Int64Var(&checkOptions.ExpectedBytes, "expected-bytes", 0, "known expected file size")
 	flags.StringVar(&checkOptions.ExpectedSHA256, "expected-sha256", "", "known expected SHA-256")
@@ -173,7 +186,7 @@ func Execute(ctx context.Context, args []string, out, errOut io.Writer, service 
 		}
 		return write(Version, nil, 0)
 	}
-	if command != "doctor" && command != "search" && command != "evaluate" && command != "inspect" && command != "check" && command != "tui" && command != "library" {
+	if command != "doctor" && command != "search" && command != "evaluate" && command != "inspect" && command != "check" && command != "tui" && command != "library" && command != "content" {
 		return write(nil, fmt.Errorf("unknown command %q; use nemalo help", command), 2)
 	}
 	p, err := paths()
@@ -189,6 +202,30 @@ func Execute(ctx context.Context, args []string, out, errOut io.Writer, service 
 		return write(nil, err, 2)
 	}
 	switch command {
+	case "content":
+		if flags.NArg() != 1 || (action != "units" && action != "read") {
+			return write(nil, errors.New("use content units/read CATALOG --root DIRECTORY --asset sha256:HASH"), 2)
+		}
+		contentRequest.Catalog, contentRequest.Root, contentRequest.UnitsOnly = flags.Arg(0), *auditRoot, action == "units"
+		if err := contentRequest.Validate(); err != nil {
+			return write(nil, err, 2)
+		}
+		if contentRequest.Cursor != "" {
+			conflict := false
+			flags.Visit(func(f *flag.Flag) {
+				if f.Name == "unit" || f.Name == "text-offset" {
+					conflict = true
+				}
+			})
+			if conflict {
+				return write(nil, errors.New("cursor cannot be combined with explicit unit or text-offset"), 2)
+			}
+		}
+		r, err := service.Content(ctx, contentRequest)
+		if err != nil {
+			return write(r, err, 1)
+		}
+		return write(r, nil, 0)
 	case "evaluate":
 		if flags.NArg() != 1 || !discovery.ValidArchiveID(flags.Arg(0)) {
 			return write(nil, errors.New("evaluate requires exactly one archive:ITEM identifier"), 2)
@@ -305,6 +342,15 @@ func flagApplies(command, action, name string) bool {
 	}
 	if name == "config" || name == "library" || name == "review" {
 		return true
+	}
+	if command == "content" {
+		if action != "units" && action != "read" {
+			return false
+		}
+		if name == "root" || name == "asset" {
+			return true
+		}
+		return action == "read" && (name == "unit" || name == "text-offset" || name == "max-bytes" || name == "cursor")
 	}
 	if command == "library" {
 		switch action {
