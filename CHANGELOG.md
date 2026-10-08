@@ -24,7 +24,11 @@
   measured text/documents, expected size/hash comparisons, and review findings.
 - Add explicit installed antivirus adapters with bounded private snapshots,
   no remediation, hash revalidation, and unsuccessful unknown/missing scan states.
+- Add portable immutable byte-identity snapshots, exact duplicate locations,
+  optional historical EPUB/file-health metadata, literal holdings search, and
+  explicit-root preservation audits in CLI/TUI. Save complete catalogs exclusively
+  outside source roots without replacing existing outputs or mutating content.
 
 Production downloads, full format validation, extraction, checked publication, durable
-library state, cleanup, audiobook management, and MCP are not implemented yet.
+mutable library journals/recovery, cleanup, audiobook management, and MCP are not implemented yet.
 Generated analysis/workspaces and model/harness integrations remain post-1.0.

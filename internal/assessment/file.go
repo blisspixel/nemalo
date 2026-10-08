@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -69,7 +70,19 @@ func Check(ctx context.Context, file string, options Options, av Scanner) (repor
 		return report, err
 	}
 	defer root.Close()
-	name := filepath.Base(abs)
+	return CheckInRoot(ctx, root, filepath.Base(abs), options, av)
+}
+
+// CheckInRoot shares the file assessment pipeline with explicitly scoped callers.
+// The supplied name cannot escape root, even if a parent is replaced by a link.
+func CheckInRoot(ctx context.Context, root *os.Root, name string, options Options, av Scanner) (report Report, err error) {
+	if !fs.ValidPath(name) || name == "." || strings.ContainsAny(name, "\\:\x00") {
+		return report, errors.New("invalid root-relative assessment path")
+	}
+	report = Report{File: filepath.Join(root.Name(), filepath.FromSlash(name)), CheckedAt: time.Now().UTC(), Status: "incomplete", Findings: []string{}, Antivirus: scanner.Result{Status: "not_scanned", ExitCode: -1}, Limitations: []string{"Limited checks do not establish safety, semantic completeness, or edition quality.", "PDF page trees and active content, and audio decoding/duration are not inspected.", "EPUB text counts are tokenizer measurements, not rendered pages or proof of complete text."}}
+	if err := options.Validate(); err != nil {
+		return report, err
+	}
 	before, err := root.Lstat(name)
 	if err != nil {
 		return report, err
@@ -100,7 +113,7 @@ func Check(ctx context.Context, file string, options Options, av Scanner) (repor
 		}
 	}()
 	// Controlled basename prevents a scanner treating a source name as an option.
-	snapshot := filepath.Join(dir, "asset"+safeExtension(abs))
+	snapshot := filepath.Join(dir, "asset"+safeExtension(name))
 	f, err := os.OpenFile(snapshot, os.O_CREATE|os.O_EXCL|os.O_RDWR, 0600)
 	if err != nil {
 		return report, err
@@ -154,7 +167,7 @@ func Check(ctx context.Context, file string, options Options, av Scanner) (repor
 		report.Status = "limited_checks_passed"
 		report.DetectedFormat = format
 	}
-	ext := strings.TrimPrefix(strings.ToLower(filepath.Ext(abs)), ".")
+	ext := strings.TrimPrefix(strings.ToLower(filepath.Ext(name)), ".")
 	if ext != format {
 		report.Findings = append(report.Findings, fmt.Sprintf("extension %q differs from assessed format %q", ext, format))
 	}

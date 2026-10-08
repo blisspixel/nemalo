@@ -11,6 +11,7 @@ import (
 	"github.com/blisspixel/nemalo/internal/config"
 	"github.com/blisspixel/nemalo/internal/discovery"
 	"github.com/blisspixel/nemalo/internal/inventory"
+	"github.com/blisspixel/nemalo/internal/library"
 	"github.com/blisspixel/nemalo/internal/scanner"
 )
 
@@ -35,6 +36,37 @@ func (s Service) Inspect(ctx context.Context, root string, limits inventory.Limi
 
 func (s Service) Check(ctx context.Context, file string, options assessment.Options) (assessment.Report, error) {
 	return assessment.Check(ctx, file, options, s.Scanner)
+}
+
+func (s Service) Snapshot(ctx context.Context, directory, output string, limits inventory.Limits, assess bool) (library.Snapshot, error) {
+	if output == "" {
+		return library.Snapshot{}, errors.New("snapshot requires an explicit output path")
+	}
+	if err := library.CheckDestination(directory, output); err != nil {
+		return library.Snapshot{}, err
+	}
+	r, err := library.Build(ctx, directory, limits, assess)
+	if err != nil {
+		return r, err
+	}
+	err = library.Save(ctx, output, &r)
+	return r, err
+}
+
+func (s Service) Holdings(file, query string, limit, offset int) (library.Page, error) {
+	c, err := library.Load(file)
+	if err != nil {
+		return library.Page{}, err
+	}
+	return library.Find(c, query, limit, offset)
+}
+
+func (s Service) Audit(ctx context.Context, file, root string, limits inventory.Limits) (library.Audit, error) {
+	c, err := library.Load(file)
+	if err != nil {
+		return library.Audit{}, err
+	}
+	return library.Verify(ctx, c, root, limits)
 }
 
 type Capability struct {

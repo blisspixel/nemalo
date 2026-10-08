@@ -43,6 +43,59 @@ func TestHealthCommand(t *testing.T) {
 	}
 }
 
+func TestLibraryCommandsPreserveSourcesAndRequireExplicitRoots(t *testing.T) {
+	root := t.TempDir()
+	source := filepath.Join(root, "paper.pdf")
+	if err := os.WriteFile(source, []byte("%PDF-1.7\n%%EOF"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	file := filepath.Join(t.TempDir(), "catalog.json")
+	code, out, stderr := execute(t, []string{"library", "snapshot", root, "--output", file, "--assess", "--json"}, nil)
+	if code != 0 || stderr != "" || !strings.Contains(out, `"complete":true`) || !strings.Contains(out, `"not_scanned"`) {
+		t.Fatal(code, out, stderr)
+	}
+	for _, args := range [][]string{
+		{"library", "list", file, "--query", "PAPER", "--limit", "1"},
+		{"library", "list", file, "--query", "PAPER", "--json"},
+		{"library", "audit", file, "--root", root},
+		{"library", "audit", file, "--root", root, "--json"},
+	} {
+		if code, out, stderr := execute(t, args, nil); code != 0 || stderr != "" || out == "" {
+			t.Fatal(args, code, out, stderr)
+		}
+	}
+	for _, args := range [][]string{
+		{"library"}, {"library", "unknown", file}, {"library", "list"},
+		{"library", "snapshot", root}, {"library", "snapshot", root, "--output", file, "--scan"},
+		{"library", "list", file, "--limit", "101"}, {"library", "list", file, "--offset", "-1"},
+		{"library", "audit", file}, {"library", "audit", file, "--root", root, "--assess"},
+	} {
+		if code, _, _ := execute(t, args, nil); code != 2 {
+			t.Fatal("invalid library invocation accepted", args, code)
+		}
+	}
+	for _, args := range [][]string{
+		{"library", "snapshot", root, "--output", file},
+		{"library", "snapshot", root, "--output", filepath.Join(root, "inside.json")},
+		{"library", "list", filepath.Join(root, "absent")},
+		{"library", "audit", filepath.Join(root, "absent"), "--root", root},
+	} {
+		if code, _, _ := execute(t, args, nil); code != 1 {
+			t.Fatal("failed operation passed", args, code)
+		}
+	}
+	if err := os.WriteFile(source, []byte("%PDF-1.8\n%%EOF"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	code, out, _ = execute(t, []string{"library", "audit", file, "--root", root, "--json"}, nil)
+	if code != 1 || !strings.Contains(out, `"changed"`) || !strings.Contains(out, `"complete":true`) {
+		t.Fatal("same-size replacement not reported", code, out)
+	}
+	if data, _ := os.ReadFile(source); string(data) != "%PDF-1.8\n%%EOF" {
+		t.Fatal("audit mutated source")
+	}
+}
+
 type searcher struct{ err error }
 
 func (s searcher) Search(_ context.Context, q string, limit, offset int) (discovery.Page, error) {
@@ -62,7 +115,7 @@ func execute(t *testing.T, args []string, searchErr error) (int, string, string)
 }
 
 func TestHelpAndVersion(t *testing.T) {
-	for _, args := range [][]string{nil, {"help"}, {"--help"}, {"-h"}, {"inspect", "--help"}} {
+	for _, args := range [][]string{nil, {"help"}, {"--help"}, {"-h"}, {"inspect", "--help"}, {"library", "--help"}, {"library", "snapshot", "--help"}} {
 		code, out, _ := execute(t, args, nil)
 		if code != 0 || !strings.Contains(out, "Nemalo") {
 			t.Fatal(code, out)

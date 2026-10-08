@@ -130,6 +130,16 @@ body text, from 22,162 to 2,657,494 non-whitespace characters per EPUB, totaling
 EPUB pages, PDF page trees, media decoding, and semantic completeness remain unknown.
 The health report is local to the collection and does not overwrite scan evidence.
 
+The shared library snapshot command subsequently cataloged the external intake:
+416 unique byte assets/locations, comprising 208 content files and 208 acquisition
+receipts. Optional assessment recorded health for all 208 content assets, including
+titles/languages for all 80 EPUBs. Snapshot source reads totaled 2,094,080,564 bytes
+across inventory hashing and assessment copies. A fresh explicit-root preservation
+audit found all 416 file locations unchanged with no findings. A literal title
+query retrieved the Italian edition of Dante's *Divina Commedia*. Catalog/audit
+reports remain outside Git. No new antivirus scan, reader handoff, content mutation,
+or checked publication was performed by these operations.
+
 ## Source contracts reviewed on 2026-10-08
 
 - Gutenberg [robot policy](https://www.gutenberg.org/policy/robot_access.html),

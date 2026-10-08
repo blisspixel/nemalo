@@ -64,7 +64,12 @@ File-level `check` is implemented in CLI/TUI: bounded snapshots, signatures,
 EPUB structure/text facts, expected size/hash comparison, and optional antivirus.
 This is assessment evidence, not checked library publication or semantic validation.
 
-Milestone 1 remains in progress: catalog identities, one-writer locking, durable
+Portable byte-identity catalog snapshots, literal holdings search, and explicit-root
+preservation audits are implemented in CLI/TUI. Exact duplicates retain every
+location; optional assessment records historical EPUB metadata and file health.
+These snapshots do not implement checked publication or a mutable library journal.
+
+Milestone 1 remains in progress: richer domain identities, one-writer locking, durable
 journal/recovery, and packaged release/checksum work are outstanding. Milestone 2
 has inventory and standalone signatures/private snapshots, without archive
 extraction or production staging. Milestone 5 has
@@ -130,6 +135,10 @@ Go application or change the user's collection.
 ## Milestone 1: portable CLI and durable state
 
 Status: in progress. Depends on milestone 0; see implementation status above.
+
+Delivered increment: versioned immutable byte-asset snapshots, duplicate locations,
+holdings queries, and preservation audits. See the
+[catalog decision](docs/decisions/0004-portable-library-snapshots.md).
 
 Deliver `doctor`, configuration loading, explicit library/review paths, a versioned
 catalog schema, and a durable run journal. Use JSON metadata initially; the catalog

@@ -29,8 +29,11 @@ filename candidates; it does not establish format validity or malware safety.
 reading-order and text measurements, and optional installed antivirus via `--scan`.
 It reports incomplete checks and review findings, without claiming absolute safety.
 
-Production downloads, archive extraction, checked publication, library
-catalog/journal recovery, audiobook management, and MCP are still planned.
+`library snapshot` records portable byte identities and duplicate locations;
+`library list` searches those holdings and optional EPUB metadata; `library audit`
+detects changed, missing, added, and unverified files against a selected baseline.
+Production downloads, archive extraction, checked publication, mutable catalogs,
+journal recovery, audiobook management, and MCP are still planned.
 Go was confirmed on 2026-10-08.
 The separate [validation harness](docs/VALIDATION.md) acquires a curated collection
 of 80 EPUBs, 10 audiobook recordings, and 10 papers into untrusted intake outside
@@ -53,11 +56,16 @@ go run ./cmd/nemalo search "Jules Verne" --limit 5
 go run ./cmd/nemalo inspect ./docs --hashes --json
 go run ./cmd/nemalo check /path/to/book.epub --json
 go run ./cmd/nemalo check /path/to/book.epub --scan
+go run ./cmd/nemalo library snapshot /path/to/books --output /path/to/catalog.json --assess
+go run ./cmd/nemalo library list /path/to/catalog.json --query "Verne"
+go run ./cmd/nemalo library audit /path/to/catalog.json --root /path/to/books
 ```
 
 `bin/nemalo` (`bin/nemalo.exe` on Windows) is the native executable. The TUI uses
-Tab to switch search/inspect/check/scan, Enter to run, Escape to cancel, PageUp/PageDown
-to scroll, and Ctrl+C to quit. Searching sends the query to Open Library; inventory
+Tab to cycle search, inspect, check, scan, snapshot, holdings, and audit; Enter to run;
+Escape to cancel; PageUp/PageDown to scroll; and Ctrl+C to quit. Ctrl+N switches
+fields in library forms; Ctrl+A toggles local health metadata in snapshot mode.
+Searching sends the query to Open Library; inventory
 is local and read-only. No telemetry or model service is required.
 
 File checks use a private temporary snapshot, at most 256 MiB. EPUBs generally
@@ -65,6 +73,13 @@ have no fixed page count, so measured documents/text are reported instead of
 invented pages. PDF pages and audio duration are not yet parsed. Antivirus is
 optional; its installed cloud/sample-submission policy applies when requested.
 See the [assessment decision](docs/decisions/0003-file-health-and-scanners.md).
+
+Catalog snapshots account for all regular files, preserve sources, and never
+overwrite. Save catalogs outside the scanned folder in an existing directory.
+Assessment metadata is historical evidence, not checked publication or a safety
+verdict. Audits always require an explicit root and make no repairs. See the
+[catalog decision](docs/decisions/0004-portable-library-snapshots.md) for bounds,
+filesystem requirements, and durability limitations.
 
 For configuration precedence, paths, limits, verification, and current boundaries,
 see [development and operation](docs/DEVELOPMENT.md). All supported current commands

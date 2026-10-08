@@ -316,6 +316,13 @@ reported when equivalent isolation is unavailable. Never execute downloaded file
 
 ## Durable operations
 
+The implemented `internal/library` seam provides immutable byte-identity snapshots,
+holdings queries, and explicit-root preservation audits. See
+[decision 0004](decisions/0004-portable-library-snapshots.md). These snapshots
+record all regular files and historical optional health evidence; they are not a
+checked publication catalog, backup, authenticated manifest, or recovery journal.
+The mutable operations below remain planned.
+
 Use a versioned JSON catalog and per-asset provenance initially. Keep catalog
 indexes rebuildable. Use a separate durable journal for in-progress operations;
 catalog rebuilds cannot reconstruct whether an interrupted source deletion happened.

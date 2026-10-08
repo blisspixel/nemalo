@@ -87,6 +87,10 @@ File/container checks are in `internal/assessment`, shared with the collection
 harness; installed antivirus is in `internal/scanner`. Preserve measured facts
 versus semantic completeness, explicit scanner opt-in and cloud-policy disclosure,
 snapshot/hash binding, no remediation, and unsuccessful missing/incomplete scans.
+Portable byte-identity snapshots, holdings, and audits belong in `internal/library`;
+see decision 0004. Preserve explicit audit roots, exclusive outside-root outputs,
+all duplicate locations, and historical evidence distinct from checked publication.
+An incomplete traversal cannot establish missing files. A snapshot is not a journal.
 
 Test behavior and failure recovery, not just execution. Use synthetic fixtures;
 never personal downloads. Give cleanup, parser boundaries, scanner skips, and

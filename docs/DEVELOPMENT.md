@@ -7,7 +7,8 @@ needed for the application, tests, or first-party tooling.
 
 ## Current operations
 
-`help`, `version`, `doctor`, `search`, `inspect`, `check`, and `tui` are implemented.
+`help`, `version`, `doctor`, `search`, `inspect`, `check`, `library snapshot`,
+`library list`, `library audit`, and `tui` are implemented.
 Open Library search returns works and original language metadata, not resolved
 download permissions or file availability. Search sends only explicit query terms,
 paging/field parameters, and client identification to the fixed HTTPS source.
@@ -23,8 +24,10 @@ Limits, errors, and cancellation produce an incomplete result and nonzero exit.
 Inventory performs no security scan; tool availability in `doctor` is not scan evidence.
 Filesystem operations can still block on a stalled device; this is not a sandbox.
 
-The TUI offers search, explicit-folder inventory, file health checks, and explicit
-antivirus scans using the same application services. Tab changes mode, Enter
+The TUI offers search, explicit-folder inventory, file health checks, explicit
+antivirus scans, snapshots, holdings, and audits using the same application services.
+Tab changes mode, Ctrl+N switches library form fields, and Ctrl+A toggles local
+health metadata in snapshot mode. Enter
 submits, Escape cancels, PageUp/PageDown scroll,
 and Ctrl+C quits. It makes no startup network request. Untrusted results and paths
 are escaped before display. Results wrap within the terminal viewport, including
@@ -74,6 +77,35 @@ does not independently establish signatures are current or every internal member
 was inspected. Scanner cloud/sample-submission settings apply, without Nemalo
 changing host preferences. Pure local checks make no network request.
 
+## Catalog snapshots and preservation
+
+```sh
+nemalo library snapshot /path/to/books --output /path/to/catalog.json --assess
+nemalo library list /path/to/catalog.json --query "fr" --limit 20 --offset 0
+nemalo library audit /path/to/catalog.json --root /path/to/books --json
+```
+
+Use an existing output directory outside the source root. Outputs never overwrite;
+the destination filesystem must support hard links. Snapshots hash all regular
+files, group exact duplicates without losing locations, and account for skipped
+links/special files. Incomplete inventory prevents saving. Optional `--assess`
+records shared EPUB/PDF/MP3 health evidence and EPUB titles/languages, without
+antivirus. Invalid content can be cataloged with findings; this is a preservation
+baseline, not publication eligibility.
+
+Snapshot/audit use inventory defaults and accept `--max-*` limits, capped at
+256 MiB/file and 5 GiB/inventory pass, with cooperative five-minute deadlines.
+Assessment makes an additional source pass over supported unique assets. Catalog
+JSON is bounded to 16 MiB. `list` searches literal metadata/path/hash text, with
+limit 1-100 and offset 0-100000. TUI holdings show the first 50 matching assets.
+
+Audits require an explicit root; the informational catalog root never authorizes
+filesystem reads. They report changed/missing/added/unverified files, with nonzero
+exit on findings or incomplete traversal. No repairs or source mutations occur.
+Catalog health is historical and unsigned. File sync plus exclusive publication
+prevents partial final JSON but does not guarantee directory-entry persistence
+through power loss. See [decision 0004](decisions/0004-portable-library-snapshots.md).
+
 ## Configuration
 
 Configuration is an optional strict JSON object with `library` and `review` paths.
@@ -116,7 +148,7 @@ by a `CGO_ENABLED=0` binary smoke. Review actual runs before claiming platform s
 
 ## Next bounded work
 
-Finish milestone 1 catalog schema, locking, and durable operation journal before
+Finish milestone 1 domain identities, mutable catalog locking, and durable operation journal before
 mutating user libraries. Follow with bounded archive staging and production
 assessment/publication policy. Reuse shared file checks/scanners. Keep real
 acquisition in the first complete lifecycle; do not turn this discovery foundation

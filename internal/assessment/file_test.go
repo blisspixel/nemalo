@@ -82,6 +82,41 @@ func TestMeasuredEPUB(t *testing.T) {
 	}
 }
 
+func TestAssessmentRemainsWithinExplicitRoot(t *testing.T) {
+	directory := t.TempDir()
+	if err := os.Mkdir(filepath.Join(directory, "nested"), 0700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(directory, "nested", "book.epub"), book(t, "<html><body>Knowledge</body></html>", nil), 0600); err != nil {
+		t.Fatal(err)
+	}
+	root, err := os.OpenRoot(directory)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer root.Close()
+	r, err := CheckInRoot(context.Background(), root, "nested/book.epub", Options{}, nil)
+	if err != nil || r.Checks.EPUB == nil || r.Checks.EPUB.TextCharacters != 9 {
+		t.Fatal(r, err)
+	}
+	for _, name := range []string{".", "../escape.pdf", "/absolute.pdf", `nested\book.epub`, "C:/escape.pdf", "bad\x00.pdf"} {
+		if _, err := CheckInRoot(context.Background(), root, name, Options{}, nil); err == nil {
+			t.Fatal("unsafe path accepted", name)
+		}
+	}
+	outside := t.TempDir()
+	if err := os.WriteFile(filepath.Join(outside, "secret.pdf"), []byte("%PDF-1.7\n%%EOF"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(outside, filepath.Join(directory, "escape")); err != nil {
+		t.Log("symlink privilege unavailable:", err)
+		return
+	}
+	if _, err := CheckInRoot(context.Background(), root, "escape/secret.pdf", Options{}, nil); err == nil {
+		t.Fatal("parent link escaped assessment root")
+	}
+}
+
 func TestReviewAndMalformedFiles(t *testing.T) {
 	for _, tc := range []struct {
 		name           string

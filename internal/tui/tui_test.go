@@ -5,6 +5,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -85,6 +86,72 @@ func TestTerminalWorkflow(t *testing.T) {
 	m.Update(cmd())
 	if !strings.Contains(m.viewport.GetContent(), "Antivirus: unavailable") {
 		t.Fatal("scanner unavailable result hidden")
+	}
+	m.Update(key(tea.KeyTab))
+	if m.mode != "snapshot" {
+		t.Fatal("snapshot mode unavailable")
+	}
+	root := t.TempDir()
+	if err := os.WriteFile(filepath.Join(root, "paper.pdf"), []byte("%PDF-1.7\n%%EOF"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	file := filepath.Join(t.TempDir(), "catalog.json")
+	m.input.SetValue(root)
+	_, cmd = m.Update(key(tea.KeyEnter))
+	if cmd != nil || m.busy {
+		t.Fatal("snapshot omitted destination")
+	}
+	m.Update(tea.KeyPressMsg{Code: 'n', Mod: tea.ModCtrl})
+	if !m.secondaryFocused || !m.secondary.Focused() || m.input.Focused() {
+		t.Fatal("second field not focused")
+	}
+	m.Update(tea.KeyPressMsg{Text: "x", Code: 'x'})
+	if m.secondary.Value() != "x" {
+		t.Fatal("secondary input ignored")
+	}
+	m.secondary.SetValue(file)
+	m.Update(tea.KeyPressMsg{Code: 'a', Mod: tea.ModCtrl})
+	if !m.assess || !strings.Contains(m.View().Content, "Ctrl+A") {
+		t.Fatal("assessment toggle missing")
+	}
+	m.Update(tea.KeyPressMsg{Code: 'n', Mod: tea.ModCtrl})
+	if m.secondaryFocused || !m.input.Focused() {
+		t.Fatal("main field not restored")
+	}
+	_, cmd = m.Update(key(tea.KeyEnter))
+	m.Update(tea.KeyPressMsg{Code: 'n', Mod: tea.ModCtrl})
+	if m.secondaryFocused {
+		t.Fatal("busy field changed")
+	}
+	m.Update(cmd())
+	if !strings.Contains(m.viewport.GetContent(), "File locations: 1") || !strings.Contains(m.viewport.GetContent(), strconv.Quote(file)) {
+		t.Fatal("snapshot missing", m.status, m.viewport.GetContent())
+	}
+	m.Update(key(tea.KeyTab))
+	if m.mode != "holdings" || m.secondary.Value() != "" {
+		t.Fatal("holdings form unavailable")
+	}
+	m.input.SetValue(file)
+	m.secondary.SetValue("paper")
+	_, cmd = m.Update(key(tea.KeyEnter))
+	m.Update(cmd())
+	if !strings.Contains(m.viewport.GetContent(), "paper.pdf") || !strings.Contains(m.viewport.GetContent(), "Recorded health") {
+		t.Fatal("holdings missing", m.status)
+	}
+	m.Update(key(tea.KeyTab))
+	if m.mode != "audit" {
+		t.Fatal("audit form unavailable")
+	}
+	m.input.SetValue(file)
+	_, cmd = m.Update(key(tea.KeyEnter))
+	if cmd != nil {
+		t.Fatal("catalog hint authorized read")
+	}
+	m.secondary.SetValue(root)
+	_, cmd = m.Update(key(tea.KeyEnter))
+	m.Update(cmd())
+	if !strings.Contains(m.viewport.GetContent(), "Unchanged file locations: 1") {
+		t.Fatal("audit missing", m.status)
 	}
 	m.Update(key(tea.KeyTab))
 	if m.mode != "search" {
