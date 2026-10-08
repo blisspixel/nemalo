@@ -14,6 +14,10 @@
   enforcing formatting, compilation, vet, Staticcheck, 80% coverage, race checks,
   vulnerability checks, and cgo-free executable smokes.
 
-Downloads, format validation, scanners, extraction, checked publication, durable
+- Add a Go-only real-resource collection harness with a 100-resource manifest,
+  13 languages, complete exposed audiobook track sets, bounded container checks,
+  per-asset receipts, and rehashing without overwriting changed files.
+
+Production downloads, full format validation, scanners, extraction, checked publication, durable
 library state, cleanup, audiobook management, and MCP are not implemented yet.
 Generated analysis/workspaces and model/harness integrations remain post-1.0.

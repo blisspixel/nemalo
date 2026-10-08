@@ -66,6 +66,9 @@ journal/recovery, and packaged release/checksum work are outstanding. Milestone 
 has inventory only, without signatures, extraction, or staging. Milestone 5 has
 Open Library discovery only, without acquisition. All remaining production
 capabilities stay planned. A configured CI workflow is not itself a hosted pass.
+The initial foundation passed hosted native CI on Linux, macOS, and Windows.
+The [collection harness](docs/VALIDATION.md) separately exercises curated real assets
+in untrusted intake; it does not complete production transfer or publication gates.
 
 ## Product-wide acceptance
 

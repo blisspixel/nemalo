@@ -25,9 +25,12 @@ Open Library discovery, read-only folder inventory, optional bounded SHA-256 has
 configuration, capability reports, and versioned JSON output. Inventory classifies
 filename candidates; it does not establish format validity or malware safety.
 
-Downloads, archive extraction, antivirus adapters, checked publication, library
+Production downloads, archive extraction, antivirus adapters, checked publication, library
 catalog/journal recovery, audiobook management, and MCP are still planned.
 Go was confirmed on 2026-10-08.
+The separate [validation harness](docs/VALIDATION.md) acquires a curated collection
+of 80 EPUBs, 10 audiobook recordings, and 10 papers into untrusted intake outside
+the checkout. This exercises real resources without claiming production ingestion.
 See the [language and stack decision](docs/decisions/0001-language-and-stack.md)
 for the Go/Rust comparison and implementation boundaries.
 
@@ -62,6 +65,7 @@ The design is recorded in:
 - [Source directory and verified integration constraints](docs/SOURCES.md)
 - [MCP and Agent Plugins design](docs/AGENT-INTEGRATION.md)
 - [Related-project research and design choices](docs/RESEARCH.md)
+- [Real-resource collection and validation boundaries](docs/VALIDATION.md)
 
 ## What Nemalo should do
 

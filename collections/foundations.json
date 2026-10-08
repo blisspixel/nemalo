@@ -1,0 +1,3588 @@
+{
+  "schema_version": 1,
+  "title": "Foundations: multilingual literature, inquiry, ethics, science, and listening",
+  "resources": [
+    {
+      "id": "pg-84",
+      "title": "Frankenstein; or, the modern prometheus",
+      "authors": [
+        "Shelley, Mary Wollstonecraft, 1797-1851"
+      ],
+      "languages": [
+        "en"
+      ],
+      "type": "ebook",
+      "rationale": "Study narrative, perspective, social relationships, moral conflict, and the limits of a single viewpoint. Historical attitudes need critical context.",
+      "landing_url": "https://www.gutenberg.org/ebooks/84",
+      "metadata_url": "https://gutenberg.pglaf.org/cache/epub/84/pg84.rdf",
+      "rights": "Project Gutenberg selection under its US-based permissions policy. Preserve the embedded license; jurisdiction and third-party material require separate review.",
+      "rights_url": "https://www.gutenberg.org/policy/permission.html",
+      "review_status": "not_applicable",
+      "assets": [
+        {
+          "name": "pg84.epub",
+          "url": "https://gutenberg.pglaf.org/cache/epub/84/pg84-images.epub",
+          "format": "epub"
+        }
+      ]
+    },
+    {
+      "id": "pg-1342",
+      "title": "Pride and Prejudice",
+      "authors": [
+        "Austen, Jane, 1775-1817"
+      ],
+      "languages": [
+        "en"
+      ],
+      "type": "ebook",
+      "rationale": "Study narrative, perspective, social relationships, moral conflict, and the limits of a single viewpoint. Historical attitudes need critical context.",
+      "landing_url": "https://www.gutenberg.org/ebooks/1342",
+      "metadata_url": "https://gutenberg.pglaf.org/cache/epub/1342/pg1342.rdf",
+      "rights": "Project Gutenberg selection under its US-based permissions policy. Preserve the embedded license; jurisdiction and third-party material require separate review.",
+      "rights_url": "https://www.gutenberg.org/policy/permission.html",
+      "review_status": "not_applicable",
+      "assets": [
+        {
+          "name": "pg1342.epub",
+          "url": "https://gutenberg.pglaf.org/cache/epub/1342/pg1342.epub",
+          "format": "epub"
+        }
+      ],
+      "notes": "Text-focused EPUB without optional illustrations, selected to bound transfer and image processing. Not a substitute for image-dependent editions."
+    },
+    {
+      "id": "pg-11",
+      "title": "Alice's Adventures in Wonderland",
+      "authors": [
+        "Carroll, Lewis, 1832-1898"
+      ],
+      "languages": [
+        "en"
+      ],
+      "type": "ebook",
+      "rationale": "Study narrative, perspective, social relationships, moral conflict, and the limits of a single viewpoint. Historical attitudes need critical context.",
+      "landing_url": "https://www.gutenberg.org/ebooks/11",
+      "metadata_url": "https://gutenberg.pglaf.org/cache/epub/11/pg11.rdf",
+      "rights": "Project Gutenberg selection under its US-based permissions policy. Preserve the embedded license; jurisdiction and third-party material require separate review.",
+      "rights_url": "https://www.gutenberg.org/policy/permission.html",
+      "review_status": "not_applicable",
+      "assets": [
+        {
+          "name": "pg11.epub",
+          "url": "https://gutenberg.pglaf.org/cache/epub/11/pg11.epub",
+          "format": "epub"
+        }
+      ],
+      "notes": "Text-focused EPUB without optional illustrations, selected to bound transfer and image processing. Not a substitute for image-dependent editions."
+    },
+    {
+      "id": "pg-1661",
+      "title": "The Adventures of Sherlock Holmes",
+      "authors": [
+        "Doyle, Arthur Conan, 1859-1930"
+      ],
+      "languages": [
+        "en"
+      ],
+      "type": "ebook",
+      "rationale": "Study narrative, perspective, social relationships, moral conflict, and the limits of a single viewpoint. Historical attitudes need critical context.",
+      "landing_url": "https://www.gutenberg.org/ebooks/1661",
+      "metadata_url": "https://gutenberg.pglaf.org/cache/epub/1661/pg1661.rdf",
+      "rights": "Project Gutenberg selection under its US-based permissions policy. Preserve the embedded license; jurisdiction and third-party material require separate review.",
+      "rights_url": "https://www.gutenberg.org/policy/permission.html",
+      "review_status": "not_applicable",
+      "assets": [
+        {
+          "name": "pg1661.epub",
+          "url": "https://gutenberg.pglaf.org/cache/epub/1661/pg1661.epub",
+          "format": "epub"
+        }
+      ],
+      "notes": "Text-focused EPUB without optional illustrations, selected to bound transfer and image processing. Not a substitute for image-dependent editions."
+    },
+    {
+      "id": "pg-2701",
+      "title": "Moby Dick; Or, The Whale",
+      "authors": [
+        "Melville, Herman, 1819-1891"
+      ],
+      "languages": [
+        "en"
+      ],
+      "type": "ebook",
+      "rationale": "Study narrative, perspective, social relationships, moral conflict, and the limits of a single viewpoint. Historical attitudes need critical context.",
+      "landing_url": "https://www.gutenberg.org/ebooks/2701",
+      "metadata_url": "https://gutenberg.pglaf.org/cache/epub/2701/pg2701.rdf",
+      "rights": "Project Gutenberg selection under its US-based permissions policy. Preserve the embedded license; jurisdiction and third-party material require separate review.",
+      "rights_url": "https://www.gutenberg.org/policy/permission.html",
+      "review_status": "not_applicable",
+      "assets": [
+        {
+          "name": "pg2701.epub",
+          "url": "https://gutenberg.pglaf.org/cache/epub/2701/pg2701.epub",
+          "format": "epub"
+        }
+      ],
+      "notes": "Text-focused EPUB without optional illustrations, selected to bound transfer and image processing. Not a substitute for image-dependent editions."
+    },
+    {
+      "id": "pg-345",
+      "title": "Dracula",
+      "authors": [
+        "Stoker, Bram, 1847-1912"
+      ],
+      "languages": [
+        "en"
+      ],
+      "type": "ebook",
+      "rationale": "Study narrative, perspective, social relationships, moral conflict, and the limits of a single viewpoint. Historical attitudes need critical context.",
+      "landing_url": "https://www.gutenberg.org/ebooks/345",
+      "metadata_url": "https://gutenberg.pglaf.org/cache/epub/345/pg345.rdf",
+      "rights": "Project Gutenberg selection under its US-based permissions policy. Preserve the embedded license; jurisdiction and third-party material require separate review.",
+      "rights_url": "https://www.gutenberg.org/policy/permission.html",
+      "review_status": "not_applicable",
+      "assets": [
+        {
+          "name": "pg345.epub",
+          "url": "https://gutenberg.pglaf.org/cache/epub/345/pg345.epub",
+          "format": "epub"
+        }
+      ],
+      "notes": "Text-focused EPUB without optional illustrations, selected to bound transfer and image processing. Not a substitute for image-dependent editions."
+    },
+    {
+      "id": "pg-98",
+      "title": "A Tale of Two Cities",
+      "authors": [
+        "Dickens, Charles, 1812-1870"
+      ],
+      "languages": [
+        "en"
+      ],
+      "type": "ebook",
+      "rationale": "Study narrative, perspective, social relationships, moral conflict, and the limits of a single viewpoint. Historical attitudes need critical context.",
+      "landing_url": "https://www.gutenberg.org/ebooks/98",
+      "metadata_url": "https://gutenberg.pglaf.org/cache/epub/98/pg98.rdf",
+      "rights": "Project Gutenberg selection under its US-based permissions policy. Preserve the embedded license; jurisdiction and third-party material require separate review.",
+      "rights_url": "https://www.gutenberg.org/policy/permission.html",
+      "review_status": "not_applicable",
+      "assets": [
+        {
+          "name": "pg98.epub",
+          "url": "https://gutenberg.pglaf.org/cache/epub/98/pg98.epub",
+          "format": "epub"
+        }
+      ],
+      "notes": "Text-focused EPUB without optional illustrations, selected to bound transfer and image processing. Not a substitute for image-dependent editions."
+    },
+    {
+      "id": "pg-1400",
+      "title": "Great Expectations",
+      "authors": [
+        "Dickens, Charles, 1812-1870"
+      ],
+      "languages": [
+        "en"
+      ],
+      "type": "ebook",
+      "rationale": "Study narrative, perspective, social relationships, moral conflict, and the limits of a single viewpoint. Historical attitudes need critical context.",
+      "landing_url": "https://www.gutenberg.org/ebooks/1400",
+      "metadata_url": "https://gutenberg.pglaf.org/cache/epub/1400/pg1400.rdf",
+      "rights": "Project Gutenberg selection under its US-based permissions policy. Preserve the embedded license; jurisdiction and third-party material require separate review.",
+      "rights_url": "https://www.gutenberg.org/policy/permission.html",
+      "review_status": "not_applicable",
+      "assets": [
+        {
+          "name": "pg1400.epub",
+          "url": "https://gutenberg.pglaf.org/cache/epub/1400/pg1400.epub",
+          "format": "epub"
+        }
+      ],
+      "notes": "Text-focused EPUB without optional illustrations, selected to bound transfer and image processing. Not a substitute for image-dependent editions."
+    },
+    {
+      "id": "pg-1260",
+      "title": "Jane Eyre: An Autobiography",
+      "authors": [
+        "Brontë, Charlotte, 1816-1855",
+        "Townsend, F. H. (Frederick Henry), 1868-1920 [Illustrator]"
+      ],
+      "languages": [
+        "en"
+      ],
+      "type": "ebook",
+      "rationale": "Study narrative, perspective, social relationships, moral conflict, and the limits of a single viewpoint. Historical attitudes need critical context.",
+      "landing_url": "https://www.gutenberg.org/ebooks/1260",
+      "metadata_url": "https://gutenberg.pglaf.org/cache/epub/1260/pg1260.rdf",
+      "rights": "Project Gutenberg selection under its US-based permissions policy. Preserve the embedded license; jurisdiction and third-party material require separate review.",
+      "rights_url": "https://www.gutenberg.org/policy/permission.html",
+      "review_status": "not_applicable",
+      "assets": [
+        {
+          "name": "pg1260.epub",
+          "url": "https://gutenberg.pglaf.org/cache/epub/1260/pg1260.epub",
+          "format": "epub"
+        }
+      ],
+      "notes": "Text-focused EPUB without optional illustrations, selected to bound transfer and image processing. Not a substitute for image-dependent editions."
+    },
+    {
+      "id": "pg-174",
+      "title": "The Picture of Dorian Gray",
+      "authors": [
+        "Wilde, Oscar, 1854-1900"
+      ],
+      "languages": [
+        "en"
+      ],
+      "type": "ebook",
+      "rationale": "Study narrative, perspective, social relationships, moral conflict, and the limits of a single viewpoint. Historical attitudes need critical context.",
+      "landing_url": "https://www.gutenberg.org/ebooks/174",
+      "metadata_url": "https://gutenberg.pglaf.org/cache/epub/174/pg174.rdf",
+      "rights": "Project Gutenberg selection under its US-based permissions policy. Preserve the embedded license; jurisdiction and third-party material require separate review.",
+      "rights_url": "https://www.gutenberg.org/policy/permission.html",
+      "review_status": "not_applicable",
+      "assets": [
+        {
+          "name": "pg174.epub",
+          "url": "https://gutenberg.pglaf.org/cache/epub/174/pg174.epub",
+          "format": "epub"
+        }
+      ],
+      "notes": "Text-focused EPUB without optional illustrations, selected to bound transfer and image processing. Not a substitute for image-dependent editions."
+    },
+    {
+      "id": "pg-2600",
+      "title": "War and Peace",
+      "authors": [
+        "Tolstoy, Leo, graf, 1828-1910",
+        "Maude, Aylmer, 1858-1938 [Translator]",
+        "Maude, Louise, 1855-1939 [Translator]"
+      ],
+      "languages": [
+        "en"
+      ],
+      "type": "ebook",
+      "rationale": "Study narrative, perspective, social relationships, moral conflict, and the limits of a single viewpoint. Historical attitudes need critical context.",
+      "landing_url": "https://www.gutenberg.org/ebooks/2600",
+      "metadata_url": "https://gutenberg.pglaf.org/cache/epub/2600/pg2600.rdf",
+      "rights": "Project Gutenberg selection under its US-based permissions policy. Preserve the embedded license; jurisdiction and third-party material require separate review.",
+      "rights_url": "https://www.gutenberg.org/policy/permission.html",
+      "review_status": "not_applicable",
+      "assets": [
+        {
+          "name": "pg2600.epub",
+          "url": "https://gutenberg.pglaf.org/cache/epub/2600/pg2600.epub",
+          "format": "epub"
+        }
+      ],
+      "notes": "Text-focused EPUB without optional illustrations, selected to bound transfer and image processing. Not a substitute for image-dependent editions."
+    },
+    {
+      "id": "pg-2554",
+      "title": "Crime and Punishment",
+      "authors": [
+        "Dostoyevsky, Fyodor, 1821-1881",
+        "Garnett, Constance, 1861-1946 [Translator]"
+      ],
+      "languages": [
+        "en"
+      ],
+      "type": "ebook",
+      "rationale": "Study narrative, perspective, social relationships, moral conflict, and the limits of a single viewpoint. Historical attitudes need critical context.",
+      "landing_url": "https://www.gutenberg.org/ebooks/2554",
+      "metadata_url": "https://gutenberg.pglaf.org/cache/epub/2554/pg2554.rdf",
+      "rights": "Project Gutenberg selection under its US-based permissions policy. Preserve the embedded license; jurisdiction and third-party material require separate review.",
+      "rights_url": "https://www.gutenberg.org/policy/permission.html",
+      "review_status": "not_applicable",
+      "assets": [
+        {
+          "name": "pg2554.epub",
+          "url": "https://gutenberg.pglaf.org/cache/epub/2554/pg2554.epub",
+          "format": "epub"
+        }
+      ],
+      "notes": "Text-focused EPUB without optional illustrations, selected to bound transfer and image processing. Not a substitute for image-dependent editions."
+    },
+    {
+      "id": "pg-28054",
+      "title": "The Brothers Karamazov",
+      "authors": [
+        "Dostoyevsky, Fyodor, 1821-1881",
+        "Garnett, Constance, 1861-1946 [Translator]"
+      ],
+      "languages": [
+        "en"
+      ],
+      "type": "ebook",
+      "rationale": "Study narrative, perspective, social relationships, moral conflict, and the limits of a single viewpoint. Historical attitudes need critical context.",
+      "landing_url": "https://www.gutenberg.org/ebooks/28054",
+      "metadata_url": "https://gutenberg.pglaf.org/cache/epub/28054/pg28054.rdf",
+      "rights": "Project Gutenberg selection under its US-based permissions policy. Preserve the embedded license; jurisdiction and third-party material require separate review.",
+      "rights_url": "https://www.gutenberg.org/policy/permission.html",
+      "review_status": "not_applicable",
+      "assets": [
+        {
+          "name": "pg28054.epub",
+          "url": "https://gutenberg.pglaf.org/cache/epub/28054/pg28054.epub",
+          "format": "epub"
+        }
+      ],
+      "notes": "Text-focused EPUB without optional illustrations, selected to bound transfer and image processing. Not a substitute for image-dependent editions."
+    },
+    {
+      "id": "pg-135",
+      "title": "Les Misérables",
+      "authors": [
+        "Hugo, Victor, 1802-1885",
+        "Hapgood, Isabel Florence, 1850-1928 [Translator]"
+      ],
+      "languages": [
+        "en"
+      ],
+      "type": "ebook",
+      "rationale": "Study narrative, perspective, social relationships, moral conflict, and the limits of a single viewpoint. Historical attitudes need critical context.",
+      "landing_url": "https://www.gutenberg.org/ebooks/135",
+      "metadata_url": "https://gutenberg.pglaf.org/cache/epub/135/pg135.rdf",
+      "rights": "Project Gutenberg selection under its US-based permissions policy. Preserve the embedded license; jurisdiction and third-party material require separate review.",
+      "rights_url": "https://www.gutenberg.org/policy/permission.html",
+      "review_status": "not_applicable",
+      "assets": [
+        {
+          "name": "pg135.epub",
+          "url": "https://gutenberg.pglaf.org/cache/epub/135/pg135.epub",
+          "format": "epub"
+        }
+      ],
+      "notes": "Text-focused EPUB without optional illustrations, selected to bound transfer and image processing. Not a substitute for image-dependent editions."
+    },
+    {
+      "id": "pg-120",
+      "title": "Treasure Island",
+      "authors": [
+        "Stevenson, Robert Louis, 1850-1894",
+        "Rhead, Louis, 1857-1926 [Illustrator]"
+      ],
+      "languages": [
+        "en"
+      ],
+      "type": "ebook",
+      "rationale": "Study narrative, perspective, social relationships, moral conflict, and the limits of a single viewpoint. Historical attitudes need critical context.",
+      "landing_url": "https://www.gutenberg.org/ebooks/120",
+      "metadata_url": "https://gutenberg.pglaf.org/cache/epub/120/pg120.rdf",
+      "rights": "Project Gutenberg selection under its US-based permissions policy. Preserve the embedded license; jurisdiction and third-party material require separate review.",
+      "rights_url": "https://www.gutenberg.org/policy/permission.html",
+      "review_status": "not_applicable",
+      "assets": [
+        {
+          "name": "pg120.epub",
+          "url": "https://gutenberg.pglaf.org/cache/epub/120/pg120.epub",
+          "format": "epub"
+        }
+      ],
+      "notes": "Text-focused EPUB without optional illustrations, selected to bound transfer and image processing. Not a substitute for image-dependent editions."
+    },
+    {
+      "id": "pg-76",
+      "title": "Adventures of Huckleberry Finn",
+      "authors": [
+        "Twain, Mark, 1835-1910",
+        "Kemble, E. W. (Edward Windsor), 1861-1933 [Illustrator]"
+      ],
+      "languages": [
+        "en"
+      ],
+      "type": "ebook",
+      "rationale": "Study narrative, perspective, social relationships, moral conflict, and the limits of a single viewpoint. Historical attitudes need critical context.",
+      "landing_url": "https://www.gutenberg.org/ebooks/76",
+      "metadata_url": "https://gutenberg.pglaf.org/cache/epub/76/pg76.rdf",
+      "rights": "Project Gutenberg selection under its US-based permissions policy. Preserve the embedded license; jurisdiction and third-party material require separate review.",
+      "rights_url": "https://www.gutenberg.org/policy/permission.html",
+      "review_status": "not_applicable",
+      "assets": [
+        {
+          "name": "pg76.epub",
+          "url": "https://gutenberg.pglaf.org/cache/epub/76/pg76.epub",
+          "format": "epub"
+        }
+      ],
+      "notes": "Text-focused EPUB without optional illustrations, selected to bound transfer and image processing. Not a substitute for image-dependent editions."
+    },
+    {
+      "id": "pg-4300",
+      "title": "Ulysses",
+      "authors": [
+        "Joyce, James, 1882-1941"
+      ],
+      "languages": [
+        "en"
+      ],
+      "type": "ebook",
+      "rationale": "Study narrative, perspective, social relationships, moral conflict, and the limits of a single viewpoint. Historical attitudes need critical context.",
+      "landing_url": "https://www.gutenberg.org/ebooks/4300",
+      "metadata_url": "https://gutenberg.pglaf.org/cache/epub/4300/pg4300.rdf",
+      "rights": "Project Gutenberg selection under its US-based permissions policy. Preserve the embedded license; jurisdiction and third-party material require separate review.",
+      "rights_url": "https://www.gutenberg.org/policy/permission.html",
+      "review_status": "not_applicable",
+      "assets": [
+        {
+          "name": "pg4300.epub",
+          "url": "https://gutenberg.pglaf.org/cache/epub/4300/pg4300.epub",
+          "format": "epub"
+        }
+      ],
+      "notes": "Text-focused EPUB without optional illustrations, selected to bound transfer and image processing. Not a substitute for image-dependent editions."
+    },
+    {
+      "id": "pg-64317",
+      "title": "The Great Gatsby",
+      "authors": [
+        "Fitzgerald, F. Scott (Francis Scott), 1896-1940"
+      ],
+      "languages": [
+        "en"
+      ],
+      "type": "ebook",
+      "rationale": "Study narrative, perspective, social relationships, moral conflict, and the limits of a single viewpoint. Historical attitudes need critical context.",
+      "landing_url": "https://www.gutenberg.org/ebooks/64317",
+      "metadata_url": "https://gutenberg.pglaf.org/cache/epub/64317/pg64317.rdf",
+      "rights": "Project Gutenberg selection under its US-based permissions policy. Preserve the embedded license; jurisdiction and third-party material require separate review.",
+      "rights_url": "https://www.gutenberg.org/policy/permission.html",
+      "review_status": "not_applicable",
+      "assets": [
+        {
+          "name": "pg64317.epub",
+          "url": "https://gutenberg.pglaf.org/cache/epub/64317/pg64317.epub",
+          "format": "epub"
+        }
+      ],
+      "notes": "Text-focused EPUB without optional illustrations, selected to bound transfer and image processing. Not a substitute for image-dependent editions."
+    },
+    {
+      "id": "pg-145",
+      "title": "Middlemarch",
+      "authors": [
+        "Eliot, George, 1819-1880"
+      ],
+      "languages": [
+        "en"
+      ],
+      "type": "ebook",
+      "rationale": "Study narrative, perspective, social relationships, moral conflict, and the limits of a single viewpoint. Historical attitudes need critical context.",
+      "landing_url": "https://www.gutenberg.org/ebooks/145",
+      "metadata_url": "https://gutenberg.pglaf.org/cache/epub/145/pg145.rdf",
+      "rights": "Project Gutenberg selection under its US-based permissions policy. Preserve the embedded license; jurisdiction and third-party material require separate review.",
+      "rights_url": "https://www.gutenberg.org/policy/permission.html",
+      "review_status": "not_applicable",
+      "assets": [
+        {
+          "name": "pg145.epub",
+          "url": "https://gutenberg.pglaf.org/cache/epub/145/pg145.epub",
+          "format": "epub"
+        }
+      ],
+      "notes": "Text-focused EPUB without optional illustrations, selected to bound transfer and image processing. Not a substitute for image-dependent editions."
+    },
+    {
+      "id": "pg-1524",
+      "title": "Hamlet",
+      "authors": [
+        "Shakespeare, William, 1564-1616"
+      ],
+      "languages": [
+        "en"
+      ],
+      "type": "ebook",
+      "rationale": "Study narrative, perspective, social relationships, moral conflict, and the limits of a single viewpoint. Historical attitudes need critical context.",
+      "landing_url": "https://www.gutenberg.org/ebooks/1524",
+      "metadata_url": "https://gutenberg.pglaf.org/cache/epub/1524/pg1524.rdf",
+      "rights": "Project Gutenberg selection under its US-based permissions policy. Preserve the embedded license; jurisdiction and third-party material require separate review.",
+      "rights_url": "https://www.gutenberg.org/policy/permission.html",
+      "review_status": "not_applicable",
+      "assets": [
+        {
+          "name": "pg1524.epub",
+          "url": "https://gutenberg.pglaf.org/cache/epub/1524/pg1524.epub",
+          "format": "epub"
+        }
+      ],
+      "notes": "Text-focused EPUB without optional illustrations, selected to bound transfer and image processing. Not a substitute for image-dependent editions."
+    },
+    {
+      "id": "pg-1533",
+      "title": "Macbeth",
+      "authors": [
+        "Shakespeare, William, 1564-1616"
+      ],
+      "languages": [
+        "en"
+      ],
+      "type": "ebook",
+      "rationale": "Study narrative, perspective, social relationships, moral conflict, and the limits of a single viewpoint. Historical attitudes need critical context.",
+      "landing_url": "https://www.gutenberg.org/ebooks/1533",
+      "metadata_url": "https://gutenberg.pglaf.org/cache/epub/1533/pg1533.rdf",
+      "rights": "Project Gutenberg selection under its US-based permissions policy. Preserve the embedded license; jurisdiction and third-party material require separate review.",
+      "rights_url": "https://www.gutenberg.org/policy/permission.html",
+      "review_status": "not_applicable",
+      "assets": [
+        {
+          "name": "pg1533.epub",
+          "url": "https://gutenberg.pglaf.org/cache/epub/1533/pg1533.epub",
+          "format": "epub"
+        }
+      ],
+      "notes": "Text-focused EPUB without optional illustrations, selected to bound transfer and image processing. Not a substitute for image-dependent editions."
+    },
+    {
+      "id": "pg-35",
+      "title": "The Time Machine",
+      "authors": [
+        "Wells, H. G. (Herbert George), 1866-1946"
+      ],
+      "languages": [
+        "en"
+      ],
+      "type": "ebook",
+      "rationale": "Study narrative, perspective, social relationships, moral conflict, and the limits of a single viewpoint. Historical attitudes need critical context.",
+      "landing_url": "https://www.gutenberg.org/ebooks/35",
+      "metadata_url": "https://gutenberg.pglaf.org/cache/epub/35/pg35.rdf",
+      "rights": "Project Gutenberg selection under its US-based permissions policy. Preserve the embedded license; jurisdiction and third-party material require separate review.",
+      "rights_url": "https://www.gutenberg.org/policy/permission.html",
+      "review_status": "not_applicable",
+      "assets": [
+        {
+          "name": "pg35.epub",
+          "url": "https://gutenberg.pglaf.org/cache/epub/35/pg35.epub",
+          "format": "epub"
+        }
+      ],
+      "notes": "Text-focused EPUB without optional illustrations, selected to bound transfer and image processing. Not a substitute for image-dependent editions."
+    },
+    {
+      "id": "pg-97",
+      "title": "Flatland: A Romance of Many Dimensions",
+      "authors": [
+        "Abbott, Edwin Abbott, 1838-1926"
+      ],
+      "languages": [
+        "en"
+      ],
+      "type": "ebook",
+      "rationale": "Study narrative, perspective, social relationships, moral conflict, and the limits of a single viewpoint. Historical attitudes need critical context.",
+      "landing_url": "https://www.gutenberg.org/ebooks/97",
+      "metadata_url": "https://gutenberg.pglaf.org/cache/epub/97/pg97.rdf",
+      "rights": "Project Gutenberg selection under its US-based permissions policy. Preserve the embedded license; jurisdiction and third-party material require separate review.",
+      "rights_url": "https://www.gutenberg.org/policy/permission.html",
+      "review_status": "not_applicable",
+      "assets": [
+        {
+          "name": "pg97.epub",
+          "url": "https://gutenberg.pglaf.org/cache/epub/97/pg97.epub",
+          "format": "epub"
+        }
+      ],
+      "notes": "Text-focused EPUB without optional illustrations, selected to bound transfer and image processing. Not a substitute for image-dependent editions."
+    },
+    {
+      "id": "pg-1952",
+      "title": "The Yellow Wallpaper",
+      "authors": [
+        "Gilman, Charlotte Perkins, 1860-1935"
+      ],
+      "languages": [
+        "en"
+      ],
+      "type": "ebook",
+      "rationale": "Study narrative, perspective, social relationships, moral conflict, and the limits of a single viewpoint. Historical attitudes need critical context.",
+      "landing_url": "https://www.gutenberg.org/ebooks/1952",
+      "metadata_url": "https://gutenberg.pglaf.org/cache/epub/1952/pg1952.rdf",
+      "rights": "Project Gutenberg selection under its US-based permissions policy. Preserve the embedded license; jurisdiction and third-party material require separate review.",
+      "rights_url": "https://www.gutenberg.org/policy/permission.html",
+      "review_status": "not_applicable",
+      "assets": [
+        {
+          "name": "pg1952.epub",
+          "url": "https://gutenberg.pglaf.org/cache/epub/1952/pg1952.epub",
+          "format": "epub"
+        }
+      ],
+      "notes": "Text-focused EPUB without optional illustrations, selected to bound transfer and image processing. Not a substitute for image-dependent editions."
+    },
+    {
+      "id": "pg-1497",
+      "title": "The Republic",
+      "authors": [
+        "Plato, 428? BCE-348? BCE",
+        "Jowett, Benjamin, 1817-1893 [Translator]"
+      ],
+      "languages": [
+        "en"
+      ],
+      "type": "ebook",
+      "rationale": "Compare arguments about knowledge, ethical responsibility, self-examination, authority, and human flourishing. These competing positions are study material, not endorsed answers.",
+      "landing_url": "https://www.gutenberg.org/ebooks/1497",
+      "metadata_url": "https://gutenberg.pglaf.org/cache/epub/1497/pg1497.rdf",
+      "rights": "Project Gutenberg selection under its US-based permissions policy. Preserve the embedded license; jurisdiction and third-party material require separate review.",
+      "rights_url": "https://www.gutenberg.org/policy/permission.html",
+      "review_status": "not_applicable",
+      "assets": [
+        {
+          "name": "pg1497.epub",
+          "url": "https://gutenberg.pglaf.org/cache/epub/1497/pg1497.epub",
+          "format": "epub"
+        }
+      ],
+      "notes": "Text-focused EPUB without optional illustrations, selected to bound transfer and image processing. Not a substitute for image-dependent editions."
+    },
+    {
+      "id": "pg-1656",
+      "title": "Apology",
+      "authors": [
+        "Plato, 428? BCE-348? BCE",
+        "Jowett, Benjamin, 1817-1893 [Translator]"
+      ],
+      "languages": [
+        "en"
+      ],
+      "type": "ebook",
+      "rationale": "Compare arguments about knowledge, ethical responsibility, self-examination, authority, and human flourishing. These competing positions are study material, not endorsed answers.",
+      "landing_url": "https://www.gutenberg.org/ebooks/1656",
+      "metadata_url": "https://gutenberg.pglaf.org/cache/epub/1656/pg1656.rdf",
+      "rights": "Project Gutenberg selection under its US-based permissions policy. Preserve the embedded license; jurisdiction and third-party material require separate review.",
+      "rights_url": "https://www.gutenberg.org/policy/permission.html",
+      "review_status": "not_applicable",
+      "assets": [
+        {
+          "name": "pg1656.epub",
+          "url": "https://gutenberg.pglaf.org/cache/epub/1656/pg1656.epub",
+          "format": "epub"
+        }
+      ],
+      "notes": "Text-focused EPUB without optional illustrations, selected to bound transfer and image processing. Not a substitute for image-dependent editions."
+    },
+    {
+      "id": "pg-1672",
+      "title": "Gorgias",
+      "authors": [
+        "Plato, 428? BCE-348? BCE",
+        "Jowett, Benjamin, 1817-1893 [Translator]"
+      ],
+      "languages": [
+        "en"
+      ],
+      "type": "ebook",
+      "rationale": "Compare arguments about knowledge, ethical responsibility, self-examination, authority, and human flourishing. These competing positions are study material, not endorsed answers.",
+      "landing_url": "https://www.gutenberg.org/ebooks/1672",
+      "metadata_url": "https://gutenberg.pglaf.org/cache/epub/1672/pg1672.rdf",
+      "rights": "Project Gutenberg selection under its US-based permissions policy. Preserve the embedded license; jurisdiction and third-party material require separate review.",
+      "rights_url": "https://www.gutenberg.org/policy/permission.html",
+      "review_status": "not_applicable",
+      "assets": [
+        {
+          "name": "pg1672.epub",
+          "url": "https://gutenberg.pglaf.org/cache/epub/1672/pg1672.epub",
+          "format": "epub"
+        }
+      ],
+      "notes": "Text-focused EPUB without optional illustrations, selected to bound transfer and image processing. Not a substitute for image-dependent editions."
+    },
+    {
+      "id": "pg-3600",
+      "title": "Essays of Michel de Montaigne - Complete",
+      "authors": [
+        "Montaigne, Michel de, 1533-1592",
+        "Hazlitt, William Carew, 1834-1913 [Editor]",
+        "Cotton, Charles, 1630-1687 [Translator]"
+      ],
+      "languages": [
+        "en"
+      ],
+      "type": "ebook",
+      "rationale": "Compare arguments about knowledge, ethical responsibility, self-examination, authority, and human flourishing. These competing positions are study material, not endorsed answers.",
+      "landing_url": "https://www.gutenberg.org/ebooks/3600",
+      "metadata_url": "https://gutenberg.pglaf.org/cache/epub/3600/pg3600.rdf",
+      "rights": "Project Gutenberg selection under its US-based permissions policy. Preserve the embedded license; jurisdiction and third-party material require separate review.",
+      "rights_url": "https://www.gutenberg.org/policy/permission.html",
+      "review_status": "not_applicable",
+      "assets": [
+        {
+          "name": "pg3600.epub",
+          "url": "https://gutenberg.pglaf.org/cache/epub/3600/pg3600.epub",
+          "format": "epub"
+        }
+      ],
+      "notes": "Text-focused EPUB without optional illustrations, selected to bound transfer and image processing. Not a substitute for image-dependent editions."
+    },
+    {
+      "id": "pg-1998",
+      "title": "Thus Spake Zarathustra: A Book for All and None",
+      "authors": [
+        "Nietzsche, Friedrich Wilhelm, 1844-1900",
+        "Common, Thomas, 1850-1919 [Translator]"
+      ],
+      "languages": [
+        "en"
+      ],
+      "type": "ebook",
+      "rationale": "Compare arguments about knowledge, ethical responsibility, self-examination, authority, and human flourishing. These competing positions are study material, not endorsed answers.",
+      "landing_url": "https://www.gutenberg.org/ebooks/1998",
+      "metadata_url": "https://gutenberg.pglaf.org/cache/epub/1998/pg1998.rdf",
+      "rights": "Project Gutenberg selection under its US-based permissions policy. Preserve the embedded license; jurisdiction and third-party material require separate review.",
+      "rights_url": "https://www.gutenberg.org/policy/permission.html",
+      "review_status": "not_applicable",
+      "assets": [
+        {
+          "name": "pg1998.epub",
+          "url": "https://gutenberg.pglaf.org/cache/epub/1998/pg1998.epub",
+          "format": "epub"
+        }
+      ],
+      "notes": "Text-focused EPUB without optional illustrations, selected to bound transfer and image processing. Not a substitute for image-dependent editions."
+    },
+    {
+      "id": "pg-4363",
+      "title": "Beyond Good and Evil",
+      "authors": [
+        "Nietzsche, Friedrich Wilhelm, 1844-1900",
+        "Zimmern, Helen, 1846-1934 [Translator]"
+      ],
+      "languages": [
+        "en"
+      ],
+      "type": "ebook",
+      "rationale": "Compare arguments about knowledge, ethical responsibility, self-examination, authority, and human flourishing. These competing positions are study material, not endorsed answers.",
+      "landing_url": "https://www.gutenberg.org/ebooks/4363",
+      "metadata_url": "https://gutenberg.pglaf.org/cache/epub/4363/pg4363.rdf",
+      "rights": "Project Gutenberg selection under its US-based permissions policy. Preserve the embedded license; jurisdiction and third-party material require separate review.",
+      "rights_url": "https://www.gutenberg.org/policy/permission.html",
+      "review_status": "not_applicable",
+      "assets": [
+        {
+          "name": "pg4363.epub",
+          "url": "https://gutenberg.pglaf.org/cache/epub/4363/pg4363.epub",
+          "format": "epub"
+        }
+      ],
+      "notes": "Text-focused EPUB without optional illustrations, selected to bound transfer and image processing. Not a substitute for image-dependent editions."
+    },
+    {
+      "id": "pg-4280",
+      "title": "The Critique of Pure Reason",
+      "authors": [
+        "Kant, Immanuel, 1724-1804",
+        "Meiklejohn, J. M. D. (John Miller Dow), 1830-1902 [Translator]"
+      ],
+      "languages": [
+        "en"
+      ],
+      "type": "ebook",
+      "rationale": "Compare arguments about knowledge, ethical responsibility, self-examination, authority, and human flourishing. These competing positions are study material, not endorsed answers.",
+      "landing_url": "https://www.gutenberg.org/ebooks/4280",
+      "metadata_url": "https://gutenberg.pglaf.org/cache/epub/4280/pg4280.rdf",
+      "rights": "Project Gutenberg selection under its US-based permissions policy. Preserve the embedded license; jurisdiction and third-party material require separate review.",
+      "rights_url": "https://www.gutenberg.org/policy/permission.html",
+      "review_status": "not_applicable",
+      "assets": [
+        {
+          "name": "pg4280.epub",
+          "url": "https://gutenberg.pglaf.org/cache/epub/4280/pg4280.epub",
+          "format": "epub"
+        }
+      ],
+      "notes": "Text-focused EPUB without optional illustrations, selected to bound transfer and image processing. Not a substitute for image-dependent editions."
+    },
+    {
+      "id": "pg-59",
+      "title": "Discourse on the Method of Rightly Conducting One's Reason and of Seeking Truth in the Sciences",
+      "authors": [
+        "Descartes, René, 1596-1650",
+        "Veitch, John, 1829-1894 [Translator]"
+      ],
+      "languages": [
+        "en"
+      ],
+      "type": "ebook",
+      "rationale": "Compare arguments about knowledge, ethical responsibility, self-examination, authority, and human flourishing. These competing positions are study material, not endorsed answers.",
+      "landing_url": "https://www.gutenberg.org/ebooks/59",
+      "metadata_url": "https://gutenberg.pglaf.org/cache/epub/59/pg59.rdf",
+      "rights": "Project Gutenberg selection under its US-based permissions policy. Preserve the embedded license; jurisdiction and third-party material require separate review.",
+      "rights_url": "https://www.gutenberg.org/policy/permission.html",
+      "review_status": "not_applicable",
+      "assets": [
+        {
+          "name": "pg59.epub",
+          "url": "https://gutenberg.pglaf.org/cache/epub/59/pg59.epub",
+          "format": "epub"
+        }
+      ],
+      "notes": "Text-focused EPUB without optional illustrations, selected to bound transfer and image processing. Not a substitute for image-dependent editions."
+    },
+    {
+      "id": "pg-2680",
+      "title": "Meditations",
+      "authors": [
+        "Marcus Aurelius, Emperor of Rome, 121-180"
+      ],
+      "languages": [
+        "en"
+      ],
+      "type": "ebook",
+      "rationale": "Compare arguments about knowledge, ethical responsibility, self-examination, authority, and human flourishing. These competing positions are study material, not endorsed answers.",
+      "landing_url": "https://www.gutenberg.org/ebooks/2680",
+      "metadata_url": "https://gutenberg.pglaf.org/cache/epub/2680/pg2680.rdf",
+      "rights": "Project Gutenberg selection under its US-based permissions policy. Preserve the embedded license; jurisdiction and third-party material require separate review.",
+      "rights_url": "https://www.gutenberg.org/policy/permission.html",
+      "review_status": "not_applicable",
+      "assets": [
+        {
+          "name": "pg2680.epub",
+          "url": "https://gutenberg.pglaf.org/cache/epub/2680/pg2680.epub",
+          "format": "epub"
+        }
+      ],
+      "notes": "Text-focused EPUB without optional illustrations, selected to bound transfer and image processing. Not a substitute for image-dependent editions."
+    },
+    {
+      "id": "pg-132",
+      "title": "The Art of War",
+      "authors": [
+        "Sunzi, active 6th century B.C.",
+        "Giles, Lionel, 1875-1958 [Translator]"
+      ],
+      "languages": [
+        "en"
+      ],
+      "type": "ebook",
+      "rationale": "Compare arguments about knowledge, ethical responsibility, self-examination, authority, and human flourishing. These competing positions are study material, not endorsed answers.",
+      "landing_url": "https://www.gutenberg.org/ebooks/132",
+      "metadata_url": "https://gutenberg.pglaf.org/cache/epub/132/pg132.rdf",
+      "rights": "Project Gutenberg selection under its US-based permissions policy. Preserve the embedded license; jurisdiction and third-party material require separate review.",
+      "rights_url": "https://www.gutenberg.org/policy/permission.html",
+      "review_status": "not_applicable",
+      "assets": [
+        {
+          "name": "pg132.epub",
+          "url": "https://gutenberg.pglaf.org/cache/epub/132/pg132.epub",
+          "format": "epub"
+        }
+      ],
+      "notes": "Text-focused EPUB without optional illustrations, selected to bound transfer and image processing. Not a substitute for image-dependent editions."
+    },
+    {
+      "id": "pg-7370",
+      "title": "Second Treatise of Government",
+      "authors": [
+        "Locke, John, 1632-1704"
+      ],
+      "languages": [
+        "en"
+      ],
+      "type": "ebook",
+      "rationale": "Compare arguments about knowledge, ethical responsibility, self-examination, authority, and human flourishing. These competing positions are study material, not endorsed answers.",
+      "landing_url": "https://www.gutenberg.org/ebooks/7370",
+      "metadata_url": "https://gutenberg.pglaf.org/cache/epub/7370/pg7370.rdf",
+      "rights": "Project Gutenberg selection under its US-based permissions policy. Preserve the embedded license; jurisdiction and third-party material require separate review.",
+      "rights_url": "https://www.gutenberg.org/policy/permission.html",
+      "review_status": "not_applicable",
+      "assets": [
+        {
+          "name": "pg7370.epub",
+          "url": "https://gutenberg.pglaf.org/cache/epub/7370/pg7370.epub",
+          "format": "epub"
+        }
+      ],
+      "notes": "Text-focused EPUB without optional illustrations, selected to bound transfer and image processing. Not a substitute for image-dependent editions."
+    },
+    {
+      "id": "pg-205",
+      "title": "Walden, and On The Duty Of Civil Disobedience",
+      "authors": [
+        "Thoreau, Henry David, 1817-1862"
+      ],
+      "languages": [
+        "en"
+      ],
+      "type": "ebook",
+      "rationale": "Compare arguments about knowledge, ethical responsibility, self-examination, authority, and human flourishing. These competing positions are study material, not endorsed answers.",
+      "landing_url": "https://www.gutenberg.org/ebooks/205",
+      "metadata_url": "https://gutenberg.pglaf.org/cache/epub/205/pg205.rdf",
+      "rights": "Project Gutenberg selection under its US-based permissions policy. Preserve the embedded license; jurisdiction and third-party material require separate review.",
+      "rights_url": "https://www.gutenberg.org/policy/permission.html",
+      "review_status": "not_applicable",
+      "assets": [
+        {
+          "name": "pg205.epub",
+          "url": "https://gutenberg.pglaf.org/cache/epub/205/pg205.epub",
+          "format": "epub"
+        }
+      ],
+      "notes": "Text-focused EPUB without optional illustrations, selected to bound transfer and image processing. Not a substitute for image-dependent editions."
+    },
+    {
+      "id": "pg-20203",
+      "title": "Autobiography of Benjamin Franklin",
+      "authors": [
+        "Franklin, Benjamin, 1706-1790",
+        "Pine, Frank Woodworth, 1869- [Editor]",
+        "Smith, E. Boyd (Elmer Boyd), 1860-1943 [Illustrator]"
+      ],
+      "languages": [
+        "en"
+      ],
+      "type": "ebook",
+      "rationale": "Compare arguments about knowledge, ethical responsibility, self-examination, authority, and human flourishing. These competing positions are study material, not endorsed answers.",
+      "landing_url": "https://www.gutenberg.org/ebooks/20203",
+      "metadata_url": "https://gutenberg.pglaf.org/cache/epub/20203/pg20203.rdf",
+      "rights": "Project Gutenberg selection under its US-based permissions policy. Preserve the embedded license; jurisdiction and third-party material require separate review.",
+      "rights_url": "https://www.gutenberg.org/policy/permission.html",
+      "review_status": "not_applicable",
+      "assets": [
+        {
+          "name": "pg20203.epub",
+          "url": "https://gutenberg.pglaf.org/cache/epub/20203/pg20203.epub",
+          "format": "epub"
+        }
+      ],
+      "notes": "Text-focused EPUB without optional illustrations, selected to bound transfer and image processing. Not a substitute for image-dependent editions."
+    },
+    {
+      "id": "pg-1080",
+      "title": "A Modest Proposal For preventing the children of poor people in Ireland, from being a burden on their parents or country, and for making them beneficial to the publick",
+      "authors": [
+        "Swift, Jonathan, 1667-1745"
+      ],
+      "languages": [
+        "en"
+      ],
+      "type": "ebook",
+      "rationale": "Compare arguments about knowledge, ethical responsibility, self-examination, authority, and human flourishing. These competing positions are study material, not endorsed answers.",
+      "landing_url": "https://www.gutenberg.org/ebooks/1080",
+      "metadata_url": "https://gutenberg.pglaf.org/cache/epub/1080/pg1080.rdf",
+      "rights": "Project Gutenberg selection under its US-based permissions policy. Preserve the embedded license; jurisdiction and third-party material require separate review.",
+      "rights_url": "https://www.gutenberg.org/policy/permission.html",
+      "review_status": "not_applicable",
+      "assets": [
+        {
+          "name": "pg1080.epub",
+          "url": "https://gutenberg.pglaf.org/cache/epub/1080/pg1080.epub",
+          "format": "epub"
+        }
+      ],
+      "notes": "Text-focused EPUB without optional illustrations, selected to bound transfer and image processing. Not a substitute for image-dependent editions."
+    },
+    {
+      "id": "pg-216",
+      "title": "The Tao Teh King, or the Tao and its Characteristics",
+      "authors": [
+        "Laozi",
+        "Legge, James, 1815-1897 [Translator]"
+      ],
+      "languages": [
+        "en"
+      ],
+      "type": "ebook",
+      "rationale": "Compare arguments about knowledge, ethical responsibility, self-examination, authority, and human flourishing. These competing positions are study material, not endorsed answers.",
+      "landing_url": "https://www.gutenberg.org/ebooks/216",
+      "metadata_url": "https://gutenberg.pglaf.org/cache/epub/216/pg216.rdf",
+      "rights": "Project Gutenberg selection under its US-based permissions policy. Preserve the embedded license; jurisdiction and third-party material require separate review.",
+      "rights_url": "https://www.gutenberg.org/policy/permission.html",
+      "review_status": "not_applicable",
+      "assets": [
+        {
+          "name": "pg216.epub",
+          "url": "https://gutenberg.pglaf.org/cache/epub/216/pg216.epub",
+          "format": "epub"
+        }
+      ],
+      "notes": "Text-focused EPUB without optional illustrations, selected to bound transfer and image processing. Not a substitute for image-dependent editions."
+    },
+    {
+      "id": "pg-3283",
+      "title": "The Upanishads",
+      "authors": [
+        "Paramananda, Swami, 1884-1940 [Translator]"
+      ],
+      "languages": [
+        "en"
+      ],
+      "type": "ebook",
+      "rationale": "Compare arguments about knowledge, ethical responsibility, self-examination, authority, and human flourishing. These competing positions are study material, not endorsed answers.",
+      "landing_url": "https://www.gutenberg.org/ebooks/3283",
+      "metadata_url": "https://gutenberg.pglaf.org/cache/epub/3283/pg3283.rdf",
+      "rights": "Project Gutenberg selection under its US-based permissions policy. Preserve the embedded license; jurisdiction and third-party material require separate review.",
+      "rights_url": "https://www.gutenberg.org/policy/permission.html",
+      "review_status": "not_applicable",
+      "assets": [
+        {
+          "name": "pg3283.epub",
+          "url": "https://gutenberg.pglaf.org/cache/epub/3283/pg3283.epub",
+          "format": "epub"
+        }
+      ],
+      "notes": "Text-focused EPUB without optional illustrations, selected to bound transfer and image processing. Not a substitute for image-dependent editions."
+    },
+    {
+      "id": "pg-3330",
+      "title": "The Analects of Confucius (from the Chinese Classics)",
+      "authors": [
+        "Confucius, 552 BCE-480 BCE",
+        "Legge, James, 1815-1897 [Translator]"
+      ],
+      "languages": [
+        "en"
+      ],
+      "type": "ebook",
+      "rationale": "Compare arguments about knowledge, ethical responsibility, self-examination, authority, and human flourishing. These competing positions are study material, not endorsed answers.",
+      "landing_url": "https://www.gutenberg.org/ebooks/3330",
+      "metadata_url": "https://gutenberg.pglaf.org/cache/epub/3330/pg3330.rdf",
+      "rights": "Project Gutenberg selection under its US-based permissions policy. Preserve the embedded license; jurisdiction and third-party material require separate review.",
+      "rights_url": "https://www.gutenberg.org/policy/permission.html",
+      "review_status": "not_applicable",
+      "assets": [
+        {
+          "name": "pg3330.epub",
+          "url": "https://gutenberg.pglaf.org/cache/epub/3330/pg3330.epub",
+          "format": "epub"
+        }
+      ],
+      "notes": "Text-focused EPUB without optional illustrations, selected to bound transfer and image processing. Not a substitute for image-dependent editions."
+    },
+    {
+      "id": "pg-3420",
+      "title": "A Vindication of the Rights of Woman With Strictures on Political and Moral Subjects",
+      "authors": [
+        "Wollstonecraft, Mary, 1759-1797"
+      ],
+      "languages": [
+        "en"
+      ],
+      "type": "ebook",
+      "rationale": "Compare arguments about knowledge, ethical responsibility, self-examination, authority, and human flourishing. These competing positions are study material, not endorsed answers.",
+      "landing_url": "https://www.gutenberg.org/ebooks/3420",
+      "metadata_url": "https://gutenberg.pglaf.org/cache/epub/3420/pg3420.rdf",
+      "rights": "Project Gutenberg selection under its US-based permissions policy. Preserve the embedded license; jurisdiction and third-party material require separate review.",
+      "rights_url": "https://www.gutenberg.org/policy/permission.html",
+      "review_status": "not_applicable",
+      "assets": [
+        {
+          "name": "pg3420.epub",
+          "url": "https://gutenberg.pglaf.org/cache/epub/3420/pg3420.epub",
+          "format": "epub"
+        }
+      ],
+      "notes": "Text-focused EPUB without optional illustrations, selected to bound transfer and image processing. Not a substitute for image-dependent editions."
+    },
+    {
+      "id": "pg-1228",
+      "title": "On the Origin of Species By Means of Natural Selection Or, the Preservation of Favoured Races in the Struggle for Life",
+      "authors": [
+        "Darwin, Charles, 1809-1882"
+      ],
+      "languages": [
+        "en"
+      ],
+      "type": "ebook",
+      "rationale": "Connect scientific and mathematical reasoning with testimony, freedom, social institutions, and communication. Historical science is not current technical or medical guidance.",
+      "landing_url": "https://www.gutenberg.org/ebooks/1228",
+      "metadata_url": "https://gutenberg.pglaf.org/cache/epub/1228/pg1228.rdf",
+      "rights": "Project Gutenberg selection under its US-based permissions policy. Preserve the embedded license; jurisdiction and third-party material require separate review.",
+      "rights_url": "https://www.gutenberg.org/policy/permission.html",
+      "review_status": "not_applicable",
+      "assets": [
+        {
+          "name": "pg1228.epub",
+          "url": "https://gutenberg.pglaf.org/cache/epub/1228/pg1228.epub",
+          "format": "epub"
+        }
+      ],
+      "notes": "Text-focused EPUB without optional illustrations, selected to bound transfer and image processing. Not a substitute for image-dependent editions."
+    },
+    {
+      "id": "pg-3300",
+      "title": "An Inquiry into the Nature and Causes of the Wealth of Nations",
+      "authors": [
+        "Smith, Adam, 1723-1790"
+      ],
+      "languages": [
+        "en"
+      ],
+      "type": "ebook",
+      "rationale": "Connect scientific and mathematical reasoning with testimony, freedom, social institutions, and communication. Historical science is not current technical or medical guidance.",
+      "landing_url": "https://www.gutenberg.org/ebooks/3300",
+      "metadata_url": "https://gutenberg.pglaf.org/cache/epub/3300/pg3300.rdf",
+      "rights": "Project Gutenberg selection under its US-based permissions policy. Preserve the embedded license; jurisdiction and third-party material require separate review.",
+      "rights_url": "https://www.gutenberg.org/policy/permission.html",
+      "review_status": "not_applicable",
+      "assets": [
+        {
+          "name": "pg3300.epub",
+          "url": "https://gutenberg.pglaf.org/cache/epub/3300/pg3300.epub",
+          "format": "epub"
+        }
+      ],
+      "notes": "Text-focused EPUB without optional illustrations, selected to bound transfer and image processing. Not a substitute for image-dependent editions."
+    },
+    {
+      "id": "pg-23",
+      "title": "Narrative of the Life of Frederick Douglass, an American Slave",
+      "authors": [
+        "Douglass, Frederick, 1818-1895"
+      ],
+      "languages": [
+        "en"
+      ],
+      "type": "ebook",
+      "rationale": "Connect scientific and mathematical reasoning with testimony, freedom, social institutions, and communication. Historical science is not current technical or medical guidance.",
+      "landing_url": "https://www.gutenberg.org/ebooks/23",
+      "metadata_url": "https://gutenberg.pglaf.org/cache/epub/23/pg23.rdf",
+      "rights": "Project Gutenberg selection under its US-based permissions policy. Preserve the embedded license; jurisdiction and third-party material require separate review.",
+      "rights_url": "https://www.gutenberg.org/policy/permission.html",
+      "review_status": "not_applicable",
+      "assets": [
+        {
+          "name": "pg23.epub",
+          "url": "https://gutenberg.pglaf.org/cache/epub/23/pg23.epub",
+          "format": "epub"
+        }
+      ],
+      "notes": "Text-focused EPUB without optional illustrations, selected to bound transfer and image processing. Not a substitute for image-dependent editions."
+    },
+    {
+      "id": "pg-408",
+      "title": "The Souls of Black Folk",
+      "authors": [
+        "Du Bois, W. E. B. (William Edward Burghardt), 1868-1963"
+      ],
+      "languages": [
+        "en"
+      ],
+      "type": "ebook",
+      "rationale": "Connect scientific and mathematical reasoning with testimony, freedom, social institutions, and communication. Historical science is not current technical or medical guidance.",
+      "landing_url": "https://www.gutenberg.org/ebooks/408",
+      "metadata_url": "https://gutenberg.pglaf.org/cache/epub/408/pg408.rdf",
+      "rights": "Project Gutenberg selection under its US-based permissions policy. Preserve the embedded license; jurisdiction and third-party material require separate review.",
+      "rights_url": "https://www.gutenberg.org/policy/permission.html",
+      "review_status": "not_applicable",
+      "assets": [
+        {
+          "name": "pg408.epub",
+          "url": "https://gutenberg.pglaf.org/cache/epub/408/pg408.epub",
+          "format": "epub"
+        }
+      ],
+      "notes": "Text-focused EPUB without optional illustrations, selected to bound transfer and image processing. Not a substitute for image-dependent editions."
+    },
+    {
+      "id": "pg-11030",
+      "title": "Incidents in the Life of a Slave Girl, Written by Herself",
+      "authors": [
+        "Jacobs, Harriet A. (Harriet Ann), 1813-1897",
+        "Child, Lydia Maria, 1802-1880 [Editor]"
+      ],
+      "languages": [
+        "en"
+      ],
+      "type": "ebook",
+      "rationale": "Connect scientific and mathematical reasoning with testimony, freedom, social institutions, and communication. Historical science is not current technical or medical guidance.",
+      "landing_url": "https://www.gutenberg.org/ebooks/11030",
+      "metadata_url": "https://gutenberg.pglaf.org/cache/epub/11030/pg11030.rdf",
+      "rights": "Project Gutenberg selection under its US-based permissions policy. Preserve the embedded license; jurisdiction and third-party material require separate review.",
+      "rights_url": "https://www.gutenberg.org/policy/permission.html",
+      "review_status": "not_applicable",
+      "assets": [
+        {
+          "name": "pg11030.epub",
+          "url": "https://gutenberg.pglaf.org/cache/epub/11030/pg11030.epub",
+          "format": "epub"
+        }
+      ],
+      "notes": "Text-focused EPUB without optional illustrations, selected to bound transfer and image processing. Not a substitute for image-dependent editions."
+    },
+    {
+      "id": "pg-15399",
+      "title": "The Interesting Narrative of the Life of Olaudah Equiano, Or Gustavus Vassa, The African Written By Himself",
+      "authors": [
+        "Equiano, Olaudah, 1745-1797"
+      ],
+      "languages": [
+        "en"
+      ],
+      "type": "ebook",
+      "rationale": "Connect scientific and mathematical reasoning with testimony, freedom, social institutions, and communication. Historical science is not current technical or medical guidance.",
+      "landing_url": "https://www.gutenberg.org/ebooks/15399",
+      "metadata_url": "https://gutenberg.pglaf.org/cache/epub/15399/pg15399.rdf",
+      "rights": "Project Gutenberg selection under its US-based permissions policy. Preserve the embedded license; jurisdiction and third-party material require separate review.",
+      "rights_url": "https://www.gutenberg.org/policy/permission.html",
+      "review_status": "not_applicable",
+      "assets": [
+        {
+          "name": "pg15399.epub",
+          "url": "https://gutenberg.pglaf.org/cache/epub/15399/pg15399.epub",
+          "format": "epub"
+        }
+      ],
+      "notes": "Text-focused EPUB without optional illustrations, selected to bound transfer and image processing. Not a substitute for image-dependent editions."
+    },
+    {
+      "id": "pg-7164",
+      "title": "Gitanjali",
+      "authors": [
+        "Tagore, Rabindranath, 1861-1941",
+        "Yeats, W. B. (William Butler), 1865-1939 [Author of introduction, etc.]"
+      ],
+      "languages": [
+        "en"
+      ],
+      "type": "ebook",
+      "rationale": "Connect scientific and mathematical reasoning with testimony, freedom, social institutions, and communication. Historical science is not current technical or medical guidance.",
+      "landing_url": "https://www.gutenberg.org/ebooks/7164",
+      "metadata_url": "https://gutenberg.pglaf.org/cache/epub/7164/pg7164.rdf",
+      "rights": "Project Gutenberg selection under its US-based permissions policy. Preserve the embedded license; jurisdiction and third-party material require separate review.",
+      "rights_url": "https://www.gutenberg.org/policy/permission.html",
+      "review_status": "not_applicable",
+      "assets": [
+        {
+          "name": "pg7164.epub",
+          "url": "https://gutenberg.pglaf.org/cache/epub/7164/pg7164.epub",
+          "format": "epub"
+        }
+      ],
+      "notes": "Text-focused EPUB without optional illustrations, selected to bound transfer and image processing. Not a substitute for image-dependent editions."
+    },
+    {
+      "id": "pg-5001",
+      "title": "Relativity : the Special and General Theory",
+      "authors": [
+        "Einstein, Albert, 1879-1955",
+        "Lawson, Robert W. (Robert William) [Translator]"
+      ],
+      "languages": [
+        "en"
+      ],
+      "type": "ebook",
+      "rationale": "Connect scientific and mathematical reasoning with testimony, freedom, social institutions, and communication. Historical science is not current technical or medical guidance.",
+      "landing_url": "https://www.gutenberg.org/ebooks/5001",
+      "metadata_url": "https://gutenberg.pglaf.org/cache/epub/5001/pg5001.rdf",
+      "rights": "Project Gutenberg selection under its US-based permissions policy. Preserve the embedded license; jurisdiction and third-party material require separate review.",
+      "rights_url": "https://www.gutenberg.org/policy/permission.html",
+      "review_status": "not_applicable",
+      "assets": [
+        {
+          "name": "pg5001.epub",
+          "url": "https://gutenberg.pglaf.org/cache/epub/5001/pg5001.epub",
+          "format": "epub"
+        }
+      ],
+      "notes": "Text-focused EPUB without optional illustrations, selected to bound transfer and image processing. Not a substitute for image-dependent editions."
+    },
+    {
+      "id": "pg-41654",
+      "title": "Introduction to Mathematical Philosophy",
+      "authors": [
+        "Russell, Bertrand, 1872-1970"
+      ],
+      "languages": [
+        "en"
+      ],
+      "type": "ebook",
+      "rationale": "Connect scientific and mathematical reasoning with testimony, freedom, social institutions, and communication. Historical science is not current technical or medical guidance.",
+      "landing_url": "https://www.gutenberg.org/ebooks/41654",
+      "metadata_url": "https://gutenberg.pglaf.org/cache/epub/41654/pg41654.rdf",
+      "rights": "Project Gutenberg selection under its US-based permissions policy. Preserve the embedded license; jurisdiction and third-party material require separate review.",
+      "rights_url": "https://www.gutenberg.org/policy/permission.html",
+      "review_status": "not_applicable",
+      "assets": [
+        {
+          "name": "pg41654.epub",
+          "url": "https://gutenberg.pglaf.org/cache/epub/41654/pg41654.epub",
+          "format": "epub"
+        }
+      ],
+      "notes": "Text-focused EPUB without optional illustrations, selected to bound transfer and image processing. Not a substitute for image-dependent editions."
+    },
+    {
+      "id": "pg-21",
+      "title": "Three hundred Aesop’s fables Translated by George Fyler Townsend",
+      "authors": [
+        "Aesop, 621? BCE-565? BCE",
+        "Townsend, George Fyler, 1814-1900 [Translator]"
+      ],
+      "languages": [
+        "en"
+      ],
+      "type": "ebook",
+      "rationale": "Connect scientific and mathematical reasoning with testimony, freedom, social institutions, and communication. Historical science is not current technical or medical guidance.",
+      "landing_url": "https://www.gutenberg.org/ebooks/21",
+      "metadata_url": "https://gutenberg.pglaf.org/cache/epub/21/pg21.rdf",
+      "rights": "Project Gutenberg selection under its US-based permissions policy. Preserve the embedded license; jurisdiction and third-party material require separate review.",
+      "rights_url": "https://www.gutenberg.org/policy/permission.html",
+      "review_status": "not_applicable",
+      "assets": [
+        {
+          "name": "pg21.epub",
+          "url": "https://gutenberg.pglaf.org/cache/epub/21/pg21.epub",
+          "format": "epub"
+        }
+      ],
+      "notes": "Text-focused EPUB without optional illustrations, selected to bound transfer and image processing. Not a substitute for image-dependent editions."
+    },
+    {
+      "id": "pg-4650",
+      "title": "Candide, ou l'optimisme",
+      "authors": [
+        "Voltaire, 1694-1778"
+      ],
+      "languages": [
+        "fr"
+      ],
+      "type": "ebook",
+      "rationale": "Read beyond English and compare cultural perspectives, language, narrative form, and translation choices. Language availability is not a claim to represent an entire culture.",
+      "landing_url": "https://www.gutenberg.org/ebooks/4650",
+      "metadata_url": "https://gutenberg.pglaf.org/cache/epub/4650/pg4650.rdf",
+      "rights": "Project Gutenberg selection under its US-based permissions policy. Preserve the embedded license; jurisdiction and third-party material require separate review.",
+      "rights_url": "https://www.gutenberg.org/policy/permission.html",
+      "review_status": "not_applicable",
+      "assets": [
+        {
+          "name": "pg4650.epub",
+          "url": "https://gutenberg.pglaf.org/cache/epub/4650/pg4650.epub",
+          "format": "epub"
+        }
+      ],
+      "notes": "Text-focused EPUB without optional illustrations, selected to bound transfer and image processing. Not a substitute for image-dependent editions."
+    },
+    {
+      "id": "pg-5097",
+      "title": "Vingt mille Lieues Sous Les Mers - Complete",
+      "authors": [
+        "Verne, Jules, 1828-1905"
+      ],
+      "languages": [
+        "fr"
+      ],
+      "type": "ebook",
+      "rationale": "Read beyond English and compare cultural perspectives, language, narrative form, and translation choices. Language availability is not a claim to represent an entire culture.",
+      "landing_url": "https://www.gutenberg.org/ebooks/5097",
+      "metadata_url": "https://gutenberg.pglaf.org/cache/epub/5097/pg5097.rdf",
+      "rights": "Project Gutenberg selection under its US-based permissions policy. Preserve the embedded license; jurisdiction and third-party material require separate review.",
+      "rights_url": "https://www.gutenberg.org/policy/permission.html",
+      "review_status": "not_applicable",
+      "assets": [
+        {
+          "name": "pg5097.epub",
+          "url": "https://gutenberg.pglaf.org/cache/epub/5097/pg5097.epub",
+          "format": "epub"
+        }
+      ],
+      "notes": "Text-focused EPUB without optional illustrations, selected to bound transfer and image processing. Not a substitute for image-dependent editions."
+    },
+    {
+      "id": "pg-6099",
+      "title": "Les Fleurs du Mal",
+      "authors": [
+        "Baudelaire, Charles, 1821-1867"
+      ],
+      "languages": [
+        "fr"
+      ],
+      "type": "ebook",
+      "rationale": "Read beyond English and compare cultural perspectives, language, narrative form, and translation choices. Language availability is not a claim to represent an entire culture.",
+      "landing_url": "https://www.gutenberg.org/ebooks/6099",
+      "metadata_url": "https://gutenberg.pglaf.org/cache/epub/6099/pg6099.rdf",
+      "rights": "Project Gutenberg selection under its US-based permissions policy. Preserve the embedded license; jurisdiction and third-party material require separate review.",
+      "rights_url": "https://www.gutenberg.org/policy/permission.html",
+      "review_status": "not_applicable",
+      "assets": [
+        {
+          "name": "pg6099.epub",
+          "url": "https://gutenberg.pglaf.org/cache/epub/6099/pg6099.epub",
+          "format": "epub"
+        }
+      ],
+      "notes": "Text-focused EPUB without optional illustrations, selected to bound transfer and image processing. Not a substitute for image-dependent editions."
+    },
+    {
+      "id": "pg-14155",
+      "title": "Madame Bovary",
+      "authors": [
+        "Flaubert, Gustave, 1821-1880"
+      ],
+      "languages": [
+        "fr"
+      ],
+      "type": "ebook",
+      "rationale": "Read beyond English and compare cultural perspectives, language, narrative form, and translation choices. Language availability is not a claim to represent an entire culture.",
+      "landing_url": "https://www.gutenberg.org/ebooks/14155",
+      "metadata_url": "https://gutenberg.pglaf.org/cache/epub/14155/pg14155.rdf",
+      "rights": "Project Gutenberg selection under its US-based permissions policy. Preserve the embedded license; jurisdiction and third-party material require separate review.",
+      "rights_url": "https://www.gutenberg.org/policy/permission.html",
+      "review_status": "not_applicable",
+      "assets": [
+        {
+          "name": "pg14155.epub",
+          "url": "https://gutenberg.pglaf.org/cache/epub/14155/pg14155.epub",
+          "format": "epub"
+        }
+      ],
+      "notes": "Text-focused EPUB without optional illustrations, selected to bound transfer and image processing. Not a substitute for image-dependent editions."
+    },
+    {
+      "id": "pg-1256",
+      "title": "Cyrano de Bergerac",
+      "authors": [
+        "Rostand, Edmond, 1868-1918"
+      ],
+      "languages": [
+        "fr"
+      ],
+      "type": "ebook",
+      "rationale": "Read beyond English and compare cultural perspectives, language, narrative form, and translation choices. Language availability is not a claim to represent an entire culture.",
+      "landing_url": "https://www.gutenberg.org/ebooks/1256",
+      "metadata_url": "https://gutenberg.pglaf.org/cache/epub/1256/pg1256.rdf",
+      "rights": "Project Gutenberg selection under its US-based permissions policy. Preserve the embedded license; jurisdiction and third-party material require separate review.",
+      "rights_url": "https://www.gutenberg.org/policy/permission.html",
+      "review_status": "not_applicable",
+      "assets": [
+        {
+          "name": "pg1256.epub",
+          "url": "https://gutenberg.pglaf.org/cache/epub/1256/pg1256.epub",
+          "format": "epub"
+        }
+      ],
+      "notes": "Text-focused EPUB without optional illustrations, selected to bound transfer and image processing. Not a substitute for image-dependent editions."
+    },
+    {
+      "id": "pg-2229",
+      "title": "Faust: Der Tragödie erster Teil",
+      "authors": [
+        "Goethe, Johann Wolfgang von, 1749-1832"
+      ],
+      "languages": [
+        "de"
+      ],
+      "type": "ebook",
+      "rationale": "Read beyond English and compare cultural perspectives, language, narrative form, and translation choices. Language availability is not a claim to represent an entire culture.",
+      "landing_url": "https://www.gutenberg.org/ebooks/2229",
+      "metadata_url": "https://gutenberg.pglaf.org/cache/epub/2229/pg2229.rdf",
+      "rights": "Project Gutenberg selection under its US-based permissions policy. Preserve the embedded license; jurisdiction and third-party material require separate review.",
+      "rights_url": "https://www.gutenberg.org/policy/permission.html",
+      "review_status": "not_applicable",
+      "assets": [
+        {
+          "name": "pg2229.epub",
+          "url": "https://gutenberg.pglaf.org/cache/epub/2229/pg2229.epub",
+          "format": "epub"
+        }
+      ],
+      "notes": "Text-focused EPUB without optional illustrations, selected to bound transfer and image processing. Not a substitute for image-dependent editions."
+    },
+    {
+      "id": "pg-2230",
+      "title": "Faust: Der Tragödie zweiter Teil",
+      "authors": [
+        "Goethe, Johann Wolfgang von, 1749-1832"
+      ],
+      "languages": [
+        "de"
+      ],
+      "type": "ebook",
+      "rationale": "Read beyond English and compare cultural perspectives, language, narrative form, and translation choices. Language availability is not a claim to represent an entire culture.",
+      "landing_url": "https://www.gutenberg.org/ebooks/2230",
+      "metadata_url": "https://gutenberg.pglaf.org/cache/epub/2230/pg2230.rdf",
+      "rights": "Project Gutenberg selection under its US-based permissions policy. Preserve the embedded license; jurisdiction and third-party material require separate review.",
+      "rights_url": "https://www.gutenberg.org/policy/permission.html",
+      "review_status": "not_applicable",
+      "assets": [
+        {
+          "name": "pg2230.epub",
+          "url": "https://gutenberg.pglaf.org/cache/epub/2230/pg2230.epub",
+          "format": "epub"
+        }
+      ],
+      "notes": "Text-focused EPUB without optional illustrations, selected to bound transfer and image processing. Not a substitute for image-dependent editions."
+    },
+    {
+      "id": "pg-2499",
+      "title": "Siddhartha: eine indische Dichtung",
+      "authors": [
+        "Hesse, Hermann, 1877-1962"
+      ],
+      "languages": [
+        "de"
+      ],
+      "type": "ebook",
+      "rationale": "Read beyond English and compare cultural perspectives, language, narrative form, and translation choices. Language availability is not a claim to represent an entire culture.",
+      "landing_url": "https://www.gutenberg.org/ebooks/2499",
+      "metadata_url": "https://gutenberg.pglaf.org/cache/epub/2499/pg2499.rdf",
+      "rights": "Project Gutenberg selection under its US-based permissions policy. Preserve the embedded license; jurisdiction and third-party material require separate review.",
+      "rights_url": "https://www.gutenberg.org/policy/permission.html",
+      "review_status": "not_applicable",
+      "assets": [
+        {
+          "name": "pg2499.epub",
+          "url": "https://gutenberg.pglaf.org/cache/epub/2499/pg2499.epub",
+          "format": "epub"
+        }
+      ],
+      "notes": "Text-focused EPUB without optional illustrations, selected to bound transfer and image processing. Not a substitute for image-dependent editions."
+    },
+    {
+      "id": "pg-22367",
+      "title": "Die Verwandlung",
+      "authors": [
+        "Kafka, Franz, 1883-1924"
+      ],
+      "languages": [
+        "de"
+      ],
+      "type": "ebook",
+      "rationale": "Read beyond English and compare cultural perspectives, language, narrative form, and translation choices. Language availability is not a claim to represent an entire culture.",
+      "landing_url": "https://www.gutenberg.org/ebooks/22367",
+      "metadata_url": "https://gutenberg.pglaf.org/cache/epub/22367/pg22367.rdf",
+      "rights": "Project Gutenberg selection under its US-based permissions policy. Preserve the embedded license; jurisdiction and third-party material require separate review.",
+      "rights_url": "https://www.gutenberg.org/policy/permission.html",
+      "review_status": "not_applicable",
+      "assets": [
+        {
+          "name": "pg22367.epub",
+          "url": "https://gutenberg.pglaf.org/cache/epub/22367/pg22367.epub",
+          "format": "epub"
+        }
+      ],
+      "notes": "Text-focused EPUB without optional illustrations, selected to bound transfer and image processing. Not a substitute for image-dependent editions."
+    },
+    {
+      "id": "pg-9186",
+      "title": "Nathan der Weise: Ein Dramatisches Gedicht, in fünf Aufzügen",
+      "authors": [
+        "Lessing, Gotthold Ephraim, 1729-1781"
+      ],
+      "languages": [
+        "de"
+      ],
+      "type": "ebook",
+      "rationale": "Read beyond English and compare cultural perspectives, language, narrative form, and translation choices. Language availability is not a claim to represent an entire culture.",
+      "landing_url": "https://www.gutenberg.org/ebooks/9186",
+      "metadata_url": "https://gutenberg.pglaf.org/cache/epub/9186/pg9186.rdf",
+      "rights": "Project Gutenberg selection under its US-based permissions policy. Preserve the embedded license; jurisdiction and third-party material require separate review.",
+      "rights_url": "https://www.gutenberg.org/policy/permission.html",
+      "review_status": "not_applicable",
+      "assets": [
+        {
+          "name": "pg9186.epub",
+          "url": "https://gutenberg.pglaf.org/cache/epub/9186/pg9186.epub",
+          "format": "epub"
+        }
+      ],
+      "notes": "Text-focused EPUB without optional illustrations, selected to bound transfer and image processing. Not a substitute for image-dependent editions."
+    },
+    {
+      "id": "pg-320",
+      "title": "Vida De Lazarillo De Tormes Y De Sus Fortunas Y Adversidades",
+      "authors": [
+        "Anonymous"
+      ],
+      "languages": [
+        "es"
+      ],
+      "type": "ebook",
+      "rationale": "Read beyond English and compare cultural perspectives, language, narrative form, and translation choices. Language availability is not a claim to represent an entire culture.",
+      "landing_url": "https://www.gutenberg.org/ebooks/320",
+      "metadata_url": "https://gutenberg.pglaf.org/cache/epub/320/pg320.rdf",
+      "rights": "Project Gutenberg selection under its US-based permissions policy. Preserve the embedded license; jurisdiction and third-party material require separate review.",
+      "rights_url": "https://www.gutenberg.org/policy/permission.html",
+      "review_status": "not_applicable",
+      "assets": [
+        {
+          "name": "pg320.epub",
+          "url": "https://gutenberg.pglaf.org/cache/epub/320/pg320.epub",
+          "format": "epub"
+        }
+      ],
+      "notes": "Text-focused EPUB without optional illustrations, selected to bound transfer and image processing. Not a substitute for image-dependent editions."
+    },
+    {
+      "id": "pg-2000",
+      "title": "Don Quijote",
+      "authors": [
+        "Cervantes Saavedra, Miguel de, 1547-1616"
+      ],
+      "languages": [
+        "es"
+      ],
+      "type": "ebook",
+      "rationale": "Read beyond English and compare cultural perspectives, language, narrative form, and translation choices. Language availability is not a claim to represent an entire culture.",
+      "landing_url": "https://www.gutenberg.org/ebooks/2000",
+      "metadata_url": "https://gutenberg.pglaf.org/cache/epub/2000/pg2000.rdf",
+      "rights": "Project Gutenberg selection under its US-based permissions policy. Preserve the embedded license; jurisdiction and third-party material require separate review.",
+      "rights_url": "https://www.gutenberg.org/policy/permission.html",
+      "review_status": "not_applicable",
+      "assets": [
+        {
+          "name": "pg2000.epub",
+          "url": "https://gutenberg.pglaf.org/cache/epub/2000/pg2000.epub",
+          "format": "epub"
+        }
+      ],
+      "notes": "Text-focused EPUB without optional illustrations, selected to bound transfer and image processing. Not a substitute for image-dependent editions."
+    },
+    {
+      "id": "pg-35407",
+      "title": "Rimas",
+      "authors": [
+        "Mitre, Bartolomé, 1821-1906"
+      ],
+      "languages": [
+        "es"
+      ],
+      "type": "ebook",
+      "rationale": "Read beyond English and compare cultural perspectives, language, narrative form, and translation choices. Language availability is not a claim to represent an entire culture.",
+      "landing_url": "https://www.gutenberg.org/ebooks/35407",
+      "metadata_url": "https://gutenberg.pglaf.org/cache/epub/35407/pg35407.rdf",
+      "rights": "Project Gutenberg selection under its US-based permissions policy. Preserve the embedded license; jurisdiction and third-party material require separate review.",
+      "rights_url": "https://www.gutenberg.org/policy/permission.html",
+      "review_status": "not_applicable",
+      "assets": [
+        {
+          "name": "pg35407.epub",
+          "url": "https://gutenberg.pglaf.org/cache/epub/35407/pg35407.epub",
+          "format": "epub"
+        }
+      ],
+      "notes": "Text-focused EPUB without optional illustrations, selected to bound transfer and image processing. Not a substitute for image-dependent editions."
+    },
+    {
+      "id": "pg-1000",
+      "title": "La Divina Commedia di Dante: Complete",
+      "authors": [
+        "Dante Alighieri, 1265-1321"
+      ],
+      "languages": [
+        "it"
+      ],
+      "type": "ebook",
+      "rationale": "Read beyond English and compare cultural perspectives, language, narrative form, and translation choices. Language availability is not a claim to represent an entire culture.",
+      "landing_url": "https://www.gutenberg.org/ebooks/1000",
+      "metadata_url": "https://gutenberg.pglaf.org/cache/epub/1000/pg1000.rdf",
+      "rights": "Project Gutenberg selection under its US-based permissions policy. Preserve the embedded license; jurisdiction and third-party material require separate review.",
+      "rights_url": "https://www.gutenberg.org/policy/permission.html",
+      "review_status": "not_applicable",
+      "assets": [
+        {
+          "name": "pg1000.epub",
+          "url": "https://gutenberg.pglaf.org/cache/epub/1000/pg1000.epub",
+          "format": "epub"
+        }
+      ],
+      "notes": "Text-focused EPUB without optional illustrations, selected to bound transfer and image processing. Not a substitute for image-dependent editions."
+    },
+    {
+      "id": "pg-19517",
+      "title": "Le avventure di Pinocchio",
+      "authors": [
+        "Collodi, Carlo, 1826-1890"
+      ],
+      "languages": [
+        "it"
+      ],
+      "type": "ebook",
+      "rationale": "Read beyond English and compare cultural perspectives, language, narrative form, and translation choices. Language availability is not a claim to represent an entire culture.",
+      "landing_url": "https://www.gutenberg.org/ebooks/19517",
+      "metadata_url": "https://gutenberg.pglaf.org/cache/epub/19517/pg19517.rdf",
+      "rights": "Project Gutenberg selection under its US-based permissions policy. Preserve the embedded license; jurisdiction and third-party material require separate review.",
+      "rights_url": "https://www.gutenberg.org/policy/permission.html",
+      "review_status": "not_applicable",
+      "assets": [
+        {
+          "name": "pg19517.epub",
+          "url": "https://gutenberg.pglaf.org/cache/epub/19517/pg19517.epub",
+          "format": "epub"
+        }
+      ],
+      "notes": "Text-focused EPUB without optional illustrations, selected to bound transfer and image processing. Not a substitute for image-dependent editions."
+    },
+    {
+      "id": "pg-3333",
+      "title": "Os Lusíadas",
+      "authors": [
+        "Camões, Luís de, 1524?-1580"
+      ],
+      "languages": [
+        "pt"
+      ],
+      "type": "ebook",
+      "rationale": "Read beyond English and compare cultural perspectives, language, narrative form, and translation choices. Language availability is not a claim to represent an entire culture.",
+      "landing_url": "https://www.gutenberg.org/ebooks/3333",
+      "metadata_url": "https://gutenberg.pglaf.org/cache/epub/3333/pg3333.rdf",
+      "rights": "Project Gutenberg selection under its US-based permissions policy. Preserve the embedded license; jurisdiction and third-party material require separate review.",
+      "rights_url": "https://www.gutenberg.org/policy/permission.html",
+      "review_status": "not_applicable",
+      "assets": [
+        {
+          "name": "pg3333.epub",
+          "url": "https://gutenberg.pglaf.org/cache/epub/3333/pg3333.epub",
+          "format": "epub"
+        }
+      ],
+      "notes": "Text-focused EPUB without optional illustrations, selected to bound transfer and image processing. Not a substitute for image-dependent editions."
+    },
+    {
+      "id": "pg-55752",
+      "title": "Dom Casmurro",
+      "authors": [
+        "Machado de Assis, 1839-1908"
+      ],
+      "languages": [
+        "pt"
+      ],
+      "type": "ebook",
+      "rationale": "Read beyond English and compare cultural perspectives, language, narrative form, and translation choices. Language availability is not a claim to represent an entire culture.",
+      "landing_url": "https://www.gutenberg.org/ebooks/55752",
+      "metadata_url": "https://gutenberg.pglaf.org/cache/epub/55752/pg55752.rdf",
+      "rights": "Project Gutenberg selection under its US-based permissions policy. Preserve the embedded license; jurisdiction and third-party material require separate review.",
+      "rights_url": "https://www.gutenberg.org/policy/permission.html",
+      "review_status": "not_applicable",
+      "assets": [
+        {
+          "name": "pg55752.epub",
+          "url": "https://gutenberg.pglaf.org/cache/epub/55752/pg55752.epub",
+          "format": "epub"
+        }
+      ],
+      "notes": "Text-focused EPUB without optional illustrations, selected to bound transfer and image processing. Not a substitute for image-dependent editions."
+    },
+    {
+      "id": "pg-10819",
+      "title": "De kleine Johannes",
+      "authors": [
+        "Eeden, Frederik van, 1860-1932"
+      ],
+      "languages": [
+        "nl"
+      ],
+      "type": "ebook",
+      "rationale": "Read beyond English and compare cultural perspectives, language, narrative form, and translation choices. Language availability is not a claim to represent an entire culture.",
+      "landing_url": "https://www.gutenberg.org/ebooks/10819",
+      "metadata_url": "https://gutenberg.pglaf.org/cache/epub/10819/pg10819.rdf",
+      "rights": "Project Gutenberg selection under its US-based permissions policy. Preserve the embedded license; jurisdiction and third-party material require separate review.",
+      "rights_url": "https://www.gutenberg.org/policy/permission.html",
+      "review_status": "not_applicable",
+      "assets": [
+        {
+          "name": "pg10819.epub",
+          "url": "https://gutenberg.pglaf.org/cache/epub/10819/pg10819.epub",
+          "format": "epub"
+        }
+      ],
+      "notes": "Text-focused EPUB without optional illustrations, selected to bound transfer and image processing. Not a substitute for image-dependent editions."
+    },
+    {
+      "id": "pg-11024",
+      "title": "Max Havelaar Of de koffiveilingen der Nederlandsche Handelsmaatschappy",
+      "authors": [
+        "Multatuli, 1820-1887"
+      ],
+      "languages": [
+        "nl"
+      ],
+      "type": "ebook",
+      "rationale": "Read beyond English and compare cultural perspectives, language, narrative form, and translation choices. Language availability is not a claim to represent an entire culture.",
+      "landing_url": "https://www.gutenberg.org/ebooks/11024",
+      "metadata_url": "https://gutenberg.pglaf.org/cache/epub/11024/pg11024.rdf",
+      "rights": "Project Gutenberg selection under its US-based permissions policy. Preserve the embedded license; jurisdiction and third-party material require separate review.",
+      "rights_url": "https://www.gutenberg.org/policy/permission.html",
+      "review_status": "not_applicable",
+      "assets": [
+        {
+          "name": "pg11024.epub",
+          "url": "https://gutenberg.pglaf.org/cache/epub/11024/pg11024.epub",
+          "format": "epub"
+        }
+      ],
+      "notes": "Text-focused EPUB without optional illustrations, selected to bound transfer and image processing. Not a substitute for image-dependent editions."
+    },
+    {
+      "id": "pg-7000",
+      "title": "Kalevala",
+      "authors": [
+        "Lönnrot, Elias, 1802-1884 [Compiler]"
+      ],
+      "languages": [
+        "fi"
+      ],
+      "type": "ebook",
+      "rationale": "Read beyond English and compare cultural perspectives, language, narrative form, and translation choices. Language availability is not a claim to represent an entire culture.",
+      "landing_url": "https://www.gutenberg.org/ebooks/7000",
+      "metadata_url": "https://gutenberg.pglaf.org/cache/epub/7000/pg7000.rdf",
+      "rights": "Project Gutenberg selection under its US-based permissions policy. Preserve the embedded license; jurisdiction and third-party material require separate review.",
+      "rights_url": "https://www.gutenberg.org/policy/permission.html",
+      "review_status": "not_applicable",
+      "assets": [
+        {
+          "name": "pg7000.epub",
+          "url": "https://gutenberg.pglaf.org/cache/epub/7000/pg7000.epub",
+          "format": "epub"
+        }
+      ],
+      "notes": "Text-focused EPUB without optional illustrations, selected to bound transfer and image processing. Not a substitute for image-dependent editions."
+    },
+    {
+      "id": "pg-11940",
+      "title": "Seitsemän veljestä",
+      "authors": [
+        "Kivi, Aleksis, 1834-1872"
+      ],
+      "languages": [
+        "fi"
+      ],
+      "type": "ebook",
+      "rationale": "Read beyond English and compare cultural perspectives, language, narrative form, and translation choices. Language availability is not a claim to represent an entire culture.",
+      "landing_url": "https://www.gutenberg.org/ebooks/11940",
+      "metadata_url": "https://gutenberg.pglaf.org/cache/epub/11940/pg11940.rdf",
+      "rights": "Project Gutenberg selection under its US-based permissions policy. Preserve the embedded license; jurisdiction and third-party material require separate review.",
+      "rights_url": "https://www.gutenberg.org/policy/permission.html",
+      "review_status": "not_applicable",
+      "assets": [
+        {
+          "name": "pg11940.epub",
+          "url": "https://gutenberg.pglaf.org/cache/epub/11940/pg11940.epub",
+          "format": "epub"
+        }
+      ],
+      "notes": "Text-focused EPUB without optional illustrations, selected to bound transfer and image processing. Not a substitute for image-dependent editions."
+    },
+    {
+      "id": "pg-57052",
+      "title": "Röda rummet: Skildringar ur artist- och författarlivet",
+      "authors": [
+        "Strindberg, August, 1849-1912",
+        "Landquist, John, 1881-1974 [Annotator]"
+      ],
+      "languages": [
+        "sv"
+      ],
+      "type": "ebook",
+      "rationale": "Read beyond English and compare cultural perspectives, language, narrative form, and translation choices. Language availability is not a claim to represent an entire culture.",
+      "landing_url": "https://www.gutenberg.org/ebooks/57052",
+      "metadata_url": "https://gutenberg.pglaf.org/cache/epub/57052/pg57052.rdf",
+      "rights": "Project Gutenberg selection under its US-based permissions policy. Preserve the embedded license; jurisdiction and third-party material require separate review.",
+      "rights_url": "https://www.gutenberg.org/policy/permission.html",
+      "review_status": "not_applicable",
+      "assets": [
+        {
+          "name": "pg57052.epub",
+          "url": "https://gutenberg.pglaf.org/cache/epub/57052/pg57052.epub",
+          "format": "epub"
+        }
+      ],
+      "notes": "Text-focused EPUB without optional illustrations, selected to bound transfer and image processing. Not a substitute for image-dependent editions."
+    },
+    {
+      "id": "pg-7337",
+      "title": "道德經",
+      "authors": [
+        "Laozi"
+      ],
+      "languages": [
+        "zh"
+      ],
+      "type": "ebook",
+      "rationale": "Read beyond English and compare cultural perspectives, language, narrative form, and translation choices. Language availability is not a claim to represent an entire culture.",
+      "landing_url": "https://www.gutenberg.org/ebooks/7337",
+      "metadata_url": "https://gutenberg.pglaf.org/cache/epub/7337/pg7337.rdf",
+      "rights": "Project Gutenberg selection under its US-based permissions policy. Preserve the embedded license; jurisdiction and third-party material require separate review.",
+      "rights_url": "https://www.gutenberg.org/policy/permission.html",
+      "review_status": "not_applicable",
+      "assets": [
+        {
+          "name": "pg7337.epub",
+          "url": "https://gutenberg.pglaf.org/cache/epub/7337/pg7337.epub",
+          "format": "epub"
+        }
+      ],
+      "notes": "Text-focused EPUB without optional illustrations, selected to bound transfer and image processing. Not a substitute for image-dependent editions."
+    },
+    {
+      "id": "pg-23839",
+      "title": "論語",
+      "authors": [
+        "Confucius, 552 BCE-480 BCE"
+      ],
+      "languages": [
+        "zh"
+      ],
+      "type": "ebook",
+      "rationale": "Read beyond English and compare cultural perspectives, language, narrative form, and translation choices. Language availability is not a claim to represent an entire culture.",
+      "landing_url": "https://www.gutenberg.org/ebooks/23839",
+      "metadata_url": "https://gutenberg.pglaf.org/cache/epub/23839/pg23839.rdf",
+      "rights": "Project Gutenberg selection under its US-based permissions policy. Preserve the embedded license; jurisdiction and third-party material require separate review.",
+      "rights_url": "https://www.gutenberg.org/policy/permission.html",
+      "review_status": "not_applicable",
+      "assets": [
+        {
+          "name": "pg23839.epub",
+          "url": "https://gutenberg.pglaf.org/cache/epub/23839/pg23839.epub",
+          "format": "epub"
+        }
+      ],
+      "notes": "Text-focused EPUB without optional illustrations, selected to bound transfer and image processing. Not a substitute for image-dependent editions."
+    },
+    {
+      "id": "pg-23962",
+      "title": "西遊記",
+      "authors": [
+        "Wu, Cheng'en, 1500?-1582?"
+      ],
+      "languages": [
+        "zh"
+      ],
+      "type": "ebook",
+      "rationale": "Read beyond English and compare cultural perspectives, language, narrative form, and translation choices. Language availability is not a claim to represent an entire culture.",
+      "landing_url": "https://www.gutenberg.org/ebooks/23962",
+      "metadata_url": "https://gutenberg.pglaf.org/cache/epub/23962/pg23962.rdf",
+      "rights": "Project Gutenberg selection under its US-based permissions policy. Preserve the embedded license; jurisdiction and third-party material require separate review.",
+      "rights_url": "https://www.gutenberg.org/policy/permission.html",
+      "review_status": "not_applicable",
+      "assets": [
+        {
+          "name": "pg23962.epub",
+          "url": "https://gutenberg.pglaf.org/cache/epub/23962/pg23962.epub",
+          "format": "epub"
+        }
+      ],
+      "notes": "Text-focused EPUB without optional illustrations, selected to bound transfer and image processing. Not a substitute for image-dependent editions."
+    },
+    {
+      "id": "pg-21186",
+      "title": "Записки из подполья",
+      "authors": [
+        "Dostoyevsky, Fyodor, 1821-1881"
+      ],
+      "languages": [
+        "ru"
+      ],
+      "type": "ebook",
+      "rationale": "Read beyond English and compare cultural perspectives, language, narrative form, and translation choices. Language availability is not a claim to represent an entire culture.",
+      "landing_url": "https://www.gutenberg.org/ebooks/21186",
+      "metadata_url": "https://gutenberg.pglaf.org/cache/epub/21186/pg21186.rdf",
+      "rights": "Project Gutenberg selection under its US-based permissions policy. Preserve the embedded license; jurisdiction and third-party material require separate review.",
+      "rights_url": "https://www.gutenberg.org/policy/permission.html",
+      "review_status": "not_applicable",
+      "assets": [
+        {
+          "name": "pg21186.epub",
+          "url": "https://gutenberg.pglaf.org/cache/epub/21186/pg21186.epub",
+          "format": "epub"
+        }
+      ],
+      "notes": "Text-focused EPUB without optional illustrations, selected to bound transfer and image processing. Not a substitute for image-dependent editions."
+    },
+    {
+      "id": "pg-31536",
+      "title": "Pan Tadeusz Czyli Ostatni Zajazd na Litwie. Historja Szlachecka z r. 1811 i 1812 we Dwunastu Księgach Wierszem",
+      "authors": [
+        "Mickiewicz, Adam, 1798-1855"
+      ],
+      "languages": [
+        "pl"
+      ],
+      "type": "ebook",
+      "rationale": "Read beyond English and compare cultural perspectives, language, narrative form, and translation choices. Language availability is not a claim to represent an entire culture.",
+      "landing_url": "https://www.gutenberg.org/ebooks/31536",
+      "metadata_url": "https://gutenberg.pglaf.org/cache/epub/31536/pg31536.rdf",
+      "rights": "Project Gutenberg selection under its US-based permissions policy. Preserve the embedded license; jurisdiction and third-party material require separate review.",
+      "rights_url": "https://www.gutenberg.org/policy/permission.html",
+      "review_status": "not_applicable",
+      "assets": [
+        {
+          "name": "pg31536.epub",
+          "url": "https://gutenberg.pglaf.org/cache/epub/31536/pg31536.epub",
+          "format": "epub"
+        }
+      ],
+      "notes": "Text-focused EPUB without optional illustrations, selected to bound transfer and image processing. Not a substitute for image-dependent editions."
+    },
+    {
+      "id": "pg-1982",
+      "title": "羅生門",
+      "authors": [
+        "Akutagawa, Ryūnosuke, 1892-1927"
+      ],
+      "languages": [
+        "ja"
+      ],
+      "type": "ebook",
+      "rationale": "Read beyond English and compare cultural perspectives, language, narrative form, and translation choices. Language availability is not a claim to represent an entire culture.",
+      "landing_url": "https://www.gutenberg.org/ebooks/1982",
+      "metadata_url": "https://gutenberg.pglaf.org/cache/epub/1982/pg1982.rdf",
+      "rights": "Project Gutenberg selection under its US-based permissions policy. Preserve the embedded license; jurisdiction and third-party material require separate review.",
+      "rights_url": "https://www.gutenberg.org/policy/permission.html",
+      "review_status": "not_applicable",
+      "assets": [
+        {
+          "name": "pg1982.epub",
+          "url": "https://gutenberg.pglaf.org/cache/epub/1982/pg1982.epub",
+          "format": "epub"
+        }
+      ],
+      "notes": "Text-focused EPUB without optional illustrations, selected to bound transfer and image processing. Not a substitute for image-dependent editions."
+    },
+    {
+      "id": "lv-1268",
+      "title": "Apology of Socrates (version 3)",
+      "authors": [
+        "Plato (Πλάτων)"
+      ],
+      "languages": [
+        "en"
+      ],
+      "type": "audiobook",
+      "rationale": "Compare listening with reading, preserve narrator and recording identity, and study ethical reasoning or literary perspective through complete cataloged recordings.",
+      "landing_url": "https://librivox.org/the-apology-of-socrates-by-plato/",
+      "metadata_url": "https://librivox.org/api/feed/audiobooks?id=1268&format=json&extended=1",
+      "rights": "LibriVox declares recordings public domain in the USA. Rights elsewhere and the underlying text or translation require jurisdiction-specific review.",
+      "rights_url": "https://librivox.org/pages/public-domain/",
+      "review_status": "not_applicable",
+      "notes": "All tracks exposed by the extended recording record are selected, in returned chapter order. Narration quality and semantic completeness are not certified.",
+      "assets": [
+        {
+          "name": "001.mp3",
+          "url": "https://www.archive.org/download/apology_rz_librivox/Apology_1_Plato_64kb.mp3",
+          "format": "mp3",
+          "title": "How you have felt, O men of Athens - to - but I am in utter poverty by reason of my devotion to the god.",
+          "contributors": [
+            "Fr. Richard Zeile of Detroit"
+          ]
+        },
+        {
+          "name": "002.mp3",
+          "url": "https://www.archive.org/download/apology_rz_librivox/Apology_2_Plato_64kb.mp3",
+          "format": "mp3",
+          "title": "There is another thing - to - not even if I have to die many times.",
+          "contributors": [
+            "Fr. Richard Zeile of Detroit"
+          ]
+        },
+        {
+          "name": "003.mp3",
+          "url": "https://www.archive.org/download/apology_rz_librivox/Apology_3_Plato_64kb.mp3",
+          "format": "mp3",
+          "title": "Men of Athens, do not interrup - to- to be determined by you as is best for you and me.",
+          "contributors": [
+            "Fr. Richard Zeile of Detroit"
+          ]
+        },
+        {
+          "name": "004.mp3",
+          "url": "https://www.archive.org/download/apology_rz_librivox/Apology_4_Plato_64kb.mp3",
+          "format": "mp3",
+          "title": "THERE are many reasons why I am not grieved - to - end ",
+          "contributors": [
+            "Fr. Richard Zeile of Detroit"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "lv-1095",
+      "title": "Meditations",
+      "authors": [
+        "Marcus Aurelius"
+      ],
+      "languages": [
+        "en"
+      ],
+      "type": "audiobook",
+      "rationale": "Compare listening with reading, preserve narrator and recording identity, and study ethical reasoning or literary perspective through complete cataloged recordings.",
+      "landing_url": "https://librivox.org/the-meditations-of-marcus-aurelius/",
+      "metadata_url": "https://librivox.org/api/feed/audiobooks?id=1095&format=json&extended=1",
+      "rights": "LibriVox declares recordings public domain in the USA. Rights elsewhere and the underlying text or translation require jurisdiction-specific review.",
+      "rights_url": "https://librivox.org/pages/public-domain/",
+      "review_status": "not_applicable",
+      "notes": "All tracks exposed by the extended recording record are selected, in returned chapter order. Narration quality and semantic completeness are not certified.",
+      "assets": [
+        {
+          "name": "001.mp3",
+          "url": "https://www.archive.org/download/meditations_0708_librivox/meditations_00_marcusaurelius_64kb.mp3",
+          "format": "mp3",
+          "title": "Introduction",
+          "contributors": [
+            "Aegist"
+          ]
+        },
+        {
+          "name": "002.mp3",
+          "url": "https://www.archive.org/download/meditations_0708_librivox/meditations_01_marcusaurelius_64kb.mp3",
+          "format": "mp3",
+          "title": "Chapter 1",
+          "contributors": [
+            "Kevin McAsh"
+          ]
+        },
+        {
+          "name": "003.mp3",
+          "url": "https://www.archive.org/download/meditations_0708_librivox/meditations_02_marcusaurelius_64kb.mp3",
+          "format": "mp3",
+          "title": "Chapter 2",
+          "contributors": [
+            "Kevin McAsh"
+          ]
+        },
+        {
+          "name": "004.mp3",
+          "url": "https://www.archive.org/download/meditations_0708_librivox/meditations_03_marcusaurelius_64kb.mp3",
+          "format": "mp3",
+          "title": "Chapter 3",
+          "contributors": [
+            "Aegist"
+          ]
+        },
+        {
+          "name": "005.mp3",
+          "url": "https://www.archive.org/download/meditations_0708_librivox/meditations_04_marcusaurelius_64kb.mp3",
+          "format": "mp3",
+          "title": "Chapter 4",
+          "contributors": [
+            "davyobrian"
+          ]
+        },
+        {
+          "name": "006.mp3",
+          "url": "https://www.archive.org/download/meditations_0708_librivox/meditations_05_marcusaurelius_64kb.mp3",
+          "format": "mp3",
+          "title": "Chapter 5",
+          "contributors": [
+            "Cicorée"
+          ]
+        },
+        {
+          "name": "007.mp3",
+          "url": "https://www.archive.org/download/meditations_0708_librivox/meditations_06_marcusaurelius_64kb.mp3",
+          "format": "mp3",
+          "title": "Chapter 6",
+          "contributors": [
+            "ontheroad"
+          ]
+        },
+        {
+          "name": "008.mp3",
+          "url": "https://www.archive.org/download/meditations_0708_librivox/meditations_07_marcusaurelius_64kb.mp3",
+          "format": "mp3",
+          "title": "Chapter 7",
+          "contributors": [
+            "davyobrian"
+          ]
+        },
+        {
+          "name": "009.mp3",
+          "url": "https://www.archive.org/download/meditations_0708_librivox/meditations_08_marcusaurelius_64kb.mp3",
+          "format": "mp3",
+          "title": "Chapter 8",
+          "contributors": [
+            "Fr. Richard Zeile of Detroit"
+          ]
+        },
+        {
+          "name": "010.mp3",
+          "url": "https://www.archive.org/download/meditations_0708_librivox/meditations_09_marcusaurelius_64kb.mp3",
+          "format": "mp3",
+          "title": "Chapter 9",
+          "contributors": [
+            "Fr. Richard Zeile of Detroit"
+          ]
+        },
+        {
+          "name": "011.mp3",
+          "url": "https://www.archive.org/download/meditations_0708_librivox/meditations_10_marcusaurelius_64kb.mp3",
+          "format": "mp3",
+          "title": "Chapter 10",
+          "contributors": [
+            "ML Cohen"
+          ]
+        },
+        {
+          "name": "012.mp3",
+          "url": "https://www.archive.org/download/meditations_0708_librivox/meditations_11_marcusaurelius_64kb.mp3",
+          "format": "mp3",
+          "title": "Chapter 11",
+          "contributors": [
+            "Leon Mire"
+          ]
+        },
+        {
+          "name": "013.mp3",
+          "url": "https://www.archive.org/download/meditations_0708_librivox/meditations_12_marcusaurelius_64kb.mp3",
+          "format": "mp3",
+          "title": "Chapter 12",
+          "contributors": [
+            "Leon Mire"
+          ]
+        },
+        {
+          "name": "014.mp3",
+          "url": "https://www.archive.org/download/meditations_0708_librivox/meditations_13_marcusaurelius_64kb.mp3",
+          "format": "mp3",
+          "title": "M. Aurelius Antoninus",
+          "contributors": [
+            "Leon Mire"
+          ]
+        },
+        {
+          "name": "015.mp3",
+          "url": "https://www.archive.org/download/meditations_0708_librivox/meditations_14_marcusaurelius_64kb.mp3",
+          "format": "mp3",
+          "title": "The Philosophy of Marcus Aurelius",
+          "contributors": [
+            "ML Cohen"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "lv-419",
+      "title": "Tao Teh King",
+      "authors": [
+        "Lao Tzu"
+      ],
+      "languages": [
+        "en"
+      ],
+      "type": "audiobook",
+      "rationale": "Compare listening with reading, preserve narrator and recording identity, and study ethical reasoning or literary perspective through complete cataloged recordings.",
+      "landing_url": "https://librivox.org/the-tao-teh-king-by-lao-tze/",
+      "metadata_url": "https://librivox.org/api/feed/audiobooks?id=419&format=json&extended=1",
+      "rights": "LibriVox declares recordings public domain in the USA. Rights elsewhere and the underlying text or translation require jurisdiction-specific review.",
+      "rights_url": "https://librivox.org/pages/public-domain/",
+      "review_status": "not_applicable",
+      "notes": "All tracks exposed by the extended recording record are selected, in returned chapter order. Narration quality and semantic completeness are not certified.",
+      "assets": [
+        {
+          "name": "001.mp3",
+          "url": "https://www.archive.org/download/tao_teh_king_librivox/tao_teh_king_01-09_lao-tze_64kb.mp3",
+          "format": "mp3",
+          "title": "Chapters 1-9",
+          "contributors": [
+            "Eric S. Piotrowski"
+          ]
+        },
+        {
+          "name": "002.mp3",
+          "url": "https://www.archive.org/download/tao_teh_king_librivox/tao_teh_king_10-18_lao-tze_64kb.mp3",
+          "format": "mp3",
+          "title": "Chapters 10-18",
+          "contributors": [
+            "Eric S. Piotrowski"
+          ]
+        },
+        {
+          "name": "003.mp3",
+          "url": "https://www.archive.org/download/tao_teh_king_librivox/tao_teh_king_19-27_lao-tze_64kb.mp3",
+          "format": "mp3",
+          "title": "Chapters 19-27",
+          "contributors": [
+            "Eric S. Piotrowski"
+          ]
+        },
+        {
+          "name": "004.mp3",
+          "url": "https://www.archive.org/download/tao_teh_king_librivox/tao_teh_king_28-37_lao-tze_64kb.mp3",
+          "format": "mp3",
+          "title": "Chapters 28-37",
+          "contributors": [
+            "Eric S. Piotrowski"
+          ]
+        },
+        {
+          "name": "005.mp3",
+          "url": "https://www.archive.org/download/tao_teh_king_librivox/tao_teh_king_38-45_lao-tze_64kb.mp3",
+          "format": "mp3",
+          "title": "Chapters 38-45",
+          "contributors": [
+            "Eric S. Piotrowski"
+          ]
+        },
+        {
+          "name": "006.mp3",
+          "url": "https://www.archive.org/download/tao_teh_king_librivox/tao_teh_king_46-54_lao-tze_64kb.mp3",
+          "format": "mp3",
+          "title": "Chapters 46-54",
+          "contributors": [
+            "Eric S. Piotrowski"
+          ]
+        },
+        {
+          "name": "007.mp3",
+          "url": "https://www.archive.org/download/tao_teh_king_librivox/tao_teh_king_55-63_lao-tze_64kb.mp3",
+          "format": "mp3",
+          "title": "Chapters 55-63",
+          "contributors": [
+            "Eric S. Piotrowski"
+          ]
+        },
+        {
+          "name": "008.mp3",
+          "url": "https://www.archive.org/download/tao_teh_king_librivox/tao_teh_king_64-72_lao-tze_64kb.mp3",
+          "format": "mp3",
+          "title": "Chapters 64-72",
+          "contributors": [
+            "Eric S. Piotrowski"
+          ]
+        },
+        {
+          "name": "009.mp3",
+          "url": "https://www.archive.org/download/tao_teh_king_librivox/tao_teh_king_73-81_lao-tze_64kb.mp3",
+          "format": "mp3",
+          "title": "Chapters 73-81",
+          "contributors": [
+            "Eric S. Piotrowski"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "lv-381",
+      "title": "Frankenstein, or The Modern Prometheus",
+      "authors": [
+        "Mary Wollstonecraft Shelley"
+      ],
+      "languages": [
+        "en"
+      ],
+      "type": "audiobook",
+      "rationale": "Compare listening with reading, preserve narrator and recording identity, and study ethical reasoning or literary perspective through complete cataloged recordings.",
+      "landing_url": "https://librivox.org/frankenstein-or-modern-prometheus-by-mary-w-shelley/",
+      "metadata_url": "https://librivox.org/api/feed/audiobooks?id=381&format=json&extended=1",
+      "rights": "LibriVox declares recordings public domain in the USA. Rights elsewhere and the underlying text or translation require jurisdiction-specific review.",
+      "rights_url": "https://librivox.org/pages/public-domain/",
+      "review_status": "not_applicable",
+      "notes": "All tracks exposed by the extended recording record are selected, in returned chapter order. Narration quality and semantic completeness are not certified.",
+      "assets": [
+        {
+          "name": "001.mp3",
+          "url": "https://www.archive.org/download/frankenstein_shelley/frankenstein_00_shelley_64kb.mp3",
+          "format": "mp3",
+          "title": "00 - Letters",
+          "contributors": [
+            "Eric Connover"
+          ]
+        },
+        {
+          "name": "002.mp3",
+          "url": "https://www.archive.org/download/frankenstein_shelley/frankenstein_01_shelley_64kb.mp3",
+          "format": "mp3",
+          "title": "01 - Chapter 1",
+          "contributors": [
+            "Carl Cravens"
+          ]
+        },
+        {
+          "name": "003.mp3",
+          "url": "https://www.archive.org/download/frankenstein_shelley/frankenstein_02_shelley_64kb.mp3",
+          "format": "mp3",
+          "title": "02 - Chapter 2",
+          "contributors": [
+            "Kara Shallenberg (1969-2023)"
+          ]
+        },
+        {
+          "name": "004.mp3",
+          "url": "https://www.archive.org/download/frankenstein_shelley/frankenstein_03_shelley_64kb.mp3",
+          "format": "mp3",
+          "title": "03 - Chapters 3-4",
+          "contributors": [
+            "ianish"
+          ]
+        },
+        {
+          "name": "005.mp3",
+          "url": "https://www.archive.org/download/frankenstein_shelley/frankenstein_04_shelley_64kb.mp3",
+          "format": "mp3",
+          "title": "04 - Chapter 5",
+          "contributors": [
+            "Paula Berinstein"
+          ]
+        },
+        {
+          "name": "006.mp3",
+          "url": "https://www.archive.org/download/frankenstein_shelley/frankenstein_05_shelley_64kb.mp3",
+          "format": "mp3",
+          "title": "05 - Chapter 6",
+          "contributors": [
+            "Paula Berinstein"
+          ]
+        },
+        {
+          "name": "007.mp3",
+          "url": "https://www.archive.org/download/frankenstein_shelley/frankenstein_06_shelley_64kb.mp3",
+          "format": "mp3",
+          "title": "06 - Chapter 7",
+          "contributors": [
+            "Alex Foster"
+          ]
+        },
+        {
+          "name": "008.mp3",
+          "url": "https://www.archive.org/download/frankenstein_shelley/frankenstein_07_shelley_64kb.mp3",
+          "format": "mp3",
+          "title": "07 - Chapter 8",
+          "contributors": [
+            "Alex Foster"
+          ]
+        },
+        {
+          "name": "009.mp3",
+          "url": "https://www.archive.org/download/frankenstein_shelley/frankenstein_08_shelley_64kb.mp3",
+          "format": "mp3",
+          "title": "08 - Chapter 9",
+          "contributors": [
+            "Mark Bradford"
+          ]
+        },
+        {
+          "name": "010.mp3",
+          "url": "https://www.archive.org/download/frankenstein_shelley/frankenstein_09_shelley_64kb.mp3",
+          "format": "mp3",
+          "title": "09 - Chapter 10",
+          "contributors": [
+            "Mark Bradford"
+          ]
+        },
+        {
+          "name": "011.mp3",
+          "url": "https://www.archive.org/download/frankenstein_shelley/frankenstein_10_shelley_64kb.mp3",
+          "format": "mp3",
+          "title": "10 - Chapter 11",
+          "contributors": [
+            "Karen Labenz"
+          ]
+        },
+        {
+          "name": "012.mp3",
+          "url": "https://www.archive.org/download/frankenstein_shelley/frankenstein_11_shelley_64kb.mp3",
+          "format": "mp3",
+          "title": "11 - Chapter 12",
+          "contributors": [
+            "Karen Labenz"
+          ]
+        },
+        {
+          "name": "013.mp3",
+          "url": "https://www.archive.org/download/frankenstein_shelley/frankenstein_12_shelley_64kb.mp3",
+          "format": "mp3",
+          "title": "12 - Chapter 13",
+          "contributors": [
+            "Karen Labenz"
+          ]
+        },
+        {
+          "name": "014.mp3",
+          "url": "https://www.archive.org/download/frankenstein_shelley/frankenstein_13_shelley_64kb.mp3",
+          "format": "mp3",
+          "title": "13 - Chapters 14-15",
+          "contributors": [
+            "Kristen McQuillin"
+          ]
+        },
+        {
+          "name": "015.mp3",
+          "url": "https://www.archive.org/download/frankenstein_shelley/frankenstein_14_shelley_64kb.mp3",
+          "format": "mp3",
+          "title": "14 - Chapter 16",
+          "contributors": [
+            "Gord Mackenzie"
+          ]
+        },
+        {
+          "name": "016.mp3",
+          "url": "https://www.archive.org/download/frankenstein_shelley/frankenstein_15_shelley_64kb.mp3",
+          "format": "mp3",
+          "title": "15 - Chapter 17",
+          "contributors": [
+            "Gord Mackenzie"
+          ]
+        },
+        {
+          "name": "017.mp3",
+          "url": "https://www.archive.org/download/frankenstein_shelley/frankenstein_16_shelley_64kb.mp3",
+          "format": "mp3",
+          "title": "16 - Chapter 18",
+          "contributors": [
+            "Gord Mackenzie"
+          ]
+        },
+        {
+          "name": "018.mp3",
+          "url": "https://www.archive.org/download/frankenstein_shelley/frankenstein_17_shelley_64kb.mp3",
+          "format": "mp3",
+          "title": "17 - Chapter 19",
+          "contributors": [
+            "Megan-Jane Daniels Suyasu"
+          ]
+        },
+        {
+          "name": "019.mp3",
+          "url": "https://www.archive.org/download/frankenstein_shelley/frankenstein_18_shelley_64kb.mp3",
+          "format": "mp3",
+          "title": "18 - Chapter 20",
+          "contributors": [
+            "Megan-Jane Daniels Suyasu"
+          ]
+        },
+        {
+          "name": "020.mp3",
+          "url": "https://www.archive.org/download/frankenstein_shelley/frankenstein_19_shelley_64kb.mp3",
+          "format": "mp3",
+          "title": "19 - Chapters 21-22",
+          "contributors": [
+            "Gord Mackenzie"
+          ]
+        },
+        {
+          "name": "021.mp3",
+          "url": "https://www.archive.org/download/frankenstein_shelley/frankenstein_20_shelley_64kb.mp3",
+          "format": "mp3",
+          "title": "20 - Chapter 23",
+          "contributors": [
+            "Hugh McGuire"
+          ]
+        },
+        {
+          "name": "022.mp3",
+          "url": "https://www.archive.org/download/frankenstein_shelley/frankenstein_21_shelley_64kb.mp3",
+          "format": "mp3",
+          "title": "21 - Chapter 24",
+          "contributors": [
+            "Hugh McGuire"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "lv-1123",
+      "title": "Narrative of the Life of Frederick Douglass",
+      "authors": [
+        "Frederick Douglass"
+      ],
+      "languages": [
+        "en"
+      ],
+      "type": "audiobook",
+      "rationale": "Compare listening with reading, preserve narrator and recording identity, and study ethical reasoning or literary perspective through complete cataloged recordings.",
+      "landing_url": "https://librivox.org/narrative-of-the-life-of-frederick-douglass-by-frederick-douglass/",
+      "metadata_url": "https://librivox.org/api/feed/audiobooks?id=1123&format=json&extended=1",
+      "rights": "LibriVox declares recordings public domain in the USA. Rights elsewhere and the underlying text or translation require jurisdiction-specific review.",
+      "rights_url": "https://librivox.org/pages/public-domain/",
+      "review_status": "not_applicable",
+      "notes": "All tracks exposed by the extended recording record are selected, in returned chapter order. Narration quality and semantic completeness are not certified. Catalog declares 13 sections but exposes 14; preserve all exposed tracks and flag the discrepancy.",
+      "assets": [
+        {
+          "name": "001.mp3",
+          "url": "https://www.archive.org/download/frederick-douglass_jf_librivox/narrative_00-1_douglass_64kb.mp3",
+          "format": "mp3",
+          "title": "Preface",
+          "contributors": [
+            "Jeanette Ferguson"
+          ]
+        },
+        {
+          "name": "002.mp3",
+          "url": "https://www.archive.org/download/frederick-douglass_jf_librivox/narrative_00-2_douglass_64kb.mp3",
+          "format": "mp3",
+          "title": "Letter from Wendell Phillips, ESQ.",
+          "contributors": [
+            "Jeanette Ferguson"
+          ]
+        },
+        {
+          "name": "003.mp3",
+          "url": "https://www.archive.org/download/frederick-douglass_jf_librivox/narrative_01_douglass_64kb.mp3",
+          "format": "mp3",
+          "title": "Chapter I",
+          "contributors": [
+            "Jeanette Ferguson"
+          ]
+        },
+        {
+          "name": "004.mp3",
+          "url": "https://www.archive.org/download/frederick-douglass_jf_librivox/narrative_02_douglass_64kb.mp3",
+          "format": "mp3",
+          "title": "Chapter II",
+          "contributors": [
+            "Jeanette Ferguson"
+          ]
+        },
+        {
+          "name": "005.mp3",
+          "url": "https://www.archive.org/download/frederick-douglass_jf_librivox/narrative_03_douglass_64kb.mp3",
+          "format": "mp3",
+          "title": "Chapter III",
+          "contributors": [
+            "Jeanette Ferguson"
+          ]
+        },
+        {
+          "name": "006.mp3",
+          "url": "https://www.archive.org/download/frederick-douglass_jf_librivox/narrative_04_douglass_64kb.mp3",
+          "format": "mp3",
+          "title": "Chapter IV",
+          "contributors": [
+            "Jeanette Ferguson"
+          ]
+        },
+        {
+          "name": "007.mp3",
+          "url": "https://www.archive.org/download/frederick-douglass_jf_librivox/narrative_05_douglass_64kb.mp3",
+          "format": "mp3",
+          "title": "Chapter V",
+          "contributors": [
+            "Jeanette Ferguson"
+          ]
+        },
+        {
+          "name": "008.mp3",
+          "url": "https://www.archive.org/download/frederick-douglass_jf_librivox/narrative_06_douglass_64kb.mp3",
+          "format": "mp3",
+          "title": "Chapter VI",
+          "contributors": [
+            "Jeanette Ferguson"
+          ]
+        },
+        {
+          "name": "009.mp3",
+          "url": "https://www.archive.org/download/frederick-douglass_jf_librivox/narrative_07_douglass_64kb.mp3",
+          "format": "mp3",
+          "title": "Chapter VII",
+          "contributors": [
+            "Jeanette Ferguson"
+          ]
+        },
+        {
+          "name": "010.mp3",
+          "url": "https://www.archive.org/download/frederick-douglass_jf_librivox/narrative_08_douglass_64kb.mp3",
+          "format": "mp3",
+          "title": "Chapter VIII",
+          "contributors": [
+            "Jeanette Ferguson"
+          ]
+        },
+        {
+          "name": "011.mp3",
+          "url": "https://www.archive.org/download/frederick-douglass_jf_librivox/narrative_09_douglass_64kb.mp3",
+          "format": "mp3",
+          "title": "Chapter IX",
+          "contributors": [
+            "Jeanette Ferguson"
+          ]
+        },
+        {
+          "name": "012.mp3",
+          "url": "https://www.archive.org/download/frederick-douglass_jf_librivox/narrative_10_douglass_64kb.mp3",
+          "format": "mp3",
+          "title": "Chapter X",
+          "contributors": [
+            "Jeanette Ferguson"
+          ]
+        },
+        {
+          "name": "013.mp3",
+          "url": "https://www.archive.org/download/frederick-douglass_jf_librivox/narrative_11-1_douglass_64kb.mp3",
+          "format": "mp3",
+          "title": "Chap XI",
+          "contributors": [
+            "Jeanette Ferguson"
+          ]
+        },
+        {
+          "name": "014.mp3",
+          "url": "https://www.archive.org/download/frederick-douglass_jf_librivox/narrative_11-2_douglass_64kb.mp3",
+          "format": "mp3",
+          "title": "Appendix",
+          "contributors": [
+            "Jeanette Ferguson"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "lv-1870",
+      "title": "Candide ou L'optimisme",
+      "authors": [
+        "Voltaire"
+      ],
+      "languages": [
+        "fr"
+      ],
+      "type": "audiobook",
+      "rationale": "Compare listening with reading, preserve narrator and recording identity, and study ethical reasoning or literary perspective through complete cataloged recordings.",
+      "landing_url": "https://librivox.org/candide-by-voltaire-2/",
+      "metadata_url": "https://librivox.org/api/feed/audiobooks?id=1870&format=json&extended=1",
+      "rights": "LibriVox declares recordings public domain in the USA. Rights elsewhere and the underlying text or translation require jurisdiction-specific review.",
+      "rights_url": "https://librivox.org/pages/public-domain/",
+      "review_status": "not_applicable",
+      "notes": "All tracks exposed by the extended recording record are selected, in returned chapter order. Narration quality and semantic completeness are not certified.",
+      "assets": [
+        {
+          "name": "001.mp3",
+          "url": "https://www.archive.org/download/candide_ou_loptimisme_b_librivox/candide_01_voltaire_64kb.mp3",
+          "format": "mp3",
+          "title": "Chapter 01",
+          "contributors": [
+            "Bernard"
+          ]
+        },
+        {
+          "name": "002.mp3",
+          "url": "https://www.archive.org/download/candide_ou_loptimisme_b_librivox/candide_02_voltaire_64kb.mp3",
+          "format": "mp3",
+          "title": "Chapter 02",
+          "contributors": [
+            "Bernard"
+          ]
+        },
+        {
+          "name": "003.mp3",
+          "url": "https://www.archive.org/download/candide_ou_loptimisme_b_librivox/candide_03_voltaire_64kb.mp3",
+          "format": "mp3",
+          "title": "Chapter 03",
+          "contributors": [
+            "Bernard"
+          ]
+        },
+        {
+          "name": "004.mp3",
+          "url": "https://www.archive.org/download/candide_ou_loptimisme_b_librivox/candide_04_voltaire_64kb.mp3",
+          "format": "mp3",
+          "title": "Chapter 04",
+          "contributors": [
+            "Bernard"
+          ]
+        },
+        {
+          "name": "005.mp3",
+          "url": "https://www.archive.org/download/candide_ou_loptimisme_b_librivox/candide_05_voltaire_64kb.mp3",
+          "format": "mp3",
+          "title": "Chapter 05",
+          "contributors": [
+            "Bernard"
+          ]
+        },
+        {
+          "name": "006.mp3",
+          "url": "https://www.archive.org/download/candide_ou_loptimisme_b_librivox/candide_06_voltaire_64kb.mp3",
+          "format": "mp3",
+          "title": "Chapter 06",
+          "contributors": [
+            "Bernard"
+          ]
+        },
+        {
+          "name": "007.mp3",
+          "url": "https://www.archive.org/download/candide_ou_loptimisme_b_librivox/candide_07_voltaire_64kb.mp3",
+          "format": "mp3",
+          "title": "Chapter 07",
+          "contributors": [
+            "Bernard"
+          ]
+        },
+        {
+          "name": "008.mp3",
+          "url": "https://www.archive.org/download/candide_ou_loptimisme_b_librivox/candide_08_voltaire_64kb.mp3",
+          "format": "mp3",
+          "title": "Chapter 08",
+          "contributors": [
+            "Bernard"
+          ]
+        },
+        {
+          "name": "009.mp3",
+          "url": "https://www.archive.org/download/candide_ou_loptimisme_b_librivox/candide_09_voltaire_64kb.mp3",
+          "format": "mp3",
+          "title": "Chapter 09",
+          "contributors": [
+            "Bernard"
+          ]
+        },
+        {
+          "name": "010.mp3",
+          "url": "https://www.archive.org/download/candide_ou_loptimisme_b_librivox/candide_10_voltaire_64kb.mp3",
+          "format": "mp3",
+          "title": "Chapter 10",
+          "contributors": [
+            "Bernard"
+          ]
+        },
+        {
+          "name": "011.mp3",
+          "url": "https://www.archive.org/download/candide_ou_loptimisme_b_librivox/candide_11_voltaire_64kb.mp3",
+          "format": "mp3",
+          "title": "Chapter 11",
+          "contributors": [
+            "Bernard"
+          ]
+        },
+        {
+          "name": "012.mp3",
+          "url": "https://www.archive.org/download/candide_ou_loptimisme_b_librivox/candide_12_voltaire_64kb.mp3",
+          "format": "mp3",
+          "title": "Chapter 12",
+          "contributors": [
+            "Bernard"
+          ]
+        },
+        {
+          "name": "013.mp3",
+          "url": "https://www.archive.org/download/candide_ou_loptimisme_b_librivox/candide_13_voltaire_64kb.mp3",
+          "format": "mp3",
+          "title": "Chapter 13",
+          "contributors": [
+            "Bernard"
+          ]
+        },
+        {
+          "name": "014.mp3",
+          "url": "https://www.archive.org/download/candide_ou_loptimisme_b_librivox/candide_14_voltaire_64kb.mp3",
+          "format": "mp3",
+          "title": "Chapter 14",
+          "contributors": [
+            "Bernard"
+          ]
+        },
+        {
+          "name": "015.mp3",
+          "url": "https://www.archive.org/download/candide_ou_loptimisme_b_librivox/candide_15_voltaire_64kb.mp3",
+          "format": "mp3",
+          "title": "Chapter 15",
+          "contributors": [
+            "Bernard"
+          ]
+        },
+        {
+          "name": "016.mp3",
+          "url": "https://www.archive.org/download/candide_ou_loptimisme_b_librivox/candide_16_voltaire_64kb.mp3",
+          "format": "mp3",
+          "title": "Chapter 16",
+          "contributors": [
+            "Bernard"
+          ]
+        },
+        {
+          "name": "017.mp3",
+          "url": "https://www.archive.org/download/candide_ou_loptimisme_b_librivox/candide_17_voltaire_64kb.mp3",
+          "format": "mp3",
+          "title": "Chapter 17",
+          "contributors": [
+            "Bernard"
+          ]
+        },
+        {
+          "name": "018.mp3",
+          "url": "https://www.archive.org/download/candide_ou_loptimisme_b_librivox/candide_18_voltaire_64kb.mp3",
+          "format": "mp3",
+          "title": "Chapter 18",
+          "contributors": [
+            "Bernard"
+          ]
+        },
+        {
+          "name": "019.mp3",
+          "url": "https://www.archive.org/download/candide_ou_loptimisme_b_librivox/candide_19_voltaire_64kb.mp3",
+          "format": "mp3",
+          "title": "Chapter 19",
+          "contributors": [
+            "Bernard"
+          ]
+        },
+        {
+          "name": "020.mp3",
+          "url": "https://www.archive.org/download/candide_ou_loptimisme_b_librivox/candide_20_voltaire_64kb.mp3",
+          "format": "mp3",
+          "title": "Chapter 20",
+          "contributors": [
+            "Bernard"
+          ]
+        },
+        {
+          "name": "021.mp3",
+          "url": "https://www.archive.org/download/candide_ou_loptimisme_b_librivox/candide_21_voltaire_64kb.mp3",
+          "format": "mp3",
+          "title": "Chapter 21",
+          "contributors": [
+            "Bernard"
+          ]
+        },
+        {
+          "name": "022.mp3",
+          "url": "https://www.archive.org/download/candide_ou_loptimisme_b_librivox/candide_22_voltaire_64kb.mp3",
+          "format": "mp3",
+          "title": "Chapter 22",
+          "contributors": [
+            "Bernard"
+          ]
+        },
+        {
+          "name": "023.mp3",
+          "url": "https://www.archive.org/download/candide_ou_loptimisme_b_librivox/candide_23_voltaire_64kb.mp3",
+          "format": "mp3",
+          "title": "Chapter 23",
+          "contributors": [
+            "Bernard"
+          ]
+        },
+        {
+          "name": "024.mp3",
+          "url": "https://www.archive.org/download/candide_ou_loptimisme_b_librivox/candide_24_voltaire_64kb.mp3",
+          "format": "mp3",
+          "title": "Chapter 24",
+          "contributors": [
+            "Bernard"
+          ]
+        },
+        {
+          "name": "025.mp3",
+          "url": "https://www.archive.org/download/candide_ou_loptimisme_b_librivox/candide_25_voltaire_64kb.mp3",
+          "format": "mp3",
+          "title": "Chapter 25",
+          "contributors": [
+            "Bernard"
+          ]
+        },
+        {
+          "name": "026.mp3",
+          "url": "https://www.archive.org/download/candide_ou_loptimisme_b_librivox/candide_26_voltaire_64kb.mp3",
+          "format": "mp3",
+          "title": "Chapter 26",
+          "contributors": [
+            "Bernard"
+          ]
+        },
+        {
+          "name": "027.mp3",
+          "url": "https://www.archive.org/download/candide_ou_loptimisme_b_librivox/candide_27_voltaire_64kb.mp3",
+          "format": "mp3",
+          "title": "Chapter 27",
+          "contributors": [
+            "Bernard"
+          ]
+        },
+        {
+          "name": "028.mp3",
+          "url": "https://www.archive.org/download/candide_ou_loptimisme_b_librivox/candide_28_voltaire_64kb.mp3",
+          "format": "mp3",
+          "title": "Chapter 28",
+          "contributors": [
+            "Bernard"
+          ]
+        },
+        {
+          "name": "029.mp3",
+          "url": "https://www.archive.org/download/candide_ou_loptimisme_b_librivox/candide_29_voltaire_64kb.mp3",
+          "format": "mp3",
+          "title": "Chapter 29",
+          "contributors": [
+            "Bernard"
+          ]
+        },
+        {
+          "name": "030.mp3",
+          "url": "https://www.archive.org/download/candide_ou_loptimisme_b_librivox/candide_30_voltaire_64kb.mp3",
+          "format": "mp3",
+          "title": "Chapter 30",
+          "contributors": [
+            "Bernard"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "lv-2689",
+      "title": "Verwandlung",
+      "authors": [
+        "Franz Kafka"
+      ],
+      "languages": [
+        "de"
+      ],
+      "type": "audiobook",
+      "rationale": "Compare listening with reading, preserve narrator and recording identity, and study ethical reasoning or literary perspective through complete cataloged recordings.",
+      "landing_url": "https://librivox.org/die-verwandlung-von-franz-kafka/",
+      "metadata_url": "https://librivox.org/api/feed/audiobooks?id=2689&format=json&extended=1",
+      "rights": "LibriVox declares recordings public domain in the USA. Rights elsewhere and the underlying text or translation require jurisdiction-specific review.",
+      "rights_url": "https://librivox.org/pages/public-domain/",
+      "review_status": "not_applicable",
+      "notes": "All tracks exposed by the extended recording record are selected, in returned chapter order. Narration quality and semantic completeness are not certified.",
+      "assets": [
+        {
+          "name": "001.mp3",
+          "url": "https://www.archive.org/download/verwandlung_mw_0811_librivox/verwandlung_01_kafka_64kb.mp3",
+          "format": "mp3",
+          "title": "Abschnitt 1",
+          "contributors": [
+            "Markus Wachenheim"
+          ]
+        },
+        {
+          "name": "002.mp3",
+          "url": "https://www.archive.org/download/verwandlung_mw_0811_librivox/verwandlung_02_kafka_64kb.mp3",
+          "format": "mp3",
+          "title": "Abschnitt 2",
+          "contributors": [
+            "Markus Wachenheim"
+          ]
+        },
+        {
+          "name": "003.mp3",
+          "url": "https://www.archive.org/download/verwandlung_mw_0811_librivox/verwandlung_03_kafka_64kb.mp3",
+          "format": "mp3",
+          "title": "Abschnitt 3",
+          "contributors": [
+            "Markus Wachenheim"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "lv-3579",
+      "title": "Lazarillo de Tormes",
+      "authors": [
+        "Anonymous"
+      ],
+      "languages": [
+        "es"
+      ],
+      "type": "audiobook",
+      "rationale": "Compare listening with reading, preserve narrator and recording identity, and study ethical reasoning or literary perspective through complete cataloged recordings.",
+      "landing_url": "https://librivox.org/lazarillo-de-tormes/",
+      "metadata_url": "https://librivox.org/api/feed/audiobooks?id=3579&format=json&extended=1",
+      "rights": "LibriVox declares recordings public domain in the USA. Rights elsewhere and the underlying text or translation require jurisdiction-specific review.",
+      "rights_url": "https://librivox.org/pages/public-domain/",
+      "review_status": "not_applicable",
+      "notes": "All tracks exposed by the extended recording record are selected, in returned chapter order. Narration quality and semantic completeness are not certified.",
+      "assets": [
+        {
+          "name": "001.mp3",
+          "url": "https://www.archive.org/download/lazarillo_0912_librivox/Lazarillo_de_Tormes_1_anonimo_64kb.mp3",
+          "format": "mp3",
+          "title": "Prologo - Tratado primero: Cuenta Lazaro su vida, y cuyo hijo fue. ",
+          "contributors": [
+            "Tux"
+          ]
+        },
+        {
+          "name": "002.mp3",
+          "url": "https://www.archive.org/download/lazarillo_0912_librivox/Lazarillo_de_Tormes_2_anonimo_64kb.mp3",
+          "format": "mp3",
+          "title": "Tratado Segundo: Como Lazaro se asento con un clerigo, y de las cosas que con el paso.",
+          "contributors": [
+            "Tux"
+          ]
+        },
+        {
+          "name": "003.mp3",
+          "url": "https://www.archive.org/download/lazarillo_0912_librivox/Lazarillo_de_Tormes_3_anonimo_64kb.mp3",
+          "format": "mp3",
+          "title": "Tratado Tercero: Como Lazaro se asento con un escudero, y de lo que le acaecio con el.",
+          "contributors": [
+            "Tux"
+          ]
+        },
+        {
+          "name": "004.mp3",
+          "url": "https://www.archive.org/download/lazarillo_0912_librivox/Lazarillo_de_Tormes_4_anonimo_64kb.mp3",
+          "format": "mp3",
+          "title": "Tratados Cuarto y Quinto: Como Lazaro se asento con un fraile de la Merced, y de lo que le acaecio con el.  Como Lazaro se asento con un buldero, y de las cosas que con el paso.",
+          "contributors": [
+            "Tux"
+          ]
+        },
+        {
+          "name": "005.mp3",
+          "url": "https://www.archive.org/download/lazarillo_0912_librivox/Lazarillo_de_Tormes_5_anonimo_64kb.mp3",
+          "format": "mp3",
+          "title": "Tratados Sexto y Septimo: Como Lazaro se asento con un capellan, y lo que con el paso. Como Lazaro se asento con un alguacil, y de lo que le acaecio con el. ",
+          "contributors": [
+            "Tux"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "lv-119",
+      "title": "Art of War",
+      "authors": [
+        "Sun Tzu 孙武"
+      ],
+      "languages": [
+        "en"
+      ],
+      "type": "audiobook",
+      "rationale": "Compare listening with reading, preserve narrator and recording identity, and study ethical reasoning or literary perspective through complete cataloged recordings.",
+      "landing_url": "https://librivox.org/the-art-of-war-by-sun-tzu/",
+      "metadata_url": "https://librivox.org/api/feed/audiobooks?id=119&format=json&extended=1",
+      "rights": "LibriVox declares recordings public domain in the USA. Rights elsewhere and the underlying text or translation require jurisdiction-specific review.",
+      "rights_url": "https://librivox.org/pages/public-domain/",
+      "review_status": "not_applicable",
+      "notes": "All tracks exposed by the extended recording record are selected, in returned chapter order. Narration quality and semantic completeness are not certified.",
+      "assets": [
+        {
+          "name": "001.mp3",
+          "url": "https://www.archive.org/download/art_of_war_librivox/art_of_war_01-02_sun_tzu_64kb.mp3",
+          "format": "mp3",
+          "title": "01 - Laying Plans / 02 - Waging War",
+          "contributors": [
+            "Moira Fogarty"
+          ]
+        },
+        {
+          "name": "002.mp3",
+          "url": "https://www.archive.org/download/art_of_war_librivox/art_of_war_03-04_sun_tzu_64kb.mp3",
+          "format": "mp3",
+          "title": "03 - Attack By Stratagem / 04 - Tactical Dispositions",
+          "contributors": [
+            "Moira Fogarty"
+          ]
+        },
+        {
+          "name": "003.mp3",
+          "url": "https://www.archive.org/download/art_of_war_librivox/art_of_war_05-06_sun_tzu_64kb.mp3",
+          "format": "mp3",
+          "title": "05 - Energy / 06 - Weak Points and Strong",
+          "contributors": [
+            "Moira Fogarty"
+          ]
+        },
+        {
+          "name": "004.mp3",
+          "url": "https://www.archive.org/download/art_of_war_librivox/art_of_war_07-08_sun_tzu_64kb.mp3",
+          "format": "mp3",
+          "title": "07 - Maneuvering / 08 - Variation in Tactics",
+          "contributors": [
+            "Moira Fogarty"
+          ]
+        },
+        {
+          "name": "005.mp3",
+          "url": "https://www.archive.org/download/art_of_war_librivox/art_of_war_09-10_sun_tzu_64kb.mp3",
+          "format": "mp3",
+          "title": "09 - The Army on the March / 10 - Terrain",
+          "contributors": [
+            "Moira Fogarty"
+          ]
+        },
+        {
+          "name": "006.mp3",
+          "url": "https://www.archive.org/download/art_of_war_librivox/art_of_war_11_sun_tzu_64kb.mp3",
+          "format": "mp3",
+          "title": "11 - The Nine Situations",
+          "contributors": [
+            "Moira Fogarty"
+          ]
+        },
+        {
+          "name": "007.mp3",
+          "url": "https://www.archive.org/download/art_of_war_librivox/art_of_war_12-13_sun_tzu_64kb.mp3",
+          "format": "mp3",
+          "title": "12 - The Attack By Fire / 13 - The Use of Spies",
+          "contributors": [
+            "Moira Fogarty"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "lv-1502",
+      "title": "Meditations on First Philosophy",
+      "authors": [
+        "René Descartes"
+      ],
+      "languages": [
+        "en"
+      ],
+      "type": "audiobook",
+      "rationale": "Compare listening with reading, preserve narrator and recording identity, and study ethical reasoning or literary perspective through complete cataloged recordings.",
+      "landing_url": "https://librivox.org/meditations-on-first-philosophy-by-rene-descartes/",
+      "metadata_url": "https://librivox.org/api/feed/audiobooks?id=1502&format=json&extended=1",
+      "rights": "LibriVox declares recordings public domain in the USA. Rights elsewhere and the underlying text or translation require jurisdiction-specific review.",
+      "rights_url": "https://librivox.org/pages/public-domain/",
+      "review_status": "not_applicable",
+      "notes": "All tracks exposed by the extended recording record are selected, in returned chapter order. Narration quality and semantic completeness are not certified.",
+      "assets": [
+        {
+          "name": "001.mp3",
+          "url": "https://www.archive.org/download/meditations_descartes_dew_librivox/descartes-00a-meditations_64kb.mp3",
+          "format": "mp3",
+          "title": "Letter of Dedication",
+          "contributors": [
+            "D.E. Wittkower"
+          ]
+        },
+        {
+          "name": "002.mp3",
+          "url": "https://www.archive.org/download/meditations_descartes_dew_librivox/descartes-00b-meditations_64kb.mp3",
+          "format": "mp3",
+          "title": "Preface to the Reader",
+          "contributors": [
+            "D.E. Wittkower"
+          ]
+        },
+        {
+          "name": "003.mp3",
+          "url": "https://www.archive.org/download/meditations_descartes_dew_librivox/descartes-00c-meditations_64kb.mp3",
+          "format": "mp3",
+          "title": "Synopsis of the Six Following Meditations",
+          "contributors": [
+            "D.E. Wittkower"
+          ]
+        },
+        {
+          "name": "004.mp3",
+          "url": "https://www.archive.org/download/meditations_descartes_dew_librivox/descartes-01-meditations_64kb.mp3",
+          "format": "mp3",
+          "title": "Meditation I:  Of the Things of which We may Doubt",
+          "contributors": [
+            "D.E. Wittkower"
+          ]
+        },
+        {
+          "name": "005.mp3",
+          "url": "https://www.archive.org/download/meditations_descartes_dew_librivox/descartes-02-meditations_64kb.mp3",
+          "format": "mp3",
+          "title": "Meditation II:  Of the Nature of the Human Mind; And that it is More Easily Known than the Body",
+          "contributors": [
+            "D.E. Wittkower"
+          ]
+        },
+        {
+          "name": "006.mp3",
+          "url": "https://www.archive.org/download/meditations_descartes_dew_librivox/descartes-03-meditations_64kb.mp3",
+          "format": "mp3",
+          "title": "Meditation III:  Of God:  That He Exists",
+          "contributors": [
+            "D.E. Wittkower"
+          ]
+        },
+        {
+          "name": "007.mp3",
+          "url": "https://www.archive.org/download/meditations_descartes_dew_librivox/descartes-04-meditations_64kb.mp3",
+          "format": "mp3",
+          "title": "Meditation IV:  Of Truth and Error",
+          "contributors": [
+            "D.E. Wittkower"
+          ]
+        },
+        {
+          "name": "008.mp3",
+          "url": "https://www.archive.org/download/meditations_descartes_dew_librivox/descartes-05-meditations_64kb.mp3",
+          "format": "mp3",
+          "title": "Meditation V:  Of the Essence of Material Things; And, Again, Of God; That He Exists",
+          "contributors": [
+            "D.E. Wittkower"
+          ]
+        },
+        {
+          "name": "009.mp3",
+          "url": "https://www.archive.org/download/meditations_descartes_dew_librivox/descartes-06-meditations_64kb.mp3",
+          "format": "mp3",
+          "title": "Meditation VI:  Of the Existence of Material Things, And of the Real Distinction Between the Mind and Body of Man",
+          "contributors": [
+            "D.E. Wittkower"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "arxiv-1706.03762v7",
+      "title": "Attention Is All You Need",
+      "authors": [
+        "Ashish Vaswani",
+        "Noam Shazeer",
+        "Niki Parmar",
+        "Jakob Uszkoreit",
+        "Llion Jones",
+        "Aidan N. Gomez",
+        "Lukasz Kaiser",
+        "Illia Polosukhin"
+      ],
+      "languages": [
+        "en"
+      ],
+      "type": "article",
+      "rationale": "Study a primary research account or technical treatment, including methods, evidence, limitations, and provenance. Compare claims with later literature rather than treating prominence as truth.",
+      "landing_url": "https://arxiv.org/abs/1706.03762v7",
+      "metadata_url": "https://export.arxiv.org/api/query?id_list=1706.03762v7",
+      "rights": "Available for personal local reading from arXiv. The item license has not been independently resolved; no redistribution permission is inferred.",
+      "rights_url": "https://info.arxiv.org/help/license/index.html",
+      "review_status": "preprint_or_repository_version",
+      "assets": [
+        {
+          "name": "1706.03762v7.pdf",
+          "url": "https://export.arxiv.org/pdf/1706.03762v7",
+          "format": "pdf"
+        }
+      ]
+    },
+    {
+      "id": "arxiv-2005.14165v4",
+      "title": "Language Models are Few-Shot Learners",
+      "authors": [
+        "Tom B. Brown",
+        "Benjamin Mann",
+        "Nick Ryder",
+        "Melanie Subbiah",
+        "Jared Kaplan",
+        "Prafulla Dhariwal",
+        "Arvind Neelakantan",
+        "Pranav Shyam",
+        "Girish Sastry",
+        "Amanda Askell",
+        "Sandhini Agarwal",
+        "Ariel Herbert-Voss",
+        "Gretchen Krueger",
+        "Tom Henighan",
+        "Rewon Child",
+        "Aditya Ramesh",
+        "Daniel M. Ziegler",
+        "Jeffrey Wu",
+        "Clemens Winter",
+        "Christopher Hesse",
+        "Mark Chen",
+        "Eric Sigler",
+        "Mateusz Litwin",
+        "Scott Gray",
+        "Benjamin Chess",
+        "Jack Clark",
+        "Christopher Berner",
+        "Sam McCandlish",
+        "Alec Radford",
+        "Ilya Sutskever",
+        "Dario Amodei"
+      ],
+      "languages": [
+        "en"
+      ],
+      "type": "article",
+      "rationale": "Study a primary research account or technical treatment, including methods, evidence, limitations, and provenance. Compare claims with later literature rather than treating prominence as truth.",
+      "landing_url": "https://arxiv.org/abs/2005.14165v4",
+      "metadata_url": "https://export.arxiv.org/api/query?id_list=2005.14165v4",
+      "rights": "Available for personal local reading from arXiv. The item license has not been independently resolved; no redistribution permission is inferred.",
+      "rights_url": "https://info.arxiv.org/help/license/index.html",
+      "review_status": "preprint_or_repository_version",
+      "assets": [
+        {
+          "name": "2005.14165v4.pdf",
+          "url": "https://export.arxiv.org/pdf/2005.14165v4",
+          "format": "pdf"
+        }
+      ]
+    },
+    {
+      "id": "arxiv-1606.06565v2",
+      "title": "Concrete Problems in AI Safety",
+      "authors": [
+        "Dario Amodei",
+        "Chris Olah",
+        "Jacob Steinhardt",
+        "Paul Christiano",
+        "John Schulman",
+        "Dan Mané"
+      ],
+      "languages": [
+        "en"
+      ],
+      "type": "article",
+      "rationale": "Study a primary research account or technical treatment, including methods, evidence, limitations, and provenance. Compare claims with later literature rather than treating prominence as truth.",
+      "landing_url": "https://arxiv.org/abs/1606.06565v2",
+      "metadata_url": "https://export.arxiv.org/api/query?id_list=1606.06565v2",
+      "rights": "Available for personal local reading from arXiv. The item license has not been independently resolved; no redistribution permission is inferred.",
+      "rights_url": "https://info.arxiv.org/help/license/index.html",
+      "review_status": "preprint_or_repository_version",
+      "assets": [
+        {
+          "name": "1606.06565v2.pdf",
+          "url": "https://export.arxiv.org/pdf/1606.06565v2",
+          "format": "pdf"
+        }
+      ]
+    },
+    {
+      "id": "arxiv-1207.7214v2",
+      "title": "Observation of a new particle in the search for the Standard Model Higgs boson with the ATLAS detector at the LHC",
+      "authors": [
+        " The ATLAS Collaboration"
+      ],
+      "languages": [
+        "en"
+      ],
+      "type": "article",
+      "rationale": "Study a primary research account or technical treatment, including methods, evidence, limitations, and provenance. Compare claims with later literature rather than treating prominence as truth.",
+      "landing_url": "https://arxiv.org/abs/1207.7214v2",
+      "metadata_url": "https://export.arxiv.org/api/query?id_list=1207.7214v2",
+      "rights": "Available for personal local reading from arXiv. The item license has not been independently resolved; no redistribution permission is inferred.",
+      "rights_url": "https://info.arxiv.org/help/license/index.html",
+      "review_status": "preprint_or_repository_version",
+      "assets": [
+        {
+          "name": "1207.7214v2.pdf",
+          "url": "https://export.arxiv.org/pdf/1207.7214v2",
+          "format": "pdf"
+        }
+      ]
+    },
+    {
+      "id": "arxiv-math-0307245v1",
+      "title": "Finite extinction time for the solutions to the Ricci flow on certain three-manifolds",
+      "authors": [
+        "Grisha Perelman"
+      ],
+      "languages": [
+        "en"
+      ],
+      "type": "article",
+      "rationale": "Study a primary research account or technical treatment, including methods, evidence, limitations, and provenance. Compare claims with later literature rather than treating prominence as truth.",
+      "landing_url": "https://arxiv.org/abs/math/0307245v1",
+      "metadata_url": "https://export.arxiv.org/api/query?id_list=math%2F0307245v1",
+      "rights": "Available for personal local reading from arXiv. The item license has not been independently resolved; no redistribution permission is inferred.",
+      "rights_url": "https://info.arxiv.org/help/license/index.html",
+      "review_status": "preprint_or_repository_version",
+      "assets": [
+        {
+          "name": "math-0307245v1.pdf",
+          "url": "https://export.arxiv.org/pdf/math/0307245v1",
+          "format": "pdf"
+        }
+      ]
+    },
+    {
+      "id": "arxiv-1602.03837v1",
+      "title": "Observation of Gravitational Waves from a Binary Black Hole Merger",
+      "authors": [
+        " The LIGO Scientific Collaboration",
+        " the Virgo Collaboration"
+      ],
+      "languages": [
+        "en"
+      ],
+      "type": "article",
+      "rationale": "Study a primary research account or technical treatment, including methods, evidence, limitations, and provenance. Compare claims with later literature rather than treating prominence as truth.",
+      "landing_url": "https://arxiv.org/abs/1602.03837v1",
+      "metadata_url": "https://export.arxiv.org/api/query?id_list=1602.03837v1",
+      "rights": "Available for personal local reading from arXiv. The item license has not been independently resolved; no redistribution permission is inferred.",
+      "rights_url": "https://info.arxiv.org/help/license/index.html",
+      "review_status": "preprint_or_repository_version",
+      "assets": [
+        {
+          "name": "1602.03837v1.pdf",
+          "url": "https://export.arxiv.org/pdf/1602.03837v1",
+          "format": "pdf"
+        }
+      ]
+    },
+    {
+      "id": "arxiv-1301.3781v3",
+      "title": "Efficient Estimation of Word Representations in Vector Space",
+      "authors": [
+        "Tomas Mikolov",
+        "Kai Chen",
+        "Greg Corrado",
+        "Jeffrey Dean"
+      ],
+      "languages": [
+        "en"
+      ],
+      "type": "article",
+      "rationale": "Study a primary research account or technical treatment, including methods, evidence, limitations, and provenance. Compare claims with later literature rather than treating prominence as truth.",
+      "landing_url": "https://arxiv.org/abs/1301.3781v3",
+      "metadata_url": "https://export.arxiv.org/api/query?id_list=1301.3781v3",
+      "rights": "Available for personal local reading from arXiv. The item license has not been independently resolved; no redistribution permission is inferred.",
+      "rights_url": "https://info.arxiv.org/help/license/index.html",
+      "review_status": "preprint_or_repository_version",
+      "assets": [
+        {
+          "name": "1301.3781v3.pdf",
+          "url": "https://export.arxiv.org/pdf/1301.3781v3",
+          "format": "pdf"
+        }
+      ]
+    },
+    {
+      "id": "arxiv-1803.09010v8",
+      "title": "Datasheets for Datasets",
+      "authors": [
+        "Timnit Gebru",
+        "Jamie Morgenstern",
+        "Briana Vecchione",
+        "Jennifer Wortman Vaughan",
+        "Hanna Wallach",
+        "Hal Daumé",
+        "Kate Crawford"
+      ],
+      "languages": [
+        "en"
+      ],
+      "type": "article",
+      "rationale": "Study a primary research account or technical treatment, including methods, evidence, limitations, and provenance. Compare claims with later literature rather than treating prominence as truth.",
+      "landing_url": "https://arxiv.org/abs/1803.09010v8",
+      "metadata_url": "https://export.arxiv.org/api/query?id_list=1803.09010v8",
+      "rights": "Available for personal local reading from arXiv. The item license has not been independently resolved; no redistribution permission is inferred.",
+      "rights_url": "https://info.arxiv.org/help/license/index.html",
+      "review_status": "preprint_or_repository_version",
+      "assets": [
+        {
+          "name": "1803.09010v8.pdf",
+          "url": "https://export.arxiv.org/pdf/1803.09010v8",
+          "format": "pdf"
+        }
+      ]
+    },
+    {
+      "id": "arxiv-1409.0473v7",
+      "title": "Neural Machine Translation by Jointly Learning to Align and Translate",
+      "authors": [
+        "Dzmitry Bahdanau",
+        "Kyunghyun Cho",
+        "Yoshua Bengio"
+      ],
+      "languages": [
+        "en"
+      ],
+      "type": "article",
+      "rationale": "Study a primary research account or technical treatment, including methods, evidence, limitations, and provenance. Compare claims with later literature rather than treating prominence as truth.",
+      "landing_url": "https://arxiv.org/abs/1409.0473v7",
+      "metadata_url": "https://export.arxiv.org/api/query?id_list=1409.0473v7",
+      "rights": "Available for personal local reading from arXiv. The item license has not been independently resolved; no redistribution permission is inferred.",
+      "rights_url": "https://info.arxiv.org/help/license/index.html",
+      "review_status": "preprint_or_repository_version",
+      "assets": [
+        {
+          "name": "1409.0473v7.pdf",
+          "url": "https://export.arxiv.org/pdf/1409.0473v7",
+          "format": "pdf"
+        }
+      ]
+    },
+    {
+      "id": "arxiv-gr-qc-9712019v1",
+      "title": "Lecture Notes on General Relativity",
+      "authors": [
+        "Sean M. Carroll"
+      ],
+      "languages": [
+        "en"
+      ],
+      "type": "article",
+      "rationale": "Study a primary research account or technical treatment, including methods, evidence, limitations, and provenance. Compare claims with later literature rather than treating prominence as truth.",
+      "landing_url": "https://arxiv.org/abs/gr-qc/9712019v1",
+      "metadata_url": "https://export.arxiv.org/api/query?id_list=gr-qc%2F9712019v1",
+      "rights": "Available for personal local reading from arXiv. The item license has not been independently resolved; no redistribution permission is inferred.",
+      "rights_url": "https://info.arxiv.org/help/license/index.html",
+      "review_status": "preprint_or_repository_version",
+      "assets": [
+        {
+          "name": "gr-qc-9712019v1.pdf",
+          "url": "https://export.arxiv.org/pdf/gr-qc/9712019v1",
+          "format": "pdf"
+        }
+      ]
+    }
+  ]
+}

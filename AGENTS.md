@@ -78,6 +78,9 @@ Shared operations belong in `internal/app`; CLI and TUI use those services and
 root-scoped inventory is in `internal/inventory`; configuration is in
 `internal/config`. Verification logic is tested in `internal/verify`. Do not
 move domain policy into a terminal update handler or duplicate it for MCP.
+The bounded collection harness is in `internal/collection` and `cmd/collection`;
+its curated manifest is `collections/foundations.json`. Keep downloaded validation
+content and local reports outside the checkout. Its intake is not checked publication.
 
 Test behavior and failure recovery, not just execution. Use synthetic fixtures;
 never personal downloads. Give cleanup, parser boundaries, scanner skips, and

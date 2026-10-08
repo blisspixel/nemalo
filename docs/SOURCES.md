@@ -5,6 +5,8 @@ production integrations below are planned. This directory
 covers books, scholarly literature, textbooks, audio, children's reading, and
 multilingual collections. It is a maintained shortlist, not a claim to list every
 repository worldwide or a promise to implement every source.
+The [validation harness](VALIDATION.md) uses explicitly selected Gutenberg-mirror,
+LibriVox/Archive, and arXiv assets without implementing their production adapters.
 
 ## How to read this directory
 
