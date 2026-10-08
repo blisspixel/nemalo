@@ -16,7 +16,6 @@ import (
 	"os"
 	"path"
 	"regexp"
-	"strings"
 	"time"
 )
 
@@ -80,6 +79,7 @@ type Report struct {
 }
 
 var identifier = regexp.MustCompile(`^[a-z0-9][a-z0-9._-]{0,100}$`)
+var archiveDeliveryHost = regexp.MustCompile(`^(ia|dn)[0-9]{6}\.(us|ca)\.archive\.org$`)
 
 func Load(r io.Reader) (Manifest, error) {
 	var m Manifest
@@ -141,8 +141,8 @@ func permittedURL(raw string) error {
 	}
 	h := u.Hostname()
 	allowed := h == "gutenberg.pglaf.org" || h == "mirror.cs.odu.edu" || h == "archive.org" || h == "www.archive.org" || h == "export.arxiv.org" || h == "arxiv.org"
-	// Archive download redirects use numbered ia hosts under its own domain.
-	if strings.HasSuffix(h, ".us.archive.org") && strings.HasPrefix(h, "ia") {
+	// Observed Archive delivery redirects use numbered ia/dn hosts in US/Canada.
+	if archiveDeliveryHost.MatchString(h) {
 		allowed = true
 	}
 	if !allowed {
@@ -219,6 +219,9 @@ func (a Acquirer) Acquire(ctx context.Context, m Manifest, directory string, pro
 			}
 			if progress != nil {
 				_, _ = fmt.Fprintf(progress, "%s/%s: acquired=%t\n", resource.ID, asset.Name, err == nil)
+				if err != nil {
+					_, _ = fmt.Fprintf(progress, "  error: %q\n", err.Error())
+				}
 			}
 			if err := ctx.Err(); err != nil {
 				result.Acquired = false

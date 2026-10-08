@@ -4,6 +4,7 @@ import (
 	"archive/zip"
 	"bytes"
 	"context"
+	"encoding/csv"
 	"encoding/json"
 	"errors"
 	"io"
@@ -47,12 +48,12 @@ func TestManifest(t *testing.T) {
 			t.Errorf("mutation %d accepted", i)
 		}
 	}
-	for _, raw := range []string{"https://archive.org/x", "https://www.archive.org/x", "https://ia800001.us.archive.org/x", "https://gutenberg.pglaf.org/x", "https://export.arxiv.org/x"} {
+	for _, raw := range []string{"https://archive.org/x", "https://www.archive.org/x", "https://ia800001.us.archive.org/x", "https://dn710904.ca.archive.org/x", "https://gutenberg.pglaf.org/x", "https://export.arxiv.org/x"} {
 		if permittedURL(raw) != nil {
 			t.Errorf("rejected %s", raw)
 		}
 	}
-	for _, raw := range []string{"https://archive.org:443/x", "https://u:p@archive.org/x", "https://archive.org/x#frag", "https://archive.org.evil.test/x", "https://127.0.0.1/x", "://", "https://evil.us.archive.org/x"} {
+	for _, raw := range []string{"https://archive.org:443/x", "https://u:p@archive.org/x", "https://archive.org/x#frag", "https://archive.org.evil.test/x", "https://127.0.0.1/x", "://", "https://evil.us.archive.org/x", "https://iaevil.us.archive.org/x", "https://dn710904.ca.archive.org.evil.test/x"} {
 		if permittedURL(raw) == nil {
 			t.Errorf("accepted %s", raw)
 		}
@@ -325,5 +326,29 @@ func TestCuratedManifest(t *testing.T) {
 	}
 	if counts["ebook"] != 80 || counts["audiobook"] != 10 || counts["article"] != 10 || len(langs) < 10 {
 		t.Fatalf("curation contract: %v, %d languages", counts, len(langs))
+	}
+	metadata, err := os.Open(filepath.Join("..", "..", "collections", "gutenberg-catalog.csv"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer metadata.Close()
+	rows, err := csv.NewReader(metadata).ReadAll()
+	if err != nil {
+		t.Fatal(err)
+	}
+	textIDs := map[string]bool{}
+	for _, row := range rows[1:] {
+		if row[1] != "Text" {
+			t.Fatalf("selected ebook is not cataloged text: %v", row[:2])
+		}
+		textIDs["pg-"+row[0]] = true
+	}
+	if len(textIDs) != 80 {
+		t.Fatalf("catalog subset count: %d", len(textIDs))
+	}
+	for _, r := range m.Resources {
+		if r.Type == "ebook" && !textIDs[r.ID] {
+			t.Fatalf("ebook has no text catalog evidence: %s", r.ID)
+		}
 	}
 }

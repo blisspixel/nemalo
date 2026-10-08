@@ -11,6 +11,12 @@ point, not a universal curriculum, a consciousness test, or an endorsement of ea
 author's claims. English and European traditions remain overrepresented. Historical
 prejudice and obsolete science need context; prominence is not evidence of truth.
 Each selection records its rationale, language, source identity, and rights caveat.
+The [Gutenberg catalog subset](../collections/gutenberg-catalog.csv) records the
+selected IDs and catalog types from the official weekly CSV, retrieved 2026-10-08.
+Its line endings and dash typography are normalized. An offline test requires all
+80 ebook selections to be cataloged `Text`: an audio catalog page can itself have
+an EPUB wrapper, so file extension and container validity are insufficient evidence
+that the selected resource is a full text edition.
 
 ## Acquisition harness
 
@@ -33,12 +39,14 @@ The optional reading list links acquired assets and records selection context;
 generating it does not open a reader or promote intake to checked library status.
 The run has one transfer at a time, a 5 GiB transfer budget, a 256 MiB per-file cap,
 five-minute HTTP deadlines, identified requests, a three-second interval between
-requests, fixed provider hosts, and checked HTTPS redirects. It uses an official
+asset requests, fixed provider hosts, and checked HTTPS redirects. It uses an official
 Gutenberg mirror rather than automating ordinary search pages. Most selected EPUBs
 omit optional illustrations to reduce transfer and image processing. Image-dependent
 editions need a separate selection. Existing completed assets are rehashed and
 reinspected without downloading them again. Changed or unreceipted files are
 preserved and rejected, not overwritten.
+Archive delivery redirects admit only the observed numbered `ia`/`dn` host patterns
+under its US/Canadian domains. Other hosts fail closed pending source verification.
 
 Each asset gets a SHA-256 receipt with the selected and final URLs, measured size,
 acquisition time, and separate assessment fields. This hash identifies the acquired

@@ -1678,25 +1678,26 @@
       "notes": "Text-focused EPUB without optional illustrations, selected to bound transfer and image processing. Not a substitute for image-dependent editions."
     },
     {
-      "id": "pg-19517",
-      "title": "Le avventure di Pinocchio",
+      "id": "pg-52484",
+      "title": "Le avventure di Pinocchio: Storia di un burattino",
       "authors": [
-        "Collodi, Carlo, 1826-1890"
+        "Collodi, Carlo, 1826-1890",
+        "Chiostri, Carlo, 1863-1939 [Illustrator]"
       ],
       "languages": [
         "it"
       ],
       "type": "ebook",
       "rationale": "Read beyond English and compare cultural perspectives, language, narrative form, and translation choices. Language availability is not a claim to represent an entire culture.",
-      "landing_url": "https://www.gutenberg.org/ebooks/19517",
-      "metadata_url": "https://gutenberg.pglaf.org/cache/epub/19517/pg19517.rdf",
+      "landing_url": "https://www.gutenberg.org/ebooks/52484",
+      "metadata_url": "https://gutenberg.pglaf.org/cache/epub/52484/pg52484.rdf",
       "rights": "Project Gutenberg selection under its US-based permissions policy. Preserve the embedded license; jurisdiction and third-party material require separate review.",
       "rights_url": "https://www.gutenberg.org/policy/permission.html",
       "review_status": "not_applicable",
       "assets": [
         {
-          "name": "pg19517.epub",
-          "url": "https://gutenberg.pglaf.org/cache/epub/19517/pg19517.epub",
+          "name": "pg52484.epub",
+          "url": "https://gutenberg.pglaf.org/cache/epub/52484/pg52484.epub",
           "format": "epub"
         }
       ],
@@ -1954,25 +1955,25 @@
       "notes": "Text-focused EPUB without optional illustrations, selected to bound transfer and image processing. Not a substitute for image-dependent editions."
     },
     {
-      "id": "pg-21186",
-      "title": "Записки из подполья",
+      "id": "pg-37196",
+      "title": "Женское международное движение: Сборник статей",
       "authors": [
-        "Dostoyevsky, Fyodor, 1821-1881"
+        "Various"
       ],
       "languages": [
         "ru"
       ],
       "type": "ebook",
       "rationale": "Read beyond English and compare cultural perspectives, language, narrative form, and translation choices. Language availability is not a claim to represent an entire culture.",
-      "landing_url": "https://www.gutenberg.org/ebooks/21186",
-      "metadata_url": "https://gutenberg.pglaf.org/cache/epub/21186/pg21186.rdf",
+      "landing_url": "https://www.gutenberg.org/ebooks/37196",
+      "metadata_url": "https://gutenberg.pglaf.org/cache/epub/37196/pg37196.rdf",
       "rights": "Project Gutenberg selection under its US-based permissions policy. Preserve the embedded license; jurisdiction and third-party material require separate review.",
       "rights_url": "https://www.gutenberg.org/policy/permission.html",
       "review_status": "not_applicable",
       "assets": [
         {
-          "name": "pg21186.epub",
-          "url": "https://gutenberg.pglaf.org/cache/epub/21186/pg21186.epub",
+          "name": "pg37196.epub",
+          "url": "https://gutenberg.pglaf.org/cache/epub/37196/pg37196.epub",
           "format": "epub"
         }
       ],
