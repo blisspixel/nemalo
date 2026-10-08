@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased managed library initialization
+
+- Add explicit library init/status in CLI/JSON/TUI, stable library identity,
+  native reader/writer locks, synced initialization intent/completion, and
+  idempotent completion/resume without modifying existing content.
+- Retain/reject corrupt, oversized, linked, replaced, or unexpected control state;
+  add cross-process crash tests and TUI write-scope review.
+- Promote the existing x/sys module to direct use without new modules or versions.
+  Content publication, mutable catalogs, and import/cleanup recovery remain planned.
+
 ## Unreleased terminal browsing and documentation
 
 - Replace teal with an adaptive indigo/neutral palette; retain no-color focus markers.

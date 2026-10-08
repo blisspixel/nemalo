@@ -58,3 +58,14 @@ func Audit(a library.Audit) string {
 	b.WriteString("Sources unchanged. Byte identity does not establish content safety or completeness.\n")
 	return b.String()
 }
+
+func LibraryState(s library.State) string {
+	var b strings.Builder
+	fmt.Fprintf(&b, "Library root: %q\nControl state: %q\nLibrary ID: %q\nJournal records: %d\nCreated: %t | Resumed: %t\n", s.Root, s.Status, s.LibraryID, s.JournalRecords, s.Created, s.Resumed)
+	if s.InitializedAt != nil {
+		fmt.Fprintf(&b, "Initialized at: %s\n", s.InitializedAt.UTC().Format("2006-01-02T15:04:05Z"))
+	}
+	fmt.Fprintf(&b, "Durability: %q\n", s.Durability)
+	b.WriteString("Control metadata only. Content was not imported, checked, opened, or deleted.\n")
+	return b.String()
+}

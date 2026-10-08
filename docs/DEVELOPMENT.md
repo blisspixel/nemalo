@@ -8,7 +8,7 @@ needed for the application, tests, or first-party tooling.
 ## Current operations
 
 `help`, `version`, `doctor`, `search`, `evaluate`, `inspect`, `check`, `library snapshot`,
-`library list`, `library audit`, and `tui` are implemented.
+`library list`, `library audit`, `library init`, `library status`, and `tui` are implemented.
 Search defaults to Open Library work metadata; `--source archive` selects Internet
 Archive text/audio item search. Neither search resolves download permissions.
 Only explicit query terms, paging/field parameters, and client identification go to
@@ -142,12 +142,35 @@ Catalog health is historical and unsigned. File sync plus exclusive publication
 prevents partial final JSON but does not guarantee directory-entry persistence
 through power loss. See [decision 0004](decisions/0004-portable-library-snapshots.md).
 
+## Library control state
+
+```sh
+nemalo library status /path/to/existing/library --json
+nemalo library init /path/to/existing/library
+```
+
+Status is read-only and does not create control state. Init requires an existing,
+explicit directory and creates only `.nemalo/writer.lock` and
+`.nemalo/journal.jsonl`. Content is preserved and not inspected. Repeating init is
+idempotent; valid interrupted initialization resumes with the same library ID.
+Busy, corrupt, linked, oversized, or unexpected control state fails explicitly.
+Do not remove a lock file to bypass another process. Preserve malformed state for
+review; automatic repair/truncation is unavailable. The initialization journal
+does not provide content import, publication, or cleanup recovery.
+
+Writes sync journal files. Directory-entry power-loss persistence and network
+filesystem coordination are not guaranteed. See the
+[state decision](decisions/0006-library-control-state.md) for the full boundaries.
+The TUI's State operation reads on Enter; F7 reviews initialization before a
+second Enter writes.
+
 ## Configuration
 
 Configuration is an optional strict JSON object with `library` and `review` paths.
 Both paths must be absolute and must not overlap. Unknown fields, multiple JSON
 values, nonregular files, and files over 64 KiB are rejected. These are reserved
-settings for upcoming library operations; current commands do not create a library.
+settings for upcoming content operations; current init/status require their own
+explicit directory and do not adopt these settings implicitly.
 
 Precedence: file, then `NEMALO_LIBRARY`/`NEMALO_REVIEW`, then command flags.
 `--config FILE` overrides `NEMALO_CONFIG`, which overrides the default config path.
@@ -184,8 +207,8 @@ by a `CGO_ENABLED=0` binary smoke. Review actual runs before claiming platform s
 
 ## Next bounded work
 
-Finish milestone 1 domain identities, mutable catalog locking, and durable operation journal before
-mutating user libraries. Follow with bounded archive staging and production
+Finish milestone 1 domain identities, mutable content catalogs, and import journal recovery before
+mutating library content. Follow with bounded archive staging and production
 assessment/publication policy. Reuse shared file checks/scanners. Keep real
 acquisition in the first complete lifecycle; do not turn this discovery foundation
 into a download-only or inspection-only product.

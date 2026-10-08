@@ -321,7 +321,10 @@ holdings queries, and explicit-root preservation audits. See
 [decision 0004](decisions/0004-portable-library-snapshots.md). These snapshots
 record all regular files and historical optional health evidence; they are not a
 checked publication catalog, backup, authenticated manifest, or recovery journal.
-The mutable operations below remain planned.
+Library identity/init/status and a synced initialization journal now share that
+seam, with native reader/writer locks and resumable valid initialization. See
+[decision 0006](decisions/0006-library-control-state.md). This does not import or
+validate content. The mutable content operations below remain planned.
 
 Use a versioned JSON catalog and per-asset provenance initially. Keep catalog
 indexes rebuildable. Use a separate durable journal for in-progress operations;

@@ -74,8 +74,14 @@ preservation audits are implemented in CLI/TUI. Exact duplicates retain every
 location; optional assessment records historical EPUB metadata and file health.
 These snapshots do not implement checked publication or a mutable library journal.
 
-Milestone 1 remains in progress: richer domain identities, one-writer locking, durable
-journal/recovery, and packaged release/checksum work are outstanding. Milestone 2
+Explicit initialization/status provide a stable library ID, nonblocking OS
+reader/writer locks, and a synced two-record initialization journal. Valid
+interrupted initialization resumes the same identity; corrupt state is retained.
+This does not implement content catalog mutations or import/cleanup recovery.
+See [decision 0006](docs/decisions/0006-library-control-state.md).
+
+Milestone 1 remains in progress: richer domain identities, mutable content catalogs,
+import/cleanup recovery, and packaged release/checksum work are outstanding. Milestone 2
 has inventory and standalone signatures/private snapshots, without archive
 extraction or production staging. Milestone 5 has
 two discovery adapters and source-declared Archive file/access/rights evaluation,
@@ -150,6 +156,8 @@ Status: in progress. Depends on milestone 0; see implementation status above.
 Delivered increment: versioned immutable byte-asset snapshots, duplicate locations,
 holdings queries, and preservation audits. See the
 [catalog decision](docs/decisions/0004-portable-library-snapshots.md).
+Library identity, initialization/status, reader/writer locking, and initialization
+recovery are implemented separately from planned content mutations.
 
 Deliver `doctor`, configuration loading, explicit library/review paths, a versioned
 catalog schema, and a durable run journal. Use JSON metadata initially; the catalog

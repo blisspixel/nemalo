@@ -26,7 +26,7 @@ not download content, determine file-level rights, or establish safety.
 | Key | Action |
 | --- | --- |
 | Tab / Shift+Tab | Next / previous operation |
-| Alt+1..8 | Jump to the numbered operation |
+| Alt+1..9 | Jump to the numbered operation |
 | Enter in form | Run the explicit operation |
 | F6 | Focus results / return to editing |
 | Up / Down, Home / End in results | Select an item |
@@ -37,6 +37,7 @@ not download content, determine file-level rights, or establish safety.
 | F2 in search | Switch Open Library / Internet Archive |
 | F3 in inspect, snapshot, audit | Select bounded 1 GiB / 5 GiB read budget |
 | F4 in holdings | Cycle EPUB / PDF / MP3 / all filename filters |
+| F7 in State | Review initialization of an explicit existing folder |
 | Ctrl+N in library forms | Switch between fields |
 | Ctrl+A in snapshot | Toggle historical health metadata |
 | e in Archive results | Prepare selected-item evaluation, without requesting it |
@@ -46,6 +47,12 @@ not download content, determine file-level rights, or establish safety.
 Edited queries require Enter before paging. Holdings start with EPUB filenames;
 filename filtering does not validate content. Snapshot success fills empty
 holdings/audit forms but does not automatically open or audit anything.
+
+State (operation 9) reads local control identity/status on Enter. F7 reviews the
+exact folder and control-file writes; a second Enter initializes it. Escape returns
+without writing. Review freezes fields/navigation and supports PageUp/PageDown.
+This establishes control state, not a checked content library; see
+[the state contract](decisions/0006-library-control-state.md).
 
 ## Appearance and boundaries
 

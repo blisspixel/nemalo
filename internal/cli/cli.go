@@ -41,6 +41,10 @@ Usage: nemalo <command> [options]
                       Browse local file holdings and optional EPUB metadata
   library audit CATALOG --root DIRECTORY
                       Report changed, missing, added, and unverified file locations
+  library init DIRECTORY
+                      Initialize local control state in an existing explicit folder
+  library status DIRECTORY
+                      Read control identity and journal state without creating files
   version             Show the development version
   help                Show this help
 
@@ -195,8 +199,21 @@ func Execute(ctx context.Context, args []string, out, errOut io.Writer, service 
 		}
 		return write(data, nil, 0)
 	case "library":
-		if flags.NArg() != 1 || (action != "snapshot" && action != "list" && action != "audit") {
-			return write(nil, errors.New("use library snapshot DIRECTORY, library list CATALOG, or library audit CATALOG"), 2)
+		if flags.NArg() != 1 || (action != "snapshot" && action != "list" && action != "audit" && action != "init" && action != "status") {
+			return write(nil, errors.New("use library init/status DIRECTORY, snapshot DIRECTORY, list CATALOG, or audit CATALOG"), 2)
+		}
+		if action == "init" || action == "status" {
+			var r library.State
+			var err error
+			if action == "init" {
+				r, err = service.InitializeLibrary(ctx, flags.Arg(0))
+			} else {
+				r, err = service.LibraryStatus(ctx, flags.Arg(0))
+			}
+			if err != nil {
+				return write(r, err, 1)
+			}
+			return write(r, nil, 0)
 		}
 		if action == "snapshot" {
 			if *output == "" {
@@ -343,6 +360,9 @@ func parse(flags *flag.FlagSet, args []string) error {
 
 func printData(out io.Writer, data any) error {
 	switch value := data.(type) {
+	case library.State:
+		_, err := io.WriteString(out, present.LibraryState(value))
+		return err
 	case discovery.Evaluation:
 		_, err := io.WriteString(out, present.Evaluation(value))
 		return err

@@ -98,6 +98,14 @@ func (s Service) Audit(ctx context.Context, file, root string, limits inventory.
 	return library.Verify(ctx, c, root, limits)
 }
 
+func (s Service) InitializeLibrary(ctx context.Context, root string) (library.State, error) {
+	return library.Initialize(ctx, root)
+}
+
+func (s Service) LibraryStatus(ctx context.Context, root string) (library.State, error) {
+	return library.LibraryStatus(ctx, root)
+}
+
 type Capability struct {
 	Name      string `json:"name"`
 	Available bool   `json:"available"`

@@ -211,6 +211,20 @@ live source results, not operating-system screenshots. Only public metadata
 and relative asset paths appear. Raw reports, scanner details, copied catalogs,
 and content remain outside tracked project state.
 
+## Library control-state validation on 2026-10-08
+
+Native Windows CLI and TUI exercises initialized a separate
+`G:\Nemalo Library\Validation\managed-state-smoke` directory, outside the intake
+collection and Git. Repeated initialization preserved the library ID and two
+journal records. Status, the TUI's exact-root write review, cancellation, and
+confirmed initialization were exercised. These checks wrote control metadata
+only; they did not import, assess, open, or delete library content.
+
+Synthetic tests cover shared readers, exclusive writers, process termination,
+resuming a synced initialization intent, corrupt journals, and unsafe control
+entries. This is evidence for initialization recovery only. Content publication,
+import recovery, cleanup recovery, and power-loss durability remain unvalidated.
+
 ## Source contracts reviewed on 2026-10-08
 
 - Gutenberg [robot policy](https://www.gutenberg.org/policy/robot_access.html),

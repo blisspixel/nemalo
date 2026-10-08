@@ -18,9 +18,10 @@ AI service. Future agent interfaces will use the same application services.
 - Inventory explicit folders; check file structure, size, hashes, and EPUB text
   measurements, with optional installed antivirus.
 - Save portable catalog snapshots, browse holdings, and audit changed/missing files.
+- Initialize library control state with locking and resumable initialization.
 - Use CLI, versioned JSON, or an interactive terminal interface.
 
-Production downloading, archive intake, checked publication, recovery journals,
+Production downloading, archive intake, checked publication, import recovery,
 reader/player handoff, complete audiobook management, and MCP are planned.
 File checks report limited evidence, never a safety or completeness guarantee.
 See [current capabilities and limits](docs/DEVELOPMENT.md) and the [roadmap](ROADMAP.md).

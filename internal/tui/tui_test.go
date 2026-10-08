@@ -175,6 +175,10 @@ func TestTerminalWorkflow(t *testing.T) {
 		t.Fatal("evaluation evidence missing", m.status)
 	}
 	m.Update(key(tea.KeyTab))
+	if m.mode != "state" {
+		t.Fatal("library state operation unavailable")
+	}
+	m.Update(key(tea.KeyTab))
 	if m.mode != "search" {
 		t.Fatal("mode not restored")
 	}

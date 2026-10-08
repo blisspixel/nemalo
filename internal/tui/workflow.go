@@ -8,7 +8,7 @@ import (
 	"github.com/blisspixel/nemalo/internal/inventory"
 )
 
-var modes = []string{"search", "inspect", "check", "scan", "snapshot", "holdings", "audit", "evaluate"}
+var modes = []string{"search", "inspect", "check", "scan", "snapshot", "holdings", "audit", "evaluate", "state"}
 
 type draft struct {
 	input, second, content, status  string
@@ -109,6 +109,10 @@ func (m *model) start(reset bool) tea.Cmd {
 	m.cancel = cancel
 	m.id++
 	id, mode, value, source := m.id, m.mode, m.input.Value(), m.source
+	if mode == "state" && m.initializeAction {
+		mode = "initialize"
+	}
+	m.initializeAction = false
 	second, assess, offset, format := m.secondary.Value(), m.assess, m.offset, m.format
 	limits := inventory.Defaults()
 	if m.largeBudget {
@@ -121,6 +125,12 @@ func (m *model) start(reset bool) tea.Cmd {
 	m.resize()
 	return func() tea.Msg {
 		switch mode {
+		case "initialize":
+			data, err := m.service.InitializeLibrary(ctx, value)
+			return result{id, data, err}
+		case "state":
+			data, err := m.service.LibraryStatus(ctx, value)
+			return result{id, data, err}
 		case "evaluate":
 			data, err := m.service.Evaluate(ctx, value)
 			return result{id, data, err}

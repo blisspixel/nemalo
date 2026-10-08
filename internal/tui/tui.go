@@ -51,6 +51,10 @@ type model struct {
 	resultsFocused   bool
 	details          bool
 	evidence         bool
+	confirmRoot      string
+	confirmReport    string
+	confirmStatus    string
+	initializeAction bool
 	mode             string
 	source           string
 	format           string
@@ -133,6 +137,8 @@ func (m *model) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		data, err := json.MarshalIndent(msg.data, "", "  ")
 		switch value := msg.data.(type) {
+		case library.State:
+			data = []byte(present.LibraryState(value))
 		case discovery.Evaluation:
 			data = []byte(present.Evaluation(value))
 		case library.Snapshot:
@@ -159,7 +165,17 @@ func (m *model) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 			m.viewport.GotoTop()
 		}
 		m.resize()
+		if !m.resultsFocused && !m.input.Focused() && !m.secondary.Focused() {
+			return m, m.focusForm()
+		}
 	case tea.KeyPressMsg:
+		if m.confirmRoot != "" {
+			return m, m.confirmInitialization(msg)
+		}
+		if msg.String() == "f7" && m.mode == "state" && !m.busy {
+			m.requestInitialization()
+			return m, nil
+		}
 		if handled, cmd := m.browserKey(msg.String()); handled {
 			return m, cmd
 		}
@@ -241,6 +257,9 @@ func (m *model) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 			m.busy = false
 			m.status = "Cancelled. Sources unchanged."
 			m.resize()
+			if !m.resultsFocused {
+				return m, m.focusForm()
+			}
 			return m, nil
 		case "tab", "shift+tab":
 			if m.busy {

@@ -96,6 +96,11 @@ Portable byte-identity snapshots, holdings, and audits belong in `internal/libra
 see decision 0004. Preserve explicit audit roots, exclusive outside-root outputs,
 all duplicate locations, and historical evidence distinct from checked publication.
 An incomplete traversal cannot establish missing files. A snapshot is not a journal.
+Library identity/init/status and OS locks also belong in `internal/library`; see
+decision 0006. The journal covers initialization only. Preserve explicit roots,
+retained corrupt state, canonical records, OS-held locks, and TUI write review.
+Never remove a lock file to release an active writer or treat initialization as
+content validation or production import/cleanup recovery.
 
 Test behavior and failure recovery, not just execution. Use synthetic fixtures;
 never personal downloads. Give cleanup, parser boundaries, scanner skips, and

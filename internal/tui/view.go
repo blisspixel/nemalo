@@ -56,6 +56,8 @@ func (m *model) fields() string {
 		label, hint, second = "Catalog", "Existing catalog file", "Root"
 	case "evaluate":
 		label, hint = "Item ID", "archive:ITEM (network metadata only; no download)"
+	case "state":
+		label, hint = "Folder", "Existing library folder; Enter reads status, F7 initializes"
 	}
 	m.input.Placeholder = hint
 	marker := " "
@@ -74,6 +76,9 @@ func (m *model) fields() string {
 }
 
 func (m *model) contextLine() string {
+	if m.mode == "state" {
+		return "Local control metadata | Enter reads status | F7 initializes"
+	}
 	if m.mode == "search" {
 		return m.source + "; F2 changes provider | Explicit network search"
 	}
@@ -109,6 +114,9 @@ func (m *model) top() string {
 }
 
 func (m *model) footer() string {
+	if m.confirmRoot != "" {
+		return lipgloss.Wrap(m.paint("Enter initialize  Esc back  PgUp/PgDown review  Ctrl+C quit", warning, false), max(1, m.width-2), " ")
+	}
 	help := "Enter run  F6 browse  Tab/Shift+Tab modes  Ctrl+C quit"
 	if m.resultsFocused {
 		help = "Up/Down select  Enter details  F6 edit  Esc back  Ctrl+C quit"
@@ -123,7 +131,7 @@ func (m *model) footer() string {
 	if m.form() {
 		help += "  Ctrl+N field"
 	}
-	help += "\nF5 full report  PgUp/PgDown scroll  Alt+1..8 jump"
+	help += "\nF5 full report  PgUp/PgDown scroll  Alt+1..9 jump"
 	if m.mode == "search" || m.mode == "holdings" {
 		help += "  Ctrl+Left/Right results page"
 	}
@@ -139,7 +147,7 @@ func (m *model) View() tea.View {
 	}
 	state := m.statusText()
 	color := accent
-	if m.busy {
+	if m.busy || m.confirmRoot != "" {
 		color = warning
 	} else if strings.Contains(state, "Incomplete") || strings.Contains(state, "error") {
 		color = danger
@@ -188,6 +196,9 @@ func (m *model) statusText() string {
 }
 
 func (m *model) position() string {
+	if m.confirmRoot != "" {
+		return fmt.Sprintf("Review initialization | Scroll %.0f%%", m.viewport.ScrollPercent()*100)
+	}
 	position := fmt.Sprintf("Results | Scroll %.0f%%", m.viewport.ScrollPercent()*100)
 	if m.report == "" {
 		position = "Results | Not loaded"
@@ -222,6 +233,8 @@ func (m *model) emptyHelp() string {
 		return "Browse your collection.\n\nChoose a saved catalog and optionally filter by title or language.\nEPUB filenames are selected by default; F4 changes the format."
 	case "evaluate":
 		return "Look before acquiring.\n\nEnter archive:ITEM, or select an Archive search result and press e.\nEnter retrieves declared files, restrictions, and rights metadata only."
+	case "state":
+		return "Establish a library identity.\n\nEnter an existing folder, then Enter to read its control status.\nF7 reviews initialization before writing only Nemalo control metadata.\nThis does not import or validate content."
 	default:
 		return "Enter the fields above, then press Enter.\n\nResults stay with their operation when you switch modes.\nSources are preserved. Escape cancels active work."
 	}
