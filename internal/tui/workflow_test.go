@@ -28,7 +28,7 @@ func TestNavigationPreservesScopedDraftsAndResults(t *testing.T) {
 	m := newModel(context.Background(), app.Service{})
 	m.input.SetValue("Dante")
 	m.status = "Previous search"
-	m.viewport.SetContent("Search evidence")
+	m.setReport("Search evidence")
 	m.Update(tea.KeyPressMsg{Code: '6', Mod: tea.ModAlt})
 	if m.mode != "holdings" || m.input.Value() != "" || strings.Contains(m.viewport.GetContent(), "Search evidence") {
 		t.Fatal("search leaked into holdings")
@@ -157,7 +157,7 @@ func TestHoldingsPaginationAndBudget(t *testing.T) {
 	m.switchMode("holdings")
 	m.format = "epub"
 	m.total = 10
-	m.viewport.SetContent("old EPUB results")
+	m.setReport("old EPUB results")
 	m.Update(key(tea.KeyF4))
 	if m.format != "pdf" || m.total != 0 || m.viewport.GetContent() != "" {
 		t.Fatal("format switch retained stale results")
@@ -191,7 +191,7 @@ func TestResponsiveFramesAndLongErrors(t *testing.T) {
 	m.Update(tea.WindowSizeMsg{Width: 80, Height: 24})
 	err := fmt.Errorf("unavailable %s", strings.Repeat("detail ", 200))
 	m.Update(result{id: m.id, data: discovery.Page{}, err: err})
-	if lipgloss.Height(m.View().Content) > 24 || !strings.Contains(m.viewport.GetContent(), err.Error()) {
+	if lipgloss.Height(m.View().Content) > 24 || !strings.Contains(m.report, err.Error()) {
 		t.Fatal("long error breaks layout or loses evidence")
 	}
 	for _, size := range [][2]int{{1, 1}, {30, 8}} {
@@ -211,7 +211,7 @@ func TestColorPreferencesAndBusyInput(t *testing.T) {
 		t.Fatal("capable terminal has no styles")
 	}
 	m.Update(tea.BackgroundColorMsg{Color: color.RGBA{R: 255, G: 255, B: 255, A: 255}})
-	if m.dark || !strings.Contains(m.paint("accent", "#45C4B0", true), "0;111;98") {
+	if m.dark || !strings.Contains(m.paint("accent", accent, true), "67;56;202") {
 		t.Fatal("light palette not applied")
 	}
 	m.Update(tea.BackgroundColorMsg{Color: color.Black})
@@ -220,7 +220,7 @@ func TestColorPreferencesAndBusyInput(t *testing.T) {
 	}
 	t.Setenv("NO_COLOR", "1")
 	m.Update(tea.ColorProfileMsg{Profile: colorprofile.TrueColor})
-	if m.color || strings.Contains(m.paint("plain", "#45C4B0", true), "\x1b") {
+	if m.color || strings.Contains(m.paint("plain", accent, true), "\x1b") {
 		t.Fatal("NO_COLOR ignored")
 	}
 	t.Setenv("NO_COLOR", "")

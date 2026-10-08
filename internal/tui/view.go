@@ -8,12 +8,19 @@ import (
 	"charm.land/lipgloss/v2"
 )
 
+const (
+	accent  = "#A5B4FC"
+	muted   = "#94A3B8"
+	warning = "#FBBF24"
+	danger  = "#FCA5A5"
+)
+
 func (m *model) paint(text, color string, bold bool) string {
 	if !m.color {
 		return text
 	}
 	if !m.dark {
-		if light, ok := map[string]string{"#45C4B0": "#006F62", "#8FA3B8": "#52637A", "#E6B566": "#805900", "#F09090": "#A32638"}[color]; ok {
+		if light, ok := map[string]string{accent: "#4338CA", muted: "#475569", warning: "#854D0E", danger: "#B91C1C"}[color]; ok {
 			color = light
 		}
 	}
@@ -25,7 +32,7 @@ func (m *model) navigation() string {
 	for i, name := range modes {
 		label := fmt.Sprintf("%d %s", i+1, strings.ToUpper(name[:1])+name[1:])
 		if name == m.mode {
-			label = m.paint("["+label+"]", "#45C4B0", true)
+			label = m.paint("["+label+"]", accent, true)
 		}
 		items[i] = label
 	}
@@ -51,9 +58,17 @@ func (m *model) fields() string {
 		label, hint = "Item ID", "archive:ITEM (network metadata only; no download)"
 	}
 	m.input.Placeholder = hint
-	s := fmt.Sprintf("%-10s%s", label, m.input.View())
+	marker := " "
+	if !m.resultsFocused && !m.secondaryFocused {
+		marker = ">"
+	}
+	s := fmt.Sprintf("%s %-10s%s", marker, label, m.input.View())
 	if second != "" {
-		s += fmt.Sprintf("\n%-10s%s", second, m.secondary.View())
+		marker = " "
+		if !m.resultsFocused && m.secondaryFocused {
+			marker = ">"
+		}
+		s += fmt.Sprintf("\n%s %-10s%s", marker, second, m.secondary.View())
 	}
 	return s
 }
@@ -86,23 +101,33 @@ func (m *model) contextLine() string {
 }
 
 func (m *model) top() string {
-	brand := m.paint("Nemalo", "#45C4B0", true)
+	brand := m.paint("Nemalo", accent, true)
 	if m.width >= 70 {
 		brand += "   Find knowledge. Care for it. Realize its potential."
 	}
-	return brand + "\n\n" + m.navigation() + "\n\n" + lipgloss.Wrap(m.paint(m.contextLine(), "#8FA3B8", false), max(1, m.width-2), " ") + "\n" + m.fields()
+	return brand + "\n" + m.navigation() + "\n\n" + lipgloss.Wrap(m.paint(m.contextLine(), muted, false), max(1, m.width-2), " ") + "\n" + m.fields()
 }
 
 func (m *model) footer() string {
-	help := "Enter run  Tab/Shift+Tab modes  Alt+1..8 jump  Esc cancel  Ctrl+C quit"
+	help := "Enter run  F6 browse  Tab/Shift+Tab modes  Ctrl+C quit"
+	if m.resultsFocused {
+		help = "Up/Down select  Enter details  F6 edit  Esc back  Ctrl+C quit"
+		if m.mode == "search" && len(m.entries) > 0 && strings.HasPrefix(m.entries[m.selected].sourceID, "archive:") {
+			help += "  e evaluate"
+		}
+	}
+	if m.busy {
+		help = "Working...  Esc cancel  Ctrl+C quit"
+		return lipgloss.Wrap(m.paint(help, muted, false), max(1, m.width-2), " ")
+	}
 	if m.form() {
 		help += "  Ctrl+N field"
 	}
-	help += "\nPageUp/PageDown scroll"
+	help += "\nF5 full report  PgUp/PgDown scroll  Alt+1..8 jump"
 	if m.mode == "search" || m.mode == "holdings" {
 		help += "  Ctrl+Left/Right results page"
 	}
-	return lipgloss.Wrap(m.paint(help, "#8FA3B8", false), max(1, m.width-2), " ")
+	return lipgloss.Wrap(m.paint(help, muted, false), max(1, m.width-2), " ")
 }
 
 func (m *model) View() tea.View {
@@ -113,32 +138,45 @@ func (m *model) View() tea.View {
 		return v
 	}
 	state := m.statusText()
-	color := "#45C4B0"
+	color := accent
 	if m.busy {
-		color = "#E6B566"
+		color = warning
 	} else if strings.Contains(state, "Incomplete") || strings.Contains(state, "error") {
-		color = "#F09090"
+		color = danger
 	}
 	state = lipgloss.Wrap(m.paint(state, color, false), m.width-2, " ")
 	position := m.position()
-	content := m.viewport.View()
+	content := m.browseView()
 	if m.viewport.GetContent() == "" && !m.busy {
-		lines := strings.Split(lipgloss.Wrap("Enter the fields above, then press Enter.\nResults stay with their operation when you switch modes.", m.width-2, " "), "\n")
+		lines := strings.Split(lipgloss.Wrap(m.emptyHelp(), m.width-2, " "), "\n")
 		content = lipgloss.NewStyle().Height(m.viewport.Height()).Render(strings.Join(lines[:min(len(lines), m.viewport.Height())], "\n"))
 	}
-	text := m.top() + "\n" + state + "\n\n" + m.paint(position, "#8FA3B8", false) + "\n" + strings.Repeat("-", m.width-2) + "\n" + content + "\n" + m.footer()
+	text := m.top() + "\n" + state + "\n\n" + m.paint(position, muted, false) + "\n" + m.paint(strings.Repeat("-", m.width-2), muted, false) + "\n" + content + "\n" + m.footer()
 	v := tea.NewView(text)
 	v.AltScreen = true
 	return v
 }
 
 func (m *model) resize() {
-	m.input.SetWidth(max(1, m.width-14))
-	m.secondary.SetWidth(max(1, m.width-14))
+	m.input.SetWidth(max(1, m.width-16))
+	m.secondary.SetWidth(max(1, m.width-16))
 	m.secondary.Placeholder = map[string]string{"snapshot": "New catalog path outside the source folder", "holdings": "Optional title, language, filename, or hash", "audit": "Explicit source directory (required)"}[m.mode]
 	// Layout height follows the actual wrapped navigation, context, and help.
 	reserved := lipgloss.Height(m.top()) + lipgloss.Height(m.footer()) + lipgloss.Height(m.statusText()) + lipgloss.Height(m.position()) + 2
 	m.viewport.SetHeight(max(1, m.height-reserved))
+	m.setReport(m.report)
+	m.preview.SetHeight(m.viewport.Height())
+	width := m.viewport.Width()
+	if !m.details && width >= 98 {
+		width -= width/2 + 3
+	}
+	m.preview.SetWidth(width)
+	m.refreshPreview()
+}
+
+func (m *model) setReport(text string) {
+	m.report = text
+	m.viewport.SetContent(lipgloss.Wrap(text, max(1, m.viewport.Width()), ""))
 }
 
 func (m *model) statusText() string {
@@ -151,8 +189,40 @@ func (m *model) statusText() string {
 
 func (m *model) position() string {
 	position := fmt.Sprintf("Results | Scroll %.0f%%", m.viewport.ScrollPercent()*100)
+	if m.report == "" {
+		position = "Results | Not loaded"
+		if m.busy {
+			position = "Results | Working"
+		}
+	}
+	if len(m.entries) > 0 && !m.evidence {
+		position = fmt.Sprintf("Results | Selected %d of %d on this page", m.selected+1, len(m.entries))
+		if m.details {
+			position = fmt.Sprintf("Item details | Scroll %.0f%%", m.preview.ScrollPercent()*100)
+		}
+	} else if m.evidence {
+		position = fmt.Sprintf("Full evidence report | Scroll %.0f%%", m.viewport.ScrollPercent()*100)
+	}
 	if (m.mode == "search" || m.mode == "holdings") && m.total > 0 {
 		position += fmt.Sprintf(" | %d matches, offset %d", m.total, m.offset)
 	}
+	if m.resultsFocused {
+		position = "> " + position
+	} else {
+		position = "  " + position
+	}
 	return lipgloss.Wrap(position, max(1, m.width-2), " ")
+}
+
+func (m *model) emptyHelp() string {
+	switch m.mode {
+	case "search":
+		return "Find something worth keeping.\n\nEnter a title, author, or topic. F2 selects Open Library or Internet Archive.\nEnter searches that provider. Discovery does not download files."
+	case "holdings":
+		return "Browse your collection.\n\nChoose a saved catalog and optionally filter by title or language.\nEPUB filenames are selected by default; F4 changes the format."
+	case "evaluate":
+		return "Look before acquiring.\n\nEnter archive:ITEM, or select an Archive search result and press e.\nEnter retrieves declared files, restrictions, and rights metadata only."
+	default:
+		return "Enter the fields above, then press Enter.\n\nResults stay with their operation when you switch modes.\nSources are preserved. Escape cancels active work."
+	}
 }

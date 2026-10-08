@@ -63,6 +63,8 @@ capability reporting, JSON envelopes, and pinned verification/native CI configur
 Live source searches and Windows TUI search/inspection/holdings/evaluation/quit
 smokes were exercised. TUI navigation, session drafts, adaptive no-color/light/dark
 presentation, bounded budget selection, format filters, and result pagination exist.
+Search/holdings include selection, adaptive detail panes, complete report access,
+explicit focus, and staged Archive evaluation without automatic requests.
 File-level `check` is implemented in CLI/TUI: bounded snapshots, signatures,
 EPUB structure/text facts, expected size/hash comparison, and optional antivirus.
 This is assessment evidence, not checked library publication or semantic validation.
@@ -93,7 +95,7 @@ audio support or publication gates. See [validation evidence](docs/VALIDATION.md
 
 ## Product-wide acceptance
 
-Every milestone must preserve the [product commitments](README.md#product-commitments).
+Every milestone must preserve the [product commitments](docs/PRODUCT.md#product-commitments).
 Add checks at the relevant service boundary, not only prose or UI assurances:
 
 - Verify unavailable/skipped checks prevent checked publication and default reader

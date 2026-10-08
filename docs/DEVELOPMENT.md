@@ -33,30 +33,12 @@ Limits, errors, and cancellation produce an incomplete result and nonzero exit.
 Inventory performs no security scan; tool availability in `doctor` is not scan evidence.
 Filesystem operations can still block on a stalled device; this is not a sandbox.
 
-The TUI offers search, explicit-folder inventory, file health checks, explicit
-antivirus scans, snapshots, holdings, audits, and Archive evaluation using shared
-application services. Tab changes mode, F2 changes the search provider, Ctrl+N
-switches library form fields, and Ctrl+A toggles local health metadata in snapshot
-mode. Enter submits, Escape cancels, PageUp/PageDown scroll,
-and Ctrl+C quits. It makes no startup network request. Untrusted results and paths
-are escaped before display. Results wrap within the terminal viewport, including
-long hashes and findings.
-
-Alt+1..8 jumps directly; Shift+Tab goes backward. Each operation retains its
-own inputs, status, and results for this session. Snapshot success seeds empty
-holdings/audit forms with the explicitly selected catalog/root. Nothing is opened
-or audited automatically. Ctrl+Left/Right pages search (10 results) and holdings
-(50 results); edited queries require Enter before paging. F4 cycles EPUB, PDF,
-MP3, and all filename filters in holdings. F3 explicitly switches the inventory,
-snapshot, or audit read budget between 1 GiB and 5 GiB. Budgets remain bounded.
-Fields are frozen while work runs; Escape and quit remain available.
-
-Navigation, field labels, contextual boundaries, scroll position, and errors remain
-readable without color. Color-capable terminals get an adaptive light/dark palette;
-`NO_COLOR` and `TERM=dumb` disable colored styling. Minimum size is 40 by 20;
-smaller terminals show a resize message while retaining operation state. Full
-errors remain in results when the status line is shortened. Ordinary text-editing
-shortcuts stay with the active input; PageUp/PageDown scroll results.
+The TUI exposes these same services with session-scoped forms/results, selectable
+search/holdings, adaptive detail panes, and complete report access. It makes no
+startup network request. Source text and paths are escaped; reports are wrapped
+at grapheme boundaries without discarding original evidence. Scopes and scanner
+cloud policy remain explicit. See the [terminal guide](TUI.md) for keyboard
+controls, budgets, paging, appearance, and application-view captures.
 
 JSON mode uses schema version 1 and exit codes 0
 (success), 1 (failed/incomplete operation), and 2 (usage/configuration error).

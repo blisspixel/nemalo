@@ -201,7 +201,12 @@ expansion reported exactly 16 added locations and no changed or missing original
 The Windows native TUI smoke exercised direct mode shortcuts, real catalog queries,
 source evaluation, result scrolling, restored inputs/results, and clean quit.
 Responsive light/dark/no-color and pagination behavior have synthetic tests.
-The README images are rendered application-view frames from the real catalog and
+The browsing refinement additionally exercised the real 82-EPUB holdings view,
+live Archive results, native Windows focus/selection/detail/report scrolling, and
+quit. Synthetic tests cover odd/even widths and long Japanese text; wrapped reports
+retain their original evidence and allow scrolling to its end. No new assets
+were acquired or rescanned for this presentation change.
+The README and [terminal guide](TUI.md) images are rendered application-view frames from the real catalog and
 live source results, not operating-system screenshots. Only public metadata
 and relative asset paths appear. Raw reports, scanner details, copied catalogs,
 and content remain outside tracked project state.

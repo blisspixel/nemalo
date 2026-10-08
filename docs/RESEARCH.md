@@ -180,6 +180,16 @@ busy guards, and edited-query paging. A native Windows terminal exercise and
 real-data rendered frames supply separate evidence. This does not establish a
 screen-reader audit, every terminal emulator, or every user's accessibility needs.
 
+The subsequent browsing refinement also consulted the
+[CLI guidelines](https://clig.dev/#saying-just-enough) for concise output and
+discoverable help. That guide explicitly excludes full-screen interface design;
+the selectable list, detail pane, and indigo palette are Nemalo design choices,
+not a claimed terminal standard. No dependency or version changed.
+The pinned viewport's soft wrapping can split wide characters and rewrap them
+past its height. Nemalo pre-wraps original reports/details with the existing
+Lip Gloss grapheme-aware wrapper, retaining complete evidence independently of
+layout. Tests cover odd/even widths, long Japanese titles, reports, and focus.
+
 ## Evidence still required
 
 No competitor runtime comparison, complete source audit, Go benchmark, or plugin-host

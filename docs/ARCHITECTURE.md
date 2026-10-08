@@ -10,7 +10,7 @@ targets with platform-specific filesystem and scanner adapters.
 
 Nemalo owns discovery, evaluation, acquisition, verification, existing-download
 intake, organization, preservation, content access, automation, and expansion.
-These form one product contract. The [README](../README.md) is the canonical vision;
+These form one product contract. The [product contract](PRODUCT.md) is the canonical vision;
 shipping order does not determine which capabilities belong to the product.
 
 The 1.0 product centers on a local library and discovery for books, ebooks, and

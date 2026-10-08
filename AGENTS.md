@@ -7,6 +7,7 @@ Use the product name `Nemalo`, CLI/integration identifiers `nemalo`, and tagline
 
 Read `README.md`, the relevant milestone in `ROADMAP.md`,
 `docs/ARCHITECTURE.md`, and the applicable decision record before editing.
+`docs/PRODUCT.md` is the product contract; keep the README a concise entry point.
 Consult `docs/SOURCES.md` for provider contracts and `docs/AGENT-INTEGRATION.md`
 for MCP/plugin boundaries. `docs/RESEARCH.md` records evaluated patterns.
 

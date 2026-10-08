@@ -14,6 +14,9 @@ type draft struct {
 	input, second, content, status  string
 	submittedInput, submittedSecond string
 	offset, total                   int
+	entries                         []entry
+	selected                        int
+	details, evidence               bool
 }
 
 func (m *model) modeIndex() int {
@@ -29,7 +32,7 @@ func (m *model) switchMode(name string) tea.Cmd {
 	if name == m.mode {
 		return nil
 	}
-	m.drafts[m.mode] = draft{m.input.Value(), m.secondary.Value(), m.viewport.GetContent(), m.status, m.submittedInput, m.submittedSecond, m.offset, m.total}
+	m.drafts[m.mode] = draft{input: m.input.Value(), second: m.secondary.Value(), content: m.report, status: m.status, submittedInput: m.submittedInput, submittedSecond: m.submittedSecond, offset: m.offset, total: m.total, entries: m.entries, selected: m.selected, details: m.details, evidence: m.evidence}
 	m.mode = name
 	d := m.drafts[name]
 	m.input.SetValue(d.input)
@@ -42,7 +45,10 @@ func (m *model) switchMode(name string) tea.Cmd {
 	if m.status == "" {
 		m.status = "Ready."
 	}
-	m.viewport.SetContent(d.content)
+	m.setReport(d.content)
+	m.entries, m.details, m.evidence = d.entries, d.details, d.evidence
+	m.resultsFocused = false
+	m.selectEntry(d.selected)
 	m.viewport.GotoTop()
 	m.resize()
 	return m.input.Focus()
@@ -110,7 +116,8 @@ func (m *model) start(reset bool) tea.Cmd {
 	}
 	m.busy = true
 	m.status = "Working. Escape cancels; Ctrl+C quits."
-	m.viewport.SetContent("")
+	m.setReport("")
+	m.populate(nil)
 	m.resize()
 	return func() tea.Msg {
 		switch mode {

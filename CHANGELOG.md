@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased terminal browsing and documentation
+
+- Replace teal with an adaptive indigo/neutral palette; retain no-color focus markers.
+- Add selectable search/holdings, wide-terminal evidence panes, focused details,
+  complete reports, and staged Archive evaluation without automatic requests.
+- Prevent wide-character report overflow with grapheme-aware wrapping and test
+  odd/even terminal widths, focus isolation, selection, and evidence preservation.
+- Shorten the README; move the full product contract and terminal guide into linked docs.
+
 ## Unreleased validation and terminal usability
 
 - Revalidated the external collection and added four resources using Gutenberg,

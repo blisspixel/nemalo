@@ -44,6 +44,13 @@ type model struct {
 	submittedInput   string
 	submittedSecond  string
 	viewport         viewport.Model
+	report           string
+	preview          viewport.Model
+	entries          []entry
+	selected         int
+	resultsFocused   bool
+	details          bool
+	evidence         bool
 	mode             string
 	source           string
 	format           string
@@ -55,12 +62,14 @@ type model struct {
 
 func newModel(ctx context.Context, service app.Service) *model {
 	input := textinput.New()
+	input.Prompt = ""
 	input.CharLimit = 1000
 	input.Placeholder = "Search books (sent to Open Library on Enter)"
 	input.SetWidth(70)
 	input.SetVirtualCursor(true)
 	input.SetStyles(textinput.Styles{Cursor: textinput.CursorStyle{Blink: true}})
 	secondary := textinput.New()
+	secondary.Prompt = ""
 	secondary.CharLimit = 1000
 	secondary.SetWidth(70)
 	secondary.SetVirtualCursor(true)
@@ -68,6 +77,8 @@ func newModel(ctx context.Context, service app.Service) *model {
 	view := viewport.New(viewport.WithWidth(80), viewport.WithHeight(16))
 	view.SoftWrap = true
 	m := &model{ctx: ctx, service: service, input: input, secondary: secondary, width: 80, height: 25, dark: true, viewport: view, mode: "search", source: "openlibrary", format: "epub", drafts: map[string]draft{}, status: "Ready. Network activity only on explicit search/evaluation."}
+	m.preview = viewport.New()
+	m.preview.SoftWrap = true
 	m.resize()
 	return m
 }
@@ -115,6 +126,11 @@ func (m *model) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 		if msg.err != nil {
 			m.status = fmt.Sprintf("Incomplete: %q", msg.err.Error())
 		}
+		m.populate(msg.data)
+		if msg.err != nil {
+			m.populate(nil)
+			m.evidence = true
+		}
 		data, err := json.MarshalIndent(msg.data, "", "  ")
 		switch value := msg.data.(type) {
 		case discovery.Evaluation:
@@ -134,16 +150,19 @@ func (m *model) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		if err != nil {
 			m.status = fmt.Sprintf("Output error: %q", err.Error())
-			m.viewport.SetContent("")
+			m.setReport("")
 		} else {
 			if msg.err != nil {
 				data = append([]byte(fmt.Sprintf("Operation error: %q\n\n", msg.err.Error())), data...)
 			}
-			m.viewport.SetContent(string(data))
+			m.setReport(string(data))
 			m.viewport.GotoTop()
 		}
 		m.resize()
 	case tea.KeyPressMsg:
+		if handled, cmd := m.browserKey(msg.String()); handled {
+			return m, cmd
+		}
 		if strings.HasPrefix(msg.String(), "alt+") {
 			for i, name := range modes {
 				if msg.String() == fmt.Sprintf("alt+%d", i+1) && !m.busy {
@@ -162,7 +181,8 @@ func (m *model) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 					}
 				}
 				m.offset, m.total = 0, 0
-				m.viewport.SetContent("")
+				m.setReport("")
+				m.populate(nil)
 				m.status = "Format filter changed. Press Enter to load holdings."
 				m.resize()
 			}
@@ -184,7 +204,8 @@ func (m *model) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 				m.input.Placeholder = "Search " + m.source + " (network on Enter; F2 changes provider)"
 				m.status = "Ready. Search provider: " + m.source
 				m.offset, m.total = 0, 0
-				m.viewport.SetContent("")
+				m.setReport("")
+				m.populate(nil)
 				m.resize()
 			}
 			return m, nil
@@ -193,6 +214,8 @@ func (m *model) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 				return m, nil
 			}
 			m.secondaryFocused = !m.secondaryFocused
+			m.resultsFocused = false
+			m.resize()
 			if m.secondaryFocused {
 				m.input.Blur()
 				return m, m.secondary.Focus()
@@ -232,11 +255,18 @@ func (m *model) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 			return m, m.start(true)
 		case "pgup", "pgdown":
 			var cmd tea.Cmd
-			m.viewport, cmd = m.viewport.Update(msg)
+			if !m.evidence && len(m.entries) > 0 && (m.details || m.width >= 100) {
+				m.preview, cmd = m.preview.Update(msg)
+			} else {
+				m.viewport, cmd = m.viewport.Update(msg)
+			}
 			return m, cmd
 		}
 	}
 	if m.busy {
+		return m, nil
+	}
+	if m.resultsFocused {
 		return m, nil
 	}
 	var cmd tea.Cmd
