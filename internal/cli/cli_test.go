@@ -7,6 +7,7 @@ import (
 	"errors"
 	"flag"
 	"io"
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -15,6 +16,32 @@ import (
 	"github.com/blisspixel/nemalo/internal/config"
 	"github.com/blisspixel/nemalo/internal/discovery"
 )
+
+func TestHealthCommand(t *testing.T) {
+	p := filepath.Join(t.TempDir(), "paper.pdf")
+	if err := os.WriteFile(p, []byte("%PDF-1.7\n%%EOF"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	for _, json := range []bool{false, true} {
+		args := []string{"check", p}
+		if json {
+			args = append(args, "--json")
+		}
+		code, out, stderr := execute(t, args, nil)
+		if code != 0 || stderr != "" || !strings.Contains(out, "limited_checks_passed") || !strings.Contains(out, "not_scanned") {
+			t.Fatal(code, out, stderr)
+		}
+	}
+	code, out, _ := execute(t, []string{"check", p, "--expected-bytes", "100", "--json"}, nil)
+	if code != 1 || !strings.Contains(out, "size differs") {
+		t.Fatal(code, out)
+	}
+	for _, args := range [][]string{{"check"}, {"check", p, "extra"}, {"check", p, "--expected-sha256", "wrong"}, {"check", p, "--limit", "1"}, {"search", "books", "--scan"}} {
+		if code, _, _ := execute(t, args, nil); code != 2 {
+			t.Fatal("bad usage accepted", args, code)
+		}
+	}
+}
 
 type searcher struct{ err error }
 

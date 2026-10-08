@@ -60,15 +60,22 @@ Implemented in Go: CLI/TUI entry points over shared services, configuration,
 Open Library metadata search, bounded read-only inventory with optional hashing,
 capability reporting, JSON envelopes, and pinned verification/native CI configuration.
 Live Open Library search and a Windows TUI search/inspection/quit smoke were exercised.
+File-level `check` is implemented in CLI/TUI: bounded snapshots, signatures,
+EPUB structure/text facts, expected size/hash comparison, and optional antivirus.
+This is assessment evidence, not checked library publication or semantic validation.
 
 Milestone 1 remains in progress: catalog identities, one-writer locking, durable
 journal/recovery, and packaged release/checksum work are outstanding. Milestone 2
-has inventory only, without signatures, extraction, or staging. Milestone 5 has
+has inventory and standalone signatures/private snapshots, without archive
+extraction or production staging. Milestone 5 has
 Open Library discovery only, without acquisition. All remaining production
 capabilities stay planned. A configured CI workflow is not itself a hosted pass.
 The initial foundation passed hosted native CI on Linux, macOS, and Windows.
 The [collection harness](docs/VALIDATION.md) separately exercises curated real assets
 in untrusted intake; it does not complete production transfer or publication gates.
+The 2026-10-08 Windows exercise acquired all 100 selected resources (208 content
+assets) and recorded an external Defender scan reporting no threats. Its exact
+checks and remaining validation gaps are recorded separately from production status.
 
 ## Product-wide acceptance
 
@@ -149,7 +156,8 @@ Acceptance:
 
 ## Milestone 2: inspect and stage local downloads
 
-Status: planned. Depends on milestone 1.
+Status: partial. Inventory and standalone file checks exist; production staging
+and archive extraction remain planned. Depends on milestone 1.
 
 Deliver recursive inventory, file-signature checks, ZIP handling, additional archive
 adapters, and private staging. Inventory includes links and unsupported entries as
@@ -170,7 +178,8 @@ Acceptance:
 
 ## Milestone 3: assess and publish EPUBs
 
-Status: planned. Depends on milestone 2.
+Status: partial. Shared EPUB checks and optional scanners exist; checked
+publication and library policy remain planned. Depends on milestone 2.
 
 Deliver EPUB package checks, content checks, scanner adapters, metadata handling,
 exact duplicate detection, and verified library publication.
@@ -178,6 +187,11 @@ exact duplicate detection, and verified library publication.
 Acceptance:
 
 - Validate container/package references, reading order, resource presence, and ZIP CRCs.
+- Keep file size, trusted expected size/hash, text quantity, reading order, and
+  declared pagination separate. Compare known edition evidence without arbitrary
+  minimum novel lengths or converting words into supposedly measured pages.
+- Add mature PDF page-tree and audio decoding/duration checks with malformed
+  fixtures when those format policies ship; retain unknown results until then.
 - Handle standard XHTML entities locally; reject unsafe custom entity resolution.
 - Report active content, executables, external resources, and encrypted content.
 - Distinguish font obfuscation from DRM; preserve uncertain files.

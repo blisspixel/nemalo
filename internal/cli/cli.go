@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	"github.com/blisspixel/nemalo/internal/app"
+	"github.com/blisspixel/nemalo/internal/assessment"
 	"github.com/blisspixel/nemalo/internal/config"
 	"github.com/blisspixel/nemalo/internal/discovery"
 	"github.com/blisspixel/nemalo/internal/inventory"
@@ -30,6 +31,7 @@ Usage: nemalo <command> [options]
   doctor              Report configuration and optional tool availability
   search QUERY        Search Open Library bibliographic metadata (network access)
   inspect DIRECTORY   Read-only inventory of an explicitly selected folder
+  check FILE          Bounded file health assessment, without rendering content
   version             Show the development version
   help                Show this help
 
@@ -37,9 +39,16 @@ Shared options: --json, --config FILE, --library DIRECTORY, --review DIRECTORY
 Search options: --limit 10, --offset 0
 Inspect options: --hashes, --max-entries 10000, --max-depth 32,
                  --max-file-bytes 268435456, --max-total-bytes 1073741824
+Check options: --scan, --expected-bytes N, --expected-sha256 HASH
+
+Check uses a private temporary snapshot (up to 256 MiB). EPUB text/document counts
+are measured; fixed pages, PDF page counts, and audio duration are not inferred.
+--scan invokes installed antivirus without remediation. External scanner cloud
+and sample-submission settings apply. Missing/failed scans cannot mean clean.
 
 Inventory does not extract archives, validate books, or scan for malware.
-Downloads, checked publication, cleanup, MCP, and audiobook handling are planned.
+Production downloads, checked publication, cleanup, MCP, and audiobook management
+are planned. PDF/MP3 checks currently establish candidate signatures only.
 Exit codes: 0 success, 1 operation failed/incomplete, 2 invalid usage/configuration.
 `
 
@@ -72,6 +81,10 @@ func Execute(ctx context.Context, args []string, out, errOut io.Writer, service 
 	review := flags.String("review", "", "explicit review directory")
 	limit, offset := flags.Int("limit", 10, "search page size"), flags.Int("offset", 0, "search offset")
 	limits := inventory.Defaults()
+	checkOptions := assessment.Options{}
+	flags.BoolVar(&checkOptions.Scan, "scan", false, "invoke installed antivirus")
+	flags.Int64Var(&checkOptions.ExpectedBytes, "expected-bytes", 0, "known expected file size")
+	flags.StringVar(&checkOptions.ExpectedSHA256, "expected-sha256", "", "known expected SHA-256")
 	flags.BoolVar(&limits.Hashes, "hashes", false, "hash eligible regular files")
 	flags.IntVar(&limits.Entries, "max-entries", limits.Entries, "inventory entry limit")
 	flags.IntVar(&limits.Depth, "max-depth", limits.Depth, "inventory depth limit")
@@ -117,7 +130,7 @@ func Execute(ctx context.Context, args []string, out, errOut io.Writer, service 
 		if command == "version" {
 			shared = f.Name == "json"
 		}
-		if !shared && !(command == "search" && (f.Name == "limit" || f.Name == "offset")) && !(command == "inspect" && (f.Name == "hashes" || strings.HasPrefix(f.Name, "max-"))) {
+		if !shared && !(command == "search" && (f.Name == "limit" || f.Name == "offset")) && !(command == "check" && (f.Name == "scan" || f.Name == "expected-bytes" || f.Name == "expected-sha256")) && !(command == "inspect" && (f.Name == "hashes" || strings.HasPrefix(f.Name, "max-"))) {
 			invalidFlag = f.Name
 		}
 	})
@@ -130,7 +143,7 @@ func Execute(ctx context.Context, args []string, out, errOut io.Writer, service 
 		}
 		return write(Version, nil, 0)
 	}
-	if command != "doctor" && command != "search" && command != "inspect" && command != "tui" {
+	if command != "doctor" && command != "search" && command != "inspect" && command != "check" && command != "tui" {
 		return write(nil, fmt.Errorf("unknown command %q; use nemalo help", command), 2)
 	}
 	p, err := paths()
@@ -146,6 +159,18 @@ func Execute(ctx context.Context, args []string, out, errOut io.Writer, service 
 		return write(nil, err, 2)
 	}
 	switch command {
+	case "check":
+		if flags.NArg() != 1 {
+			return write(nil, errors.New("check requires exactly one file"), 2)
+		}
+		if err := checkOptions.Validate(); err != nil {
+			return write(nil, err, 2)
+		}
+		data, err := service.Check(ctx, flags.Arg(0), checkOptions)
+		if err != nil {
+			return write(data, err, 1)
+		}
+		return write(data, nil, 0)
 	case "doctor":
 		if flags.NArg() != 0 {
 			return write(nil, errors.New("doctor takes no arguments"), 2)
@@ -214,6 +239,9 @@ func parse(flags *flag.FlagSet, args []string) error {
 
 func printData(out io.Writer, data any) error {
 	switch value := data.(type) {
+	case assessment.Report:
+		_, err := io.WriteString(out, present.Health(value))
+		return err
 	case discovery.Page:
 		_, err := io.WriteString(out, present.Search(value))
 		return err

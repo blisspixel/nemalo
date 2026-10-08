@@ -74,8 +74,10 @@ own configuration and must be disclosed separately from Nemalo's network behavio
 
 One LibriVox record declares 13 sections but exposes 14 tracks. The manifest retains
 all 14 and the discrepancy. Papers are repository versions; metadata does not prove
-peer review. Their item licenses are unresolved, so local reading is not permission
-to redistribute. Gutenberg and LibriVox declarations use US copyright boundaries,
+peer review. Eight current OAI records expose license URIs, retained as evidence;
+two older records expose no license. A current-record declaration is not proof of
+rights for every pinned version. Local reading is not permission to redistribute.
+Gutenberg and LibriVox declarations use US copyright boundaries,
 not a global public-domain assertion. Embedded notices and attribution remain intact.
 
 ## Recovery and production boundary
@@ -94,6 +96,39 @@ implemented here. These remain roadmap work through the shared application core
 and CLI/TUI. Synthetic tests exercise failure boundaries; real provider runs prove
 only the particular bytes and checks recorded at that time. Public CI success
 does not validate live provider availability or certify this collection.
+
+## Recorded exercise: 2026-10-08
+
+The Windows/amd64 run acquired all 100 selected resources: 80 EPUBs, 118 MP3
+tracks across 10 recordings, and 10 PDFs. The 208 content assets total
+1,046,965,564 bytes. All passed the limited checks above; completed assets were
+rehashed on retry. Three Archive HTTP 500 failures succeeded in a subsequent run
+without redownloading completed files. No partial files or writer lock remained.
+
+An external Windows Defender custom scan of the intake completed with exit code 0
+and output reporting no threats. Remediation was disabled, and existing machine
+cloud/sample-consent settings were unchanged. This is scanner evidence for that
+local run, not evidence that Nemalo performed that initial scan or a safety certification.
+The later shared `check FILE --scan` adapter was separately smoke-tested against
+one EPUB with Defender and reported `no_detections_reported`. Historical
+acquisition receipts remain unchanged.
+EPUB conformance, full PDF validation, MP3 decoding, and editorial review remain
+unperformed. No downloaded content, personal paths, or local scanner logs are in Git.
+
+The local reading list, selected source snapshots, asset receipts, failed-attempt
+reports, successful acquisition report, and scanner report live with the external
+collection. Gutenberg files can be regenerated; a URL-based manifest selects
+resources but cannot reproduce historical bytes without preserved assets/receipts.
+Manifest SHA-256 for this exercise:
+`623c8101bacb698cb6864e336852244a7a2c562ab9b7eddeb649a316e2ea01cc`.
+
+A subsequent CLI file-health pass checked all 208 content assets using the shared
+assessment service. Every result was `limited_checks_passed`, with no active-content
+indicators reported by these limited checks. The 80 EPUBs contained measured HTML
+body text, from 22,162 to 2,657,494 non-whitespace characters per EPUB, totaling
+40,824,129. These are measurements, not expected-length or completeness verdicts.
+EPUB pages, PDF page trees, media decoding, and semantic completeness remain unknown.
+The health report is local to the collection and does not overwrite scan evidence.
 
 ## Source contracts reviewed on 2026-10-08
 

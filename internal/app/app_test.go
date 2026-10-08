@@ -32,7 +32,7 @@ func TestSharedServices(t *testing.T) {
 		}
 		return "", errors.New("not installed")
 	})
-	if d.Security != "not_scanned" || len(d.Capabilities) != 3 || d.Capabilities[0].Available || !d.Capabilities[1].Available {
+	if d.Security != "not_scanned" || len(d.Capabilities) != 4 || d.Capabilities[0].Available || !d.Capabilities[2].Available {
 		t.Fatalf("tool availability became scan coverage: %+v", d)
 	}
 	if New().Catalog == nil {
@@ -41,4 +41,5 @@ func TestSharedServices(t *testing.T) {
 	if _, err := Lookup("nemalo-nonexistent-fixture-tool"); err == nil {
 		t.Fatal("unexpected tool")
 	}
+	_, _ = Lookup("MpCmdRun.exe")
 }

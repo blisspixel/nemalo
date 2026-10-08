@@ -11,6 +11,7 @@ import (
 	"charm.land/bubbles/v2/viewport"
 	tea "charm.land/bubbletea/v2"
 	"github.com/blisspixel/nemalo/internal/app"
+	"github.com/blisspixel/nemalo/internal/assessment"
 	"github.com/blisspixel/nemalo/internal/discovery"
 	"github.com/blisspixel/nemalo/internal/inventory"
 	"github.com/blisspixel/nemalo/internal/present"
@@ -40,7 +41,9 @@ func newModel(ctx context.Context, service app.Service) *model {
 	input.Placeholder = "Search books (sent to Open Library on Enter)"
 	input.SetWidth(70)
 	input.SetVirtualCursor(true)
-	return &model{ctx: ctx, service: service, input: input, viewport: viewport.New(viewport.WithWidth(80), viewport.WithHeight(16)), mode: "search", status: "Ready. No network activity until you submit a search."}
+	view := viewport.New(viewport.WithWidth(80), viewport.WithHeight(16))
+	view.SoftWrap = true
+	return &model{ctx: ctx, service: service, input: input, viewport: view, mode: "search", status: "Ready. No network activity until you submit a search."}
 }
 
 func (m *model) Init() tea.Cmd { return m.input.Focus() }
@@ -66,6 +69,8 @@ func (m *model) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		data, err := json.MarshalIndent(msg.data, "", "  ")
 		switch value := msg.data.(type) {
+		case assessment.Report:
+			data = []byte(present.Health(value))
 		case discovery.Page:
 			data = []byte(present.Search(value))
 		case inventory.Report:
@@ -102,6 +107,12 @@ func (m *model) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 			if m.mode == "search" {
 				m.mode = "inspect"
 				m.input.Placeholder = "Explicit folder path (read-only inventory)"
+			} else if m.mode == "inspect" {
+				m.mode = "check"
+				m.input.Placeholder = "Explicit file path (health checks; no antivirus)"
+			} else if m.mode == "check" {
+				m.mode = "scan"
+				m.input.Placeholder = "File path (health + antivirus; scanner cloud/sample policy applies)"
 			} else {
 				m.mode = "search"
 				m.input.Placeholder = "Search books (sent to Open Library on Enter)"
@@ -124,6 +135,10 @@ func (m *model) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 					data, err := m.service.Search(ctx, value, 10, 0)
 					return result{id, data, err}
 				}
+				if mode == "check" || mode == "scan" {
+					data, err := m.service.Check(ctx, value, assessment.Options{Scan: mode == "scan"})
+					return result{id, data, err}
+				}
 				data, err := m.service.Inspect(ctx, value, inventory.Defaults())
 				return result{id, data, err}
 			}
@@ -139,7 +154,7 @@ func (m *model) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m *model) View() tea.View {
-	v := tea.NewView("Nemalo\nFind knowledge. Care for it. Put it to work.\n\nMode: " + m.mode + " (Tab switches search / inspect)\n" + m.input.View() + "\n" + m.status + "\n\n" + m.viewport.View() + "\nEnter: run  Escape: cancel  PageUp/PageDown: scroll  Ctrl+C: quit")
+	v := tea.NewView("Nemalo\nFind knowledge. Care for it. Put it to work.\n\nMode: " + m.mode + " (Tab: search / inspect / check / scan)\n" + m.input.View() + "\n" + m.status + "\n\n" + m.viewport.View() + "\nEnter: run  Escape: cancel  PageUp/PageDown: scroll  Ctrl+C: quit")
 	v.AltScreen = true
 	return v
 }

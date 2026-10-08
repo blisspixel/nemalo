@@ -3,12 +3,15 @@ package tui
 import (
 	"context"
 	"errors"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
 	tea "charm.land/bubbletea/v2"
 	"github.com/blisspixel/nemalo/internal/app"
 	"github.com/blisspixel/nemalo/internal/discovery"
+	"github.com/blisspixel/nemalo/internal/scanner"
 )
 
 type catalog struct{ err error }
@@ -59,6 +62,31 @@ func TestTerminalWorkflow(t *testing.T) {
 		t.Fatal("inspection missing")
 	}
 	m.Update(key(tea.KeyTab))
+	if m.mode != "check" {
+		t.Fatal("health mode unavailable")
+	}
+	p := filepath.Join(t.TempDir(), "paper.pdf")
+	if err := os.WriteFile(p, []byte("%PDF-1.7\n%%EOF"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	m.input.SetValue(p)
+	_, cmd = m.Update(key(tea.KeyEnter))
+	m.Update(cmd())
+	if !strings.Contains(m.viewport.GetContent(), "limited_checks_passed") || !strings.Contains(m.viewport.GetContent(), "Antivirus: not_scanned") {
+		t.Fatal("health result missing")
+	}
+	m.Update(key(tea.KeyTab))
+	if m.mode != "scan" {
+		t.Fatal("explicit antivirus mode unavailable")
+	}
+	m.service.Scanner = fakeScanner{}
+	m.input.SetValue(p)
+	_, cmd = m.Update(key(tea.KeyEnter))
+	m.Update(cmd())
+	if !strings.Contains(m.viewport.GetContent(), "Antivirus: unavailable") {
+		t.Fatal("scanner unavailable result hidden")
+	}
+	m.Update(key(tea.KeyTab))
 	if m.mode != "search" {
 		t.Fatal("mode not restored")
 	}
@@ -72,6 +100,22 @@ func TestTerminalWorkflow(t *testing.T) {
 	if cmd == nil {
 		t.Fatal("quit unavailable")
 	}
+}
+
+func TestLongResultsRemainVisible(t *testing.T) {
+	m := newModel(context.Background(), app.Service{})
+	m.viewport.SetWidth(10)
+	m.viewport.SetHeight(5)
+	m.viewport.SetContent(strings.Repeat("a", 20) + "TAIL")
+	if !m.viewport.SoftWrap || !strings.Contains(m.viewport.View(), "TAIL") {
+		t.Fatal("long health evidence clipped", m.viewport.View())
+	}
+}
+
+type fakeScanner struct{}
+
+func (fakeScanner) Scan(context.Context, string) scanner.Result {
+	return scanner.Result{Status: "unavailable"}
 }
 
 func TestCancellationStaleResultsAndFailures(t *testing.T) {

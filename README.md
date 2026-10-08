@@ -25,7 +25,11 @@ Open Library discovery, read-only folder inventory, optional bounded SHA-256 has
 configuration, capability reports, and versioned JSON output. Inventory classifies
 filename candidates; it does not establish format validity or malware safety.
 
-Production downloads, archive extraction, antivirus adapters, checked publication, library
+`check FILE` adds actual signature/structure checks, size and SHA-256, EPUB
+reading-order and text measurements, and optional installed antivirus via `--scan`.
+It reports incomplete checks and review findings, without claiming absolute safety.
+
+Production downloads, archive extraction, checked publication, library
 catalog/journal recovery, audiobook management, and MCP are still planned.
 Go was confirmed on 2026-10-08.
 The separate [validation harness](docs/VALIDATION.md) acquires a curated collection
@@ -47,12 +51,20 @@ go run ./cmd/nemalo tui
 go run ./cmd/nemalo doctor --json
 go run ./cmd/nemalo search "Jules Verne" --limit 5
 go run ./cmd/nemalo inspect ./docs --hashes --json
+go run ./cmd/nemalo check /path/to/book.epub --json
+go run ./cmd/nemalo check /path/to/book.epub --scan
 ```
 
 `bin/nemalo` (`bin/nemalo.exe` on Windows) is the native executable. The TUI uses
-Tab to switch search/inspection, Enter to run, Escape to cancel, PageUp/PageDown
+Tab to switch search/inspect/check/scan, Enter to run, Escape to cancel, PageUp/PageDown
 to scroll, and Ctrl+C to quit. Searching sends the query to Open Library; inventory
 is local and read-only. No telemetry or model service is required.
+
+File checks use a private temporary snapshot, at most 256 MiB. EPUBs generally
+have no fixed page count, so measured documents/text are reported instead of
+invented pages. PDF pages and audio duration are not yet parsed. Antivirus is
+optional; its installed cloud/sample-submission policy applies when requested.
+See the [assessment decision](docs/decisions/0003-file-health-and-scanners.md).
 
 For configuration precedence, paths, limits, verification, and current boundaries,
 see [development and operation](docs/DEVELOPMENT.md). All supported current commands
@@ -165,7 +177,7 @@ recorded intake plan, and must refuse stale or changed inputs.
 ## Proposed command interface
 
 These examples describe the full production design. Only `doctor`, basic Open
-Library `search`, read-only `inspect`, `version`, `help`, and `tui` work today;
+Library `search`, read-only `inspect`, file-level `check`, `version`, `help`, and `tui` work today;
 language/type/provider filters and the other commands below are planned:
 
 ```sh
@@ -192,7 +204,8 @@ Today's `doctor` reports configuration paths and tool availability, without exec
 `inspect` reports what is present without modifying source or library files; any
 temporary staging it needs is bounded and reported. `organize` stages and imports
 eligible assets under enabled format policies. `cleanup` shows or applies recorded
-dispositions from a completed run. `check` reassesses the existing library. An
+dispositions from a completed run. Current `check FILE` assesses one file;
+library-wide preservation checks remain planned. An
 agent must use the same validated plans and configured filesystem scope.
 
 ## Catalogs and collection growth

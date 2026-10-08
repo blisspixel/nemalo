@@ -17,6 +17,8 @@ import (
 	"path"
 	"regexp"
 	"time"
+
+	"github.com/blisspixel/nemalo/internal/assessment"
 )
 
 type Asset struct {
@@ -50,14 +52,14 @@ type Manifest struct {
 }
 
 type Receipt struct {
-	ResourceID string    `json:"resource_id"`
-	Asset      Asset     `json:"asset"`
-	Bytes      int64     `json:"bytes"`
-	SHA256     string    `json:"sha256"`
-	AcquiredAt time.Time `json:"acquired_at"`
-	FinalURL   string    `json:"final_url"`
-	Checks     Checks    `json:"checks"`
-	Antivirus  string    `json:"antivirus"`
+	ResourceID string            `json:"resource_id"`
+	Asset      Asset             `json:"asset"`
+	Bytes      int64             `json:"bytes"`
+	SHA256     string            `json:"sha256"`
+	AcquiredAt time.Time         `json:"acquired_at"`
+	FinalURL   string            `json:"final_url"`
+	Checks     assessment.Checks `json:"checks"`
+	Antivirus  string            `json:"antivirus"`
 }
 
 type Result struct {
@@ -279,7 +281,7 @@ func (a *Acquirer) acquireAsset(ctx context.Context, root *os.Root, id string, a
 		if err != nil || hex.EncodeToString(h.Sum(nil)) != old.SHA256 {
 			return receipt, 0, errors.New("existing asset hash changed")
 		}
-		old.Checks, err = Inspect(f, old.Bytes, asset.Format)
+		old.Checks, err = assessment.InspectContext(ctx, f, old.Bytes, asset.Format)
 		old.Asset = asset
 		return old, 0, err
 	} else if !os.IsNotExist(err) {
@@ -333,7 +335,7 @@ func (a *Acquirer) acquireAsset(ctx context.Context, root *os.Root, id string, a
 	}
 	receipt.Bytes, receipt.SHA256 = n, hex.EncodeToString(h.Sum(nil))
 	receipt.AcquiredAt, receipt.FinalURL = time.Now().UTC(), res.Request.URL.String()
-	receipt.Checks, err = Inspect(f, n, asset.Format)
+	receipt.Checks, err = assessment.InspectContext(ctx, f, n, asset.Format)
 	if err != nil {
 		return receipt, n, err
 	}

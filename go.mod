@@ -5,6 +5,7 @@ go 1.27.2
 require (
 	charm.land/bubbles/v2 v2.2.1
 	charm.land/bubbletea/v2 v2.0.10
+	golang.org/x/net v0.60.0
 )
 
 require (

@@ -267,6 +267,13 @@ Do not require an editor, Git installation, wiki service, or vector database.
 
 ## Assessment evidence
 
+The initial implementation is `internal/assessment`, shared by `check FILE` and
+the validation harness. Optional installed antivirus uses `internal/scanner`.
+CLI/TUI dispatch through `internal/app` and share `internal/present`. See the
+[file-health decision](decisions/0003-file-health-and-scanners.md) for implemented
+limits and parser/scanner decisions. The production publication policy below is
+still planned; file checks do not publish or delete anything.
+
 Store independent results for structure, suspicious content, antivirus, metadata,
 completeness, and duplicates. Each check records status, tool/version, policy/version,
 asset hash, time, limits, and evidence. Distinguish pass, findings, unsupported,

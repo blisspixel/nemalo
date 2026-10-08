@@ -81,6 +81,12 @@ move domain policy into a terminal update handler or duplicate it for MCP.
 The bounded collection harness is in `internal/collection` and `cmd/collection`;
 its curated manifest is `collections/foundations.json`. Keep downloaded validation
 content and local reports outside the checkout. Its intake is not checked publication.
+When integrating production acquisition/assessment, reuse or deliberately relocate
+these tested building blocks; do not grow a second transfer or publication policy.
+File/container checks are in `internal/assessment`, shared with the collection
+harness; installed antivirus is in `internal/scanner`. Preserve measured facts
+versus semantic completeness, explicit scanner opt-in and cloud-policy disclosure,
+snapshot/hash binding, no remediation, and unsuccessful missing/incomplete scans.
 
 Test behavior and failure recovery, not just execution. Use synthetic fixtures;
 never personal downloads. Give cleanup, parser boundaries, scanner skips, and

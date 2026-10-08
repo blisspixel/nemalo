@@ -3311,8 +3311,8 @@
       "rationale": "Study a primary research account or technical treatment, including methods, evidence, limitations, and provenance. Compare claims with later literature rather than treating prominence as truth.",
       "landing_url": "https://arxiv.org/abs/1706.03762v7",
       "metadata_url": "https://export.arxiv.org/api/query?id_list=1706.03762v7",
-      "rights": "Available for personal local reading from arXiv. The item license has not been independently resolved; no redistribution permission is inferred.",
-      "rights_url": "https://info.arxiv.org/help/license/index.html",
+      "rights": "The current arXiv OAI record declares http://arxiv.org/licenses/nonexclusive-distrib/1.0/. Preserve notices. This is source evidence, not a grant of additional redistribution rights or confirmation of rights for every version.",
+      "rights_url": "http://arxiv.org/licenses/nonexclusive-distrib/1.0/",
       "review_status": "preprint_or_repository_version",
       "assets": [
         {
@@ -3320,7 +3320,8 @@
           "url": "https://export.arxiv.org/pdf/1706.03762v7",
           "format": "pdf"
         }
-      ]
+      ],
+      "notes": "License metadata retrieved 2026-10-08 from https://oaipmh.arxiv.org/oai?verb=GetRecord&metadataPrefix=arXiv&identifier=oai%3AarXiv.org%3A1706.03762. A later metadata update does not automatically relicense this pinned PDF."
     },
     {
       "id": "arxiv-2005.14165v4",
@@ -3365,8 +3366,8 @@
       "rationale": "Study a primary research account or technical treatment, including methods, evidence, limitations, and provenance. Compare claims with later literature rather than treating prominence as truth.",
       "landing_url": "https://arxiv.org/abs/2005.14165v4",
       "metadata_url": "https://export.arxiv.org/api/query?id_list=2005.14165v4",
-      "rights": "Available for personal local reading from arXiv. The item license has not been independently resolved; no redistribution permission is inferred.",
-      "rights_url": "https://info.arxiv.org/help/license/index.html",
+      "rights": "The current arXiv OAI record declares http://arxiv.org/licenses/nonexclusive-distrib/1.0/. Preserve notices. This is source evidence, not a grant of additional redistribution rights or confirmation of rights for every version.",
+      "rights_url": "http://arxiv.org/licenses/nonexclusive-distrib/1.0/",
       "review_status": "preprint_or_repository_version",
       "assets": [
         {
@@ -3374,7 +3375,8 @@
           "url": "https://export.arxiv.org/pdf/2005.14165v4",
           "format": "pdf"
         }
-      ]
+      ],
+      "notes": "License metadata retrieved 2026-10-08 from https://oaipmh.arxiv.org/oai?verb=GetRecord&metadataPrefix=arXiv&identifier=oai%3AarXiv.org%3A2005.14165. A later metadata update does not automatically relicense this pinned PDF."
     },
     {
       "id": "arxiv-1606.06565v2",
@@ -3394,8 +3396,8 @@
       "rationale": "Study a primary research account or technical treatment, including methods, evidence, limitations, and provenance. Compare claims with later literature rather than treating prominence as truth.",
       "landing_url": "https://arxiv.org/abs/1606.06565v2",
       "metadata_url": "https://export.arxiv.org/api/query?id_list=1606.06565v2",
-      "rights": "Available for personal local reading from arXiv. The item license has not been independently resolved; no redistribution permission is inferred.",
-      "rights_url": "https://info.arxiv.org/help/license/index.html",
+      "rights": "The current arXiv OAI record declares http://arxiv.org/licenses/nonexclusive-distrib/1.0/. Preserve notices. This is source evidence, not a grant of additional redistribution rights or confirmation of rights for every version.",
+      "rights_url": "http://arxiv.org/licenses/nonexclusive-distrib/1.0/",
       "review_status": "preprint_or_repository_version",
       "assets": [
         {
@@ -3403,7 +3405,8 @@
           "url": "https://export.arxiv.org/pdf/1606.06565v2",
           "format": "pdf"
         }
-      ]
+      ],
+      "notes": "License metadata retrieved 2026-10-08 from https://oaipmh.arxiv.org/oai?verb=GetRecord&metadataPrefix=arXiv&identifier=oai%3AarXiv.org%3A1606.06565. A later metadata update does not automatically relicense this pinned PDF."
     },
     {
       "id": "arxiv-1207.7214v2",
@@ -3418,8 +3421,8 @@
       "rationale": "Study a primary research account or technical treatment, including methods, evidence, limitations, and provenance. Compare claims with later literature rather than treating prominence as truth.",
       "landing_url": "https://arxiv.org/abs/1207.7214v2",
       "metadata_url": "https://export.arxiv.org/api/query?id_list=1207.7214v2",
-      "rights": "Available for personal local reading from arXiv. The item license has not been independently resolved; no redistribution permission is inferred.",
-      "rights_url": "https://info.arxiv.org/help/license/index.html",
+      "rights": "The current arXiv OAI record declares http://arxiv.org/licenses/nonexclusive-distrib/1.0/. Preserve notices. This is source evidence, not a grant of additional redistribution rights or confirmation of rights for every version.",
+      "rights_url": "http://arxiv.org/licenses/nonexclusive-distrib/1.0/",
       "review_status": "preprint_or_repository_version",
       "assets": [
         {
@@ -3427,7 +3430,8 @@
           "url": "https://export.arxiv.org/pdf/1207.7214v2",
           "format": "pdf"
         }
-      ]
+      ],
+      "notes": "License metadata retrieved 2026-10-08 from https://oaipmh.arxiv.org/oai?verb=GetRecord&metadataPrefix=arXiv&identifier=oai%3AarXiv.org%3A1207.7214. A later metadata update does not automatically relicense this pinned PDF."
     },
     {
       "id": "arxiv-math-0307245v1",
@@ -3467,8 +3471,8 @@
       "rationale": "Study a primary research account or technical treatment, including methods, evidence, limitations, and provenance. Compare claims with later literature rather than treating prominence as truth.",
       "landing_url": "https://arxiv.org/abs/1602.03837v1",
       "metadata_url": "https://export.arxiv.org/api/query?id_list=1602.03837v1",
-      "rights": "Available for personal local reading from arXiv. The item license has not been independently resolved; no redistribution permission is inferred.",
-      "rights_url": "https://info.arxiv.org/help/license/index.html",
+      "rights": "The current arXiv OAI record declares http://creativecommons.org/licenses/by/4.0/. Preserve notices. This is source evidence, not a grant of additional redistribution rights or confirmation of rights for every version.",
+      "rights_url": "http://creativecommons.org/licenses/by/4.0/",
       "review_status": "preprint_or_repository_version",
       "assets": [
         {
@@ -3476,7 +3480,8 @@
           "url": "https://export.arxiv.org/pdf/1602.03837v1",
           "format": "pdf"
         }
-      ]
+      ],
+      "notes": "License metadata retrieved 2026-10-08 from https://oaipmh.arxiv.org/oai?verb=GetRecord&metadataPrefix=arXiv&identifier=oai%3AarXiv.org%3A1602.03837. A later metadata update does not automatically relicense this pinned PDF."
     },
     {
       "id": "arxiv-1301.3781v3",
@@ -3494,8 +3499,8 @@
       "rationale": "Study a primary research account or technical treatment, including methods, evidence, limitations, and provenance. Compare claims with later literature rather than treating prominence as truth.",
       "landing_url": "https://arxiv.org/abs/1301.3781v3",
       "metadata_url": "https://export.arxiv.org/api/query?id_list=1301.3781v3",
-      "rights": "Available for personal local reading from arXiv. The item license has not been independently resolved; no redistribution permission is inferred.",
-      "rights_url": "https://info.arxiv.org/help/license/index.html",
+      "rights": "The current arXiv OAI record declares http://arxiv.org/licenses/nonexclusive-distrib/1.0/. Preserve notices. This is source evidence, not a grant of additional redistribution rights or confirmation of rights for every version.",
+      "rights_url": "http://arxiv.org/licenses/nonexclusive-distrib/1.0/",
       "review_status": "preprint_or_repository_version",
       "assets": [
         {
@@ -3503,7 +3508,8 @@
           "url": "https://export.arxiv.org/pdf/1301.3781v3",
           "format": "pdf"
         }
-      ]
+      ],
+      "notes": "License metadata retrieved 2026-10-08 from https://oaipmh.arxiv.org/oai?verb=GetRecord&metadataPrefix=arXiv&identifier=oai%3AarXiv.org%3A1301.3781. A later metadata update does not automatically relicense this pinned PDF."
     },
     {
       "id": "arxiv-1803.09010v8",
@@ -3524,8 +3530,8 @@
       "rationale": "Study a primary research account or technical treatment, including methods, evidence, limitations, and provenance. Compare claims with later literature rather than treating prominence as truth.",
       "landing_url": "https://arxiv.org/abs/1803.09010v8",
       "metadata_url": "https://export.arxiv.org/api/query?id_list=1803.09010v8",
-      "rights": "Available for personal local reading from arXiv. The item license has not been independently resolved; no redistribution permission is inferred.",
-      "rights_url": "https://info.arxiv.org/help/license/index.html",
+      "rights": "The current arXiv OAI record declares http://arxiv.org/licenses/nonexclusive-distrib/1.0/. Preserve notices. This is source evidence, not a grant of additional redistribution rights or confirmation of rights for every version.",
+      "rights_url": "http://arxiv.org/licenses/nonexclusive-distrib/1.0/",
       "review_status": "preprint_or_repository_version",
       "assets": [
         {
@@ -3533,7 +3539,8 @@
           "url": "https://export.arxiv.org/pdf/1803.09010v8",
           "format": "pdf"
         }
-      ]
+      ],
+      "notes": "License metadata retrieved 2026-10-08 from https://oaipmh.arxiv.org/oai?verb=GetRecord&metadataPrefix=arXiv&identifier=oai%3AarXiv.org%3A1803.09010. A later metadata update does not automatically relicense this pinned PDF."
     },
     {
       "id": "arxiv-1409.0473v7",
@@ -3550,8 +3557,8 @@
       "rationale": "Study a primary research account or technical treatment, including methods, evidence, limitations, and provenance. Compare claims with later literature rather than treating prominence as truth.",
       "landing_url": "https://arxiv.org/abs/1409.0473v7",
       "metadata_url": "https://export.arxiv.org/api/query?id_list=1409.0473v7",
-      "rights": "Available for personal local reading from arXiv. The item license has not been independently resolved; no redistribution permission is inferred.",
-      "rights_url": "https://info.arxiv.org/help/license/index.html",
+      "rights": "The current arXiv OAI record declares http://arxiv.org/licenses/nonexclusive-distrib/1.0/. Preserve notices. This is source evidence, not a grant of additional redistribution rights or confirmation of rights for every version.",
+      "rights_url": "http://arxiv.org/licenses/nonexclusive-distrib/1.0/",
       "review_status": "preprint_or_repository_version",
       "assets": [
         {
@@ -3559,7 +3566,8 @@
           "url": "https://export.arxiv.org/pdf/1409.0473v7",
           "format": "pdf"
         }
-      ]
+      ],
+      "notes": "License metadata retrieved 2026-10-08 from https://oaipmh.arxiv.org/oai?verb=GetRecord&metadataPrefix=arXiv&identifier=oai%3AarXiv.org%3A1409.0473. A later metadata update does not automatically relicense this pinned PDF."
     },
     {
       "id": "arxiv-gr-qc-9712019v1",

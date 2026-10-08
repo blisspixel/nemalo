@@ -1,0 +1,342 @@
+package assessment
+
+import (
+	"archive/zip"
+	"bytes"
+	"context"
+	"encoding/xml"
+	"errors"
+	"fmt"
+	"io"
+	"io/fs"
+	"net/url"
+	"path"
+	"strings"
+	"unicode"
+	"unicode/utf8"
+
+	"golang.org/x/net/html"
+)
+
+type Checks struct {
+	Signature     string     `json:"signature"`
+	ZIPCRC        string     `json:"zip_crc"`
+	EPUBPackage   string     `json:"epub_package"`
+	Conformance   string     `json:"conformance"`
+	ContentReview string     `json:"content_review"`
+	Members       int        `json:"members,omitempty"`
+	Warnings      []string   `json:"warnings,omitempty"`
+	EPUB          *EPUBFacts `json:"epub,omitempty"`
+}
+
+type EPUBFacts struct {
+	Titles                []string `json:"titles"`
+	Languages             []string `json:"languages"`
+	ReadingOrderDocuments int      `json:"reading_order_documents"`
+	Images                int      `json:"images"`
+	TextCharacters        int      `json:"non_whitespace_body_text_characters"`
+	ExpandedBytes         uint64   `json:"expanded_bytes"`
+	PageCountStatus       string   `json:"page_count_status"`
+}
+
+// Inspect performs bounded container checks without rendering or executing content.
+// PDF/MP3 signatures are candidates, not parser, decoder, or malware validation.
+func Inspect(r io.ReaderAt, size int64, format string) (Checks, error) {
+	return InspectContext(context.Background(), r, size, format)
+}
+
+func InspectContext(ctx context.Context, r io.ReaderAt, size int64, format string) (Checks, error) {
+	c := Checks{Signature: "not_checked", ZIPCRC: "not_applicable", EPUBPackage: "not_applicable", Conformance: "not_checked", ContentReview: "not_checked"}
+	if size <= 0 || size > 256<<20 {
+		return c, errors.New("invalid asset size")
+	}
+	header := make([]byte, min(size, int64(8)))
+	if _, err := r.ReadAt(header, 0); err != nil {
+		return c, err
+	}
+	switch format {
+	case "pdf":
+		if !bytes.HasPrefix(header, []byte("%PDF-")) {
+			return c, errors.New("PDF header missing")
+		}
+		tail := make([]byte, min(size, int64(2048)))
+		if _, err := r.ReadAt(tail, size-int64(len(tail))); err != nil {
+			return c, err
+		}
+		if !bytes.Contains(tail, []byte("%%EOF")) {
+			return c, errors.New("PDF end marker missing")
+		}
+		c.Signature = "pdf_header_and_end_marker"
+	case "mp3":
+		if !bytes.HasPrefix(header, []byte("ID3")) && !(len(header) >= 2 && header[0] == 0xff && header[1]&0xe0 == 0xe0) {
+			return c, errors.New("MP3 candidate signature missing")
+		}
+		c.Signature = "mp3_candidate_only"
+	case "epub":
+		if !bytes.HasPrefix(header, []byte("PK\x03\x04")) {
+			return c, errors.New("ZIP signature missing")
+		}
+		c.Signature = "zip"
+		if err := inspectEPUB(ctx, r, size, &c); err != nil {
+			return c, err
+		}
+	default:
+		return c, errors.New("unsupported assessment format")
+	}
+	return c, nil
+}
+
+func inspectEPUB(ctx context.Context, r io.ReaderAt, size int64, c *Checks) error {
+	// Bound directory parsing before zip.NewReader can allocate per-member state.
+	metadata := &metadataReader{r: r, remaining: 2 << 20, limited: true}
+	z, err := zip.NewReader(metadata, size)
+	metadata.limited = false
+	if err != nil {
+		return err
+	}
+	if len(z.File) == 0 || len(z.File) > 10000 {
+		return errors.New("EPUB member count outside limits")
+	}
+	files := map[string]*zip.File{}
+	type htmlMeasurement struct {
+		characters int
+		active     bool
+	}
+	measured := map[string]htmlMeasurement{}
+	var expanded uint64
+	for _, f := range z.File {
+		if err := ctx.Err(); err != nil {
+			return err
+		}
+		name := strings.TrimSuffix(f.Name, "/")
+		if !fs.ValidPath(name) || strings.ContainsAny(name, "\\:\x00") || f.Mode()&fs.ModeSymlink != 0 || (!f.FileInfo().IsDir() && !f.Mode().IsRegular()) || files[f.Name] != nil {
+			return fmt.Errorf("unsafe or duplicate EPUB member %q", f.Name)
+		}
+		files[f.Name] = f
+		if f.UncompressedSize64 > 32<<20 || expanded > 128<<20-f.UncompressedSize64 {
+			return errors.New("EPUB expanded size exceeds limit")
+		}
+		expanded += f.UncompressedSize64
+		body, err := f.Open()
+		if err != nil {
+			return err
+		}
+		n, err := io.Copy(io.Discard, io.LimitReader(contextReader{ctx, body}, int64(f.UncompressedSize64)+1))
+		closeErr := body.Close()
+		if err != nil || closeErr != nil || n != int64(f.UncompressedSize64) {
+			return fmt.Errorf("EPUB member failed CRC/length checks: %q", f.Name)
+		}
+	}
+	c.Members, c.ZIPCRC = len(files), "passed"
+	c.EPUB = &EPUBFacts{ExpandedBytes: expanded, PageCountStatus: "unknown_no_fixed_page_count", Titles: []string{}, Languages: []string{}}
+	if files["META-INF/encryption.xml"] != nil {
+		c.Warnings = append(c.Warnings, "encryption declarations present; may include font obfuscation")
+	}
+	mt, err := member(files, "mimetype", 128)
+	if err != nil || string(mt) != "application/epub+zip" || z.File[0].Name != "mimetype" || z.File[0].Method != zip.Store {
+		return errors.New("invalid EPUB mimetype placement, compression, or value")
+	}
+	container, err := member(files, "META-INF/container.xml", 1<<20)
+	if err != nil {
+		return err
+	}
+	var doc struct {
+		XMLName xml.Name `xml:"urn:oasis:names:tc:opendocument:xmlns:container container"`
+		Roots   []struct {
+			Path  string `xml:"full-path,attr"`
+			Media string `xml:"media-type,attr"`
+		} `xml:"rootfiles>rootfile"`
+	}
+	if err := xml.Unmarshal(container, &doc); err != nil || len(doc.Roots) == 0 || len(doc.Roots) > 8 {
+		return errors.New("invalid EPUB container document")
+	}
+	for _, entry := range doc.Roots {
+		if !fs.ValidPath(entry.Path) || strings.ContainsAny(entry.Path, "\\:") || entry.Media != "application/oebps-package+xml" {
+			return errors.New("invalid EPUB package path or media type")
+		}
+		data, err := member(files, entry.Path, 2<<20)
+		if err != nil {
+			return err
+		}
+		var pkg struct {
+			XMLName   xml.Name `xml:"http://www.idpf.org/2007/opf package"`
+			Titles    []string `xml:"metadata>title"`
+			Languages []string `xml:"metadata>language"`
+			Items     []struct {
+				ID         string `xml:"id,attr"`
+				Href       string `xml:"href,attr"`
+				Media      string `xml:"media-type,attr"`
+				Properties string `xml:"properties,attr"`
+			} `xml:"manifest>item"`
+			Spine []struct {
+				ID string `xml:"idref,attr"`
+			} `xml:"spine>itemref"`
+		}
+		if err := xml.Unmarshal(data, &pkg); err != nil || len(pkg.Items) == 0 || len(pkg.Spine) == 0 || len(pkg.Items) > 10000 || len(pkg.Spine) > 10000 {
+			return errors.New("invalid EPUB package manifest or spine")
+		}
+		ids := map[string]bool{}
+		text := map[string]int{}
+		c.EPUB.Titles = append(c.EPUB.Titles, pkg.Titles...)
+		c.EPUB.Languages = append(c.EPUB.Languages, pkg.Languages...)
+		if len(pkg.Titles) == 0 || len(pkg.Languages) == 0 {
+			c.Warnings = append(c.Warnings, "title or language metadata missing")
+		}
+		for _, item := range pkg.Items {
+			if item.ID == "" || ids[item.ID] || item.Href == "" {
+				return errors.New("invalid EPUB manifest identity")
+			}
+			ids[item.ID] = true
+			for _, property := range strings.Fields(item.Properties) {
+				if property == "scripted" {
+					c.Warnings = append(c.Warnings, "scripted manifest item declared")
+				}
+			}
+			// Remote resource declarations need content policy review; never fetch them.
+			if strings.Contains(item.Href, ":") || strings.HasPrefix(item.Href, "//") {
+				c.Warnings = append(c.Warnings, "remote manifest resource declared")
+				continue
+			}
+			reference, err := url.Parse(item.Href)
+			if err != nil || reference.RawQuery != "" || strings.HasPrefix(reference.Path, "/") || strings.ContainsAny(reference.Path, "\\:\x00") {
+				return errors.New("invalid EPUB member reference")
+			}
+			name := path.Join(path.Dir(entry.Path), reference.Path)
+			if !fs.ValidPath(name) || files[name] == nil {
+				return fmt.Errorf("EPUB manifest references missing member %q", name)
+			}
+			if strings.HasPrefix(item.Media, "image/") {
+				c.EPUB.Images++
+			}
+			if item.Media == "application/xhtml+xml" || item.Media == "text/html" {
+				facts, ok := measured[name]
+				if !ok {
+					data, err := member(files, name, 32<<20)
+					if err != nil {
+						return err
+					}
+					n, active, err := htmlFactsContext(ctx, data)
+					if err != nil {
+						return fmt.Errorf("EPUB document %q: %w", name, err)
+					}
+					facts = htmlMeasurement{n, active}
+					measured[name] = facts
+				}
+				text[item.ID] = facts.characters
+				if facts.active {
+					c.Warnings = append(c.Warnings, "active or externally referenced content in "+name)
+				}
+			}
+		}
+		seenSpine := map[string]bool{}
+		for _, spine := range pkg.Spine {
+			if !ids[spine.ID] {
+				return errors.New("EPUB spine references missing manifest item")
+			}
+			if seenSpine[spine.ID] {
+				c.Warnings = append(c.Warnings, "repeated reading-order reference")
+				continue
+			}
+			seenSpine[spine.ID] = true
+			if n, ok := text[spine.ID]; ok {
+				c.EPUB.ReadingOrderDocuments++
+				c.EPUB.TextCharacters += n
+			}
+		}
+	}
+	if c.EPUB.TextCharacters == 0 {
+		c.Warnings = append(c.Warnings, "no measured body text in HTML reading order; may be image-based or unsupported")
+	}
+	c.EPUBPackage = "container_manifest_spine_checked"
+	c.ContentReview = "limited_token_indicators_only"
+	return nil
+}
+
+type metadataReader struct {
+	r         io.ReaderAt
+	remaining int
+	limited   bool
+}
+
+func (r *metadataReader) ReadAt(p []byte, off int64) (int, error) {
+	if r.limited {
+		if len(p) > r.remaining {
+			return 0, errors.New("EPUB ZIP metadata read budget exceeded")
+		}
+		r.remaining -= len(p)
+	}
+	return r.r.ReadAt(p, off)
+}
+
+// These are positive indicators and text measurements, not a sanitizer or a DOM
+// security verdict. No member is rendered and no referenced URL is fetched.
+func htmlFacts(data []byte) (int, bool, error) {
+	return htmlFactsContext(context.Background(), data)
+}
+
+func htmlFactsContext(ctx context.Context, data []byte) (int, bool, error) {
+	if !utf8.Valid(data) {
+		return 0, false, errors.New("non-UTF-8 document is unsupported")
+	}
+	z := html.NewTokenizer(bytes.NewReader(data))
+	z.SetMaxBuf(1 << 20)
+	body, hidden, count, active := false, "", 0, false
+	for {
+		if err := ctx.Err(); err != nil {
+			return count, active, err
+		}
+		typ := z.Next()
+		if typ == html.ErrorToken {
+			if errors.Is(z.Err(), io.EOF) {
+				return count, active, nil
+			}
+			return count, active, z.Err()
+		}
+		token := z.Token()
+		if typ == html.StartTagToken || typ == html.SelfClosingTagToken {
+			switch token.Data {
+			case "body":
+				body = true
+			case "script", "iframe", "object", "embed":
+				active = true
+			}
+			if token.Data == "script" || token.Data == "style" {
+				hidden = token.Data
+			}
+			for _, a := range token.Attr {
+				v := strings.ToLower(strings.TrimSpace(a.Val))
+				if strings.HasPrefix(a.Key, "on") || ((a.Key == "src" || a.Key == "data") && (strings.Contains(v, ":") || strings.HasPrefix(v, "//"))) || (a.Key == "href" && strings.HasPrefix(v, "javascript:")) {
+					active = true
+				}
+			}
+		}
+		if typ == html.EndTagToken {
+			if token.Data == "body" {
+				body = false
+			}
+			if token.Data == hidden {
+				hidden = ""
+			}
+		}
+		if typ == html.TextToken && body && hidden == "" {
+			for _, r := range token.Data {
+				if !unicode.IsSpace(r) {
+					count++
+				}
+			}
+		}
+	}
+}
+
+func member(files map[string]*zip.File, name string, limit uint64) ([]byte, error) {
+	f := files[name]
+	if f == nil || f.UncompressedSize64 > limit {
+		return nil, fmt.Errorf("EPUB member missing or too large: %q", name)
+	}
+	r, err := f.Open()
+	if err != nil {
+		return nil, err
+	}
+	defer r.Close()
+	return io.ReadAll(io.LimitReader(r, int64(limit)+1))
+}

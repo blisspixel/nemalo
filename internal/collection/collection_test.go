@@ -4,6 +4,7 @@ import (
 	"archive/zip"
 	"bytes"
 	"context"
+	"encoding/binary"
 	"encoding/csv"
 	"encoding/json"
 	"errors"
@@ -15,6 +16,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/blisspixel/nemalo/internal/assessment"
 )
 
 func fixture() Manifest {
@@ -261,17 +264,17 @@ func epub(t *testing.T, mutate func(map[string]string)) []byte {
 
 func TestInspect(t *testing.T) {
 	b := epub(t, nil)
-	c, err := Inspect(bytes.NewReader(b), int64(len(b)), "epub")
+	c, err := assessment.Inspect(bytes.NewReader(b), int64(len(b)), "epub")
 	if err != nil || c.ZIPCRC != "passed" || c.Members != 4 || c.Conformance != "not_checked" {
 		t.Fatalf("%+v %v", c, err)
 	}
 	for _, tc := range []struct{ data, format string }{{"%PDF-1.7\n%%EOF", "pdf"}, {"ID3audio", "mp3"}, {"\xff\xfb1234", "mp3"}} {
-		if _, err := Inspect(strings.NewReader(tc.data), int64(len(tc.data)), tc.format); err != nil {
+		if _, err := assessment.Inspect(strings.NewReader(tc.data), int64(len(tc.data)), tc.format); err != nil {
 			t.Fatal(err)
 		}
 	}
 	for _, tc := range []struct{ data, format string }{{"", "pdf"}, {"bad", "pdf"}, {"%PDF-1.7", "pdf"}, {"html", "mp3"}, {"bad", "epub"}, {"PK\x03\x04bad", "epub"}, {"value", "exe"}} {
-		if _, err := Inspect(strings.NewReader(tc.data), int64(len(tc.data)), tc.format); err == nil {
+		if _, err := assessment.Inspect(strings.NewReader(tc.data), int64(len(tc.data)), tc.format); err == nil {
 			t.Fatal("invalid content accepted")
 		}
 	}
@@ -290,16 +293,75 @@ func TestInspect(t *testing.T) {
 	}
 	for i, mutate := range mutations {
 		b := epub(t, mutate)
-		if _, err := Inspect(bytes.NewReader(b), int64(len(b)), "epub"); err == nil {
+		if _, err := assessment.Inspect(bytes.NewReader(b), int64(len(b)), "epub"); err == nil {
 			t.Errorf("mutation %d accepted", i)
 		}
 	}
 	b = epub(t, func(f map[string]string) {
 		f["book.opf"] = strings.ReplaceAll(f["book.opf"], "chapter.xhtml", "https://example.org/chapter")
 	})
-	c, err = Inspect(bytes.NewReader(b), int64(len(b)), "epub")
-	if err != nil || len(c.Warnings) != 1 {
+	c, err = assessment.Inspect(bytes.NewReader(b), int64(len(b)), "epub")
+	if err != nil || !strings.Contains(strings.Join(c.Warnings, ";"), "remote manifest resource declared") {
 		t.Fatal("remote resources not flagged")
+	}
+}
+
+func TestContainerCorruptionAndBudgets(t *testing.T) {
+	b := epub(t, nil)
+	position := bytes.Index(b, []byte("application/epub+zip"))
+	if position < 0 {
+		t.Fatal("fixture has no stored mimetype")
+	}
+	b[position] ^= 1
+	if _, err := assessment.Inspect(bytes.NewReader(b), int64(len(b)), "epub"); err == nil || !strings.Contains(err.Error(), "CRC") {
+		t.Fatalf("corruption not detected: %v", err)
+	}
+	b = epub(t, nil)
+	central := bytes.Index(b, []byte{'P', 'K', 1, 2})
+	if central < 0 {
+		t.Fatal("fixture has no central directory")
+	}
+	binary.LittleEndian.PutUint32(b[central+24:central+28], (32<<20)+1)
+	if _, err := assessment.Inspect(bytes.NewReader(b), int64(len(b)), "epub"); err == nil || !strings.Contains(err.Error(), "expanded size") {
+		t.Fatalf("oversized member accepted: %v", err)
+	}
+	for _, duplicate := range []bool{false, true} {
+		var buffer bytes.Buffer
+		w := zip.NewWriter(&buffer)
+		header := &zip.FileHeader{Name: "member"}
+		if !duplicate {
+			header.SetMode(os.ModeSymlink | 0700)
+		}
+		f, err := w.CreateHeader(header)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := f.Write([]byte("target")); err != nil {
+			t.Fatal(err)
+		}
+		if duplicate {
+			if _, err := w.Create("member"); err != nil {
+				t.Fatal(err)
+			}
+		}
+		if err := w.Close(); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := assessment.Inspect(bytes.NewReader(buffer.Bytes()), int64(buffer.Len()), "epub"); err == nil {
+			t.Fatal("link or duplicate accepted")
+		}
+	}
+	if _, err := Load(strings.NewReader(strings.Repeat(" ", (2<<20)+1))); err == nil {
+		t.Fatal("oversized manifest accepted")
+	}
+	m := fixture()
+	m.Resources[0].Assets = append(m.Resources[0].Assets, Asset{Name: "second.pdf", URL: "https://arxiv.org/pdf/1606.06565v2", Format: "pdf"})
+	body := "%PDF-x %%EOF"
+	a := testAcquirer(body, 200, -1)
+	a.Budget = int64(len(body))
+	r, err := a.Acquire(context.Background(), m, t.TempDir(), nil)
+	if err == nil || r.Complete || r.TransferredBytes != int64(len(body)) || len(r.Results[0].Assets) != 1 {
+		t.Fatalf("aggregate transfer budget: %+v %v", r, err)
 	}
 }
 

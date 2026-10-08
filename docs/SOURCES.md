@@ -56,6 +56,12 @@ Gutenberg's robot policy is more restrictive than the mere existence of an OPDS
 web response suggests. The Go design must use permitted catalog/acquisition
 channels, even where a prototype successfully called another endpoint.
 
+arXiv's [OAI documentation](https://info.arxiv.org/help/oa/index.html) specifies
+`https://oaipmh.arxiv.org/oai`, replacing the old `export.arxiv.org/oai2` base in
+March 2025. Its `arXiv` metadata format exposes license information for the latest
+record; `arXivRaw` also exposes history. Do not assign a latest-record license to
+older file versions without evidence that it applies.
+
 ## Corrections and implementation caveats
 
 - OpenStax is useful without EPUB. PDF collection support must stand on its own.
