@@ -24,13 +24,15 @@ import (
 const Version = "0.1.0-dev"
 
 const help = `Nemalo
-Find knowledge. Care for it. Put it to work.
+Find knowledge. Care for it. Realize its potential.
 
 Usage: nemalo <command> [options]
 
   tui                 Open the interactive terminal interface
   doctor              Report configuration and optional tool availability
-  search QUERY        Search Open Library bibliographic metadata (network access)
+  search QUERY        Search a selected catalog (explicit network access)
+  evaluate archive:ITEM
+                      Inspect source-declared files, rights, and access restrictions
   inspect DIRECTORY   Read-only inventory of an explicitly selected folder
   check FILE          Bounded file health assessment, without rendering content
   library snapshot DIRECTORY --output FILE
@@ -43,7 +45,7 @@ Usage: nemalo <command> [options]
   help                Show this help
 
 Shared options: --json, --config FILE, --library DIRECTORY, --review DIRECTORY
-Search options: --limit 10, --offset 0
+Search options: --source openlibrary|archive (default openlibrary), --limit 10, --offset 0
 Inspect options: --hashes, --max-entries 10000, --max-depth 32,
                  --max-file-bytes 268435456, --max-total-bytes 1073741824
 Check options: --scan, --expected-bytes N, --expected-sha256 HASH
@@ -102,6 +104,7 @@ func Execute(ctx context.Context, args []string, out, errOut io.Writer, service 
 	library := flags.String("library", "", "explicit library directory")
 	review := flags.String("review", "", "explicit review directory")
 	limit, offset := flags.Int("limit", 10, "search page size"), flags.Int("offset", 0, "search offset")
+	source := flags.String("source", "openlibrary", "search provider")
 	limits := inventory.Defaults()
 	checkOptions := assessment.Options{}
 	output := flags.String("output", "", "new snapshot output path")
@@ -165,7 +168,7 @@ func Execute(ctx context.Context, args []string, out, errOut io.Writer, service 
 		}
 		return write(Version, nil, 0)
 	}
-	if command != "doctor" && command != "search" && command != "inspect" && command != "check" && command != "tui" && command != "library" {
+	if command != "doctor" && command != "search" && command != "evaluate" && command != "inspect" && command != "check" && command != "tui" && command != "library" {
 		return write(nil, fmt.Errorf("unknown command %q; use nemalo help", command), 2)
 	}
 	p, err := paths()
@@ -181,6 +184,15 @@ func Execute(ctx context.Context, args []string, out, errOut io.Writer, service 
 		return write(nil, err, 2)
 	}
 	switch command {
+	case "evaluate":
+		if flags.NArg() != 1 || !discovery.ValidArchiveID(flags.Arg(0)) {
+			return write(nil, errors.New("evaluate requires exactly one archive:ITEM identifier"), 2)
+		}
+		data, err := service.Evaluate(ctx, flags.Arg(0))
+		if err != nil {
+			return write(data, err, 1)
+		}
+		return write(data, nil, 0)
 	case "library":
 		if flags.NArg() != 1 || (action != "snapshot" && action != "list" && action != "audit") {
 			return write(nil, errors.New("use library snapshot DIRECTORY, library list CATALOG, or library audit CATALOG"), 2)
@@ -232,10 +244,13 @@ func Execute(ctx context.Context, args []string, out, errOut io.Writer, service 
 		return write(service.Doctor(p, c, app.Lookup), nil, 0)
 	case "search":
 		query := strings.Join(flags.Args(), " ")
+		if *source != "openlibrary" && *source != "archive" {
+			return write(nil, errors.New("search source must be openlibrary or archive"), 2)
+		}
 		if strings.TrimSpace(query) == "" || len(query) > 1000 || *limit < 1 || *limit > 50 || *offset < 0 || *offset > 10000 {
 			return write(nil, errors.New("search requires QUERY, limit 1-50, and offset 0-10000"), 2)
 		}
-		data, err := service.Search(ctx, query, *limit, *offset)
+		data, err := service.SearchSource(ctx, *source, query, *limit, *offset)
 		if err != nil {
 			return write(data, err, 1)
 		}
@@ -282,7 +297,7 @@ func flagApplies(command, action, name string) bool {
 	}
 	switch command {
 	case "search":
-		return name == "limit" || name == "offset"
+		return name == "limit" || name == "offset" || name == "source"
 	case "check":
 		return name == "scan" || name == "expected-bytes" || name == "expected-sha256"
 	case "inspect":
@@ -324,6 +339,9 @@ func parse(flags *flag.FlagSet, args []string) error {
 
 func printData(out io.Writer, data any) error {
 	switch value := data.(type) {
+	case discovery.Evaluation:
+		_, err := io.WriteString(out, present.Evaluation(value))
+		return err
 	case library.Snapshot:
 		_, err := io.WriteString(out, present.Snapshot(value))
 		return err

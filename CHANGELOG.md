@@ -28,6 +28,12 @@
   optional historical EPUB/file-health metadata, literal holdings search, and
   explicit-root preservation audits in CLI/TUI. Save complete catalogs exclusively
   outside source roots without replacing existing outputs or mutating content.
+- Add Internet Archive discovery and item/file evaluation alongside Open Library,
+  with source-declared rights, access restrictions, candidate assets, and explicit
+  unverified DRM/file-rights states through CLI/TUI and structured output.
+- Consolidate provider metadata HTTP handling with bounded JSON, checked direct
+  destinations/redirects, cancellable pacing, and Retry-After handling.
+- Update the tagline to "Find knowledge. Care for it. Realize its potential."
 
 Production downloads, full format validation, extraction, checked publication, durable
 mutable library journals/recovery, cleanup, audiobook management, and MCP are not implemented yet.

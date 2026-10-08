@@ -167,7 +167,9 @@ patches, advisories, compatibility, and contracts when implementation begins.
 
 No competitor runtime comparison, complete source audit, Go benchmark, or plugin-host
 test was performed. The implemented foundation has offline Go tests, native Windows
-race checks, a live Open Library search, and a Windows TUI search/inspection/quit
-smoke. Native CI configuration covers Linux/macOS/Windows; actual run results are
+race checks, live Open Library/Archive searches, Archive item evaluation, and Windows
+TUI search/inspection/evaluation/quit smokes. The provider increment is recorded in
+[decision 0005](decisions/0005-provider-search-and-evaluation.md). Native CI
+configuration covers Linux/macOS/Windows; actual run results are
 separate evidence. Neither foundation coverage nor the old prototype certifies
 the planned archive, scanner, recovery, or acquisition behavior.

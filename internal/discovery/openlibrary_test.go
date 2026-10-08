@@ -13,9 +13,14 @@ import (
 
 func provider(t *testing.T, handler http.HandlerFunc) *OpenLibrary {
 	t.Helper()
-	server := httptest.NewServer(handler)
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		handler(w, r)
+	}))
 	t.Cleanup(server.Close)
-	return &OpenLibrary{endpoint: server.URL, client: server.Client()}
+	p := NewOpenLibrary()
+	p.endpoint, p.client = server.URL, server.Client()
+	return p
 }
 
 func TestSearchContract(t *testing.T) {

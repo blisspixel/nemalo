@@ -7,14 +7,23 @@ needed for the application, tests, or first-party tooling.
 
 ## Current operations
 
-`help`, `version`, `doctor`, `search`, `inspect`, `check`, `library snapshot`,
+`help`, `version`, `doctor`, `search`, `evaluate`, `inspect`, `check`, `library snapshot`,
 `library list`, `library audit`, and `tui` are implemented.
-Open Library search returns works and original language metadata, not resolved
-download permissions or file availability. Search sends only explicit query terms,
-paging/field parameters, and client identification to the fixed HTTPS source.
-Responses are bounded to 2 MiB, page sizes to 50, and requests to one per second
-per client instance. Separate CLI processes do not yet coordinate provider quotas.
-No automatic HTTP retry, arbitrary URL fetching, or bulk catalog harvesting occurs.
+Search defaults to Open Library work metadata; `--source archive` selects Internet
+Archive text/audio item search. Neither search resolves download permissions.
+Only explicit query terms, paging/field parameters, and client identification go to
+the selected fixed HTTPS source. Shared metadata responses are bounded to 2 MiB
+of decompressed JSON, page sizes to 50, and requests to one per second per provider
+instance, with a 30-second deadline including waits. Valid `Retry-After` on 429/503
+postpones subsequent requests in that instance. Separate CLI processes do not
+coordinate quotas. No automatic retry or bulk harvesting occurs.
+
+Provider metadata requests use checked direct connections and fixed-host HTTPS
+redirects. Environment proxies are disabled for this boundary; proxy-only networks
+are currently unsupported. Private/reserved/mixed DNS destinations are rejected,
+and connections use the validated numeric address with normal TLS validation.
+Metadata/rights URLs returned by a provider are not fetched. See
+[decision 0005](decisions/0005-provider-search-and-evaluation.md).
 
 Inventory requires an explicit directory. It uses `os.Root`, skips links/special
 files, and reports filename-based candidates without extracting or validating them.
@@ -25,14 +34,35 @@ Inventory performs no security scan; tool availability in `doctor` is not scan e
 Filesystem operations can still block on a stalled device; this is not a sandbox.
 
 The TUI offers search, explicit-folder inventory, file health checks, explicit
-antivirus scans, snapshots, holdings, and audits using the same application services.
-Tab changes mode, Ctrl+N switches library form fields, and Ctrl+A toggles local
-health metadata in snapshot mode. Enter
-submits, Escape cancels, PageUp/PageDown scroll,
+antivirus scans, snapshots, holdings, audits, and Archive evaluation using shared
+application services. Tab changes mode, F2 changes the search provider, Ctrl+N
+switches library form fields, and Ctrl+A toggles local health metadata in snapshot
+mode. Enter submits, Escape cancels, PageUp/PageDown scroll,
 and Ctrl+C quits. It makes no startup network request. Untrusted results and paths
 are escaped before display. Results wrap within the terminal viewport, including
 long hashes and findings. JSON mode uses schema version 1 and exit codes 0
 (success), 1 (failed/incomplete operation), and 2 (usage/configuration error).
+
+## Source item evaluation
+
+```sh
+nemalo search 'collection:librivoxaudio AND title:"Art of War"' --source archive --limit 3
+nemalo evaluate archive:art_of_war_chinese_1506_librivox --json
+```
+
+Archive evaluation requires a valid namespaced item ID and interprets at most
+5000 files within the shared response budget. It retains source titles, languages,
+creators, dates, publishers, rights, and license strings; these are declarations.
+Source file sizes/checksums, filename candidates, restriction evidence, unresolved
+file rights, and unassessed DRM are separate fields. Restricted or uncertain
+items/files receive no download URL. ACSM/LCPL delivery documents are not content
+downloads. Other URLs are escaped candidates constructed on the fixed source host.
+
+`complete` means bounded metadata interpretation succeeded, including a restricted
+item. No candidate URLs are probed or acquired; no files are scanned or opened.
+An Archive audio item is not necessarily an audiobook, and multiple formats may
+represent the same tracks. Actual edition/recording identity, complete track sets,
+rights policy, production acquisition, and checked publication remain planned.
 
 ## File health and scanning
 

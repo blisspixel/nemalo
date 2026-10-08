@@ -102,6 +102,28 @@ func (s searcher) Search(_ context.Context, q string, limit, offset int) (discov
 	return discovery.Page{Query: q, Total: limit, Offset: offset, Results: []discovery.Result{}}, s.err
 }
 
+func (s searcher) Evaluate(_ context.Context, id string) (discovery.Evaluation, error) {
+	return discovery.Evaluation{ID: id, Source: "archive", Access: "restricted_or_uncertain", Files: []discovery.OfferedFile{}, Limitations: []string{"File rights and DRM remain unverified"}}, s.err
+}
+
+func TestProviderSearchAndEvaluationCommands(t *testing.T) {
+	for _, args := range [][]string{{"search", "Verne", "--source", "archive", "--json"}, {"search", "Verne", "--source", "openlibrary"}, {"evaluate", "archive:demo"}, {"evaluate", "archive:demo", "--json"}} {
+		code, out, stderr := execute(t, args, nil)
+		if code != 0 || out == "" || stderr != "" {
+			t.Fatal(args, code, out, stderr)
+		}
+	}
+	code, out, _ := execute(t, []string{"evaluate", "archive:demo", "--json"}, errors.New("provider unavailable"))
+	if code != 1 || !strings.Contains(out, "provider unavailable") {
+		t.Fatal(code, out)
+	}
+	for _, args := range [][]string{{"evaluate"}, {"evaluate", "demo"}, {"evaluate", "archive:../x"}, {"evaluate", "openlibrary:OL1W"}, {"evaluate", "archive:demo", "extra"}, {"evaluate", "archive:demo", "--source", "archive"}, {"search", "x", "--source", "missing"}, {"inspect", "x", "--source", "archive"}} {
+		if code, _, _ := execute(t, args, nil); code != 2 {
+			t.Fatal("invalid provider usage accepted", args, code)
+		}
+	}
+}
+
 type brokenWriter struct{}
 
 func (brokenWriter) Write([]byte) (int, error) { return 0, errors.New("write failed") }
@@ -110,7 +132,7 @@ func execute(t *testing.T, args []string, searchErr error) (int, string, string)
 	t.Helper()
 	dir := t.TempDir()
 	var out, errOut bytes.Buffer
-	code := Execute(context.Background(), args, &out, &errOut, app.Service{Catalog: searcher{searchErr}}, func(string) string { return "" }, func() (config.Paths, error) { return config.Paths{Config: filepath.Join(dir, "missing.json")}, nil }, func(context.Context, app.Service) error { return nil })
+	code := Execute(context.Background(), args, &out, &errOut, app.Service{Providers: map[string]app.Searcher{"openlibrary": searcher{searchErr}, "archive": searcher{searchErr}}}, func(string) string { return "" }, func() (config.Paths, error) { return config.Paths{Config: filepath.Join(dir, "missing.json")}, nil }, func(context.Context, app.Service) error { return nil })
 	return code, out.String(), errOut.String()
 }
 

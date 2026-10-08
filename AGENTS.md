@@ -1,7 +1,7 @@
 # Nemalo development instructions
 
 Use the product name `Nemalo`, CLI/integration identifiers `nemalo`, and tagline
-"Find knowledge. Care for it. Put it to work."
+"Find knowledge. Care for it. Realize its potential."
 
 ## Orient first
 
@@ -78,6 +78,10 @@ Shared operations belong in `internal/app`; CLI and TUI use those services and
 root-scoped inventory is in `internal/inventory`; configuration is in
 `internal/config`. Verification logic is tested in `internal/verify`. Do not
 move domain policy into a terminal update handler or duplicate it for MCP.
+Provider adapters use the shared metadata HTTP client in `internal/discovery`;
+preserve fixed hosts, checked direct destinations, bounded JSON, and quota handling.
+Source evaluation is declaration evidence, never file rights, safety, or write
+authorization. See decision 0005 before changing access classification or networking.
 The bounded collection harness is in `internal/collection` and `cmd/collection`;
 its curated manifest is `collections/foundations.json`. Keep downloaded validation
 content and local reports outside the checkout. Its intake is not checked publication.

@@ -16,8 +16,32 @@ func (catalog) Search(_ context.Context, q string, limit, offset int) (discovery
 	return discovery.Page{Query: q, Offset: offset, Total: limit}, nil
 }
 
+type evaluator struct{ catalog }
+
+func (evaluator) Evaluate(_ context.Context, id string) (discovery.Evaluation, error) {
+	return discovery.Evaluation{ID: id}, nil
+}
+
+func TestProviderRegistryAndEvaluation(t *testing.T) {
+	s := Service{Providers: map[string]Searcher{"archive": evaluator{}, "openlibrary": catalog{}}}
+	if p, err := s.SearchSource(context.Background(), "archive", "books", 2, 1); err != nil || p.Query != "books" {
+		t.Fatal(p, err)
+	}
+	if _, err := s.SearchSource(context.Background(), "missing", "books", 2, 1); err == nil {
+		t.Fatal("unavailable provider accepted")
+	}
+	if e, err := s.Evaluate(context.Background(), "archive:demo"); err != nil || e.ID != "archive:demo" {
+		t.Fatal(e, err)
+	}
+	for _, id := range []string{"demo", "openlibrary:OL1W", "missing:id"} {
+		if _, err := s.Evaluate(context.Background(), id); err == nil {
+			t.Fatal("unsupported evaluation accepted", id)
+		}
+	}
+}
+
 func TestSharedServices(t *testing.T) {
-	s := Service{Catalog: catalog{}}
+	s := Service{Providers: map[string]Searcher{"openlibrary": catalog{}}}
 	p, err := s.Search(context.Background(), "books", 4, 3)
 	if err != nil || p.Query != "books" || p.Total != 4 || p.Offset != 3 {
 		t.Fatal(p, err)
@@ -35,7 +59,7 @@ func TestSharedServices(t *testing.T) {
 	if d.Security != "not_scanned" || len(d.Capabilities) != 4 || d.Capabilities[0].Available || !d.Capabilities[2].Available {
 		t.Fatalf("tool availability became scan coverage: %+v", d)
 	}
-	if New().Catalog == nil {
+	if New().Providers["openlibrary"] == nil {
 		t.Fatal("missing catalog")
 	}
 	if _, err := Lookup("nemalo-nonexistent-fixture-tool"); err == nil {

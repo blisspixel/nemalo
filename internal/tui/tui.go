@@ -34,6 +34,7 @@ type model struct {
 	height           int
 	viewport         viewport.Model
 	mode             string
+	source           string
 	status           string
 	busy             bool
 	id               int
@@ -52,7 +53,7 @@ func newModel(ctx context.Context, service app.Service) *model {
 	secondary.SetVirtualCursor(true)
 	view := viewport.New(viewport.WithWidth(80), viewport.WithHeight(16))
 	view.SoftWrap = true
-	return &model{ctx: ctx, service: service, input: input, secondary: secondary, height: 25, viewport: view, mode: "search", status: "Ready. No network activity until you submit a search."}
+	return &model{ctx: ctx, service: service, input: input, secondary: secondary, height: 25, viewport: view, mode: "search", source: "openlibrary", status: "Ready. Network activity only on explicit search/evaluation."}
 }
 
 func (m *model) Init() tea.Cmd { return m.input.Focus() }
@@ -80,6 +81,8 @@ func (m *model) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		data, err := json.MarshalIndent(msg.data, "", "  ")
 		switch value := msg.data.(type) {
+		case discovery.Evaluation:
+			data = []byte(present.Evaluation(value))
 		case library.Snapshot:
 			data = []byte(present.Snapshot(value))
 		case library.Page:
@@ -102,6 +105,17 @@ func (m *model) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 		}
 	case tea.KeyPressMsg:
 		switch msg.String() {
+		case "f2":
+			if m.mode == "search" && !m.busy {
+				if m.source == "openlibrary" {
+					m.source = "archive"
+				} else {
+					m.source = "openlibrary"
+				}
+				m.input.Placeholder = "Search " + m.source + " (network on Enter; F2 changes provider)"
+				m.status = "Ready. Search provider: " + m.source
+			}
+			return m, nil
 		case "ctrl+n":
 			if !m.form() || m.busy {
 				return m, nil
@@ -161,9 +175,12 @@ func (m *model) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 				m.mode = "audit"
 				m.input.Placeholder = "Catalog file"
 				m.secondary.Placeholder = "Explicit root directory to audit (required)"
+			} else if m.mode == "audit" {
+				m.mode = "evaluate"
+				m.input.Placeholder = "archive:ITEM (network metadata lookup on Enter; no download)"
 			} else {
 				m.mode = "search"
-				m.input.Placeholder = "Search books (sent to Open Library on Enter)"
+				m.input.Placeholder = "Search " + m.source + " (network on Enter; F2 changes provider)"
 			}
 			m.status = "Ready."
 			m.resize()
@@ -180,12 +197,15 @@ func (m *model) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 			m.cancel = cancel
 			m.id++
 			id := m.id
-			mode, value := m.mode, m.input.Value()
+			mode, value, source := m.mode, m.input.Value(), m.source
 			second, assess := m.secondary.Value(), m.assess
 			m.busy = true
 			m.status = "Working. Escape cancels; Ctrl+C quits."
 			return m, func() tea.Msg {
 				switch mode {
+				case "evaluate":
+					data, err := m.service.Evaluate(ctx, value)
+					return result{id, data, err}
 				case "snapshot":
 					data, err := m.service.Snapshot(ctx, value, second, inventory.Defaults(), assess)
 					return result{id, data, err}
@@ -197,7 +217,7 @@ func (m *model) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 					return result{id, data, err}
 				}
 				if mode == "search" {
-					data, err := m.service.Search(ctx, value, 10, 0)
+					data, err := m.service.SearchSource(ctx, source, value, 10, 0)
 					return result{id, data, err}
 				}
 				if mode == "check" || mode == "scan" {
@@ -230,7 +250,11 @@ func (m *model) View() tea.View {
 	if m.mode == "snapshot" {
 		form += fmt.Sprintf("; Ctrl+A: local health metadata (%t)", m.assess)
 	}
-	v := tea.NewView("Nemalo\nFind knowledge. Care for it. Put it to work.\n\nMode: " + m.mode + " (Tab: next mode)\n" + m.input.View() + form + "\n" + m.status + "\n\n" + m.viewport.View() + "\nEnter: run  Escape: cancel  PageUp/PageDown: scroll  Ctrl+C: quit")
+	mode := m.mode
+	if m.mode == "search" {
+		mode += " [" + m.source + "; F2 changes provider]"
+	}
+	v := tea.NewView("Nemalo\nFind knowledge. Care for it. Realize its potential.\n\nMode: " + mode + " (Tab: next mode)\n" + m.input.View() + form + "\n" + m.status + "\n\n" + m.viewport.View() + "\nEnter: run  Escape: cancel  PageUp/PageDown: scroll  Ctrl+C: quit")
 	v.AltScreen = true
 	return v
 }

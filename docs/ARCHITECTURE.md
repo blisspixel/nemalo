@@ -350,6 +350,12 @@ and concurrent changes must preserve recoverable content.
 
 ## Providers and networking
 
+The implemented metadata boundary supports explicit Open Library/Internet Archive
+search and Archive item/file evaluation through the shared provider registry.
+[Decision 0005](decisions/0005-provider-search-and-evaluation.md) records current
+contracts, checked direct connections, limits, and unverified access/rights states.
+The production transfer and wider provider behavior below remain planned.
+
 Provider capabilities distinguish search, lookup, asset resolution, download,
 web reading, streaming, and borrowing. Implement adapters in Go only as needed;
 an external destination can be a catalog link without an ingestion adapter.

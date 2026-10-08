@@ -11,7 +11,7 @@ import (
 
 func Search(page discovery.Page) string {
 	var b strings.Builder
-	fmt.Fprintf(&b, "Open Library search %q: %d matching works; %d shown from offset %d.\n", page.Query, page.Total, len(page.Results), page.Offset)
+	fmt.Fprintf(&b, "%q search %q: %d matches; %d shown from offset %d.\n", page.Source, page.Query, page.Total, len(page.Results), page.Offset)
 	if len(page.Results) == 0 {
 		b.WriteString("No results in this page.\n")
 	}

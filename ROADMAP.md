@@ -57,7 +57,8 @@ are first-class 1.0 interfaces; web/desktop interfaces are outside the current s
 ## Implementation status
 
 Implemented in Go: CLI/TUI entry points over shared services, configuration,
-Open Library metadata search, bounded read-only inventory with optional hashing,
+Open Library/Internet Archive metadata search, Archive item/file evaluation,
+bounded read-only inventory with optional hashing,
 capability reporting, JSON envelopes, and pinned verification/native CI configuration.
 Live Open Library search and a Windows TUI search/inspection/quit smoke were exercised.
 File-level `check` is implemented in CLI/TUI: bounded snapshots, signatures,
@@ -73,7 +74,8 @@ Milestone 1 remains in progress: richer domain identities, one-writer locking, d
 journal/recovery, and packaged release/checksum work are outstanding. Milestone 2
 has inventory and standalone signatures/private snapshots, without archive
 extraction or production staging. Milestone 5 has
-Open Library discovery only, without acquisition. All remaining production
+two discovery adapters and source-declared Archive file/access/rights evaluation,
+without production acquisition. All remaining production
 capabilities stay planned. A configured CI workflow is not itself a hosted pass.
 The initial foundation passed hosted native CI on Linux, macOS, and Windows.
 The [collection harness](docs/VALIDATION.md) separately exercises curated real assets
@@ -237,10 +239,12 @@ Acceptance:
 
 ## Milestone 5: collection discovery and selected downloads
 
-Status: planned. Search/evaluation begin with milestone 1; transfers and checked
-publication use milestones 2 and 3. Source cleanup is independent and requires 4.
+Status: partial. Open Library/Archive search and Archive source evaluation exist.
+Gutenberg production integration, acquisition, and broader provider contracts remain
+planned. Transfers and checked publication use milestones 2 and 3. Source cleanup
+is independent and requires 4.
 
-Implement Gutenberg and Archive support in Go, then Open Library discovery.
+Complete Gutenberg and Archive acquisition over the existing Go provider core.
 Use Gutenberg's permitted machine catalogs and acquisition routes rather than
 porting automated website search unchanged. See [source research](docs/SOURCES.md).
 

@@ -6,6 +6,7 @@ import (
 	"errors"
 	"os/exec"
 	"runtime"
+	"strings"
 
 	"github.com/blisspixel/nemalo/internal/assessment"
 	"github.com/blisspixel/nemalo/internal/config"
@@ -20,14 +21,38 @@ type Searcher interface {
 }
 
 type Service struct {
-	Catalog Searcher
-	Scanner assessment.Scanner
+	Providers map[string]Searcher
+	Scanner   assessment.Scanner
 }
 
-func New() Service { return Service{Catalog: discovery.NewOpenLibrary()} }
+func New() Service {
+	return Service{Providers: map[string]Searcher{"openlibrary": discovery.NewOpenLibrary(), "archive": discovery.NewArchive()}}
+}
 
 func (s Service) Search(ctx context.Context, query string, limit, offset int) (discovery.Page, error) {
-	return s.Catalog.Search(ctx, query, limit, offset)
+	return s.SearchSource(ctx, "openlibrary", query, limit, offset)
+}
+
+func (s Service) SearchSource(ctx context.Context, source, query string, limit, offset int) (discovery.Page, error) {
+	p, ok := s.Providers[source]
+	if !ok || p == nil {
+		return discovery.Page{}, errors.New("search provider unavailable")
+	}
+	return p.Search(ctx, query, limit, offset)
+}
+
+func (s Service) Evaluate(ctx context.Context, id string) (discovery.Evaluation, error) {
+	source, _, ok := strings.Cut(id, ":")
+	if !ok {
+		return discovery.Evaluation{}, errors.New("evaluation requires a namespaced item identifier")
+	}
+	p, ok := s.Providers[source].(interface {
+		Evaluate(context.Context, string) (discovery.Evaluation, error)
+	})
+	if !ok {
+		return discovery.Evaluation{}, errors.New("provider does not support item evaluation")
+	}
+	return p.Evaluate(ctx, id)
 }
 
 func (s Service) Inspect(ctx context.Context, root string, limits inventory.Limits) (inventory.Report, error) {

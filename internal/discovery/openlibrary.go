@@ -3,18 +3,11 @@ package discovery
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
-	"net/http"
 	"net/url"
 	"strings"
-	"sync"
-	"time"
 )
-
-const maxResponse = 2 << 20
 
 type Result struct {
 	ID          string   `json:"id"`
@@ -34,31 +27,17 @@ type Page struct {
 }
 
 type OpenLibrary struct {
-	client   *http.Client
+	*metadataClient
 	endpoint string
-	mu       sync.Mutex
-	next     time.Time
 }
 
 func NewOpenLibrary() *OpenLibrary {
-	return &OpenLibrary{endpoint: "https://openlibrary.org/search.json", client: &http.Client{
-		Timeout: 30 * time.Second,
-		CheckRedirect: func(req *http.Request, via []*http.Request) error {
-			if len(via) > 3 || req.URL.Scheme != "https" || req.URL.Host != "openlibrary.org" {
-				return errors.New("catalog redirect outside approved source")
-			}
-			return nil
-		},
-	}}
+	return &OpenLibrary{metadataClient: newMetadataClient("openlibrary.org"), endpoint: "https://openlibrary.org/search.json"}
 }
-
 func (p *OpenLibrary) Search(ctx context.Context, query string, limit, offset int) (Page, error) {
 	page := Page{Source: "openlibrary", Query: strings.TrimSpace(query), Offset: offset, Results: []Result{}}
 	if page.Query == "" || len(page.Query) > 1000 || limit < 1 || limit > 50 || offset < 0 || offset > 10000 {
 		return page, errors.New("search requires a query of 1-1000 bytes, limit 1-50, and offset 0-10000")
-	}
-	if err := p.wait(ctx); err != nil {
-		return page, err
 	}
 	u, err := url.Parse(p.endpoint)
 	if err != nil {
@@ -70,27 +49,6 @@ func (p *OpenLibrary) Search(ctx context.Context, query string, limit, offset in
 	q.Set("offset", fmt.Sprint(offset))
 	q.Set("fields", "key,title,author_name,language")
 	u.RawQuery = q.Encode()
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u.String(), nil)
-	if err != nil {
-		return page, err
-	}
-	req.Header.Set("Accept", "application/json")
-	req.Header.Set("User-Agent", "nemalo/0.1 (+https://github.com/blisspixel/nemalo)")
-	resp, err := p.client.Do(req)
-	if err != nil {
-		return page, err
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
-		return page, fmt.Errorf("catalog returned HTTP %d; no automatic retry", resp.StatusCode)
-	}
-	body, err := io.ReadAll(io.LimitReader(resp.Body, maxResponse+1))
-	if err != nil {
-		return page, err
-	}
-	if len(body) > maxResponse {
-		return page, errors.New("catalog response exceeds 2 MiB")
-	}
 	var wire struct {
 		Found *int `json:"numFound"`
 		Docs  []struct {
@@ -100,7 +58,7 @@ func (p *OpenLibrary) Search(ctx context.Context, query string, limit, offset in
 			Languages []string `json:"language"`
 		} `json:"docs"`
 	}
-	if err := json.Unmarshal(body, &wire); err != nil {
+	if err := p.getJSON(ctx, u.String(), &wire); err != nil {
 		return page, fmt.Errorf("decode catalog: %w", err)
 	}
 	if wire.Docs == nil || wire.Found == nil || *wire.Found < 0 || len(wire.Docs) > limit {
@@ -134,26 +92,4 @@ func nonnil(values []string) []string {
 		return []string{}
 	}
 	return values
-}
-
-func (p *OpenLibrary) wait(ctx context.Context) error {
-	p.mu.Lock()
-	start := maxTime(time.Now(), p.next)
-	p.next = start.Add(time.Second)
-	p.mu.Unlock()
-	timer := time.NewTimer(time.Until(start))
-	defer timer.Stop()
-	select {
-	case <-ctx.Done():
-		return ctx.Err()
-	case <-timer.C:
-		return nil
-	}
-}
-
-func maxTime(a, b time.Time) time.Time {
-	if a.After(b) {
-		return a
-	}
-	return b
 }

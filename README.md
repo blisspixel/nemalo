@@ -1,6 +1,6 @@
 # Nemalo
 
-Find knowledge. Care for it. Put it to work.
+Find knowledge. Care for it. Realize its potential.
 
 Pronounced **neh-MAH-lo**. The name expresses the intent to acquire and nurture knowledge.
 
@@ -21,7 +21,8 @@ logic. Agent packaging will follow [Agent Plugins](https://agent-plugins.org/).
 ## Project status
 
 **Early Go implementation, not a 1.0 release.** Working capabilities are CLI/TUI
-Open Library discovery, read-only folder inventory, optional bounded SHA-256 hashing,
+Open Library and Internet Archive discovery, Archive item/file evaluation,
+read-only folder inventory, optional bounded SHA-256 hashing,
 configuration, capability reports, and versioned JSON output. Inventory classifies
 filename candidates; it does not establish format validity or malware safety.
 
@@ -53,6 +54,8 @@ go build -trimpath -o bin/ ./cmd/nemalo
 go run ./cmd/nemalo tui
 go run ./cmd/nemalo doctor --json
 go run ./cmd/nemalo search "Jules Verne" --limit 5
+go run ./cmd/nemalo search 'collection:librivoxaudio AND title:"Art of War"' --source archive --limit 3
+go run ./cmd/nemalo evaluate archive:art_of_war_chinese_1506_librivox --json
 go run ./cmd/nemalo inspect ./docs --hashes --json
 go run ./cmd/nemalo check /path/to/book.epub --json
 go run ./cmd/nemalo check /path/to/book.epub --scan
@@ -62,11 +65,19 @@ go run ./cmd/nemalo library audit /path/to/catalog.json --root /path/to/books
 ```
 
 `bin/nemalo` (`bin/nemalo.exe` on Windows) is the native executable. The TUI uses
-Tab to cycle search, inspect, check, scan, snapshot, holdings, and audit; Enter to run;
+Tab to cycle search, inspect, check, scan, snapshot, holdings, audit, and evaluate;
+F2 to select the search provider; Enter to run;
 Escape to cancel; PageUp/PageDown to scroll; and Ctrl+C to quit. Ctrl+N switches
 fields in library forms; Ctrl+A toggles local health metadata in snapshot mode.
-Searching sends the query to Open Library; inventory
-is local and read-only. No telemetry or model service is required.
+Search sends the query to the selected provider; evaluation sends the selected
+Archive item ID. Local inventory/catalog operations are offline. No telemetry or
+model service is required.
+
+Evaluation shows offered files, declared sizes/checksums, rights/license statements,
+and separate access restrictions. Candidate URLs are not downloaded or probed;
+DRM, file-level rights, quality, and safety remain unverified. Restricted or uncertain
+items/files receive no download URL. See the
+[provider decision](docs/decisions/0005-provider-search-and-evaluation.md).
 
 File checks use a private temporary snapshot, at most 256 MiB. EPUBs generally
 have no fixed page count, so measured documents/text are reported instead of

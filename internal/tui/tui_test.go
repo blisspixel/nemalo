@@ -20,10 +20,14 @@ type catalog struct{ err error }
 func (c catalog) Search(_ context.Context, q string, _ int, _ int) (discovery.Page, error) {
 	return discovery.Page{Query: q, Results: []discovery.Result{}}, c.err
 }
+
+func (c catalog) Evaluate(_ context.Context, id string) (discovery.Evaluation, error) {
+	return discovery.Evaluation{ID: id, Access: "restricted_or_uncertain", Limitations: []string{"DRM and rights remain unverified"}}, c.err
+}
 func key(code rune) tea.KeyPressMsg { return tea.KeyPressMsg{Code: code} }
 
 func TestTerminalWorkflow(t *testing.T) {
-	m := newModel(context.Background(), app.Service{Catalog: catalog{}})
+	m := newModel(context.Background(), app.Service{Providers: map[string]app.Searcher{"openlibrary": catalog{}}})
 	if m.Init() == nil || !strings.Contains(m.View().Content, "Nemalo") {
 		t.Fatal("missing initial view/focus")
 	}
@@ -154,8 +158,37 @@ func TestTerminalWorkflow(t *testing.T) {
 		t.Fatal("audit missing", m.status)
 	}
 	m.Update(key(tea.KeyTab))
+	if m.mode != "evaluate" {
+		t.Fatal("evaluation mode unavailable")
+	}
+	m.service.Providers["archive"] = catalog{}
+	m.input.SetValue("archive:demo")
+	_, cmd = m.Update(key(tea.KeyEnter))
+	m.Update(cmd())
+	if !strings.Contains(m.viewport.GetContent(), "archive:demo") || !strings.Contains(m.viewport.GetContent(), "DRM and rights remain unverified") {
+		t.Fatal("evaluation evidence missing", m.status)
+	}
+	m.Update(key(tea.KeyTab))
 	if m.mode != "search" {
 		t.Fatal("mode not restored")
+	}
+	m.Update(key(tea.KeyF2))
+	if m.source != "archive" || !strings.Contains(m.View().Content, "archive; F2") {
+		t.Fatal("provider toggle unavailable")
+	}
+	m.input.SetValue("Archive query")
+	_, cmd = m.Update(key(tea.KeyEnter))
+	m.Update(key(tea.KeyF2))
+	if m.source != "archive" {
+		t.Fatal("provider changed during operation")
+	}
+	m.Update(cmd())
+	if !strings.Contains(m.viewport.GetContent(), "Archive query") {
+		t.Fatal("Archive search not routed")
+	}
+	m.Update(key(tea.KeyF2))
+	if m.source != "openlibrary" {
+		t.Fatal("provider not restored")
 	}
 	m.Update(tea.KeyPressMsg{Code: tea.KeyPgDown})
 	m.Update(tea.KeyPressMsg{Code: tea.KeyPgUp})
@@ -186,7 +219,7 @@ func (fakeScanner) Scan(context.Context, string) scanner.Result {
 }
 
 func TestCancellationStaleResultsAndFailures(t *testing.T) {
-	m := newModel(context.Background(), app.Service{Catalog: catalog{errors.New("unavailable\x1b[31m")}})
+	m := newModel(context.Background(), app.Service{Providers: map[string]app.Searcher{"openlibrary": catalog{errors.New("unavailable\x1b[31m")}}})
 	m.input.SetValue("books")
 	_, cmd := m.Update(key(tea.KeyEnter))
 	old := cmd()
