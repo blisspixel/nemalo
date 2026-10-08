@@ -18,8 +18,18 @@ func Snapshot(s library.Snapshot) string {
 func Holdings(p library.Page) string {
 	var b strings.Builder
 	fmt.Fprintf(&b, "Snapshot: %q\nMatching byte assets: %d; offset: %d\n", p.SnapshotID, p.Total, p.Offset)
+	if p.Format != "" && p.Format != "all" {
+		fmt.Fprintf(&b, "Filename format filter: %q; not a validity verdict.\n", p.Format)
+	}
 	for _, a := range p.Assets {
-		fmt.Fprintf(&b, "\n%q (%d bytes)\n", a.ID, a.Bytes)
+		title := a.ID
+		if len(a.Locations) > 0 {
+			title = a.Locations[0].Path
+		}
+		if a.Health != nil && a.Health.Checks.EPUB != nil && len(a.Health.Checks.EPUB.Titles) > 0 {
+			title = a.Health.Checks.EPUB.Titles[0]
+		}
+		fmt.Fprintf(&b, "\n%q\n  %d bytes | ID: %q\n", title, a.Bytes, a.ID)
 		for _, l := range a.Locations {
 			fmt.Fprintf(&b, "  %q [%q]\n", l.Path, l.CandidateKind)
 		}

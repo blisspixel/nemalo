@@ -68,41 +68,71 @@ func (p *Archive) Search(ctx context.Context, query string, limit, offset int) (
 	if page.Query == "" || len(page.Query) > 1000 || limit < 1 || limit > 50 || offset < 0 || offset > 10000 {
 		return page, errors.New("search requires a query of 1-1000 bytes, limit 1-50, and offset 0-10000")
 	}
-	// Verify the returned start rather than silently accepting a repeated page.
-	q := url.Values{"q": {"(" + page.Query + ") AND (mediatype:texts OR mediatype:audio)"}, "output": {"json"}, "rows": {strconv.Itoa(limit)}, "start": {strconv.Itoa(offset)}, "sort[]": {"identifier asc"}, "fl[]": {"identifier", "title", "creator", "language", "mediatype"}}
-	var wire struct {
-		Header struct {
-			Status *int `json:"status"`
-		} `json:"responseHeader"`
-		Response struct {
-			Found *int `json:"numFound"`
-			Start *int `json:"start"`
-			Docs  []struct {
-				Identifier string  `json:"identifier"`
-				Title      string  `json:"title"`
-				Creator    Strings `json:"creator"`
-				Language   Strings `json:"language"`
-				MediaType  string  `json:"mediatype"`
-			} `json:"docs"`
-		} `json:"response"`
-	}
-	if err := p.getJSON(ctx, p.endpoint+"/advancedsearch.php?"+q.Encode(), &wire); err != nil {
-		return page, err
-	}
-	if wire.Header.Status == nil || *wire.Header.Status != 0 || wire.Response.Found == nil || *wire.Response.Found < 0 || wire.Response.Start == nil || *wire.Response.Start != offset || wire.Response.Docs == nil || len(wire.Response.Docs) > limit {
-		return page, errors.New("Archive returned an invalid search page")
-	}
-	page.Total = *wire.Response.Found
+	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
+	defer cancel()
+	// Advanced search pages by page/rows. Its start parameter can echo an
+	// offset without moving the documents. Unaligned offsets need two pages.
+	base, skip := offset/limit*limit, offset%limit
 	seen := map[string]bool{}
-	for _, d := range wire.Response.Docs {
-		id := "archive:" + d.Identifier
-		if !ValidArchiveID(id) || seen[id] || strings.TrimSpace(d.Title) == "" || (d.MediaType != "texts" && d.MediaType != "audio") {
-			return page, errors.New("Archive returned an invalid or duplicate item")
+	for request := 0; request < 2; request++ {
+		wire, err := p.searchPage(ctx, page.Query, limit, base)
+		if err != nil {
+			return page, err
 		}
-		seen[id] = true
-		page.Results = append(page.Results, Result{ID: id, Title: d.Title, Authors: nonnil(d.Creator), Languages: nonnil(d.Language), LandingPage: "https://archive.org/details/" + d.Identifier, Access: "discovery_only"})
+		if request > 0 && page.Total != *wire.Response.Found {
+			return page, errors.New("Archive catalog changed between search pages; repeat the query")
+		}
+		page.Total = *wire.Response.Found
+		for i, d := range wire.Response.Docs {
+			id := "archive:" + d.Identifier
+			if !ValidArchiveID(id) || seen[id] || strings.TrimSpace(d.Title) == "" || (d.MediaType != "texts" && d.MediaType != "audio") {
+				return page, errors.New("Archive returned an invalid or duplicate item")
+			}
+			seen[id] = true
+			if i < skip || len(page.Results) >= limit {
+				continue
+			}
+			page.Results = append(page.Results, Result{ID: id, Title: d.Title, Authors: nonnil(d.Creator), Languages: nonnil(d.Language), LandingPage: "https://archive.org/details/" + d.Identifier, Access: "discovery_only"})
+		}
+		if len(page.Results) == limit || base+len(wire.Response.Docs) >= page.Total {
+			return page, nil
+		}
+		base += limit
+		skip = 0
 	}
 	return page, nil
+}
+
+type archiveSearchPage struct {
+	Header struct {
+		Status *int `json:"status"`
+	} `json:"responseHeader"`
+	Response struct {
+		Found *int `json:"numFound"`
+		Start *int `json:"start"`
+		Docs  []struct {
+			Identifier string  `json:"identifier"`
+			Title      string  `json:"title"`
+			Creator    Strings `json:"creator"`
+			Language   Strings `json:"language"`
+			MediaType  string  `json:"mediatype"`
+		} `json:"docs"`
+	} `json:"response"`
+}
+
+func (p *Archive) searchPage(ctx context.Context, query string, limit, base int) (archiveSearchPage, error) {
+	q := url.Values{"q": {"(" + query + ") AND (mediatype:texts OR mediatype:audio)"}, "output": {"json"}, "rows": {strconv.Itoa(limit)}, "page": {strconv.Itoa(base/limit + 1)}, "sort[]": {"identifier asc"}, "fl[]": {"identifier", "title", "creator", "language", "mediatype"}}
+	var wire archiveSearchPage
+	if err := p.getJSON(ctx, p.endpoint+"/advancedsearch.php?"+q.Encode(), &wire); err != nil {
+		return wire, err
+	}
+	if wire.Header.Status == nil || *wire.Header.Status != 0 || wire.Response.Found == nil || *wire.Response.Found < 0 || wire.Response.Start == nil || *wire.Response.Start != base || wire.Response.Docs == nil || len(wire.Response.Docs) > limit {
+		return wire, errors.New("Archive returned an invalid search page")
+	}
+	if len(wire.Response.Docs) != min(limit, max(0, *wire.Response.Found-base)) {
+		return wire, errors.New("Archive returned an inconsistent result count")
+	}
+	return wire, nil
 }
 
 type OfferedFile struct {

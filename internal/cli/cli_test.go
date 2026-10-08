@@ -57,6 +57,7 @@ func TestLibraryCommandsPreserveSourcesAndRequireExplicitRoots(t *testing.T) {
 	for _, args := range [][]string{
 		{"library", "list", file, "--query", "PAPER", "--limit", "1"},
 		{"library", "list", file, "--query", "PAPER", "--json"},
+		{"library", "list", file, "--format", "pdf", "--json"},
 		{"library", "audit", file, "--root", root},
 		{"library", "audit", file, "--root", root, "--json"},
 	} {
@@ -68,6 +69,7 @@ func TestLibraryCommandsPreserveSourcesAndRequireExplicitRoots(t *testing.T) {
 		{"library"}, {"library", "unknown", file}, {"library", "list"},
 		{"library", "snapshot", root}, {"library", "snapshot", root, "--output", file, "--scan"},
 		{"library", "list", file, "--limit", "101"}, {"library", "list", file, "--offset", "-1"},
+		{"library", "list", file, "--format", "exe"}, {"search", "books", "--format", "pdf"},
 		{"library", "audit", file}, {"library", "audit", file, "--root", root, "--assess"},
 	} {
 		if code, _, _ := execute(t, args, nil); code != 2 {

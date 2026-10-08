@@ -3,9 +3,11 @@ package discovery
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"strconv"
 	"strings"
 	"testing"
 )
@@ -22,10 +24,64 @@ func archiveProvider(t *testing.T, handler http.HandlerFunc) *Archive {
 	return p
 }
 
+func TestArchivePagingUsesDistinctDocuments(t *testing.T) {
+	for _, offset := range []int{0, 1, 2, 3, 4, 5, 6, 7, 9} {
+		t.Run(fmt.Sprint(offset), func(t *testing.T) {
+			requests := 0
+			p := archiveProvider(t, func(w http.ResponseWriter, r *http.Request) {
+				requests++
+				if r.URL.Query().Has("start") {
+					t.Error("unsupported start parameter sent")
+				}
+				index, err := strconv.Atoi(r.URL.Query().Get("page"))
+				if err != nil || index < 1 {
+					t.Error("missing page index")
+					return
+				}
+				base := (index - 1) * 3
+				docs := []map[string]string{}
+				for i := base; i < min(base+3, 7); i++ {
+					docs = append(docs, map[string]string{"identifier": fmt.Sprintf("item%d", i), "title": fmt.Sprint(i), "mediatype": "texts"})
+				}
+				_ = json.NewEncoder(w).Encode(map[string]any{"responseHeader": map[string]int{"status": 0}, "response": map[string]any{"numFound": 7, "start": base, "docs": docs}})
+			})
+			page, err := p.Search(context.Background(), "query", 3, offset)
+			if err != nil || len(page.Results) != min(3, max(0, 7-offset)) || requests > 2 {
+				t.Fatal(page, requests, err)
+			}
+			for i, result := range page.Results {
+				if result.ID != fmt.Sprintf("archive:item%d", offset+i) {
+					t.Fatal("wrong actual document", page)
+				}
+			}
+		})
+	}
+}
+
+func TestArchiveUnalignedPagingRejectsChangingEvidence(t *testing.T) {
+	for _, second := range []string{
+		`{"numFound":4,"start":2,"docs":[{"identifier":"item1","title":"One","mediatype":"texts"},{"identifier":"item3","title":"Three","mediatype":"texts"}]}`,
+		`{"numFound":5,"start":2,"docs":[{"identifier":"item2","title":"Two","mediatype":"texts"},{"identifier":"item3","title":"Three","mediatype":"texts"}]}`,
+		`{"numFound":4,"start":0,"docs":[{"identifier":"item2","title":"Two","mediatype":"texts"},{"identifier":"item3","title":"Three","mediatype":"texts"}]}`,
+		`{"numFound":4,"start":2,"docs":[]}`,
+	} {
+		p := archiveProvider(t, func(w http.ResponseWriter, r *http.Request) {
+			response := `{"numFound":4,"start":0,"docs":[{"identifier":"item0","title":"Zero","mediatype":"texts"},{"identifier":"item1","title":"One","mediatype":"texts"}]}`
+			if r.URL.Query().Get("page") == "2" {
+				response = second
+			}
+			_, _ = fmt.Fprintf(w, `{"responseHeader":{"status":0},"response":%s}`, response)
+		})
+		if _, err := p.Search(context.Background(), "query", 2, 1); err == nil {
+			t.Fatal("accepted inconsistent pages", second)
+		}
+	}
+}
+
 func TestArchiveSearchAndOffset(t *testing.T) {
 	p := archiveProvider(t, func(w http.ResponseWriter, r *http.Request) {
 		q := r.URL.Query()
-		if r.URL.Path != "/advancedsearch.php" || q.Get("start") != "2" || q.Get("rows") != "2" || q.Get("sort[]") != "identifier asc" || !strings.Contains(q.Get("q"), "(mediatype:texts OR mediatype:audio)") || !strings.Contains(q.Get("q"), "Verne & ocean") {
+		if r.URL.Path != "/advancedsearch.php" || q.Get("start") != "" || q.Get("page") != "2" || q.Get("rows") != "2" || q.Get("sort[]") != "identifier asc" || !strings.Contains(q.Get("q"), "(mediatype:texts OR mediatype:audio)") || !strings.Contains(q.Get("q"), "Verne & ocean") {
 			t.Error("incorrect search contract", r.URL)
 		}
 		_, _ = io.WriteString(w, `{"responseHeader":{"status":0},"response":{"numFound":4,"start":2,"docs":[{"identifier":"Demo-1","title":"Voyage","creator":"Verne","language":["fre"],"mediatype":"texts"},{"identifier":"Demo-2","title":"Audio","mediatype":"audio"}]}}`)

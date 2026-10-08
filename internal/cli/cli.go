@@ -50,7 +50,7 @@ Inspect options: --hashes, --max-entries 10000, --max-depth 32,
                  --max-file-bytes 268435456, --max-total-bytes 1073741824
 Check options: --scan, --expected-bytes N, --expected-sha256 HASH
 Library snapshot options: --output FILE, --assess (local health/EPUB metadata)
-Library list options: --query TEXT, --limit 10, --offset 0
+Library list options: --query TEXT, --format all|epub|pdf|mp3, --limit 10, --offset 0
 Library audit options: --root DIRECTORY
 Snapshot/audit also accept inventory max-* limits. Snapshots hash all regular files,
 account for excluded links, refuse incomplete inventories, and never overwrite.
@@ -101,7 +101,7 @@ func Execute(ctx context.Context, args []string, out, errOut io.Writer, service 
 	flags.SetOutput(io.Discard)
 	jsonMode := flags.Bool("json", false, "structured output")
 	configFile := flags.String("config", env("NEMALO_CONFIG"), "configuration file")
-	library := flags.String("library", "", "explicit library directory")
+	libraryDir := flags.String("library", "", "explicit library directory")
 	review := flags.String("review", "", "explicit review directory")
 	limit, offset := flags.Int("limit", 10, "search page size"), flags.Int("offset", 0, "search offset")
 	source := flags.String("source", "openlibrary", "search provider")
@@ -109,6 +109,7 @@ func Execute(ctx context.Context, args []string, out, errOut io.Writer, service 
 	checkOptions := assessment.Options{}
 	output := flags.String("output", "", "new snapshot output path")
 	query := flags.String("query", "", "literal holdings metadata filter")
+	format := flags.String("format", "all", "exact holdings filename suffix filter")
 	auditRoot := flags.String("root", "", "explicit audit root")
 	assess := flags.Bool("assess", false, "include local health facts without antivirus")
 	flags.BoolVar(&checkOptions.Scan, "scan", false, "invoke installed antivirus")
@@ -179,7 +180,7 @@ func Execute(ctx context.Context, args []string, out, errOut io.Writer, service 
 	if !explicit {
 		*configFile = p.Config
 	}
-	c, err := config.Load(*configFile, explicit, env, config.Config{Library: *library, Review: *review})
+	c, err := config.Load(*configFile, explicit, env, config.Config{Library: *libraryDir, Review: *review})
 	if err != nil {
 		return write(nil, err, 2)
 	}
@@ -211,7 +212,10 @@ func Execute(ctx context.Context, args []string, out, errOut io.Writer, service 
 			if *limit < 1 || *limit > 100 || *offset < 0 || *offset > 100000 || len(*query) > 1000 {
 				return write(nil, errors.New("library list requires limit 1-100, offset 0-100000, and query at most 1000 bytes"), 2)
 			}
-			r, err := service.Holdings(flags.Arg(0), *query, *limit, *offset)
+			if !library.ValidFormatFilter(*format) {
+				return write(nil, errors.New("format filter must be all, epub, pdf, or mp3"), 2)
+			}
+			r, err := service.HoldingsFormat(flags.Arg(0), *query, *format, *limit, *offset)
 			if err != nil {
 				return write(r, err, 1)
 			}
@@ -290,7 +294,7 @@ func flagApplies(command, action, name string) bool {
 		case "snapshot":
 			return name == "output" || name == "assess" || strings.HasPrefix(name, "max-")
 		case "list":
-			return name == "query" || name == "limit" || name == "offset"
+			return name == "query" || name == "format" || name == "limit" || name == "offset"
 		case "audit":
 			return name == "root" || strings.HasPrefix(name, "max-")
 		}

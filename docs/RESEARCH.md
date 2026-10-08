@@ -163,6 +163,23 @@ patches, advisories, compatibility, and contracts when implementation begins.
 | Vulnerability checks | Official [govulncheck guidance](https://go.dev/security/vuln/); `golang.org/x/vuln` v1.8.0 pinned as a development tool |
 | Providers | [Source directory](SOURCES.md) records current API/access caveats and research limits |
 
+## Terminal interaction reviewed on 2026-10-08
+
+The [Charm v2 release](https://charm.land/blog/v2/) and the installed, pinned
+Bubble Tea/Bubbles/Lip Gloss APIs informed the terminal increment. Use existing
+keyboard/input/viewport primitives, terminal background/color capability messages,
+and the [NO_COLOR convention](https://no-color.org/). Lip Gloss and colorprofile
+were already transitive modules; direct use changed no module version or checksum.
+There is no additional terminal framework, renderer, or application runtime.
+
+Nemalo's concrete choices are visible direct/reverse navigation, session-scoped
+forms/results, explicit network and scanner context, result pagination, exact
+filename-format filters, bounded local read budgets, and responsive layouts.
+Synthetic tests cover 40x20 through 160x45, long errors, no-color/light/dark states,
+busy guards, and edited-query paging. A native Windows terminal exercise and
+real-data rendered frames supply separate evidence. This does not establish a
+screen-reader audit, every terminal emulator, or every user's accessibility needs.
+
 ## Evidence still required
 
 No competitor runtime comparison, complete source audit, Go benchmark, or plugin-host

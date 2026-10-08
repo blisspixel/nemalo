@@ -39,6 +39,8 @@ Go was confirmed on 2026-10-08.
 The separate [validation harness](docs/VALIDATION.md) acquires a curated collection
 of 80 EPUBs, 10 audiobook recordings, and 10 papers into untrusted intake outside
 the checkout. This exercises real resources without claiming production ingestion.
+The subsequent discovery-validation expansion brings the current external exercise
+to 104 resources; its checks and remaining gaps are recorded in the validation guide.
 See the [language and stack decision](docs/decisions/0001-language-and-stack.md)
 for the Go/Rust comparison and implementation boundaries.
 
@@ -61,17 +63,33 @@ go run ./cmd/nemalo check /path/to/book.epub --json
 go run ./cmd/nemalo check /path/to/book.epub --scan
 go run ./cmd/nemalo library snapshot /path/to/books --output /path/to/catalog.json --assess
 go run ./cmd/nemalo library list /path/to/catalog.json --query "Verne"
+go run ./cmd/nemalo library list /path/to/catalog.json --format epub
 go run ./cmd/nemalo library audit /path/to/catalog.json --root /path/to/books
 ```
 
 `bin/nemalo` (`bin/nemalo.exe` on Windows) is the native executable. The TUI uses
-Tab to cycle search, inspect, check, scan, snapshot, holdings, audit, and evaluate;
-F2 to select the search provider; Enter to run;
-Escape to cancel; PageUp/PageDown to scroll; and Ctrl+C to quit. Ctrl+N switches
-fields in library forms; Ctrl+A toggles local health metadata in snapshot mode.
+Tab/Shift+Tab to cycle operations and Alt+1..8 to jump directly. Inputs and results
+stay with each operation. F2 selects the search provider; F3 explicitly selects
+the local read budget; F4 changes the holdings filename-format filter.
+Enter runs, Escape cancels, PageUp/PageDown scroll, and Ctrl+C quits. Ctrl+N switches
+library form fields; Ctrl+A toggles snapshot health metadata. Ctrl+Left/Right pages
+search or holdings results. Holdings start with EPUB filenames; choose all to see
+receipts and other material. A filename filter does not certify format validity.
 Search sends the query to the selected provider; evaluation sends the selected
 Archive item ID. Local inventory/catalog operations are offline. No telemetry or
-model service is required.
+model service is required. The interface adapts to terminal background/color
+capabilities, respects `NO_COLOR`, and requires at least 40 columns and 20 rows.
+
+### TUI examples
+
+Rendered snapshots of the application view using the actual validation catalog
+and live Archive results, captured 2026-10-08. These are terminal-frame
+renders, not operating-system window captures or mockups. Downloaded content and
+private paths are excluded; `catalog.json` is a local copy of the real catalog.
+
+![Nemalo holdings showing real multilingual EPUB metadata](docs/images/tui-holdings.png)
+
+![Nemalo discovery showing live Archive audiobook results](docs/images/tui-discovery.png)
 
 Evaluation shows offered files, declared sizes/checksums, rights/license statements,
 and separate access restrictions. Candidate URLs are not downloaded or probed;

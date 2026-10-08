@@ -69,7 +69,10 @@ that every filename is creatable on every OS. Browsing never opens content.
 
 `library list` filters literal case-insensitive title, language, path, candidate
 kind, or hash text. It supports limit 1-100 and offset 0-100000. The TUI shows the
-first 50 matching assets; CLI pagination exposes subsequent results. No semantic
+50 matching assets per page; CLI and TUI pagination expose subsequent results.
+Optional `all|epub|pdf|mp3` format filters use exact case-insensitive filename
+suffixes. Receipts are excluded from EPUB-only results, while matching duplicate
+assets retain every location. A filter is not a content validation verdict. No semantic
 quality or relevance score is invented.
 
 `library audit` requires an explicit root even when the catalog includes a root

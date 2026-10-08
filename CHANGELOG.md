@@ -1,5 +1,17 @@
 # Changelog
 
+## Unreleased validation and terminal usability
+
+- Revalidated the external collection and added four resources using Gutenberg,
+  Archive, and arXiv; retained all source files and per-asset evidence outside Git.
+- Fixed Archive pagination using documented page indexes, with actual document-ID
+  tests and bounded adjacent-page handling for unaligned offsets.
+- Added direct/reverse TUI navigation, per-operation drafts/results, search/holdings
+  pagination, labeled forms, explicit read-budget selection, and adaptive color.
+- Added CLI/TUI exact filename-format filters and title-first holdings; EPUB-only
+  views exclude receipts without claiming filename validity.
+- Added real-data rendered TUI images and updated validation limits/evidence.
+
 ## Unreleased
 
 - Establish Nemalo as an Apache-2.0 Go CLI/TUI application, with no Python prototype

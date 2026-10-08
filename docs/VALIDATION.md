@@ -140,6 +140,72 @@ query retrieved the Italian edition of Dante's *Divina Commedia*. Catalog/audit
 reports remain outside Git. No new antivirus scan, reader handoff, content mutation,
 or checked publication was performed by these operations.
 
+## Repeat validation and discovery expansion: 2026-10-08
+
+The original 100-resource selection was rechecked against its receipts with zero
+transferred bytes. The previous 416-location catalog audit was complete and found
+no changes before expansion. No original asset or receipt was replaced.
+
+The [discovery validation selection](../collections/discovery-validation.json)
+then added four distinct resources: *Little Women*, the Danish novel *Tine*,
+*The Happy Prince and Other Tales, Version 2*, and the versioned preprint
+*Coded MapReduce*. Its eight assets comprise two EPUBs, five MP3 tracks, and one
+PDF, totaling 51,625,325 bytes. The external collection now contains 104 resources:
+82 EPUBs, 11 recordings with 123 tracks, and 11 papers, across 14 declared languages.
+The 216 content assets total 1,098,590,889 bytes. Downloads remain outside Git.
+
+The exercise used the following distinct source boundaries:
+
+| Source | Exercised behavior | Product boundary |
+| --- | --- | --- |
+| Open Library | Native CLI search for Alcott and book metadata | Discovery only |
+| Internet Archive | Native search, item evaluation, distinct-page checks, offered audio files | Acquisition uses the separate Go harness |
+| Project Gutenberg | Official offline CSV selection, per-book RDF, mirror EPUB acquisition | Native provider search remains planned |
+| arXiv | Official API title search and pinned-version PDF acquisition | Native provider search remains planned |
+| LibriVox | Three title-search probes returned not-found errors | Not a successful search integration; new audio selected from Archive's exposed LibriVox item |
+
+Real pagination testing found and fixed an Archive adapter defect: `start` echoed
+the requested offset while repeating the first documents. Document-ID comparison
+now proves disjoint aligned pages and correct unaligned offsets using `page`/`rows`.
+Offline tests cover adjacent-page consistency, duplicate IDs, and changing totals.
+Failed probes and the pre-fix response remain local evidence, not successful checks.
+
+Every content asset was checked through the actual CLI with its receipt's expected
+bytes and SHA-256. All 216 reports were `limited_checks_passed`, with no findings.
+All five new audio files also matched Archive's declared size and SHA-1. These
+source checksums are integrity declarations, not cryptographic authentication.
+Explicit Nemalo `--scan` checks of one EPUB, one MP3, and one PDF returned
+`no_detections_reported`, bound to their private snapshots. A separate fresh Defender
+directory scan completed with exit code 0 and no threats reported, with remediation
+disabled and host cloud/sample policy unchanged. Receipts were not rewritten.
+
+An already-installed FFmpeg/ffprobe diagnostic independently probed and decoded
+all 123 audio tracks to a null output, sequentially with bounded processes. All
+decoded without reported errors; probed durations sum to 36.56 hours. This is
+additional local validation evidence, not a Nemalo decoder feature, a dependency,
+listening review, or proof that every recording is semantically complete. PDF
+parsing and EPUB conformance remain unperformed. No content was executed or
+handed to a reader/player.
+
+A fresh assessed catalog and audit accounted for 432 unchanged file locations:
+216 content files and 216 receipts. The expanded collection exceeds the default
+1 GiB inventory budget, so the explicit 5 GiB option was exercised. Local holdings
+retrieved *Tine* with language `da`; exact format filtering returned 82 EPUB assets,
+and MP3 pagination exposed all 123 tracks, including the final 23 after offset 100.
+A receipt containing `.epub` in its name is no longer included by the EPUB format
+filter. The filename filter remains separate from health evidence.
+Negative CLI exercises rejected a wrong expected hash, insufficient hash budget,
+and an attempt to overwrite the saved catalog. Auditing the old baseline after
+expansion reported exactly 16 added locations and no changed or missing originals.
+
+The Windows native TUI smoke exercised direct mode shortcuts, real catalog queries,
+source evaluation, result scrolling, restored inputs/results, and clean quit.
+Responsive light/dark/no-color and pagination behavior have synthetic tests.
+The README images are rendered application-view frames from the real catalog and
+live source results, not operating-system screenshots. Only public metadata
+and relative asset paths appear. Raw reports, scanner details, copied catalogs,
+and content remain outside tracked project state.
+
 ## Source contracts reviewed on 2026-10-08
 
 - Gutenberg [robot policy](https://www.gutenberg.org/policy/robot_access.html),

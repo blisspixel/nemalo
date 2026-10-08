@@ -40,7 +40,25 @@ switches library form fields, and Ctrl+A toggles local health metadata in snapsh
 mode. Enter submits, Escape cancels, PageUp/PageDown scroll,
 and Ctrl+C quits. It makes no startup network request. Untrusted results and paths
 are escaped before display. Results wrap within the terminal viewport, including
-long hashes and findings. JSON mode uses schema version 1 and exit codes 0
+long hashes and findings.
+
+Alt+1..8 jumps directly; Shift+Tab goes backward. Each operation retains its
+own inputs, status, and results for this session. Snapshot success seeds empty
+holdings/audit forms with the explicitly selected catalog/root. Nothing is opened
+or audited automatically. Ctrl+Left/Right pages search (10 results) and holdings
+(50 results); edited queries require Enter before paging. F4 cycles EPUB, PDF,
+MP3, and all filename filters in holdings. F3 explicitly switches the inventory,
+snapshot, or audit read budget between 1 GiB and 5 GiB. Budgets remain bounded.
+Fields are frozen while work runs; Escape and quit remain available.
+
+Navigation, field labels, contextual boundaries, scroll position, and errors remain
+readable without color. Color-capable terminals get an adaptive light/dark palette;
+`NO_COLOR` and `TERM=dumb` disable colored styling. Minimum size is 40 by 20;
+smaller terminals show a resize message while retaining operation state. Full
+errors remain in results when the status line is shortened. Ordinary text-editing
+shortcuts stay with the active input; PageUp/PageDown scroll results.
+
+JSON mode uses schema version 1 and exit codes 0
 (success), 1 (failed/incomplete operation), and 2 (usage/configuration error).
 
 ## Source item evaluation
@@ -112,6 +130,7 @@ changing host preferences. Pure local checks make no network request.
 ```sh
 nemalo library snapshot /path/to/books --output /path/to/catalog.json --assess
 nemalo library list /path/to/catalog.json --query "fr" --limit 20 --offset 0
+nemalo library list /path/to/catalog.json --format epub --limit 100
 nemalo library audit /path/to/catalog.json --root /path/to/books --json
 ```
 
@@ -127,7 +146,12 @@ Snapshot/audit use inventory defaults and accept `--max-*` limits, capped at
 256 MiB/file and 5 GiB/inventory pass, with cooperative five-minute deadlines.
 Assessment makes an additional source pass over supported unique assets. Catalog
 JSON is bounded to 16 MiB. `list` searches literal metadata/path/hash text, with
-limit 1-100 and offset 0-100000. TUI holdings show the first 50 matching assets.
+limit 1-100 and offset 0-100000. TUI holdings show 50 matching assets per page.
+`--format all|epub|pdf|mp3` uses exact case-insensitive filename suffixes, excluding
+`.epub.receipt.json` from EPUB results. It does not manufacture assessment evidence;
+invalid or unassessed files remain representable. CLI defaults to all files; TUI
+defaults to EPUB filenames. Byte duplicates retain all locations even when only
+one location matches the selected format.
 
 Audits require an explicit root; the informational catalog root never authorizes
 filesystem reads. They report changed/missing/added/unverified files, with nonzero

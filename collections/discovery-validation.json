@@ -1,0 +1,125 @@
+{
+  "schema_version": 1,
+  "title": "Discovery validation expansion: literature, Danish text, spoken stories, distributed computing",
+  "resources": [
+    {
+      "id": "pg-514",
+      "title": "Little Women",
+      "authors": [
+        "Alcott, Louisa May, 1832-1888"
+      ],
+      "languages": [
+        "en"
+      ],
+      "type": "ebook",
+      "rationale": "Expand validation with another complete text edition and exercise multilingual holdings.",
+      "landing_url": "https://www.gutenberg.org/ebooks/514",
+      "metadata_url": "https://gutenberg.pglaf.org/cache/epub/514/pg514.rdf",
+      "rights": "Project Gutenberg selection under its US-based permissions policy. Preserve the embedded license; jurisdiction and third-party material require separate review.",
+      "rights_url": "https://www.gutenberg.org/policy/permission.html",
+      "review_status": "not_applicable",
+      "assets": [
+        {
+          "name": "pg514.epub",
+          "url": "https://gutenberg.pglaf.org/cache/epub/514/pg514.epub",
+          "format": "epub"
+        }
+      ]
+    },
+    {
+      "id": "pg-10686",
+      "title": "Tine",
+      "authors": [
+        "Bang, Herman, 1857-1912"
+      ],
+      "languages": [
+        "da"
+      ],
+      "type": "ebook",
+      "rationale": "Expand validation with another complete text edition and exercise multilingual holdings.",
+      "landing_url": "https://www.gutenberg.org/ebooks/10686",
+      "metadata_url": "https://gutenberg.pglaf.org/cache/epub/10686/pg10686.rdf",
+      "rights": "Project Gutenberg selection under its US-based permissions policy. Preserve the embedded license; jurisdiction and third-party material require separate review.",
+      "rights_url": "https://www.gutenberg.org/policy/permission.html",
+      "review_status": "not_applicable",
+      "assets": [
+        {
+          "name": "pg10686.epub",
+          "url": "https://gutenberg.pglaf.org/cache/epub/10686/pg10686.epub",
+          "format": "epub"
+        }
+      ]
+    },
+    {
+      "id": "ia-happyprince-1103",
+      "title": "The Happy Prince and Other Tales, Version 2",
+      "authors": [
+        "Oscar Wilde"
+      ],
+      "languages": [
+        "en"
+      ],
+      "type": "audiobook",
+      "rationale": "Exercise discovery-to-acquisition using a recording not already held; retain all five exposed 64 kbps MP3 tracks.",
+      "landing_url": "https://archive.org/details/happyprince_1103_librivox",
+      "metadata_url": "https://archive.org/metadata/happyprince_1103_librivox?extended_err=1",
+      "rights": "Archive declares Public Domain Mark 1.0 for this LibriVox item. LibriVox uses US public-domain boundaries; file-level and other-jurisdiction rights are not independently established.",
+      "rights_url": "https://librivox.org/pages/public-domain/",
+      "review_status": "not_applicable",
+      "notes": "Five 64Kbps MP3 files selected from Archive metadata. LibriVox title searches failed during this exercise; chapter completeness is based on this exposed file set, not an independent catalog reconciliation.",
+      "assets": [
+        {
+          "name": "happyprince_01_oscarwilde_64kb.mp3",
+          "url": "https://archive.org/download/happyprince_1103_librivox/happyprince_01_oscarwilde_64kb.mp3",
+          "format": "mp3"
+        },
+        {
+          "name": "happyprince_02_oscarwilde_64kb.mp3",
+          "url": "https://archive.org/download/happyprince_1103_librivox/happyprince_02_oscarwilde_64kb.mp3",
+          "format": "mp3"
+        },
+        {
+          "name": "happyprince_03_oscarwilde_64kb.mp3",
+          "url": "https://archive.org/download/happyprince_1103_librivox/happyprince_03_oscarwilde_64kb.mp3",
+          "format": "mp3"
+        },
+        {
+          "name": "happyprince_04_oscarwilde_64kb.mp3",
+          "url": "https://archive.org/download/happyprince_1103_librivox/happyprince_04_oscarwilde_64kb.mp3",
+          "format": "mp3"
+        },
+        {
+          "name": "happyprince_05_oscarwilde_64kb.mp3",
+          "url": "https://archive.org/download/happyprince_1103_librivox/happyprince_05_oscarwilde_64kb.mp3",
+          "format": "mp3"
+        }
+      ]
+    },
+    {
+      "id": "arxiv-1512.01625v1",
+      "title": "Coded MapReduce",
+      "authors": [
+        "Songze Li",
+        "Mohammad Ali Maddah-Ali",
+        "A. Salman Avestimehr"
+      ],
+      "languages": [
+        "en"
+      ],
+      "type": "article",
+      "rationale": "Exercise scholarly discovery and pinned-version acquisition with a distributed-computing paper not already held.",
+      "landing_url": "https://arxiv.org/abs/1512.01625v1",
+      "metadata_url": "https://export.arxiv.org/api/query?id_list=1512.01625v1",
+      "rights": "Repository full text is publicly accessible. A version-specific reuse license was not established in this exercise; no redistribution permission is inferred.",
+      "rights_url": "https://info.arxiv.org/help/license/index.html",
+      "review_status": "preprint",
+      "assets": [
+        {
+          "name": "1512.01625v1.pdf",
+          "url": "https://arxiv.org/pdf/1512.01625v1",
+          "format": "pdf"
+        }
+      ]
+    }
+  ]
+}

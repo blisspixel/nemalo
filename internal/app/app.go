@@ -79,11 +79,15 @@ func (s Service) Snapshot(ctx context.Context, directory, output string, limits 
 }
 
 func (s Service) Holdings(file, query string, limit, offset int) (library.Page, error) {
+	return s.HoldingsFormat(file, query, "all", limit, offset)
+}
+
+func (s Service) HoldingsFormat(file, query, format string, limit, offset int) (library.Page, error) {
 	c, err := library.Load(file)
 	if err != nil {
 		return library.Page{}, err
 	}
-	return library.Find(c, query, limit, offset)
+	return library.FindFormat(c, query, format, limit, offset)
 }
 
 func (s Service) Audit(ctx context.Context, file, root string, limits inventory.Limits) (library.Audit, error) {

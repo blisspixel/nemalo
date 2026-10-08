@@ -21,14 +21,19 @@ Reviewed the Archive [advanced search interface](https://archive.org/advancedsea
 [metadata read API](https://archive.org/developers/md-read.html),
 [metadata schema](https://archive.org/developers/metadata-schema/index.html), and
 [automated-access guidance](https://archive.org/developers/bots.html).
-Small live requests verified JSON search parameters and arbitrary `start` offsets.
+Live distinct-ID comparisons verified documented `page`/`rows` pagination. Do not
+send `start`: the observed endpoint can echo it without advancing documents.
 
 Archive search uses `advancedsearch.php`, requesting only identifier, title,
 creator, language, and media type. It bounds pages to 50, offsets to 10000,
 and queries to 1000 bytes. User query syntax is preserved inside a text/audio
 media filter. Results are sorted by identifier for predictable pagination; the
-remote catalog can still change between requests. A mismatched response offset,
-invalid/duplicate ID, unexpected media type, or malformed result fails the request.
+remote catalog can still change between requests. Arbitrary offsets translate to
+at most two adjacent source pages, each at most 50 records and 2 MiB, under one
+30-second operation deadline. Unaligned pages are sliced locally. A mismatched
+response offset/count, changed total across adjacent pages, invalid/duplicate ID,
+unexpected media type, or malformed result fails the request. Tests verify actual
+document identities, not just the echoed offset.
 Audio media type does not establish that an item is an audiobook.
 
 Evaluation uses `/metadata/ITEM?extended_err=1` and validates the returned item

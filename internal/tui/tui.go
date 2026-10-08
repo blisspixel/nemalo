@@ -6,6 +6,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"os"
+	"strings"
 
 	"charm.land/bubbles/v2/textinput"
 	"charm.land/bubbles/v2/viewport"
@@ -32,9 +34,19 @@ type model struct {
 	secondaryFocused bool
 	assess           bool
 	height           int
+	width            int
+	color            bool
+	dark             bool
+	largeBudget      bool
+	drafts           map[string]draft
+	offset           int
+	total            int
+	submittedInput   string
+	submittedSecond  string
 	viewport         viewport.Model
 	mode             string
 	source           string
+	format           string
 	status           string
 	busy             bool
 	id               int
@@ -47,20 +59,30 @@ func newModel(ctx context.Context, service app.Service) *model {
 	input.Placeholder = "Search books (sent to Open Library on Enter)"
 	input.SetWidth(70)
 	input.SetVirtualCursor(true)
+	input.SetStyles(textinput.Styles{Cursor: textinput.CursorStyle{Blink: true}})
 	secondary := textinput.New()
 	secondary.CharLimit = 1000
 	secondary.SetWidth(70)
 	secondary.SetVirtualCursor(true)
+	secondary.SetStyles(textinput.Styles{Cursor: textinput.CursorStyle{Blink: true}})
 	view := viewport.New(viewport.WithWidth(80), viewport.WithHeight(16))
 	view.SoftWrap = true
-	return &model{ctx: ctx, service: service, input: input, secondary: secondary, height: 25, viewport: view, mode: "search", source: "openlibrary", status: "Ready. Network activity only on explicit search/evaluation."}
+	m := &model{ctx: ctx, service: service, input: input, secondary: secondary, width: 80, height: 25, dark: true, viewport: view, mode: "search", source: "openlibrary", format: "epub", drafts: map[string]draft{}, status: "Ready. Network activity only on explicit search/evaluation."}
+	m.resize()
+	return m
 }
 
-func (m *model) Init() tea.Cmd { return m.input.Focus() }
+func (m *model) Init() tea.Cmd { return tea.Batch(m.input.Focus(), tea.RequestBackgroundColor) }
 
 func (m *model) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := message.(type) {
+	case tea.BackgroundColorMsg:
+		m.dark = msg.IsDark()
+	case tea.ColorProfileMsg:
+		profile := msg.Profile.String()
+		m.color = (profile == "ANSI" || profile == "ANSI256" || profile == "TrueColor") && os.Getenv("NO_COLOR") == "" && os.Getenv("TERM") != "dumb"
 	case tea.WindowSizeMsg:
+		m.width = max(1, msg.Width)
 		m.height = msg.Height
 		m.input.SetWidth(max(1, msg.Width-4))
 		m.secondary.SetWidth(max(1, msg.Width-4))
@@ -76,6 +98,20 @@ func (m *model) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 			m.cancel = nil
 		}
 		m.status = "Complete."
+		switch value := msg.data.(type) {
+		case discovery.Page:
+			if msg.err == nil {
+				m.offset, m.total = value.Offset, value.Total
+			}
+		case library.Page:
+			if msg.err == nil {
+				m.offset, m.total = value.Offset, value.Total
+			}
+		case library.Snapshot:
+			if msg.err == nil {
+				m.seedLibraryForms(value.Output, value.Catalog.RootHint)
+			}
+		}
 		if msg.err != nil {
 			m.status = fmt.Sprintf("Incomplete: %q", msg.err.Error())
 		}
@@ -100,11 +136,44 @@ func (m *model) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 			m.status = fmt.Sprintf("Output error: %q", err.Error())
 			m.viewport.SetContent("")
 		} else {
+			if msg.err != nil {
+				data = append([]byte(fmt.Sprintf("Operation error: %q\n\n", msg.err.Error())), data...)
+			}
 			m.viewport.SetContent(string(data))
 			m.viewport.GotoTop()
 		}
+		m.resize()
 	case tea.KeyPressMsg:
+		if strings.HasPrefix(msg.String(), "alt+") {
+			for i, name := range modes {
+				if msg.String() == fmt.Sprintf("alt+%d", i+1) && !m.busy {
+					return m, m.switchMode(name)
+				}
+			}
+		}
 		switch msg.String() {
+		case "f4":
+			if m.mode == "holdings" && !m.busy {
+				formats := []string{"epub", "pdf", "mp3", "all"}
+				for i, format := range formats {
+					if format == m.format {
+						m.format = formats[(i+1)%len(formats)]
+						break
+					}
+				}
+				m.offset, m.total = 0, 0
+				m.viewport.SetContent("")
+				m.status = "Format filter changed. Press Enter to load holdings."
+				m.resize()
+			}
+			return m, nil
+		case "f3":
+			if !m.busy && (m.mode == "inspect" || m.mode == "snapshot" || m.mode == "audit") {
+				m.largeBudget = !m.largeBudget
+			}
+			return m, nil
+		case "ctrl+right", "ctrl+left":
+			return m, m.turnPage(msg.String() == "ctrl+right")
 		case "f2":
 			if m.mode == "search" && !m.busy {
 				if m.source == "openlibrary" {
@@ -114,6 +183,9 @@ func (m *model) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 				}
 				m.input.Placeholder = "Search " + m.source + " (network on Enter; F2 changes provider)"
 				m.status = "Ready. Search provider: " + m.source
+				m.offset, m.total = 0, 0
+				m.viewport.SetContent("")
+				m.resize()
 			}
 			return m, nil
 		case "ctrl+n":
@@ -145,93 +217,27 @@ func (m *model) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 			m.id++
 			m.busy = false
 			m.status = "Cancelled. Sources unchanged."
+			m.resize()
 			return m, nil
-		case "tab":
+		case "tab", "shift+tab":
 			if m.busy {
 				return m, nil
 			}
-			m.input.Reset()
-			m.secondary.Reset()
-			m.secondary.Blur()
-			m.secondaryFocused = false
-			if m.mode == "search" {
-				m.mode = "inspect"
-				m.input.Placeholder = "Explicit folder path (read-only inventory)"
-			} else if m.mode == "inspect" {
-				m.mode = "check"
-				m.input.Placeholder = "Explicit file path (health checks; no antivirus)"
-			} else if m.mode == "check" {
-				m.mode = "scan"
-				m.input.Placeholder = "File path (health + antivirus; scanner cloud/sample policy applies)"
-			} else if m.mode == "scan" {
-				m.mode = "snapshot"
-				m.input.Placeholder = "Folder to catalog (sources unchanged)"
-				m.secondary.Placeholder = "New catalog output path outside that folder"
-			} else if m.mode == "snapshot" {
-				m.mode = "holdings"
-				m.input.Placeholder = "Catalog file"
-				m.secondary.Placeholder = "Optional literal filter: title, language, filename, or hash"
-			} else if m.mode == "holdings" {
-				m.mode = "audit"
-				m.input.Placeholder = "Catalog file"
-				m.secondary.Placeholder = "Explicit root directory to audit (required)"
-			} else if m.mode == "audit" {
-				m.mode = "evaluate"
-				m.input.Placeholder = "archive:ITEM (network metadata lookup on Enter; no download)"
-			} else {
-				m.mode = "search"
-				m.input.Placeholder = "Search " + m.source + " (network on Enter; F2 changes provider)"
+			step := 1
+			if msg.String() == "shift+tab" {
+				step = -1
 			}
-			m.status = "Ready."
-			m.resize()
-			return m, m.input.Focus()
+			return m, m.switchMode(modes[(m.modeIndex()+step+len(modes))%len(modes)])
 		case "enter":
-			if m.busy || m.input.Value() == "" {
-				return m, nil
-			}
-			if (m.mode == "snapshot" || m.mode == "audit") && m.secondary.Value() == "" {
-				m.status = "Enter the required second field with Ctrl+N."
-				return m, nil
-			}
-			ctx, cancel := context.WithCancel(m.ctx)
-			m.cancel = cancel
-			m.id++
-			id := m.id
-			mode, value, source := m.mode, m.input.Value(), m.source
-			second, assess := m.secondary.Value(), m.assess
-			m.busy = true
-			m.status = "Working. Escape cancels; Ctrl+C quits."
-			return m, func() tea.Msg {
-				switch mode {
-				case "evaluate":
-					data, err := m.service.Evaluate(ctx, value)
-					return result{id, data, err}
-				case "snapshot":
-					data, err := m.service.Snapshot(ctx, value, second, inventory.Defaults(), assess)
-					return result{id, data, err}
-				case "holdings":
-					data, err := m.service.Holdings(value, second, 50, 0)
-					return result{id, data, err}
-				case "audit":
-					data, err := m.service.Audit(ctx, value, second, inventory.Defaults())
-					return result{id, data, err}
-				}
-				if mode == "search" {
-					data, err := m.service.SearchSource(ctx, source, value, 10, 0)
-					return result{id, data, err}
-				}
-				if mode == "check" || mode == "scan" {
-					data, err := m.service.Check(ctx, value, assessment.Options{Scan: mode == "scan"})
-					return result{id, data, err}
-				}
-				data, err := m.service.Inspect(ctx, value, inventory.Defaults())
-				return result{id, data, err}
-			}
-		case "pgup", "pgdown", "ctrl+u", "ctrl+d":
+			return m, m.start(true)
+		case "pgup", "pgdown":
 			var cmd tea.Cmd
 			m.viewport, cmd = m.viewport.Update(msg)
 			return m, cmd
 		}
+	}
+	if m.busy {
+		return m, nil
 	}
 	var cmd tea.Cmd
 	if m.secondaryFocused {
@@ -242,31 +248,7 @@ func (m *model) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 	return m, cmd
 }
 
-func (m *model) View() tea.View {
-	form := ""
-	if m.form() {
-		form = "\n" + m.secondary.View() + "\nCtrl+N: switch fields"
-	}
-	if m.mode == "snapshot" {
-		form += fmt.Sprintf("; Ctrl+A: local health metadata (%t)", m.assess)
-	}
-	mode := m.mode
-	if m.mode == "search" {
-		mode += " [" + m.source + "; F2 changes provider]"
-	}
-	v := tea.NewView("Nemalo\nFind knowledge. Care for it. Realize its potential.\n\nMode: " + mode + " (Tab: next mode)\n" + m.input.View() + form + "\n" + m.status + "\n\n" + m.viewport.View() + "\nEnter: run  Escape: cancel  PageUp/PageDown: scroll  Ctrl+C: quit")
-	v.AltScreen = true
-	return v
-}
-
 func (m *model) form() bool { return m.mode == "snapshot" || m.mode == "holdings" || m.mode == "audit" }
-func (m *model) resize() {
-	extra := 0
-	if m.form() {
-		extra = 2
-	}
-	m.viewport.SetHeight(max(1, m.height-9-extra))
-}
 
 func Run(ctx context.Context, service app.Service, in io.Reader, out io.Writer) error {
 	m := newModel(ctx, service)

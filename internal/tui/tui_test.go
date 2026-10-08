@@ -32,9 +32,10 @@ func TestTerminalWorkflow(t *testing.T) {
 		t.Fatal("missing initial view/focus")
 	}
 	m.Update(tea.WindowSizeMsg{Width: 40, Height: 12})
-	if m.viewport.Width() != 38 || m.viewport.Height() != 3 {
+	if m.viewport.Width() != 38 || m.viewport.Height() < 1 || !strings.Contains(m.View().Content, "Terminal too small") {
 		t.Fatal("resize ignored")
 	}
+	m.Update(tea.WindowSizeMsg{Width: 100, Height: 30})
 	_, cmd := m.Update(key(tea.KeyEnter))
 	if cmd != nil {
 		t.Fatal("empty query submitted")
@@ -135,6 +136,7 @@ func TestTerminalWorkflow(t *testing.T) {
 	if m.mode != "holdings" || m.secondary.Value() != "" {
 		t.Fatal("holdings form unavailable")
 	}
+	m.Update(key(tea.KeyF4)) // PDF filename filter for this fixture.
 	m.input.SetValue(file)
 	m.secondary.SetValue("paper")
 	_, cmd = m.Update(key(tea.KeyEnter))
@@ -147,6 +149,10 @@ func TestTerminalWorkflow(t *testing.T) {
 		t.Fatal("audit form unavailable")
 	}
 	m.input.SetValue(file)
+	if m.secondary.Value() != root {
+		t.Fatal("snapshot did not seed the audit root")
+	}
+	m.secondary.SetValue("")
 	_, cmd = m.Update(key(tea.KeyEnter))
 	if cmd != nil {
 		t.Fatal("catalog hint authorized read")

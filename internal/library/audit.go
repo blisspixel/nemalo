@@ -3,6 +3,7 @@ package library
 import (
 	"context"
 	"errors"
+	"path"
 	"strings"
 	"time"
 
@@ -104,6 +105,7 @@ func Verify(ctx context.Context, c Catalog, directory string, limits inventory.L
 type Page struct {
 	SnapshotID string  `json:"snapshot_id"`
 	Query      string  `json:"query"`
+	Format     string  `json:"format_filter"`
 	Total      int     `json:"total_assets"`
 	Offset     int     `json:"offset"`
 	Assets     []Asset `json:"assets"`
@@ -111,15 +113,32 @@ type Page struct {
 
 // Find is a literal metadata filter, not a relevance or quality score.
 func Find(c Catalog, query string, limit, offset int) (Page, error) {
-	p := Page{SnapshotID: c.ID, Query: query, Offset: offset, Assets: []Asset{}}
+	return FindFormat(c, query, "all", limit, offset)
+}
+
+// FindFormat applies exact filename suffixes, not inferred content validity.
+func FindFormat(c Catalog, query, format string, limit, offset int) (Page, error) {
+	p := Page{SnapshotID: c.ID, Query: query, Format: format, Offset: offset, Assets: []Asset{}}
 	if err := c.Validate(); err != nil {
 		return p, err
 	}
 	if limit < 1 || limit > 100 || offset < 0 || offset > 100000 || len(query) > 1000 {
 		return p, errors.New("holdings require limit 1-100, offset 0-100000, and query at most 1000 bytes")
 	}
+	if !ValidFormatFilter(format) {
+		return p, errors.New("format filter must be all, epub, pdf, or mp3")
+	}
 	query = strings.ToLower(strings.TrimSpace(query))
 	for _, a := range c.Assets {
+		matchesFormat := format == "all"
+		for _, location := range a.Locations {
+			if strings.EqualFold(path.Ext(location.Path), "."+format) {
+				matchesFormat = true
+			}
+		}
+		if !matchesFormat {
+			continue
+		}
 		values := []string{a.ID}
 		for _, l := range a.Locations {
 			values = append(values, l.Path, l.CandidateKind)
@@ -144,4 +163,8 @@ func Find(c Catalog, query string, limit, offset int) (Page, error) {
 		p.Total++
 	}
 	return p, nil
+}
+
+func ValidFormatFilter(format string) bool {
+	return format == "all" || format == "epub" || format == "pdf" || format == "mp3"
 }

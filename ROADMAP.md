@@ -60,7 +60,9 @@ Implemented in Go: CLI/TUI entry points over shared services, configuration,
 Open Library/Internet Archive metadata search, Archive item/file evaluation,
 bounded read-only inventory with optional hashing,
 capability reporting, JSON envelopes, and pinned verification/native CI configuration.
-Live Open Library search and a Windows TUI search/inspection/quit smoke were exercised.
+Live source searches and Windows TUI search/inspection/holdings/evaluation/quit
+smokes were exercised. TUI navigation, session drafts, adaptive no-color/light/dark
+presentation, bounded budget selection, format filters, and result pagination exist.
 File-level `check` is implemented in CLI/TUI: bounded snapshots, signatures,
 EPUB structure/text facts, expected size/hash comparison, and optional antivirus.
 This is assessment evidence, not checked library publication or semantic validation.
@@ -83,6 +85,11 @@ in untrusted intake; it does not complete production transfer or publication gat
 The 2026-10-08 Windows exercise acquired all 100 selected resources (208 content
 assets) and recorded an external Defender scan reporting no threats. Its exact
 checks and remaining validation gaps are recorded separately from production status.
+Repeat validation preserved that selection and added four resources through three
+content sources. The external intake now has 104 resources and 216 content assets;
+all passed the current limited CLI checks, and an installed external diagnostic
+decoded all 123 MP3 tracks. These are particular validation results, not production
+audio support or publication gates. See [validation evidence](docs/VALIDATION.md).
 
 ## Product-wide acceptance
 
