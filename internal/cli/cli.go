@@ -3,7 +3,6 @@ package cli
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
@@ -11,6 +10,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/blisspixel/nemalo/internal/acquisition"
 	"github.com/blisspixel/nemalo/internal/app"
 	"github.com/blisspixel/nemalo/internal/assessment"
 	"github.com/blisspixel/nemalo/internal/config"
@@ -19,10 +19,11 @@ import (
 	"github.com/blisspixel/nemalo/internal/inventory"
 	"github.com/blisspixel/nemalo/internal/library"
 	"github.com/blisspixel/nemalo/internal/present"
+	"github.com/blisspixel/nemalo/internal/textsafe"
 	"github.com/blisspixel/nemalo/internal/tui"
 )
 
-const Version = "0.1.0-dev"
+const Version = "0.1.0-alpha.1"
 
 const help = `Nemalo
 Find knowledge. Care for it. Realize its potential.
@@ -34,6 +35,8 @@ Usage: nemalo <command> [options]
   search QUERY        Search a selected catalog (explicit network access)
   evaluate archive:ITEM
                       Inspect source-declared files, rights, and access restrictions
+  acquire archive:ITEM --file NAME --output NEW_DIRECTORY
+                      Download a selected EPUB/PDF/MP3 into untrusted intake
   inspect DIRECTORY   Read-only inventory of an explicitly selected folder
   check FILE          Bounded file health assessment, without rendering content
   library snapshot DIRECTORY --output FILE
@@ -61,6 +64,10 @@ Usage: nemalo <command> [options]
 
 Shared options: --json, --config FILE, --library DIRECTORY, --review DIRECTORY
 Search options: --source openlibrary|archive (default openlibrary), --limit 10, --offset 0
+Acquire options: --file exact-source-filename, --output new-directory,
+                 --max-file-bytes 268435456 (maximum 256 MiB)
+Acquisition retains incomplete output, never overwrites or resumes it, and does
+not scan antivirus or publish to a checked library. Rights remain unresolved.
 Inspect options: --hashes, --max-entries 10000, --max-depth 32,
                  --max-file-bytes 268435456, --max-total-bytes 1073741824
 Check options: --scan, --expected-bytes N, --expected-sha256 HASH
@@ -80,7 +87,7 @@ are measured; fixed pages, PDF page counts, and audio duration are not inferred.
 and sample-submission settings apply. Missing/failed scans cannot mean clean.
 
 Inventory does not extract archives, validate books, or scan for malware.
-Production downloads, checked publication, cleanup, MCP, and audiobook management
+Resumable transfers, checked publication, cleanup, MCP, and audiobook management
 are planned. PDF/MP3 checks currently establish candidate signatures only.
 Exit codes: 0 success, 1 operation failed/incomplete, 2 invalid usage/configuration.
 `
@@ -126,6 +133,7 @@ func Execute(ctx context.Context, args []string, out, errOut io.Writer, service 
 	limits := inventory.Defaults()
 	checkOptions := assessment.Options{}
 	output := flags.String("output", "", "new snapshot output path")
+	sourceFile := flags.String("file", "", "exact selected source filename")
 	query := flags.String("query", "", "literal holdings metadata filter")
 	format := flags.String("format", "all", "exact holdings filename suffix filter")
 	auditRoot := flags.String("root", "", "explicit audit root")
@@ -153,7 +161,7 @@ func Execute(ctx context.Context, args []string, out, errOut io.Writer, service 
 			if err != nil {
 				e.Error = err.Error()
 			}
-			if encodeErr := json.NewEncoder(out).Encode(e); encodeErr != nil {
+			if encodeErr := textsafe.WriteJSON(out, e, false); encodeErr != nil {
 				return 1
 			}
 		} else if err != nil {
@@ -201,7 +209,7 @@ func Execute(ctx context.Context, args []string, out, errOut io.Writer, service 
 		}
 		return write(service.ContentCapabilities(), nil, 0)
 	}
-	if command != "doctor" && command != "search" && command != "evaluate" && command != "inspect" && command != "check" && command != "tui" && command != "library" && command != "content" {
+	if command != "doctor" && command != "search" && command != "evaluate" && command != "acquire" && command != "inspect" && command != "check" && command != "tui" && command != "library" && command != "content" {
 		return write(nil, fmt.Errorf("unknown command %q; use nemalo help", command), 2)
 	}
 	p, err := paths()
@@ -217,6 +225,19 @@ func Execute(ctx context.Context, args []string, out, errOut io.Writer, service 
 		return write(nil, err, 2)
 	}
 	switch command {
+	case "acquire":
+		if flags.NArg() != 1 {
+			return write(nil, errors.New("use acquire archive:ITEM --file NAME --output NEW_DIRECTORY"), 2)
+		}
+		request := acquisition.Request{SourceID: flags.Arg(0), File: *sourceFile, Output: *output, MaxBytes: limits.FileBytes}
+		if err := request.Validate(); err != nil {
+			return write(nil, err, 2)
+		}
+		data, err := service.Acquire(ctx, request)
+		if err != nil {
+			return write(data, err, 1)
+		}
+		return write(data, nil, 0)
 	case "content":
 		if flags.NArg() != 1 || (action != "units" && action != "read" && action != "source" && action != "resource") {
 			return write(nil, errors.New("use content units/read/source/resource CATALOG --root DIRECTORY --asset sha256:HASH"), 2)
@@ -393,6 +414,8 @@ func flagApplies(command, action, name string) bool {
 		}
 	}
 	switch command {
+	case "acquire":
+		return name == "file" || name == "output" || name == "max-file-bytes"
 	case "search":
 		return name == "limit" || name == "offset" || name == "source"
 	case "check":
@@ -436,6 +459,9 @@ func parse(flags *flag.FlagSet, args []string) error {
 
 func printData(out io.Writer, data any) error {
 	switch value := data.(type) {
+	case acquisition.Result:
+		_, err := io.WriteString(out, present.Acquisition(value))
+		return err
 	case library.State:
 		_, err := io.WriteString(out, present.LibraryState(value))
 		return err
@@ -465,8 +491,5 @@ func printData(out io.Writer, data any) error {
 		_, err := fmt.Fprintln(out, value)
 		return err
 	}
-	// JSON escaping keeps untrusted filenames and provider strings from emitting terminal controls.
-	encoder := json.NewEncoder(out)
-	encoder.SetIndent("", "  ")
-	return encoder.Encode(data)
+	return textsafe.WriteJSON(out, data, true)
 }

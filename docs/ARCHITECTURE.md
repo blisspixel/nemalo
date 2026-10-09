@@ -106,6 +106,12 @@ small packages organized around real boundaries, not a plugin framework or an
 interface for every struct. Introduce interfaces where external behavior needs
 substitution, especially filesystem mutations, processes, clocks, and providers.
 
+Selected acquisition is implemented through shared services into exclusive
+untrusted packets; see [decision 0007](decisions/0007-selected-acquisition.md).
+Filesystem capability binding and display encoding use shared adapters described
+in [decision 0008](decisions/0008-filesystem-and-display-boundaries.md).
+Neither intake receipts nor portable snapshots are managed publication journals.
+
 ## Identity and catalog model
 
 | Entity | Purpose and identity |

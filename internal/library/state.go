@@ -11,6 +11,8 @@ import (
 	"os"
 	"path/filepath"
 	"time"
+
+	"github.com/blisspixel/nemalo/internal/safeio"
 )
 
 const journalName = "journal.jsonl"
@@ -272,7 +274,7 @@ func appendEvent(ctx context.Context, c *control, f *os.File, event journalEvent
 }
 
 func openControl(directory string, write bool) (*control, bool, error) {
-	parent, err := os.OpenRoot(directory)
+	parent, err := safeio.OpenRoot(directory)
 	if err != nil {
 		return nil, false, fmt.Errorf("explicit library root: %w", err)
 	}
@@ -292,7 +294,7 @@ func openControl(directory string, write bool) (*control, bool, error) {
 	} else if !info.IsDir() || info.Mode()&os.ModeSymlink != 0 {
 		return nil, false, ErrStateReview
 	}
-	root, err := parent.OpenRoot(".nemalo")
+	root, err := safeio.OpenRootIn(parent, ".nemalo")
 	if err != nil {
 		return nil, false, err
 	}
@@ -358,7 +360,7 @@ func openRegular(root *os.Root, name string, flags int) (*os.File, error) {
 	if err != nil && !errors.Is(err, os.ErrNotExist) {
 		return nil, err
 	}
-	f, err := root.OpenFile(name, flags, 0600)
+	f, err := safeio.OpenRegular(root, name, before, flags)
 	if err != nil {
 		return nil, err
 	}

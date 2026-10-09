@@ -15,6 +15,8 @@ AI service. Future agent interfaces will use the same application services.
 **Early development, not 1.0.** Available today:
 
 - Search Open Library and Internet Archive; evaluate Archive item/file metadata.
+- Acquire a selected Archive EPUB, PDF, or MP3 into exclusive untrusted intake,
+  with source checksums, local checks, and a provenance receipt.
 - Inventory explicit folders; check file structure, size, hashes, and EPUB text
   measurements, with optional installed antivirus.
 - Save portable catalog snapshots, browse holdings, and audit changed/missing files.
@@ -23,10 +25,11 @@ AI service. Future agent interfaces will use the same application services.
   note references, local image bytes, and explicit extraction gaps.
 - Use CLI, versioned JSON, or an interactive terminal interface.
 
-Production downloading, archive intake, checked publication, import recovery,
+Resumable transfers, archive intake, checked publication, import recovery,
 reader/player handoff, complete audiobook management, and MCP are planned.
 File checks report limited evidence, never a safety or completeness guarantee.
 See [current capabilities and limits](docs/DEVELOPMENT.md) and the [roadmap](ROADMAP.md).
+Native prerelease archives and checksums are on [GitHub Releases](https://github.com/blisspixel/nemalo/releases).
 
 ## Quick start
 
@@ -57,11 +60,13 @@ OS window capture. See [terminal guide and discovery view](docs/TUI.md).
 | [Operation and development](docs/DEVELOPMENT.md) | Commands, configuration, bounds, safety limits, and verification |
 | [Terminal guide](docs/TUI.md) | Navigation, browsing, keyboard shortcuts, and screenshots |
 | [Content access](docs/CONTENT-ACCESS.md) | EPUB excerpts, exact continuation, unsupported gaps, and remaining access work |
+| [Acquisition](docs/ACQUISITION.md) | Selected downloads, intake receipts, and failure handling |
 | [Architecture](docs/ARCHITECTURE.md) | Shared services, data protection, recovery, and decisions |
 | [Sources](docs/SOURCES.md) | Provider directory, rights, and integration constraints |
 | [Agent integration](docs/AGENT-INTEGRATION.md) | Planned MCP and Agent Plugins boundaries |
 | [Validation](docs/VALIDATION.md) | External 104-resource collection, evidence, and remaining gaps |
 | [Research](docs/RESEARCH.md) | Evaluated patterns and primary references |
+| [Releases](docs/RELEASING.md) | Packaging, checksums, and native validation requirements |
 
 Contributing: read [AGENTS.md](AGENTS.md), then run `go run ./cmd/verify` and
 `go test -race ./...` (race checks require a native C compiler).

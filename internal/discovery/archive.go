@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
+	"net/http"
 	"net/url"
 	"path"
 	"strconv"
@@ -17,11 +18,12 @@ import (
 
 type Archive struct {
 	*metadataClient
-	endpoint string
+	endpoint       string
+	downloadClient *http.Client
 }
 
 func NewArchive() *Archive {
-	return &Archive{metadataClient: newMetadataClient("archive.org"), endpoint: "https://archive.org"}
+	return &Archive{metadataClient: newMetadataClient("archive.org"), endpoint: "https://archive.org", downloadClient: NewFileClient(ArchiveDownloadHost)}
 }
 
 // Strings preserves source metadata without inventing language or rights mappings.

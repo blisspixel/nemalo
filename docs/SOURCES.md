@@ -1,9 +1,10 @@
 # Source directory and integration research
 
 Research date: 2026-10-08. Open Library/Internet Archive metadata search and Archive
-item/file evaluation are implemented. Other production integrations below remain
+item/file evaluation and selected EPUB/PDF/MP3 intake are implemented. Other integrations below remain
 planned. See [decision 0005](decisions/0005-provider-search-and-evaluation.md) for
-implemented contracts and limits. This directory
+implemented contracts and limits. The [acquisition guide](ACQUISITION.md)
+distinguishes metadata from actual transfers. This directory
 covers books, scholarly literature, textbooks, audio, children's reading, and
 multilingual collections. It is a maintained shortlist, not a claim to list every
 repository worldwide or a promise to implement every source.

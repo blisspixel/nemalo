@@ -19,6 +19,7 @@ import (
 
 	"github.com/blisspixel/nemalo/internal/assessment"
 	"github.com/blisspixel/nemalo/internal/inventory"
+	"github.com/blisspixel/nemalo/internal/safeio"
 )
 
 const maxCatalogBytes = 16 << 20
@@ -116,7 +117,16 @@ func Build(ctx context.Context, directory string, limits inventory.Limits, asses
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Minute)
 	defer cancel()
 	limits.Hashes = true
-	r, inventoryErr := inventory.Inspect(ctx, directory, limits)
+	abs, err := filepath.Abs(directory)
+	if err != nil {
+		return Snapshot{}, err
+	}
+	root, err := safeio.OpenRoot(abs)
+	if err != nil {
+		return Snapshot{}, err
+	}
+	defer root.Close()
+	r, inventoryErr := inventory.InspectRoot(ctx, root, abs, limits)
 	s := Snapshot{Catalog: Catalog{SchemaVersion: 1, ID: "snapshot:" + hex.EncodeToString(randomID()), CreatedAt: time.Now().UTC(), RootHint: r.Root, Complete: r.Complete, Assets: []Asset{}, Excluded: []inventory.Entry{}}, BytesRead: r.BytesRead, Durability: "not_saved"}
 	positions := map[string]int{}
 	for _, e := range r.Entries {
@@ -140,11 +150,6 @@ func Build(ctx context.Context, directory string, limits inventory.Limits, asses
 		return s, inventoryErr
 	}
 	if assess {
-		root, err := os.OpenRoot(r.Root)
-		if err != nil {
-			return s, err
-		}
-		defer root.Close()
 		for i := range s.Catalog.Assets {
 			a := &s.Catalog.Assets[i]
 			name := ""
@@ -186,14 +191,23 @@ func randomID() []byte {
 
 func Load(file string) (Catalog, error) {
 	var c Catalog
-	info, err := os.Lstat(file)
+	abs, err := filepath.Abs(file)
+	if err != nil {
+		return c, err
+	}
+	root, err := safeio.OpenResolvedRoot(filepath.Dir(abs))
+	if err != nil {
+		return c, err
+	}
+	defer root.Close()
+	info, err := root.Lstat(filepath.Base(abs))
 	if err != nil {
 		return c, err
 	}
 	if !info.Mode().IsRegular() || info.Size() > maxCatalogBytes {
 		return c, errors.New("catalog must be a regular file at most 16 MiB")
 	}
-	f, err := os.Open(file)
+	f, err := safeio.OpenRegular(root, filepath.Base(abs), info, os.O_RDONLY)
 	if err != nil {
 		return c, err
 	}
@@ -227,32 +241,84 @@ func Load(file string) (Catalog, error) {
 // CheckDestination rejects existing outputs and source-contained destinations
 // before expensive source reads. Save repeats this check before publication.
 func CheckDestination(directory, file string) error {
-	abs, err := filepath.Abs(file)
+	parent, _, err := openDestination(directory, file)
+	if err == nil {
+		err = parent.Close()
+	}
+	return err
+}
+
+// openDestination validates physical containment against the identities of the
+// capabilities it returns. Save retains that parent through publication.
+func openDestination(directory, file string) (parent *os.Root, abs string, err error) {
+	abs, err = filepath.Abs(file)
 	if err != nil {
-		return err
+		return nil, "", err
 	}
 	rootAbs, err := filepath.Abs(directory)
 	if err != nil {
-		return err
+		return nil, "", err
+	}
+	sourceExpected, err := safeio.Stat(rootAbs)
+	if err != nil {
+		return nil, "", err
+	}
+	parentExpected, err := safeio.Stat(filepath.Dir(abs))
+	if err != nil {
+		return nil, "", err
 	}
 	physicalRoot, err := filepath.EvalSymlinks(rootAbs)
 	if err != nil {
-		return err
+		return nil, "", err
 	}
 	physicalParent, err := filepath.EvalSymlinks(filepath.Dir(abs))
 	if err != nil {
-		return err
+		return nil, "", err
+	}
+	source, err := safeio.OpenRoot(physicalRoot)
+	if err != nil {
+		return nil, "", err
+	}
+	defer source.Close()
+	parent, err = safeio.OpenRoot(physicalParent)
+	if err != nil {
+		return nil, "", err
+	}
+	defer func() {
+		if err != nil {
+			_ = parent.Close()
+		}
+	}()
+	for _, bound := range []struct {
+		before fs.FileInfo
+		root   *os.Root
+	}{{sourceExpected, source}, {parentExpected, parent}} {
+		opened, statErr := bound.root.Stat(".")
+		if statErr != nil || !os.SameFile(bound.before, opened) {
+			return parent, "", errors.New("destination directory changed while opening")
+		}
+	}
+	// Detect path replacement during physical-name resolution and acquisition.
+	for _, bound := range []struct {
+		name string
+		root *os.Root
+	}{{physicalRoot, source}, {physicalParent, parent}} {
+		a, statErr := safeio.Stat(bound.name)
+		b, rootErr := bound.root.Stat(".")
+		if statErr != nil || rootErr != nil || !os.SameFile(a, b) {
+			return parent, "", errors.New("destination relationship changed while opening")
+		}
 	}
 	rel, relErr := filepath.Rel(physicalRoot, filepath.Join(physicalParent, filepath.Base(abs)))
 	if relErr == nil && rel != ".." && !strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
-		return errors.New("catalog output must be outside the inventoried root")
+		return parent, "", errors.New("catalog output must be outside the inventoried root")
 	}
-	if _, err := os.Lstat(abs); err == nil {
-		return errors.New("catalog output already exists")
-	} else if !errors.Is(err, fs.ErrNotExist) {
-		return err
+	if _, checkErr := parent.Lstat(filepath.Base(abs)); checkErr == nil {
+		return parent, "", errors.New("catalog output already exists")
+	} else if !errors.Is(checkErr, fs.ErrNotExist) {
+		return parent, "", checkErr
 	}
-	return nil
+	return parent, abs, nil
 }
 
 // Save publishes a synced complete file through an exclusive hard link. A crash
@@ -263,14 +329,7 @@ func Save(ctx context.Context, file string, s *Snapshot) (err error) {
 	if err := s.Catalog.Validate(); err != nil {
 		return err
 	}
-	abs, err := filepath.Abs(file)
-	if err != nil {
-		return err
-	}
-	if err := CheckDestination(s.Catalog.RootHint, abs); err != nil {
-		return err
-	}
-	parent, err := os.OpenRoot(filepath.Dir(abs))
+	parent, abs, err := openDestination(s.Catalog.RootHint, file)
 	if err != nil {
 		return err
 	}

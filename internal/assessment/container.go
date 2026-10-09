@@ -13,7 +13,9 @@ import (
 	"io/fs"
 	"net/url"
 	"path"
+	"sort"
 	"strings"
+	"time"
 	"unicode"
 	"unicode/utf8"
 
@@ -100,6 +102,9 @@ func VisitEPUBResource(ctx context.Context, r io.ReaderAt, size int64, visit fun
 }
 
 func inspectContext(ctx context.Context, r io.ReaderAt, size int64, format string, visit func(EPUBDocument) error, resource *memberRequest) (Checks, error) {
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Minute)
+	defer cancel()
+	r = contextAt{ctx, r}
 	c := Checks{Signature: "not_checked", ZIPCRC: "not_applicable", EPUBPackage: "not_applicable", Conformance: "not_checked", ContentReview: "not_checked"}
 	if size <= 0 || size > 256<<20 {
 		return c, errors.Join(ErrLimit, errors.New("invalid asset size"))
@@ -142,7 +147,7 @@ func inspectContext(ctx context.Context, r io.ReaderAt, size int64, format strin
 
 func inspectEPUB(ctx context.Context, r io.ReaderAt, size int64, c *Checks, visit func(EPUBDocument) error, resource *memberRequest) error {
 	// Bound directory parsing before zip.NewReader can allocate per-member state.
-	metadata := &metadataReader{r: r, remaining: 2 << 20, limited: true}
+	metadata := &metadataReader{r: r, ctx: ctx, remaining: 2 << 20, workRemaining: 1 << 30, limited: true}
 	z, err := zip.NewReader(metadata, size)
 	metadata.limited = false
 	if err != nil {
@@ -150,6 +155,9 @@ func inspectEPUB(ctx context.Context, r io.ReaderAt, size int64, c *Checks, visi
 	}
 	if len(z.File) == 0 || len(z.File) > 10000 {
 		return errors.Join(ErrLimit, errors.New("EPUB member count outside limits"))
+	}
+	if err := compressedLayout(z.File, size); err != nil {
+		return err
 	}
 	files := map[string]*zip.File{}
 	members := map[string]EPUBMember{}
@@ -352,12 +360,23 @@ func inspectEPUB(ctx context.Context, r io.ReaderAt, size int64, c *Checks, visi
 }
 
 type metadataReader struct {
-	r         io.ReaderAt
-	remaining int
-	limited   bool
+	r             io.ReaderAt
+	ctx           context.Context
+	remaining     int
+	workRemaining int64
+	limited       bool
 }
 
 func (r *metadataReader) ReadAt(p []byte, off int64) (int, error) {
+	if r.ctx != nil {
+		if err := r.ctx.Err(); err != nil {
+			return 0, err
+		}
+	}
+	if int64(len(p)) > r.workRemaining {
+		return 0, errors.Join(ErrLimit, errors.New("EPUB compressed read budget exceeded"))
+	}
+	r.workRemaining -= int64(len(p))
 	if r.limited {
 		if len(p) > r.remaining {
 			return 0, errors.Join(ErrLimit, errors.New("EPUB ZIP metadata read budget exceeded"))
@@ -365,6 +384,32 @@ func (r *metadataReader) ReadAt(p []byte, off int64) (int, error) {
 		r.remaining -= len(p)
 	}
 	return r.r.ReadAt(p, off)
+}
+
+// Validate all compressed ranges before opening a decompressor. Central-directory
+// order is not physical order, and signed offsets must be checked before casts.
+func compressedLayout(files []*zip.File, size int64) error {
+	type interval struct{ start, end int64 }
+	ranges := make([]interval, 0, len(files))
+	var compressed uint64
+	for _, f := range files {
+		offset, err := f.DataOffset()
+		if err != nil {
+			return err
+		}
+		if offset < 0 || offset > size || f.CompressedSize64 > uint64(size-offset) || f.CompressedSize64 > 256<<20 || compressed > 256<<20-f.CompressedSize64 {
+			return errors.Join(ErrLimit, errors.New("EPUB compressed ranges exceed asset or work limits"))
+		}
+		compressed += f.CompressedSize64
+		ranges = append(ranges, interval{offset, offset + int64(f.CompressedSize64)})
+	}
+	sort.Slice(ranges, func(i, j int) bool { return ranges[i].start < ranges[j].start })
+	for i := 1; i < len(ranges); i++ {
+		if ranges[i].start < ranges[i-1].end || ranges[i].start == ranges[i-1].start {
+			return errors.New("EPUB compressed member ranges overlap")
+		}
+	}
+	return nil
 }
 
 // These are positive indicators and text measurements, not a sanitizer or a DOM

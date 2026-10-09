@@ -159,7 +159,7 @@ The exercise used the following distinct source boundaries:
 | Source | Exercised behavior | Product boundary |
 | --- | --- | --- |
 | Open Library | Native CLI search for Alcott and book metadata | Discovery only |
-| Internet Archive | Native search, item evaluation, distinct-page checks, offered audio files | Acquisition uses the separate Go harness |
+| Internet Archive | Native search, item evaluation, distinct-page checks, offered audio files | Expansion used the harness; selected-file CLI/TUI acquisition is now implemented |
 | Project Gutenberg | Official offline CSV selection, per-book RDF, mirror EPUB acquisition | Native provider search remains planned |
 | arXiv | Official API title search and pinned-version PDF acquisition | Native provider search remains planned |
 | LibriVox | Three title-search probes returned not-found errors | Not a successful search integration; new audio selected from Archive's exposed LibriVox item |
@@ -276,6 +276,31 @@ failure. This is bounded evidence, not exhaustive parser validation or safe
 rendering. The terminal guide includes a real application-view read capture.
 PDF/OCR, decoded audio ranges, MCP, and external caller acknowledgement/transport
 integration still require their planned format/client validation.
+
+## Selected acquisition and boundary revalidation on 2026-10-08
+
+The current Windows CLI rechecked all 216 existing content assets against their
+receipts' sizes and SHA-256 values. All returned `limited_checks_passed`. A fresh
+preservation audit found all 432 locations unchanged, with no findings. These
+operations were offline and did not request another antivirus scan.
+
+Live Archive search and fresh evaluation then selected two additional files into
+separate external intake packets: a Chinese *Art of War* LibriVox track (2,316,800
+bytes) and the illustrated Gutenberg EPUB *Songs From Alice in Wonderland and
+Through the Looking-Glass* (4,101,787 bytes). Both matched source-declared checksums,
+passed the current limited format checks and read-back SHA-256 verification, and
+received provenance receipts with `untrusted_intake` and `not_scanned` status.
+The audio is one track, not another complete audiobook recording. The original
+104-resource collection and its historical receipts were preserved.
+
+The acquired EPUB was checked, cataloged, listed, retrieved through structured
+EPUB access, and audited through the actual CLI. Its three declared reading-order
+documents were exposed. These smokes establish the exercised workflow for these
+particular files, not universal source availability, content completeness, rights,
+safe rendering, or managed-library publication. Reports and content remain outside
+Git. Synthetic regression tests separately cover directory/file replacement,
+nonblocking special-file acquisition on Unix, overlapping compressed members,
+lifetime parser work budgets, and parse-equivalent terminal-control escaping.
 
 ## Source contracts reviewed on 2026-10-08
 

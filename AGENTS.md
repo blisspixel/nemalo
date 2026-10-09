@@ -88,6 +88,14 @@ its curated manifest is `collections/foundations.json`. Keep downloaded validati
 content and local reports outside the checkout. Its intake is not checked publication.
 When integrating production acquisition/assessment, reuse or deliberately relocate
 these tested building blocks; do not grow a second transfer or publication policy.
+Selected acquisition is in `internal/acquisition`, sharing `internal/transfer` and
+the checked file HTTP adapter with the harness. Preserve fresh evaluation, exact
+selection, exclusive packets, synced intent, retained failures, and untrusted status;
+see decision 0007. Resume and checked publication are not implemented.
+Use `internal/safeio` for capability-bound roots and existing-file opens and
+`internal/textsafe` for JSON/generated prose. Preserve parent aliases, opened
+identity checks, lifetime compressed-reader budgets, and parse-equivalent escaping;
+see decision 0008. Do not reopen a validated pathname for later sensitive use.
 File/container checks are in `internal/assessment`, shared with the collection
 harness; installed antivirus is in `internal/scanner`. Preserve measured facts
 versus semantic completeness, explicit scanner opt-in and cloud-policy disclosure,

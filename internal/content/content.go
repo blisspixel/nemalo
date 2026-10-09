@@ -18,6 +18,7 @@ import (
 
 	"github.com/blisspixel/nemalo/internal/assessment"
 	"github.com/blisspixel/nemalo/internal/library"
+	"github.com/blisspixel/nemalo/internal/safeio"
 	"golang.org/x/net/html"
 )
 
@@ -362,7 +363,7 @@ func readAsset(ctx context.Context, directory, name string, asset library.Asset)
 	if asset.Bytes <= 0 || asset.Bytes > maxInput {
 		return nil, "budget_exceeded", errBudget
 	}
-	root, err := os.OpenRoot(directory)
+	root, err := safeio.OpenResolvedRoot(directory)
 	if err != nil {
 		return nil, "unavailable", err
 	}
@@ -380,7 +381,7 @@ func readAsset(ctx context.Context, directory, name string, asset library.Asset)
 	if before.Size() != asset.Bytes {
 		return nil, "changed_source", errors.New("source size differs from asset")
 	}
-	f, err := root.Open(name)
+	f, err := safeio.OpenRegular(root, name, before, os.O_RDONLY)
 	if err != nil {
 		return nil, "unavailable", err
 	}

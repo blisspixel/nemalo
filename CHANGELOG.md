@@ -1,6 +1,26 @@
 # Changelog
 
-## Unreleased structured EPUB access
+## 0.1.0-alpha.1
+
+First native prerelease. This is an early library/discovery foundation, not 1.0.
+
+- Search Open Library and Archive, evaluate source assets, and acquire selected
+  Archive EPUB/PDF/MP3 files into provenance-bearing untrusted intake packets.
+- Inventory, assess with optional antivirus, snapshot, browse, audit, and initialize
+  library control state through shared Go CLI/TUI services.
+- Retrieve source-bound EPUB text, structured parts, notes, source XML, and local
+  resource bytes with exact continuation and explicit extraction gaps.
+- Bind filesystem validation to held capabilities, bound compressed parser work,
+  and preserve safe, parse-equivalent multilingual terminal output.
+- Package cgo-free Linux, macOS, and Windows archives with SHA-256 checksums.
+
+Resumable downloads, archive extraction, checked publication, mutable managed
+catalogs, complete audiobook management, and MCP remain planned. See the
+[roadmap](ROADMAP.md) and [capability limits](docs/DEVELOPMENT.md).
+
+## Pre-release development history
+
+### Development: structured EPUB access
 
 - Address the EPUB scope of issues 1 and 2 with versioned capability negotiation,
   paragraphs/headings/stanzas, inherited language/direction, and source-bound parts.
@@ -15,7 +35,7 @@
   range-coverage, note/resource, CLI/TUI recovery, and repeated-retrieval tests.
   PDF/OCR, decoded audio ranges, MCP, and external caller validation remain open.
 
-## Unreleased source-bound EPUB access
+### Development: source-bound EPUB access
 
 - Address the first Nemalo-owned slice of issue 1 with offline content units/read
   CLI/JSON over shared services and the existing bounded EPUB container parser.
@@ -25,7 +45,7 @@
   stanza breaks, stale references, changed/missing content, limits, and cancellation.
   MCP, paper/audio ranges, and external caller integration remain open.
 
-## Unreleased managed library initialization
+### Development: managed library initialization
 
 - Add explicit library init/status in CLI/JSON/TUI, stable library identity,
   native reader/writer locks, synced initialization intent/completion, and
@@ -35,7 +55,7 @@
 - Promote the existing x/sys module to direct use without new modules or versions.
   Content publication, mutable catalogs, and import/cleanup recovery remain planned.
 
-## Unreleased terminal browsing and documentation
+### Development: terminal browsing and documentation
 
 - Replace teal with an adaptive indigo/neutral palette; retain no-color focus markers.
 - Add selectable search/holdings, wide-terminal evidence panes, focused details,
@@ -44,7 +64,7 @@
   odd/even terminal widths, focus isolation, selection, and evidence preservation.
 - Shorten the README; move the full product contract and terminal guide into linked docs.
 
-## Unreleased validation and terminal usability
+### Development: validation and terminal usability
 
 - Revalidated the external collection and added four resources using Gutenberg,
   Archive, and arXiv; retained all source files and per-asset evidence outside Git.
@@ -56,7 +76,7 @@
   views exclude receipts without claiming filename validity.
 - Added real-data rendered TUI images and updated validation limits/evidence.
 
-## Unreleased
+### Development:
 
 - Establish Nemalo as an Apache-2.0 Go CLI/TUI application, with no Python prototype
   in the repository. Use `nemalo` as the command/integration identifier.
@@ -91,6 +111,4 @@
   destinations/redirects, cancellable pacing, and Retry-After handling.
 - Update the tagline to "Find knowledge. Care for it. Realize its potential."
 
-Production downloads, full format validation, extraction, checked publication, durable
-mutable library journals/recovery, cleanup, audiobook management, and MCP are not implemented yet.
-Generated analysis/workspaces and model/harness integrations remain post-1.0.
+These entries record development before the first prerelease. Current capability limits are documented above and in docs/DEVELOPMENT.md.

@@ -14,6 +14,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/blisspixel/nemalo/internal/safeio"
 	"github.com/blisspixel/nemalo/internal/scanner"
 )
 
@@ -65,17 +66,21 @@ func Check(ctx context.Context, file string, options Options, av Scanner) (repor
 		return report, err
 	}
 	report.File = abs
-	root, err := os.OpenRoot(filepath.Dir(abs))
+	root, err := safeio.OpenResolvedRoot(filepath.Dir(abs))
 	if err != nil {
 		return report, err
 	}
 	defer root.Close()
-	return CheckInRoot(ctx, root, filepath.Base(abs), options, av)
+	report, err = CheckInRoot(ctx, root, filepath.Base(abs), options, av)
+	report.File = abs
+	return report, err
 }
 
 // CheckInRoot shares the file assessment pipeline with explicitly scoped callers.
 // The supplied name cannot escape root, even if a parent is replaced by a link.
 func CheckInRoot(ctx context.Context, root *os.Root, name string, options Options, av Scanner) (report Report, err error) {
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Minute)
+	defer cancel()
 	if !fs.ValidPath(name) || name == "." || strings.ContainsAny(name, "\\:\x00") {
 		return report, errors.New("invalid root-relative assessment path")
 	}
@@ -90,7 +95,7 @@ func CheckInRoot(ctx context.Context, root *os.Root, name string, options Option
 	if !before.Mode().IsRegular() || before.Size() <= 0 || before.Size() > 256<<20 {
 		return report, errors.New("check requires a regular, nonempty, non-symlink file at most 256 MiB")
 	}
-	source, err := root.Open(name)
+	source, err := safeio.OpenRegular(root, name, before, os.O_RDONLY)
 	if err != nil {
 		return report, err
 	}

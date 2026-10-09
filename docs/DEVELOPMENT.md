@@ -7,7 +7,7 @@ needed for the application, tests, or first-party tooling.
 
 ## Current operations
 
-`help`, `version`, `doctor`, `search`, `evaluate`, `inspect`, `check`, `library snapshot`,
+`help`, `version`, `doctor`, `search`, `evaluate`, `acquire`, `inspect`, `check`, `library snapshot`,
 `library list`, `library audit`, `library init`, `library status`, `content units`,
 `content read`, `content source`, `content resource`, `content capabilities`, and
 `tui` are implemented.
@@ -26,6 +26,8 @@ are currently unsupported. Private/reserved/mixed DNS destinations are rejected,
 and connections use the validated numeric address with normal TLS validation.
 Metadata/rights URLs returned by a provider are not fetched. See
 [decision 0005](decisions/0005-provider-search-and-evaluation.md).
+Explicit selected-file acquisition has its own
+[intake and transfer contract](ACQUISITION.md). It does not publish checked holdings.
 
 Inventory requires an explicit directory. It uses `os.Root`, skips links/special
 files, and reports filename-based candidates without extracting or validating them.
@@ -69,9 +71,16 @@ downloads. Other URLs are escaped candidates constructed on the fixed source hos
 item. No candidate URLs are probed or acquired; no files are scanned or opened.
 An Archive audio item is not necessarily an audiobook, and multiple formats may
 represent the same tracks. Actual edition/recording identity, complete track sets,
-rights policy, production acquisition, and checked publication remain planned.
+rights policy, complete recording acquisition, and checked publication remain planned.
 
 ## File health and scanning
+
+Filesystem capabilities and output encoding follow
+[decision 0008](decisions/0008-filesystem-and-display-boundaries.md). Linux requires
+`/proc/self/fd`, macOS `/dev/fd`; missing facilities fail explicitly. EPUB compressed
+ranges are preflighted; lifetime compressed reads are capped at 1 GiB, expanded
+members retain their separate limits, and assessment has a five-minute deadline.
+JSON escapes terminal-sensitive Unicode without changing parsed data.
 
 ```sh
 nemalo check /path/to/book.epub --json

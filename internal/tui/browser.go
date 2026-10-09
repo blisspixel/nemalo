@@ -18,6 +18,14 @@ type entry struct{ title, summary, detail, sourceID string }
 func (m *model) populate(data any) {
 	m.entries, m.selected, m.details, m.evidence = nil, 0, false, false
 	switch p := data.(type) {
+	case discovery.Evaluation:
+		for _, f := range p.Files {
+			size := "size not declared"
+			if f.Bytes != nil {
+				size = byteSize(*f.Bytes)
+			}
+			m.entries = append(m.entries, entry{title: fmt.Sprintf("%q", f.Name), summary: fmt.Sprintf("%s | %q", size, f.Access), detail: fmt.Sprintf("File: %q\nSource format: %q\nSize: %s\nAccess: %q\nRights: %q\nDRM: %q\n\nFindings: %q\n\nItem rights: %q\nLicense declarations: %q\n\nUse d to review an explicit intake download. Availability is resolved again before transfer; restricted, uncertain, unsupported, or unbounded files are refused.\n", f.Name, f.Format, size, f.Access, f.RightsStatus, f.DRMStatus, f.Findings, p.Rights, p.LicenseURLs), sourceID: f.Name})
+		}
 	case discovery.Page:
 		for _, r := range p.Results {
 			m.entries = append(m.entries, entry{
@@ -140,6 +148,11 @@ func (m *model) browserKey(key string) (bool, tea.Cmd) {
 		return false, nil
 	}
 	switch key {
+	case "d":
+		if m.mode == "evaluate" && len(m.entries) > 0 {
+			m.requestDownload()
+			return true, nil
+		}
 	case "esc":
 		return true, m.focusForm()
 	case "up", "down", "home", "end":

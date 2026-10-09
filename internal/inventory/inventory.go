@@ -12,6 +12,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/blisspixel/nemalo/internal/safeio"
 )
 
 type Limits struct {
@@ -53,20 +55,23 @@ func Inspect(ctx context.Context, path string, limits Limits) (Report, error) {
 		return r, err
 	}
 	r.Root = abs
-	info, err := os.Lstat(abs)
-	if err != nil {
-		return r, err
-	}
-	if !info.IsDir() || info.Mode()&os.ModeSymlink != 0 {
-		return r, errors.New("inventory root must be a directory, not a link")
-	}
-	root, err := os.OpenRoot(abs)
+	root, err := safeio.OpenRoot(abs)
 	if err != nil {
 		return r, err
 	}
 	defer root.Close()
+	return InspectRoot(ctx, root, abs, limits)
+}
+
+// InspectRoot retains the caller's already bound root through later assessment.
+// label is reporting text only; it is never reopened or used as authority.
+func InspectRoot(ctx context.Context, root *os.Root, label string, limits Limits) (Report, error) {
+	r := Report{Root: label, Security: "not_scanned", Entries: []Entry{}}
+	if limits.Entries < 1 || limits.Entries > 100000 || limits.Depth < 1 || limits.Depth > 256 || limits.FileBytes < 1 || limits.TotalBytes < 1 {
+		return r, errors.New("invalid inventory limits")
+	}
 	seen, incomplete := 0, false
-	err = fs.WalkDir(root.FS(), ".", func(name string, d fs.DirEntry, walkErr error) error {
+	err := fs.WalkDir(root.FS(), ".", func(name string, d fs.DirEntry, walkErr error) error {
 		if err := ctx.Err(); err != nil {
 			return err
 		}
@@ -144,7 +149,7 @@ func kind(name string) string {
 }
 
 func hash(ctx context.Context, root *os.Root, name string, before fs.FileInfo, budget int64, read *int64) (string, error) {
-	f, err := root.Open(name)
+	f, err := safeio.OpenRegular(root, name, before, os.O_RDONLY)
 	if err != nil {
 		return "", err
 	}

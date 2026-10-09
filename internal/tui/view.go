@@ -55,7 +55,7 @@ func (m *model) fields() string {
 	case "audit":
 		label, hint, second = "Catalog", "Existing catalog file", "Root"
 	case "evaluate":
-		label, hint = "Item ID", "archive:ITEM (network metadata only; no download)"
+		label, hint, second = "Item ID", "archive:ITEM (Enter retrieves metadata only)", "Intake"
 	case "state":
 		label, hint = "Folder", "Existing library folder; Enter reads status, F7 initializes"
 	case "read":
@@ -91,7 +91,7 @@ func (m *model) contextLine() string {
 		return m.source + "; F2 changes provider | Explicit network search"
 	}
 	if m.mode == "evaluate" {
-		return "Source declarations | No file download or safety verdict"
+		return "Source declarations | Enter evaluates | d reviews an intake download"
 	}
 	if m.mode == "scan" {
 		return "Explicit antivirus | Host cloud/sample policy applies; no remediation"
@@ -122,6 +122,9 @@ func (m *model) top() string {
 }
 
 func (m *model) footer() string {
+	if m.downloadReview != nil {
+		return lipgloss.Wrap(m.paint("Enter acquire  Esc back  PgUp/PgDown review  Ctrl+C quit", warning, false), max(1, m.width-2), " ")
+	}
 	if m.confirmRoot != "" {
 		return lipgloss.Wrap(m.paint("Enter initialize  Esc back  PgUp/PgDown review  Ctrl+C quit", warning, false), max(1, m.width-2), " ")
 	}
@@ -133,6 +136,9 @@ func (m *model) footer() string {
 		}
 		if m.mode == "holdings" && len(m.entries) > 0 {
 			help += "  r source access"
+		}
+		if m.mode == "evaluate" && len(m.entries) > 0 {
+			help += "  d acquire"
 		}
 		if m.mode == "read" {
 			help = "Enter unit  n next range  r repeat  u units  F6 edit  Ctrl+C quit"
@@ -161,7 +167,7 @@ func (m *model) View() tea.View {
 	}
 	state := m.statusText()
 	color := accent
-	if m.busy || m.confirmRoot != "" {
+	if m.busy || m.confirmRoot != "" || m.downloadReview != nil {
 		color = warning
 	} else if strings.Contains(state, "Incomplete") || strings.Contains(state, "error") {
 		color = danger
@@ -182,7 +188,7 @@ func (m *model) View() tea.View {
 func (m *model) resize() {
 	m.input.SetWidth(max(1, m.width-16))
 	m.secondary.SetWidth(max(1, m.width-16))
-	m.secondary.Placeholder = map[string]string{"snapshot": "New catalog path outside the source folder", "holdings": "Optional title, language, filename, or hash", "audit": "Explicit source directory (required)", "read": "Explicit source directory (required)"}[m.mode]
+	m.secondary.Placeholder = map[string]string{"snapshot": "New catalog path outside the source folder", "holdings": "Optional title, language, filename, or hash", "audit": "Explicit source directory (required)", "read": "Explicit source directory (required)", "evaluate": "New untrusted intake directory, for d acquire"}[m.mode]
 	// Layout height follows the actual wrapped navigation, context, and help.
 	reserved := lipgloss.Height(m.top()) + lipgloss.Height(m.footer()) + lipgloss.Height(m.statusText()) + lipgloss.Height(m.position()) + 2
 	m.viewport.SetHeight(max(1, m.height-reserved))
@@ -210,6 +216,9 @@ func (m *model) statusText() string {
 }
 
 func (m *model) position() string {
+	if m.downloadReview != nil {
+		return fmt.Sprintf("Review acquisition | Scroll %.0f%%", m.viewport.ScrollPercent()*100)
+	}
 	if m.confirmRoot != "" {
 		return fmt.Sprintf("Review initialization | Scroll %.0f%%", m.viewport.ScrollPercent()*100)
 	}
@@ -246,7 +255,7 @@ func (m *model) emptyHelp() string {
 	case "holdings":
 		return "Browse your collection.\n\nChoose a saved catalog and optionally filter by title or language.\nEPUB filenames are selected by default; F4 changes the format."
 	case "evaluate":
-		return "Look before acquiring.\n\nEnter archive:ITEM, or select an Archive search result and press e.\nEnter retrieves declared files, restrictions, and rights metadata only."
+		return "Look before acquiring.\n\nEnter archive:ITEM, or select an Archive search result and press e.\nEnter retrieves metadata only. F6 browses source files.\nEnter a new intake folder with Ctrl+N; select a file and press d to review acquisition.\nDownloads remain untrusted; existing intake is never overwritten."
 	case "state":
 		return "Establish a library identity.\n\nEnter an existing folder, then Enter to read its control status.\nF7 reviews initialization before writing only Nemalo control metadata.\nThis does not import or validate content."
 	case "read":

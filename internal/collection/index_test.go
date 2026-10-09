@@ -6,6 +6,7 @@ import (
 	"io"
 	"strings"
 	"testing"
+	"unicode"
 )
 
 type failingWriter struct{}
@@ -31,5 +32,29 @@ func TestIndex(t *testing.T) {
 	}
 	if err := WriteIndex(failingWriter{}, m, r, "intake"); !errors.Is(err, io.ErrClosedPipe) {
 		t.Fatal("write error swallowed")
+	}
+}
+
+func TestIndexControlsAcrossAllProse(t *testing.T) {
+	payload := "日本語 العربية café\x1b]52;c;payload\a\b\u009b\u009d\u202e\u2066\u2069\U000e0001"
+	m := fixture()
+	r := &m.Resources[0]
+	r.Title, r.Rationale, r.Rights, r.Notes = payload, payload, payload, payload
+	r.Authors, r.Languages = []string{payload}, []string{payload}
+	report := Report{Results: []Result{{ResourceID: r.ID, Acquired: true, Assets: []Receipt{{Asset: Asset{Name: payload}, SHA256: payload}}}}}
+	var out bytes.Buffer
+	if err := WriteIndex(&out, m, report, payload); err != nil {
+		t.Fatal(err)
+	}
+	for _, r := range out.String() {
+		if unicode.Is(unicode.Cf, r) || (unicode.IsControl(r) && r != '\n' && r != '\t') {
+			t.Fatalf("raw control in index: %U", r)
+		}
+	}
+	if !strings.Contains(out.String(), "日本語 العربية café") || !strings.Contains(out.String(), `\\u001b`) {
+		t.Fatal("visible evidence or multilingual text lost", out.String())
+	}
+	if m.Resources[0].Title != payload {
+		t.Fatal("source metadata was altered")
 	}
 }

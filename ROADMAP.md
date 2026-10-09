@@ -81,11 +81,15 @@ This does not implement content catalog mutations or import/cleanup recovery.
 See [decision 0006](docs/decisions/0006-library-control-state.md).
 
 Milestone 1 remains in progress: richer domain identities, mutable content catalogs,
-import/cleanup recovery, and packaged release/checksum work are outstanding. Milestone 2
+and import/cleanup recovery are outstanding. Native archive/checksum packaging is
+implemented; releases still require the actual verification and publication gates.
+Milestone 2
 has inventory and standalone signatures/private snapshots, without archive
 extraction or production staging. Milestone 5 has
-two discovery adapters and source-declared Archive file/access/rights evaluation,
-without production acquisition. All remaining production
+two discovery adapters, source-declared Archive file/access/rights evaluation,
+and selected EPUB/PDF/MP3 acquisition into exclusive untrusted intake packets.
+Validator-bound resume, complete track sets, and checked publication remain planned.
+All remaining production
 capabilities stay planned. A configured CI workflow is not itself a hosted pass.
 The initial foundation passed hosted native CI on Linux, macOS, and Windows.
 The [collection harness](docs/VALIDATION.md) separately exercises curated real assets
@@ -256,8 +260,10 @@ Acceptance:
 
 ## Milestone 5: collection discovery and selected downloads
 
-Status: partial. Open Library/Archive search and Archive source evaluation exist.
-Gutenberg production integration, acquisition, and broader provider contracts remain
+Status: partial. Open Library/Archive search, Archive source evaluation, and
+selected-file intake acquisition exist in CLI/JSON/TUI. See the
+[acquisition contract](docs/ACQUISITION.md). Resume, complete recording downloads,
+Gutenberg production integration, and broader provider contracts remain
 planned. Transfers and checked publication use milestones 2 and 3. Source cleanup
 is independent and requires 4.
 

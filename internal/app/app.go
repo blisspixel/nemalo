@@ -4,6 +4,7 @@ package app
 import (
 	"context"
 	"errors"
+	"github.com/blisspixel/nemalo/internal/acquisition"
 	"os/exec"
 	"runtime"
 	"strings"
@@ -19,6 +20,14 @@ import (
 
 type Searcher interface {
 	Search(context.Context, string, int, int) (discovery.Page, error)
+}
+
+func (s Service) Acquire(ctx context.Context, request acquisition.Request) (acquisition.Result, error) {
+	provider, ok := s.Providers["archive"].(acquisition.Provider)
+	if !ok {
+		return acquisition.Result{}, errors.New("archive acquisition is unavailable")
+	}
+	return acquisition.Acquire(ctx, provider, request)
 }
 
 type Service struct {

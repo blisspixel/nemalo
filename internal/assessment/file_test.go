@@ -263,7 +263,7 @@ func TestReferenceBudgetsAndCancellation(t *testing.T) {
 	if err != nil || c.EPUB.TextCharacters != 4 || !strings.Contains(strings.Join(c.Warnings, ";"), "repeated reading-order") {
 		t.Fatal(c, err)
 	}
-	r := &metadataReader{r: bytes.NewReader([]byte("hello")), remaining: 2, limited: true}
+	r := &metadataReader{r: bytes.NewReader([]byte("hello")), remaining: 2, workRemaining: 100, limited: true}
 	if _, err := r.ReadAt(make([]byte, 3), 0); err == nil {
 		t.Fatal("metadata budget ignored")
 	}

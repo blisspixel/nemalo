@@ -19,6 +19,9 @@ import (
 	"time"
 
 	"github.com/blisspixel/nemalo/internal/assessment"
+	"github.com/blisspixel/nemalo/internal/discovery"
+	"github.com/blisspixel/nemalo/internal/safeio"
+	"github.com/blisspixel/nemalo/internal/transfer"
 )
 
 type Asset struct {
@@ -81,7 +84,6 @@ type Report struct {
 }
 
 var identifier = regexp.MustCompile(`^[a-z0-9][a-z0-9._-]{0,100}$`)
-var archiveDeliveryHost = regexp.MustCompile(`^(ia|dn)[0-9]{6}\.(us|ca)\.archive\.org$`)
 
 func Load(r io.Reader) (Manifest, error) {
 	var m Manifest
@@ -141,25 +143,19 @@ func permittedURL(raw string) error {
 	if err != nil || u.Scheme != "https" || u.User != nil || u.Port() != "" || u.Fragment != "" {
 		return fmt.Errorf("disallowed download URL %q", raw)
 	}
-	h := u.Hostname()
-	allowed := h == "gutenberg.pglaf.org" || h == "mirror.cs.odu.edu" || h == "archive.org" || h == "www.archive.org" || h == "export.arxiv.org" || h == "arxiv.org"
-	// Observed Archive delivery redirects use numbered ia/dn hosts in US/Canada.
-	if archiveDeliveryHost.MatchString(h) {
-		allowed = true
-	}
-	if !allowed {
+	h := u.Host
+	if !permittedHost(h) {
 		return fmt.Errorf("download host %q is outside curated providers", h)
 	}
 	return nil
 }
 
 func NewClient() *http.Client {
-	return &http.Client{Timeout: 5 * time.Minute, CheckRedirect: func(req *http.Request, via []*http.Request) error {
-		if len(via) >= 5 {
-			return errors.New("too many download redirects")
-		}
-		return permittedURL(req.URL.String())
-	}}
+	return discovery.NewFileClient(permittedHost)
+}
+
+func permittedHost(host string) bool {
+	return discovery.ArchiveDownloadHost(host) || host == "gutenberg.pglaf.org" || host == "mirror.cs.odu.edu" || host == "export.arxiv.org" || host == "arxiv.org"
 }
 
 type Acquirer struct {
@@ -189,7 +185,7 @@ func (a Acquirer) Acquire(ctx context.Context, m Manifest, directory string, pro
 	if err != nil || !info.IsDir() || info.Mode()&os.ModeSymlink != 0 {
 		return report, errors.New("collection root must be a real directory")
 	}
-	root, err := os.OpenRoot(directory)
+	root, err := safeio.OpenRoot(directory)
 	if err != nil {
 		return report, err
 	}
@@ -254,7 +250,7 @@ func (a *Acquirer) acquireAsset(ctx context.Context, root *os.Root, id string, a
 		if err != nil || !info.Mode().IsRegular() || info.Size() > 64<<10 {
 			return receipt, 0, errors.New("existing file has no regular bounded receipt; refusing overwrite")
 		}
-		receiptFile, err := root.Open(name + ".receipt.json")
+		receiptFile, err := safeio.OpenRegular(root, name+".receipt.json", info, os.O_RDONLY)
 		if err != nil {
 			return receipt, 0, errors.New("existing file has no receipt; refusing overwrite")
 		}
@@ -267,7 +263,11 @@ func (a *Acquirer) acquireAsset(ctx context.Context, root *os.Root, id string, a
 		if err := json.Unmarshal(data, &old); err != nil || old.Asset.URL != asset.URL || old.Asset.Name != asset.Name || old.Asset.Format != asset.Format || old.ResourceID != id || old.Bytes <= 0 || old.Bytes > 256<<20 {
 			return receipt, 0, errors.New("existing receipt does not match selection")
 		}
-		f, err := root.Open(name)
+		assetInfo, err := root.Lstat(name)
+		if err != nil {
+			return receipt, 0, err
+		}
+		f, err := safeio.OpenRegular(root, name, assetInfo, os.O_RDONLY)
 		if err != nil {
 			return receipt, 0, err
 		}
@@ -322,18 +322,12 @@ func (a *Acquirer) acquireAsset(ctx context.Context, root *os.Root, id string, a
 		return receipt, 0, err
 	}
 	defer func() { _ = f.Close(); _ = root.Remove(name + ".partial") }()
-	h := sha256.New()
-	n, err := io.Copy(io.MultiWriter(f, h), io.LimitReader(res.Body, limit+1))
+	stream, err := transfer.Copy(ctx, f, res.Body, limit, transfer.Expectation{Bytes: res.ContentLength})
+	n := stream.Bytes
 	if err != nil {
 		return receipt, n, err
 	}
-	if n == 0 || n > limit {
-		return receipt, n, errors.New("empty download or transfer limit exceeded")
-	}
-	if res.ContentLength >= 0 && res.ContentLength != n {
-		return receipt, n, errors.New("truncated download")
-	}
-	receipt.Bytes, receipt.SHA256 = n, hex.EncodeToString(h.Sum(nil))
+	receipt.Bytes, receipt.SHA256 = n, stream.SHA256
 	receipt.AcquiredAt, receipt.FinalURL = time.Now().UTC(), res.Request.URL.String()
 	receipt.Checks, err = assessment.InspectContext(ctx, f, n, asset.Format)
 	if err != nil {

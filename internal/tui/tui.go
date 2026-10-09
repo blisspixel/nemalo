@@ -3,7 +3,6 @@ package tui
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"io"
 	"os"
@@ -12,6 +11,7 @@ import (
 	"charm.land/bubbles/v2/textinput"
 	"charm.land/bubbles/v2/viewport"
 	tea "charm.land/bubbletea/v2"
+	"github.com/blisspixel/nemalo/internal/acquisition"
 	"github.com/blisspixel/nemalo/internal/app"
 	"github.com/blisspixel/nemalo/internal/assessment"
 	"github.com/blisspixel/nemalo/internal/content"
@@ -19,6 +19,7 @@ import (
 	"github.com/blisspixel/nemalo/internal/inventory"
 	"github.com/blisspixel/nemalo/internal/library"
 	"github.com/blisspixel/nemalo/internal/present"
+	"github.com/blisspixel/nemalo/internal/textsafe"
 )
 
 type result struct {
@@ -64,6 +65,7 @@ type model struct {
 	id               int
 	cancel           context.CancelFunc
 	reader           readerState
+	downloadReview   *acquisition.Request
 }
 
 func newModel(ctx context.Context, service app.Service) *model {
@@ -116,6 +118,15 @@ func (m *model) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		m.status = "Complete."
 		switch value := msg.data.(type) {
+		case acquisition.Result:
+			if msg.err == nil {
+				m.status = "Downloaded to untrusted intake. Antivirus not scanned; checked publication pending."
+				for _, mode := range []string{"check", "scan"} {
+					d := m.drafts[mode]
+					d.input = value.ContentPath
+					m.drafts[mode] = d
+				}
+			}
 		case discovery.Page:
 			if msg.err == nil {
 				m.offset, m.total = value.Offset, value.Total
@@ -150,8 +161,10 @@ func (m *model) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 			m.populate(nil)
 			m.evidence = true
 		}
-		data, err := json.MarshalIndent(msg.data, "", "  ")
+		data, err := textsafe.MarshalJSON(msg.data, true)
 		switch value := msg.data.(type) {
+		case acquisition.Result:
+			data = []byte(present.Acquisition(value))
 		case library.State:
 			data = []byte(present.LibraryState(value))
 		case discovery.Evaluation:
@@ -186,6 +199,9 @@ func (m *model) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 			return m, m.focusForm()
 		}
 	case tea.KeyPressMsg:
+		if m.downloadReview != nil {
+			return m, m.confirmDownload(msg)
+		}
 		if m.confirmRoot != "" {
 			return m, m.confirmInitialization(msg)
 		}
@@ -272,7 +288,7 @@ func (m *model) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			m.id++
 			m.busy = false
-			m.status = "Cancelled. Sources unchanged."
+			m.status = "Cancelled. Any started download remains in its intake folder."
 			m.resize()
 			if !m.resultsFocused {
 				return m, m.focusForm()
@@ -315,7 +331,7 @@ func (m *model) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m *model) form() bool {
-	return m.mode == "snapshot" || m.mode == "holdings" || m.mode == "audit" || m.mode == "read"
+	return m.mode == "snapshot" || m.mode == "holdings" || m.mode == "audit" || m.mode == "read" || m.mode == "evaluate"
 }
 
 func Run(ctx context.Context, service app.Service, in io.Reader, out io.Writer) error {

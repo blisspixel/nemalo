@@ -20,6 +20,10 @@ While work runs, Escape cancels it. Ctrl+C quits from anywhere.
 In Archive search results, `e` fills the evaluation form with the selected item
 ID. This makes no request; Enter explicitly retrieves metadata. Evaluation does
 not download content, determine file-level rights, or establish safety.
+Evaluation also lists source files. Enter a new Intake directory with Ctrl+N,
+focus a file with F6, then `d` reviews the exact acquisition before a confirming
+Enter. Downloads remain untrusted; Check/Scan are staged afterward. See
+[acquisition](ACQUISITION.md) for incomplete-packet handling and bounds.
 
 ## Commands and shortcuts
 
@@ -38,9 +42,10 @@ not download content, determine file-level rights, or establish safety.
 | F3 in inspect, snapshot, audit | Select bounded 1 GiB / 5 GiB read budget |
 | F4 in holdings | Cycle EPUB / PDF / MP3 / all filename filters |
 | F7 in State | Review initialization of an explicit existing folder |
-| Ctrl+N in library forms | Switch between fields |
+| Ctrl+N in two-field forms | Switch between fields |
 | Ctrl+A in snapshot | Toggle historical health metadata |
 | e in Archive results | Prepare selected-item evaluation, without requesting it |
+| d in Evaluate results | Review selected-file acquisition into a new intake directory |
 | r in Holdings results | Stage source access; explicit root still required |
 | Enter in Read results | Retrieve the selected source unit |
 | n / r / u in Read results | Next range / repeat last request / list units |
