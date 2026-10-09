@@ -4,8 +4,10 @@ package main
 import (
 	"context"
 	"debug/buildinfo"
+	"encoding/json"
 	"flag"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -45,6 +47,38 @@ func run(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+	goRoot, err := exec.CommandContext(ctx, "go", "env", "GOROOT").Output()
+	if err != nil {
+		return err
+	}
+	goLicense, err := os.ReadFile(filepath.Join(strings.TrimSpace(string(goRoot)), "LICENSE"))
+	if err != nil {
+		return err
+	}
+	moduleData, err := exec.CommandContext(ctx, "go", "list", "-m", "-json", "all").Output()
+	if err != nil {
+		return err
+	}
+	modules := make(map[string]release.Dependency)
+	decoder := json.NewDecoder(strings.NewReader(string(moduleData)))
+	for {
+		var module struct {
+			Path, Version, Dir string
+			Main               bool
+			Replace            *json.RawMessage
+		}
+		if err := decoder.Decode(&module); err == io.EOF {
+			break
+		} else if err != nil {
+			return err
+		}
+		if module.Replace != nil {
+			return fmt.Errorf("release packaging does not accept module replacements")
+		}
+		if !module.Main {
+			modules[module.Path] = release.Dependency{Path: module.Path, Version: module.Version, Directory: module.Dir}
+		}
+	}
 	abs, err := filepath.Abs(*output)
 	if err != nil {
 		return err
@@ -83,11 +117,23 @@ func run(ctx context.Context) error {
 		if settings["GOOS"] != target.OS || settings["GOARCH"] != target.Arch || settings["CGO_ENABLED"] != "0" || settings["vcs.revision"] != strings.TrimSpace(string(revision)) || settings["vcs.modified"] != "false" {
 			return fmt.Errorf("release binary metadata does not match the clean source revision and target")
 		}
+		var dependencies []release.Dependency
+		for _, dep := range info.Deps {
+			module, ok := modules[dep.Path]
+			if !ok || module.Version != dep.Version || dep.Replace != nil {
+				return fmt.Errorf("binary dependency does not match the pinned module graph: %s", dep.Path)
+			}
+			dependencies = append(dependencies, module)
+		}
+		notices, err := release.Notices(info.GoVersion, goLicense, dependencies)
+		if err != nil {
+			return err
+		}
 		binary, err := os.ReadFile(name)
 		if err != nil {
 			return err
 		}
-		a, err := release.Archive(abs, cli.Version, target, binary, license)
+		a, err := release.Archive(abs, cli.Version, target, binary, license, notices)
 		if err != nil {
 			return err
 		}

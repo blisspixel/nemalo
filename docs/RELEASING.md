@@ -28,7 +28,9 @@ The Go packaging command refuses a dirty checkout and existing output, validates
 each executable's embedded target and clean VCS revision, and rechecks the source
 checkout before finalizing manifests. Choose an ignored or external output. It builds
 cgo-free amd64/arm64 executables for all three OSes using the pinned toolchain.
-Archives contain only the executable, Apache license, and short usage guide.
+Archives contain only the executable, Apache license, upstream third-party license
+notices, and short usage guide. Notices are selected from the executable's embedded
+module list and pinned module cache, with missing licenses and replacements rejected.
 Packaging uses fixed timestamps and is reproducible for identical binary inputs;
 this is not a claim of independently reproduced compiler output. Build failures
 leave output for diagnosis and never publish automatically.

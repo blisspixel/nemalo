@@ -27,13 +27,13 @@ type Artifact struct {
 	Bytes        int
 }
 
-func Archive(directory, version string, target Target, binary, license []byte) (Artifact, error) {
+func Archive(directory, version string, target Target, binary, license, notices []byte) (Artifact, error) {
 	var result Artifact
 	valid := false
 	for _, t := range Targets {
 		valid = valid || t == target
 	}
-	if !valid || !versionPattern.MatchString(version) || len(binary) == 0 || len(binary) > 128<<20 || len(license) == 0 {
+	if !valid || !versionPattern.MatchString(version) || len(binary) == 0 || len(binary) > 128<<20 || len(license) == 0 || len(notices) == 0 {
 		return result, errors.New("invalid release version, target, binary, or license")
 	}
 	name := "nemalo"
@@ -45,7 +45,7 @@ func Archive(directory, version string, target Target, binary, license []byte) (
 		name string
 		data []byte
 		mode int64
-	}{{name, binary, 0755}, {"LICENSE", license, 0644}, {"USAGE.txt", usage, 0644}}
+	}{{name, binary, 0755}, {"LICENSE", license, 0644}, {"THIRD_PARTY_NOTICES.txt", notices, 0644}, {"USAGE.txt", usage, 0644}}
 	var out bytes.Buffer
 	stamp := time.Date(1980, 1, 1, 0, 0, 0, 0, time.UTC)
 	ext := ".tar.gz"
