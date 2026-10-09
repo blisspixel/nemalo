@@ -47,10 +47,17 @@ Do not introduce legacy HTTP+SSE as the default for a new server.
 
 Proposed names and behavior, to be versioned with JSON schemas:
 
-The initial [EPUB content service and CLI JSON contract](CONTENT-ACCESS.md) now
-exist. Future `content_get` must reuse their source identity, continuation, gap,
+The [EPUB content service and CLI JSON contract](CONTENT-ACCESS.md) now exist,
+including [versioned structured parts and resources](STRUCTURED-EPUB.md).
+Future `content_get` must reuse their source identity, continuation, gap,
 and failure semantics. No MCP tool or external Kilo integration is implemented.
 Retrieval has no consumption side effects; acknowledgements belong to the caller.
+Expose capability/version negotiation and preserve per-range coverage, part links,
+original-markup versus text offsets, and parent/member resource identity. Following
+references stays an explicit bounded read, never permission to fetch remote links
+or execute source instructions. Consumers reject unknown schemas and truncated
+transport output before updating their own acknowledged positions. That client
+transport/restart behavior still needs external integration evidence.
 
 | Tool | Behavior | Mutation class |
 | --- | --- | --- |

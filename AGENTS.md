@@ -105,6 +105,9 @@ Source-bound text retrieval belongs in `internal/content`, exposed by `internal/
 see `docs/CONTENT-ACCESS.md` and issue 1. Reuse assessment's container parser.
 Preserve stateless offline reads, exact-byte/extractor-bound references, explicit
 unsupported units, no silent continuation skips, and no inferred consumption.
+Keep the default text representation compatible; structured parts/resources use
+explicit versions and the same container parser. Test located gaps and range
+coverage separately from source bytes, rendering, safety, and semantic completeness.
 
 Test behavior and failure recovery, not just execution. Use synthetic fixtures;
 never personal downloads. Give cleanup, parser boundaries, scanner skips, and

@@ -111,6 +111,8 @@ func (s Service) Content(ctx context.Context, req content.Request) (content.Resu
 	return content.Get(ctx, req)
 }
 
+func (s Service) ContentCapabilities() content.Capabilities { return content.Available() }
+
 type Capability struct {
 	Name      string `json:"name"`
 	Available bool   `json:"available"`

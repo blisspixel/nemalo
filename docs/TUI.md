@@ -26,7 +26,7 @@ not download content, determine file-level rights, or establish safety.
 | Key | Action |
 | --- | --- |
 | Tab / Shift+Tab | Next / previous operation |
-| Alt+1..9 | Jump to the numbered operation |
+| Alt+1..9, Alt+0 | Jump to the numbered operation; 0 selects Read |
 | Enter in form | Run the explicit operation |
 | F6 | Focus results / return to editing |
 | Up / Down, Home / End in results | Select an item |
@@ -41,6 +41,9 @@ not download content, determine file-level rights, or establish safety.
 | Ctrl+N in library forms | Switch between fields |
 | Ctrl+A in snapshot | Toggle historical health metadata |
 | e in Archive results | Prepare selected-item evaluation, without requesting it |
+| r in Holdings results | Stage source access; explicit root still required |
+| Enter in Read results | Retrieve the selected source unit |
+| n / r / u in Read results | Next range / repeat last request / list units |
 | Escape | Back; cancel active work |
 | Ctrl+C | Quit |
 
@@ -53,6 +56,22 @@ exact folder and control-file writes; a second Enter initializes it. Escape retu
 without writing. Review freezes fields/navigation and supports PageUp/PageDown.
 This establishes control state, not a checked content library; see
 [the state contract](decisions/0006-library-control-state.md).
+
+## Source access
+
+Select a Holdings asset and press `r`. This stages Read without reading files.
+Use Ctrl+N to enter the explicit source root, then Enter lists EPUB spine units.
+F6 focuses the list; Enter retrieves up to 4096 structured-text bytes from the
+selected unit. The report preserves lines and escapes terminal control bytes.
+It reports extraction gaps and references outside the delivered range.
+
+In focused Read results, `n` requests the returned continuation, `r` repeats the
+last request, and `u` lists units again. Failed requests retain the previous next
+reference; repeat retries the failed request. Changing catalog/root requires a
+fresh units request before continuation. Switching operations preserves the
+session's report and references. Nothing records reading or acknowledgement.
+The CLI exposes note/source/resource references; the TUI does not yet navigate
+notes, render images, or play audio. Unsupported units fail explicitly.
 
 ## Appearance and boundaries
 
@@ -75,3 +94,5 @@ not OS screenshots or mockups. Downloaded content and private paths are excluded
 ![Multilingual EPUB holdings and selected evidence](images/tui-holdings.png)
 
 ![Internet Archive discovery and selected source evidence](images/tui-discovery.png)
+
+![Bounded source reading from Alice's Adventures in Wonderland](images/tui-reading.png)

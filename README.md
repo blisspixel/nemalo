@@ -19,7 +19,8 @@ AI service. Future agent interfaces will use the same application services.
   measurements, with optional installed antivirus.
 - Save portable catalog snapshots, browse holdings, and audit changed/missing files.
 - Initialize library control state with locking and resumable initialization.
-- Retrieve bounded EPUB text with source-bound locators and continuation in CLI/JSON.
+- Retrieve bounded EPUB text in CLI/JSON/TUI, with exact continuation, source parts,
+  note references, local image bytes, and explicit extraction gaps.
 - Use CLI, versioned JSON, or an interactive terminal interface.
 
 Production downloading, archive intake, checked publication, import recovery,

@@ -294,12 +294,12 @@ func TestRequestAndCursorValidation(t *testing.T) {
 			t.Fatal("accepted invalid request", r)
 		}
 	}
-	for _, token := range []string{"%", encodeCursor(cursor{2, "a", Extractor, "b", 0, 0}), encodeCursor(cursor{1, "a", Extractor, "b", -1, 0}), "e30", "bm90IGpzb24"} {
+	for _, token := range []string{"%", encodeCursor(cursor{SchemaVersion: 2, AssetID: "a", Extractor: Extractor, RepresentationID: "b"}), encodeCursor(cursor{SchemaVersion: 1, AssetID: "a", Extractor: Extractor, RepresentationID: "b", Unit: -1}), "e30", "bm90IGpzb24"} {
 		if _, err := parseCursor(token); err == nil {
 			t.Fatal("accepted invalid cursor", token)
 		}
 	}
-	valid, _ := json.Marshal(cursor{1, base.AssetID, Extractor, "sha256:" + strings.Repeat("0", 64), 0, 0})
+	valid, _ := json.Marshal(cursor{SchemaVersion: 1, AssetID: base.AssetID, Extractor: Extractor, RepresentationID: "sha256:" + strings.Repeat("0", 64)})
 	for _, raw := range []string{
 		strings.Replace(string(valid), `"schema_version":1`, `"schema_version":1,"schema_version":1`, 1),
 		strings.Replace(string(valid), `"schema_version":1`, `"unknown":true,"schema_version":1`, 1),

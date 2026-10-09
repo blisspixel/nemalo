@@ -1,5 +1,20 @@
 # Changelog
 
+## Unreleased structured EPUB access
+
+- Address the EPUB scope of issues 1 and 2 with versioned capability negotiation,
+  paragraphs/headings/stanzas, inherited language/direction, and source-bound parts.
+- Resolve local note/backlink references and disclose cycles without auto-following.
+  Expose source alt text, captions, and bounded image-member bytes with parent/member
+  hashes. Remote resources remain unfetched; missing alt text stays explicit.
+- Locate unsupported tables/math/hidden content as gaps instead of flattening them.
+  Add bounded original XHTML/XML retrieval, preserving table spans and source math.
+- Add TUI unit selection, exact repeat/continuation, explicit-root staging from
+  Holdings, escaped source lines, and session navigation without consumption records.
+- Keep the existing plain-text representation available. Add hostile-boundary,
+  range-coverage, note/resource, CLI/TUI recovery, and repeated-retrieval tests.
+  PDF/OCR, decoded audio ranges, MCP, and external caller validation remain open.
+
 ## Unreleased source-bound EPUB access
 
 - Address the first Nemalo-owned slice of issue 1 with offline content units/read
@@ -8,7 +23,7 @@
   explicit unsupported document gaps, bounded errors, and no reading-history writes.
 - Test more than 300 actual retrieval cycles, retries, interleaved works, Unicode,
   stanza breaks, stale references, changed/missing content, limits, and cancellation.
-  TUI reading, MCP, paper/audio ranges, and external caller integration remain open.
+  MCP, paper/audio ranges, and external caller integration remain open.
 
 ## Unreleased managed library initialization
 

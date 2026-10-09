@@ -218,7 +218,15 @@ An initial [source-bound EPUB text service](CONTENT-ACCESS.md) is implemented in
 `internal/content`, using the canonical assessment container parser and shared
 application boundary. It is offline and stateless; callers own acknowledgement.
 Unsupported units are explicit and continuations never silently skip them.
-CLI/JSON expose it; TUI content access, MCP, PDF/audio ranges, and indexes remain planned.
+CLI/JSON and the TUI Read operation expose it. Explicit version negotiation adds
+structured EPUB parts, local note references, source XML, and hash-bound image
+member bytes through the same services and container parser. Located text gaps
+are distinct from retained source markup and unknown rendered/semantic coverage.
+Assessment warnings remain review evidence; typed access restrictions prohibit
+active/encrypted/repeated-spine content, while remote static references are disclosed
+without fetching them. No retrieved bytes are rendered or executed. See
+[the structured contract](STRUCTURED-EPUB.md). MCP, PDF/audio ranges, and indexes
+remain planned.
 
 Expand bounded text extraction and search per supported format. Derived indexes key
 on asset hash and extractor version; rebuild them without modifying originals.

@@ -93,4 +93,22 @@ func TestContentCLIContract(t *testing.T) {
 	if code != 0 || !strings.Contains(out, `"text": "Read a little.`) {
 		t.Fatal(code, out)
 	}
+	code, out, _ = execute(t, []string{"content", "capabilities", "--json"}, nil)
+	if code != 0 || !strings.Contains(out, "epub-structure/1") || !strings.Contains(out, "epub-source/1") {
+		t.Fatal(code, out)
+	}
+	rich := append(append([]string{}, base...), "--representation", "epub-structure/1")
+	code, out, _ = execute(t, rich, nil)
+	if err := json.Unmarshal([]byte(out), &envelope); err != nil || code != 0 || len(envelope.Data.Parts) == 0 || envelope.Data.Coverage == nil {
+		t.Fatal(code, out, err)
+	}
+	source := []string{"content", "source", catalog, "--root", root, "--asset", s.Catalog.Assets[0].ID, "--cursor", envelope.Data.Parts[0].SourceReference, "--json"}
+	code, out, _ = execute(t, source, nil)
+	if code != 0 || !strings.Contains(out, "member_utf8_bytes") || !strings.Contains(out, `\u003cp\u003eRead`) {
+		t.Fatal(code, out)
+	}
+	code, out, _ = execute(t, []string{"content", "resource", catalog, "--root", root, "--asset", s.Catalog.Assets[0].ID, "--json"}, nil)
+	if code != 1 || !strings.Contains(out, "invalid_request") {
+		t.Fatal(code, out)
+	}
 }

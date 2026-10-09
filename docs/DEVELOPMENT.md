@@ -9,7 +9,8 @@ needed for the application, tests, or first-party tooling.
 
 `help`, `version`, `doctor`, `search`, `evaluate`, `inspect`, `check`, `library snapshot`,
 `library list`, `library audit`, `library init`, `library status`, `content units`,
-`content read`, and `tui` are implemented.
+`content read`, `content source`, `content resource`, `content capabilities`, and
+`tui` are implemented.
 Search defaults to Open Library work metadata; `--source archive` selects Internet
 Archive text/audio item search. Neither search resolves download permissions.
 Only explicit query terms, paging/field parameters, and client identification go to
@@ -40,9 +41,11 @@ startup network request. Source text and paths are escaped; reports are wrapped
 at grapheme boundaries without discarding original evidence. Scopes and scanner
 cloud policy remain explicit. See the [terminal guide](TUI.md) for keyboard
 controls, budgets, paging, appearance, and application-view captures.
-Content retrieval currently uses CLI/JSON and shared services; its TUI and MCP
-interfaces remain planned. See [source-bound access](CONTENT-ACCESS.md) for the
-implemented format subset, byte/continuation contracts, bounds, and issue 1 scope.
+Content retrieval uses CLI/JSON and the TUI Read operation over shared services.
+Capability negotiation, structured EPUB parts, note references, original markup,
+and bounded local image bytes are available in CLI/JSON. MCP remains planned.
+See [source-bound access](CONTENT-ACCESS.md) and [structured EPUB](STRUCTURED-EPUB.md)
+for supported representations, exact contracts, bounds, and remaining issue scope.
 
 JSON mode uses schema version 1 and exit codes 0
 (success), 1 (failed/incomplete operation), and 2 (usage/configuration error).

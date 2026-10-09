@@ -179,6 +179,10 @@ func TestTerminalWorkflow(t *testing.T) {
 		t.Fatal("library state operation unavailable")
 	}
 	m.Update(key(tea.KeyTab))
+	if m.mode != "read" {
+		t.Fatal("source access mode unavailable")
+	}
+	m.Update(key(tea.KeyTab))
 	if m.mode != "search" {
 		t.Fatal("mode not restored")
 	}

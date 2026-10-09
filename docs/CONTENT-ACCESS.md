@@ -1,10 +1,17 @@
 # Source-bound content access
 
-Implemented initial EPUB slice, 2026-10-08. Tracks
-[issue 1](https://github.com/blisspixel/nemalo/issues/1); the full issue remains open.
-CLI JSON uses `internal/app.Service.Content` and `internal/content`. There is no
-MCP server, content-reading TUI, PDF extractor, audio-range service, or Kilo adapter
-yet. This work does not bypass production import/publication gates.
+Implemented EPUB access, 2026-10-08. Tracks
+[issue 1](https://github.com/blisspixel/nemalo/issues/1) and
+[issue 2](https://github.com/blisspixel/nemalo/issues/2); full cross-format/caller
+acceptance remains open. CLI/JSON and TUI use `internal/app.Service.Content` and
+`internal/content`. There is no MCP server, PDF extractor, audio-range service,
+or Kilo adapter yet. This work does not bypass production import/publication gates.
+
+The existing default `epub-text/1` contract below remains available. Opt into
+`epub-structure/1` for source parts, note links, figures, and located gaps;
+`epub-source/1` returns bounded original XML. `content capabilities --json` lists
+implemented representations. See [structured EPUB access](STRUCTURED-EPUB.md)
+for commands, offsets, coverage, resources, and the issue acceptance matrix.
 
 ## Usage
 
@@ -28,7 +35,8 @@ or changed bytes do not trigger an undisclosed search of duplicate locations.
 Every request reads a bounded immutable in-memory copy, checks size and SHA-256,
 and checks file identity around the read. Paths are locations, never identity.
 Final source symlinks and special files are refused; `os.Root` confines traversal.
-Source reads write nothing and never load embedded resources or execute content.
+Source reads write nothing and never execute content. Only an explicit resource
+read returns local embedded bytes; it never fetches links or renders those bytes.
 
 ## Version 1 text and references
 
@@ -114,7 +122,8 @@ It does not test caller-owned atomic acknowledgements or certify subjective expe
 
 Remaining work, without moving post-1.0 analysis ahead of library delivery:
 
-- TUI content browsing and future MCP expose this same service and failure facts.
+- TUI unit browsing, bounded reading, repeat, and continuation expose this service.
+  Future MCP must preserve its representation negotiation and failure facts.
 - Milestone 7: physical PDF page index versus printed label, exact quotation spans,
   OCR/gaps, publication version and bibliographic provenance.
 - Milestone 8: recording/narration identity, ordered track hashes, declared/probed/

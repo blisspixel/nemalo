@@ -309,11 +309,16 @@ Acceptance:
 
 These are cross-cutting workstreams, not optional product add-ons:
 
-An initial offline EPUB retrieval slice is implemented through shared Go services
-and CLI/JSON. [Content access](docs/CONTENT-ACCESS.md) records exact locators,
-continuation, unsupported gaps, limits, evidence, and remaining acceptance from
-[issue 1](https://github.com/blisspixel/nemalo/issues/1). TUI reading, MCP, PDF/audio
-ranges, and the external caller adapter remain open; the full issue is not complete.
+Offline EPUB retrieval is implemented through shared Go services, CLI/JSON, and
+TUI unit selection/repeat/continuation. [Content access](docs/CONTENT-ACCESS.md)
+records exact locators and bounds. [Structured EPUB](docs/STRUCTURED-EPUB.md)
+records implemented parts, language/direction, local notes/backlinks, source XML,
+image-member identity, and per-range gaps from
+[issue 1](https://github.com/blisspixel/nemalo/issues/1) and
+[issue 2](https://github.com/blisspixel/nemalo/issues/2).
+Table grids and rendered mathematics are explicitly unsupported, with original
+markup available separately. MCP, PDF/OCR, decoded audio ranges, and external
+caller validation remain open; neither full issue is complete.
 
 - Initial local access: resolve a stable library ID to exact assets/provenance,
   export/open in an explicitly configured reader, and report changed/missing files.
@@ -351,6 +356,11 @@ Acceptance:
   and retraction evidence without treating availability as scientific endorsement.
 - Export documented citation metadata, such as CSL-JSON, with provenance and
   unknown fields retained rather than invented.
+- Define physical PDF page indexes separately from printed labels, and bind exact
+  quotations to asset/version, source page/section, extractor, and extracted span.
+  Disclose missing text, two-column order uncertainty, scanned/mixed pages, and
+  located figure/table/math gaps. Optional OCR retains derivation/confidence evidence
+  and never silently replaces exact original text. Use the shared access contract.
 - Use approved retrieval channels, per-asset rights, quotas, and configured usage
   budgets. Retired Unpaywall search is not an implementation target.
 - Add DOAB/OAPEN, OpenStax, and LibreTexts as a separate textbook/scholarly-book
@@ -373,6 +383,15 @@ Acceptance:
   deliberately; disclose probe coverage and unavailable checks. No mandatory transcoding.
 - Preserve chapter order, track IDs, declared counts/durations, narrator, language,
   and abridgment. Missing or failed tracks keep a recording incomplete.
+- Provide a versioned source-bound recording manifest with ordered track hashes
+  and chapter/range evidence. Separate declared, probed, and decoded timing; retain
+  unknown durations, gaps, overlaps, and uncertain boundaries. Specify track-local
+  timestamp units and, where verified, sample rate/channels and half-open sample
+  ranges, including encoded versus presented/resampled timing.
+- Retrieve actual bounded source ranges or explicitly authorized local references
+  usable by an external player. A transcript or TTS version is a distinct derived
+  asset. Probe/preparation/delivery never acknowledges playback; clients own that
+  lifecycle. Test real range boundaries and distinct narrations independently.
 - Preserve different narrations. Deduplicate alternate hosts using recording
   evidence and exact asset hashes, never book title or text identity alone.
 - Interrupted multi-file downloads resume or restart with matching remote validators;

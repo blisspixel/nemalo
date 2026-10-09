@@ -243,8 +243,39 @@ gaps without silent skipping, malformed content, changed/missing sources, stale
 references, budgets, and cancellation. A short local extraction fuzz run completed
 12,650 inputs without a reported failure. This is bounded evidence, not exhaustive
 fuzzing, conformance, safe rendering, or proof that content was read. Paper/audio
-retrieval, caller-owned acknowledgement/crash handling, TUI reading, MCP, and the
+retrieval, caller-owned acknowledgement/crash handling, MCP, and the
 actual external Kilo tool path remain unimplemented and unvalidated here.
+
+## Structured EPUB access on 2026-10-08
+
+The new representation was exercised against the same five real Gutenberg EPUBs.
+All listed their complete declared spine manifests (31, 4, 14, 152, and 27 units,
+respectively). Native CLI probes selected a text-bearing unit explicitly, verified
+byte-identical retries and adjacent bounded continuation, retrieved original XML
+through a returned part reference, and read 64 cover-image bytes through a returned
+local-resource reference. Before/after source SHA-256 checks matched. Reports and
+source excerpts remain outside Git; no source file or catalog was overwritten.
+
+The initial 4096-part whole-book budget rejected Nietzsche and Russell explicitly.
+The bounded implementation now permits 16384 parts, retaining the 1024-part
+per-unit, 32 MiB representation-input, 1 MiB response, and time limits. All five
+passed after this adjustment. This does not establish coverage for every EPUB.
+
+The structured synthetic suite adds 758 actual retrieval/retry calls across two
+works with exact concatenated text and unchanged originals. Fixtures cover linked
+notes/return, whole-document and nested-anchor cycles, language/direction, poetry,
+source captions/alt versus absent alt, remote unfetched images, oversized/missing
+resources, resource reassembly/hash identity, table spans and MathML source markup,
+known zero-width/end-of-document gaps, and partially delivered reference targets.
+TUI tests exercise explicit-root staging, unit selection, repeat, switching modes,
+missing-file recovery, and preventing a failed request from rebinding an old
+continuation to an edited root. Terminal-control bytes remain escaped.
+
+A short structured-parser fuzz run executed 122202 inputs without a reported
+failure. This is bounded evidence, not exhaustive parser validation or safe
+rendering. The terminal guide includes a real application-view read capture.
+PDF/OCR, decoded audio ranges, MCP, and external caller acknowledgement/transport
+integration still require their planned format/client validation.
 
 ## Source contracts reviewed on 2026-10-08
 

@@ -14,6 +14,7 @@ import (
 	tea "charm.land/bubbletea/v2"
 	"github.com/blisspixel/nemalo/internal/app"
 	"github.com/blisspixel/nemalo/internal/assessment"
+	"github.com/blisspixel/nemalo/internal/content"
 	"github.com/blisspixel/nemalo/internal/discovery"
 	"github.com/blisspixel/nemalo/internal/inventory"
 	"github.com/blisspixel/nemalo/internal/library"
@@ -62,6 +63,7 @@ type model struct {
 	busy             bool
 	id               int
 	cancel           context.CancelFunc
+	reader           readerState
 }
 
 func newModel(ctx context.Context, service app.Service) *model {
@@ -126,6 +128,19 @@ func (m *model) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 			if msg.err == nil {
 				m.seedLibraryForms(value.Output, value.Catalog.RootHint)
 			}
+		case content.Result:
+			if msg.err == nil {
+				m.reader.next = value.Continuation
+				m.reader.boundCatalog, m.reader.boundRoot = m.reader.last.Catalog, m.reader.last.Root
+				switch value.Status {
+				case "units_available":
+					m.status = "Source units available. Select deliberately; no progress is recorded."
+				case "partial_range":
+					m.status = "Bounded range delivered; continuation available."
+				default:
+					m.status = "Selected range delivered; no reading progress is recorded."
+				}
+			}
 		}
 		if msg.err != nil {
 			m.status = fmt.Sprintf("Incomplete: %q", msg.err.Error())
@@ -153,6 +168,8 @@ func (m *model) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 			data = []byte(present.Search(value))
 		case inventory.Report:
 			data = []byte(present.Inventory(value))
+		case content.Result:
+			data = []byte(present.Content(value))
 		}
 		if err != nil {
 			m.status = fmt.Sprintf("Output error: %q", err.Error())
@@ -181,7 +198,7 @@ func (m *model) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		if strings.HasPrefix(msg.String(), "alt+") {
 			for i, name := range modes {
-				if msg.String() == fmt.Sprintf("alt+%d", i+1) && !m.busy {
+				if msg.String() == fmt.Sprintf("alt+%d", (i+1)%10) && !m.busy {
 					return m, m.switchMode(name)
 				}
 			}
@@ -297,7 +314,9 @@ func (m *model) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 	return m, cmd
 }
 
-func (m *model) form() bool { return m.mode == "snapshot" || m.mode == "holdings" || m.mode == "audit" }
+func (m *model) form() bool {
+	return m.mode == "snapshot" || m.mode == "holdings" || m.mode == "audit" || m.mode == "read"
+}
 
 func Run(ctx context.Context, service app.Service, in io.Reader, out io.Writer) error {
 	m := newModel(ctx, service)

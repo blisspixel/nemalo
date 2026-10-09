@@ -50,6 +50,12 @@ Usage: nemalo <command> [options]
                       List supported EPUB reading-order documents, offline
   content read CATALOG --root DIRECTORY --asset sha256:HASH
                       Retrieve bounded source text with exact continuation, offline
+  content source CATALOG --root DIRECTORY --asset sha256:HASH
+                      Read bounded original EPUB XML, optionally --part ID
+  content resource CATALOG --root DIRECTORY --asset sha256:HASH --cursor TOKEN
+                      Read referenced local image bytes as base64; never render
+  content capabilities
+                      Report supported representation versions and limits
   version             Show the development version
   help                Show this help
 
@@ -62,6 +68,7 @@ Library snapshot options: --output FILE, --assess (local health/EPUB metadata)
 Library list options: --query TEXT, --format all|epub|pdf|mp3, --limit 10, --offset 0
 Library audit options: --root DIRECTORY
 Content read options: --unit 0, --text-offset 0, --max-bytes 4096, --cursor TOKEN
+                     --representation epub-text/1|epub-structure/1, --part ID
 Content extraction is plain text, not rendered layout or acknowledgement of reading.
 Snapshot/audit also accept inventory max-* limits. Snapshots hash all regular files,
 account for excluded links, refuse incomplete inventories, and never overwrite.
@@ -129,6 +136,8 @@ func Execute(ctx context.Context, args []string, out, errOut io.Writer, service 
 	flags.IntVar(&contentRequest.Offset, "text-offset", 0, "zero-based UTF-8 text byte offset")
 	flags.IntVar(&contentRequest.MaxBytes, "max-bytes", 4096, "maximum returned text bytes")
 	flags.StringVar(&contentRequest.Cursor, "cursor", "", "source-bound continuation token")
+	flags.StringVar(&contentRequest.Representation, "representation", "epub-text/1", "negotiated content representation")
+	flags.StringVar(&contentRequest.Part, "part", "", "exact source part ID")
 	flags.BoolVar(&checkOptions.Scan, "scan", false, "invoke installed antivirus")
 	flags.Int64Var(&checkOptions.ExpectedBytes, "expected-bytes", 0, "known expected file size")
 	flags.StringVar(&checkOptions.ExpectedSHA256, "expected-sha256", "", "known expected SHA-256")
@@ -186,6 +195,12 @@ func Execute(ctx context.Context, args []string, out, errOut io.Writer, service 
 		}
 		return write(Version, nil, 0)
 	}
+	if command == "content" && action == "capabilities" {
+		if flags.NArg() != 0 {
+			return write(nil, errors.New("content capabilities takes no arguments"), 2)
+		}
+		return write(service.ContentCapabilities(), nil, 0)
+	}
 	if command != "doctor" && command != "search" && command != "evaluate" && command != "inspect" && command != "check" && command != "tui" && command != "library" && command != "content" {
 		return write(nil, fmt.Errorf("unknown command %q; use nemalo help", command), 2)
 	}
@@ -203,10 +218,16 @@ func Execute(ctx context.Context, args []string, out, errOut io.Writer, service 
 	}
 	switch command {
 	case "content":
-		if flags.NArg() != 1 || (action != "units" && action != "read") {
-			return write(nil, errors.New("use content units/read CATALOG --root DIRECTORY --asset sha256:HASH"), 2)
+		if flags.NArg() != 1 || (action != "units" && action != "read" && action != "source" && action != "resource") {
+			return write(nil, errors.New("use content units/read/source/resource CATALOG --root DIRECTORY --asset sha256:HASH"), 2)
 		}
 		contentRequest.Catalog, contentRequest.Root, contentRequest.UnitsOnly = flags.Arg(0), *auditRoot, action == "units"
+		if action == "source" {
+			contentRequest.Representation = "epub-source/1"
+		}
+		if action == "resource" {
+			contentRequest.Representation, contentRequest.Resource = "epub-structure/1", true
+		}
 		if err := contentRequest.Validate(); err != nil {
 			return write(nil, err, 2)
 		}
@@ -337,6 +358,9 @@ func flagApplies(command, action, name string) bool {
 	if name == "json" {
 		return true
 	}
+	if command == "content" && action == "capabilities" {
+		return false
+	}
 	if command == "version" {
 		return false
 	}
@@ -344,13 +368,19 @@ func flagApplies(command, action, name string) bool {
 		return true
 	}
 	if command == "content" {
-		if action != "units" && action != "read" {
+		if action != "units" && action != "read" && action != "source" && action != "resource" {
 			return false
 		}
 		if name == "root" || name == "asset" {
 			return true
 		}
-		return action == "read" && (name == "unit" || name == "text-offset" || name == "max-bytes" || name == "cursor")
+		if name == "representation" {
+			return action == "read" || action == "units"
+		}
+		if name == "max-bytes" || name == "cursor" {
+			return action != "units"
+		}
+		return (action == "read" || action == "source") && (name == "part" || name == "unit" || name == "text-offset")
 	}
 	if command == "library" {
 		switch action {

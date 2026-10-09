@@ -4,6 +4,8 @@ import (
 	"archive/zip"
 	"bytes"
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/xml"
 	"errors"
 	"fmt"
@@ -21,14 +23,15 @@ import (
 var ErrLimit = errors.New("container inspection limit exceeded")
 
 type Checks struct {
-	Signature     string     `json:"signature"`
-	ZIPCRC        string     `json:"zip_crc"`
-	EPUBPackage   string     `json:"epub_package"`
-	Conformance   string     `json:"conformance"`
-	ContentReview string     `json:"content_review"`
-	Members       int        `json:"members,omitempty"`
-	Warnings      []string   `json:"warnings,omitempty"`
-	EPUB          *EPUBFacts `json:"epub,omitempty"`
+	Signature          string     `json:"signature"`
+	ZIPCRC             string     `json:"zip_crc"`
+	EPUBPackage        string     `json:"epub_package"`
+	Conformance        string     `json:"conformance"`
+	ContentReview      string     `json:"content_review"`
+	Members            int        `json:"members,omitempty"`
+	Warnings           []string   `json:"warnings,omitempty"`
+	AccessRestrictions []string   `json:"access_restrictions,omitempty"`
+	EPUB               *EPUBFacts `json:"epub,omitempty"`
 }
 
 type EPUBFacts struct {
@@ -48,7 +51,7 @@ func Inspect(r io.ReaderAt, size int64, format string) (Checks, error) {
 }
 
 func InspectContext(ctx context.Context, r io.ReaderAt, size int64, format string) (Checks, error) {
-	return inspectContext(ctx, r, size, format, nil)
+	return inspectContext(ctx, r, size, format, nil, nil)
 }
 
 // EPUBDocument identifies an actual spine entry, not an inferred chapter. Data
@@ -60,16 +63,43 @@ type EPUBDocument struct {
 	Linear  string
 	Index   int
 	Data    []byte
+	Members map[string]EPUBMember
+}
+
+type EPUBMember struct {
+	SHA256 string
+	Bytes  uint64
+	Media  string
 }
 
 // VisitEPUB shares container/package validation with assessment. The visitor
 // must not publish results before the whole operation succeeds. No resources
 // are fetched, rendered, executed, or extracted to disk.
 func VisitEPUB(ctx context.Context, r io.ReaderAt, size int64, visit func(EPUBDocument) error) (Checks, error) {
-	return inspectContext(ctx, r, size, "epub", visit)
+	return inspectContext(ctx, r, size, "epub", visit, nil)
 }
 
-func inspectContext(ctx context.Context, r io.ReaderAt, size int64, format string, visit func(EPUBDocument) error) (Checks, error) {
+type memberRequest struct {
+	name  string
+	limit uint64
+	data  []byte
+}
+
+// VisitEPUBResource performs the same complete bounded validation and returns
+// only the selected validated local member. It never resolves URLs or paths.
+func VisitEPUBResource(ctx context.Context, r io.ReaderAt, size int64, visit func(EPUBDocument) error, name string, limit uint64) (Checks, []byte, error) {
+	if limit > 8<<20 {
+		return Checks{}, nil, ErrLimit
+	}
+	request := &memberRequest{name: name, limit: limit}
+	c, err := inspectContext(ctx, r, size, "epub", visit, request)
+	if err != nil {
+		return c, nil, err
+	}
+	return c, request.data, err
+}
+
+func inspectContext(ctx context.Context, r io.ReaderAt, size int64, format string, visit func(EPUBDocument) error, resource *memberRequest) (Checks, error) {
 	c := Checks{Signature: "not_checked", ZIPCRC: "not_applicable", EPUBPackage: "not_applicable", Conformance: "not_checked", ContentReview: "not_checked"}
 	if size <= 0 || size > 256<<20 {
 		return c, errors.Join(ErrLimit, errors.New("invalid asset size"))
@@ -101,7 +131,7 @@ func inspectContext(ctx context.Context, r io.ReaderAt, size int64, format strin
 			return c, errors.New("ZIP signature missing")
 		}
 		c.Signature = "zip"
-		if err := inspectEPUB(ctx, r, size, &c, visit); err != nil {
+		if err := inspectEPUB(ctx, r, size, &c, visit, resource); err != nil {
 			return c, err
 		}
 	default:
@@ -110,7 +140,7 @@ func inspectContext(ctx context.Context, r io.ReaderAt, size int64, format strin
 	return c, nil
 }
 
-func inspectEPUB(ctx context.Context, r io.ReaderAt, size int64, c *Checks, visit func(EPUBDocument) error) error {
+func inspectEPUB(ctx context.Context, r io.ReaderAt, size int64, c *Checks, visit func(EPUBDocument) error, resource *memberRequest) error {
 	// Bound directory parsing before zip.NewReader can allocate per-member state.
 	metadata := &metadataReader{r: r, remaining: 2 << 20, limited: true}
 	z, err := zip.NewReader(metadata, size)
@@ -122,9 +152,11 @@ func inspectEPUB(ctx context.Context, r io.ReaderAt, size int64, c *Checks, visi
 		return errors.Join(ErrLimit, errors.New("EPUB member count outside limits"))
 	}
 	files := map[string]*zip.File{}
+	members := map[string]EPUBMember{}
 	type htmlMeasurement struct {
 		characters int
 		active     bool
+		external   bool
 	}
 	measured := map[string]htmlMeasurement{}
 	var expanded uint64
@@ -145,16 +177,25 @@ func inspectEPUB(ctx context.Context, r io.ReaderAt, size int64, c *Checks, visi
 		if err != nil {
 			return err
 		}
-		n, err := io.Copy(io.Discard, io.LimitReader(contextReader{ctx, body}, int64(f.UncompressedSize64)+1))
+		h := sha256.New()
+		var destination io.Writer = io.Discard
+		if visit != nil {
+			destination = h
+		}
+		n, err := io.Copy(destination, io.LimitReader(contextReader{ctx, body}, int64(f.UncompressedSize64)+1))
 		closeErr := body.Close()
 		if err != nil || closeErr != nil || n != int64(f.UncompressedSize64) {
 			return fmt.Errorf("EPUB member failed CRC/length checks: %q", f.Name)
+		}
+		if visit != nil {
+			members[f.Name] = EPUBMember{SHA256: hex.EncodeToString(h.Sum(nil)), Bytes: f.UncompressedSize64}
 		}
 	}
 	c.Members, c.ZIPCRC = len(files), "passed"
 	c.EPUB = &EPUBFacts{ExpandedBytes: expanded, PageCountStatus: "unknown_no_fixed_page_count", Titles: []string{}, Languages: []string{}}
 	if files["META-INF/encryption.xml"] != nil {
 		c.Warnings = append(c.Warnings, "encryption declarations present; may include font obfuscation")
+		c.AccessRestrictions = append(c.AccessRestrictions, "encryption_declarations")
 	}
 	mt, err := member(files, "mimetype", 128)
 	if err != nil || string(mt) != "application/epub+zip" || z.File[0].Name != "mimetype" || z.File[0].Method != zip.Store {
@@ -217,6 +258,7 @@ func inspectEPUB(ctx context.Context, r io.ReaderAt, size int64, c *Checks, visi
 			for _, property := range strings.Fields(item.Properties) {
 				if property == "scripted" {
 					c.Warnings = append(c.Warnings, "scripted manifest item declared")
+					c.AccessRestrictions = append(c.AccessRestrictions, "scripted_manifest_item")
 				}
 			}
 			// Remote resource declarations need content policy review; never fetch them.
@@ -233,6 +275,11 @@ func inspectEPUB(ctx context.Context, r io.ReaderAt, size int64, c *Checks, visi
 				return fmt.Errorf("EPUB manifest references missing member %q", name)
 			}
 			documents[item.ID] = EPUBDocument{Package: entry.Path, Path: name, Media: item.Media}
+			if visit != nil {
+				m := members[name]
+				m.Media = item.Media
+				members[name] = m
+			}
 			if strings.HasPrefix(item.Media, "image/") {
 				c.EPUB.Images++
 			}
@@ -243,16 +290,19 @@ func inspectEPUB(ctx context.Context, r io.ReaderAt, size int64, c *Checks, visi
 					if err != nil {
 						return err
 					}
-					n, active, err := htmlFactsContext(ctx, data)
+					n, active, external, err := htmlPolicyContext(ctx, data)
 					if err != nil {
 						return fmt.Errorf("EPUB document %q: %w", name, err)
 					}
-					facts = htmlMeasurement{n, active}
+					facts = htmlMeasurement{n, active, external}
 					measured[name] = facts
 				}
 				text[item.ID] = facts.characters
-				if facts.active {
+				if facts.active || facts.external {
 					c.Warnings = append(c.Warnings, "active or externally referenced content in "+name)
+				}
+				if facts.active {
+					c.AccessRestrictions = append(c.AccessRestrictions, "active_content")
 				}
 			}
 		}
@@ -263,11 +313,13 @@ func inspectEPUB(ctx context.Context, r io.ReaderAt, size int64, c *Checks, visi
 			}
 			if seenSpine[spine.ID] {
 				c.Warnings = append(c.Warnings, "repeated reading-order reference")
+				c.AccessRestrictions = append(c.AccessRestrictions, "repeated_reading_order")
 				continue
 			}
 			seenSpine[spine.ID] = true
 			if visit != nil {
 				d := documents[spine.ID]
+				d.Members = members
 				d.Index, d.Linear = index, spine.Linear
 				if d.Media == "application/xhtml+xml" || d.Media == "text/html" {
 					d.Data, err = member(files, d.Path, 32<<20)
@@ -290,6 +342,12 @@ func inspectEPUB(ctx context.Context, r io.ReaderAt, size int64, c *Checks, visi
 	}
 	c.EPUBPackage = "container_manifest_spine_checked"
 	c.ContentReview = "limited_token_indicators_only"
+	if resource != nil {
+		resource.data, err = member(files, resource.name, resource.limit)
+		if err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
@@ -316,22 +374,28 @@ func htmlFacts(data []byte) (int, bool, error) {
 }
 
 func htmlFactsContext(ctx context.Context, data []byte) (int, bool, error) {
+	n, active, external, err := htmlPolicyContext(ctx, data)
+	return n, active || external, err
+}
+
+func htmlPolicyContext(ctx context.Context, data []byte) (int, bool, bool, error) {
 	if !utf8.Valid(data) {
-		return 0, false, errors.New("non-UTF-8 document is unsupported")
+		return 0, false, false, errors.New("non-UTF-8 document is unsupported")
 	}
 	z := html.NewTokenizer(bytes.NewReader(data))
 	z.SetMaxBuf(1 << 20)
 	body, hidden, count, active := false, "", 0, false
+	external := false
 	for {
 		if err := ctx.Err(); err != nil {
-			return count, active, err
+			return count, active, external, err
 		}
 		typ := z.Next()
 		if typ == html.ErrorToken {
 			if errors.Is(z.Err(), io.EOF) {
-				return count, active, nil
+				return count, active, external, nil
 			}
-			return count, active, z.Err()
+			return count, active, external, z.Err()
 		}
 		token := z.Token()
 		if typ == html.StartTagToken || typ == html.SelfClosingTagToken {
@@ -346,8 +410,11 @@ func htmlFactsContext(ctx context.Context, data []byte) (int, bool, error) {
 			}
 			for _, a := range token.Attr {
 				v := strings.ToLower(strings.TrimSpace(a.Val))
-				if strings.HasPrefix(a.Key, "on") || ((a.Key == "src" || a.Key == "data") && (strings.Contains(v, ":") || strings.HasPrefix(v, "//"))) || (a.Key == "href" && strings.HasPrefix(v, "javascript:")) {
+				if strings.HasPrefix(a.Key, "on") || ((a.Key == "href" || a.Key == "src" || a.Key == "data") && strings.HasPrefix(v, "javascript:")) {
 					active = true
+				}
+				if (a.Key == "src" || a.Key == "data") && (strings.Contains(v, ":") || strings.HasPrefix(v, "//")) {
+					external = true
 				}
 			}
 		}

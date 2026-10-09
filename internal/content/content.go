@@ -30,15 +30,18 @@ var errBudget = errors.New("content retrieval budget exceeded")
 var errUnsupported = errors.New("unsupported EPUB extraction; no excerpt returned")
 
 type Request struct {
-	SchemaVersion int
-	Catalog       string
-	Root          string
-	AssetID       string
-	Unit          int
-	Offset        int
-	MaxBytes      int
-	Cursor        string
-	UnitsOnly     bool
+	SchemaVersion  int
+	Catalog        string
+	Root           string
+	AssetID        string
+	Unit           int
+	Offset         int
+	MaxBytes       int
+	Cursor         string
+	UnitsOnly      bool
+	Representation string
+	Part           string
+	Resource       bool
 }
 
 func (r Request) Validate() error {
@@ -55,6 +58,12 @@ func (r Request) Validate() error {
 	if r.Cursor != "" && (r.Unit != 0 || r.Offset != 0 || r.UnitsOnly) {
 		return errors.New("cursor cannot be combined with unit, offset, or units listing")
 	}
+	if len(r.Representation) > 80 || len(r.Part) > 256 || (r.Cursor != "" && r.Part != "") || (r.UnitsOnly && (r.Part != "" || r.Resource)) {
+		return errors.New("invalid representation, part, or cursor combination")
+	}
+	if (r.Resource && r.Representation != "epub-structure/1") || (r.UnitsOnly && r.Representation == "epub-source/1") {
+		return errors.New("operation is unavailable for the selected representation; inspect content capabilities")
+	}
 	return nil
 }
 
@@ -66,10 +75,15 @@ type Unit struct {
 	Linear     string `json:"linear"`
 	TextBytes  int    `json:"text_bytes"`
 	Extraction string `json:"extraction"`
+	Language   string `json:"language,omitempty"`
+	Direction  string `json:"direction,omitempty"`
+	Parts      int    `json:"parts,omitempty"`
+	KnownGaps  int    `json:"known_gaps,omitempty"`
 }
 
-// Locator offsets are zero-based, half-open UTF-8 byte offsets in the defined
-// extracted representation. They are not offsets in the ZIP or rendered pages.
+// Locator offsets are zero-based and half-open in OffsetUnit. An omitted
+// OffsetUnit retains the original UTF-8 extracted-text contract. No offset
+// refers to ZIP positions or inferred rendered pages.
 type Locator struct {
 	SchemaVersion    int    `json:"schema_version"`
 	AssetID          string `json:"asset_id"`
@@ -78,24 +92,30 @@ type Locator struct {
 	Unit             int    `json:"unit"`
 	Start            int    `json:"start"`
 	End              int    `json:"end"`
+	Member           string `json:"member,omitempty"`
+	OffsetUnit       string `json:"offset_unit,omitempty"`
 }
 
 type Result struct {
-	SchemaVersion    int      `json:"schema_version"`
-	Status           string   `json:"status"`
-	AssetID          string   `json:"asset_id"`
-	CatalogID        string   `json:"catalog_id,omitempty"`
-	SourcePath       string   `json:"source_path,omitempty"`
-	Extractor        string   `json:"extractor"`
-	RepresentationID string   `json:"representation_id,omitempty"`
-	Units            []Unit   `json:"units,omitempty"`
-	Text             string   `json:"text,omitempty"`
-	Locator          *Locator `json:"locator,omitempty"`
-	Continuation     string   `json:"continuation,omitempty"`
-	EndOfUnit        bool     `json:"end_of_unit"`
-	EndOfSource      bool     `json:"end_of_source"`
-	UnsupportedUnits []int    `json:"unsupported_units,omitempty"`
-	Limitations      []string `json:"limitations"`
+	SchemaVersion    int           `json:"schema_version"`
+	Status           string        `json:"status"`
+	AssetID          string        `json:"asset_id"`
+	CatalogID        string        `json:"catalog_id,omitempty"`
+	SourcePath       string        `json:"source_path,omitempty"`
+	Extractor        string        `json:"extractor"`
+	RepresentationID string        `json:"representation_id,omitempty"`
+	Units            []Unit        `json:"units,omitempty"`
+	Text             string        `json:"text,omitempty"`
+	Locator          *Locator      `json:"locator,omitempty"`
+	Continuation     string        `json:"continuation,omitempty"`
+	EndOfUnit        bool          `json:"end_of_unit"`
+	EndOfSource      bool          `json:"end_of_source"`
+	UnsupportedUnits []int         `json:"unsupported_units,omitempty"`
+	Limitations      []string      `json:"limitations"`
+	Representation   string        `json:"representation,omitempty"`
+	Parts            []Part        `json:"parts,omitempty"`
+	Coverage         *Coverage     `json:"coverage,omitempty"`
+	Resource         *ResourceData `json:"resource,omitempty"`
 }
 
 type cursor struct {
@@ -105,6 +125,10 @@ type cursor struct {
 	RepresentationID string `json:"representation_id"`
 	Unit             int    `json:"unit"`
 	Offset           int    `json:"offset"`
+	Representation   string `json:"representation,omitempty"`
+	Part             string `json:"part,omitempty"`
+	Member           string `json:"member,omitempty"`
+	MemberSHA256     string `json:"member_sha256,omitempty"`
 }
 
 func parseCursor(token string) (cursor, error) {
@@ -144,6 +168,7 @@ func Get(ctx context.Context, req Request) (result Result, err error) {
 			err = diagnosticError{err}
 			result.Text, result.Continuation, result.Locator = "", "", nil
 			result.Units = nil
+			result.Parts, result.Coverage, result.Resource = nil, nil, nil
 			result.EndOfUnit, result.EndOfSource = false, false
 		}
 	}()
@@ -157,45 +182,30 @@ func Get(ctx context.Context, req Request) (result Result, err error) {
 		result.Status = "cancelled"
 		return result, err
 	}
+	if req.Representation != "" && req.Representation != "epub-text/1" {
+		if req.Representation != "epub-structure/1" && req.Representation != "epub-source/1" {
+			result.Status = "unsupported_representation"
+			return result, errors.New("unsupported content representation; inspect content capabilities")
+		}
+		return getStructured(ctx, req, result)
+	}
+	if req.Part != "" || req.Resource {
+		return result, errors.New("part/resource access requires a structured EPUB representation")
+	}
 	var continuation cursor
 	if req.Cursor != "" {
 		continuation, err = parseCursor(req.Cursor)
 		if err != nil {
 			return result, err
 		}
-		if continuation.AssetID != req.AssetID || continuation.Extractor != Extractor {
+		if continuation.AssetID != req.AssetID || continuation.Extractor != Extractor || continuation.Part != "" || continuation.Member != "" || continuation.MemberSHA256 != "" || (continuation.Representation != "" && continuation.Representation != "epub-text/1") {
 			result.Status = "stale_reference"
 			return result, errors.New("continuation belongs to another asset or extractor")
 		}
 		req.Unit, req.Offset = continuation.Unit, continuation.Offset
 	}
-	result.Status = "unavailable"
-	catalog, err := library.Load(req.Catalog)
+	data, err := resolveSource(ctx, req, &result)
 	if err != nil {
-		return result, err
-	}
-	result.CatalogID = catalog.ID
-	var asset *library.Asset
-	for i := range catalog.Assets {
-		if catalog.Assets[i].ID == req.AssetID {
-			asset = &catalog.Assets[i]
-			break
-		}
-	}
-	if asset == nil {
-		result.Status = "missing_asset"
-		return result, errors.New("asset not present in catalog")
-	}
-	if len(asset.Locations[0].Path) > 4096 {
-		result.Status = "budget_exceeded"
-		return result, errBudget
-	}
-	// Use the first catalog location deterministically. Missing/changed locations
-	// never cause an unreported fallback or search beyond the authorized root.
-	result.SourcePath = asset.Locations[0].Path
-	data, status, err := readAsset(ctx, req.Root, result.SourcePath, *asset)
-	if err != nil {
-		result.Status = status
 		return result, err
 	}
 	if !bytes.HasPrefix(data, []byte("PK\x03\x04")) {
@@ -291,7 +301,7 @@ func Get(ctx context.Context, req Request) (result Result, err error) {
 			end--
 		}
 		result.Text = text[req.Offset:end]
-		result.Locator = &Locator{1, req.AssetID, Extractor, result.RepresentationID, req.Unit, req.Offset, end}
+		result.Locator = &Locator{SchemaVersion: 1, AssetID: req.AssetID, Extractor: Extractor, RepresentationID: result.RepresentationID, Unit: req.Unit, Start: req.Offset, End: end}
 		result.EndOfUnit, result.EndOfSource = end == len(text), end == len(text) && req.Unit == len(texts)-1
 		result.Status = "complete_range"
 		if !result.EndOfUnit {
@@ -302,7 +312,7 @@ func Get(ctx context.Context, req Request) (result Result, err error) {
 			if result.EndOfUnit {
 				nextUnit, nextOffset = req.Unit+1, 0
 			}
-			result.Continuation = encodeCursor(cursor{1, req.AssetID, Extractor, result.RepresentationID, nextUnit, nextOffset})
+			result.Continuation = encodeCursor(cursor{SchemaVersion: 1, AssetID: req.AssetID, Extractor: Extractor, RepresentationID: result.RepresentationID, Unit: nextUnit, Offset: nextOffset})
 		}
 	}
 	encoded, err := json.Marshal(result)
@@ -318,6 +328,34 @@ func Get(ctx context.Context, req Request) (result Result, err error) {
 		return result, err
 	}
 	return result, nil
+}
+
+func resolveSource(ctx context.Context, req Request, result *Result) ([]byte, error) {
+	result.Status = "unavailable"
+	catalog, err := library.Load(req.Catalog)
+	if err != nil {
+		return nil, err
+	}
+	result.CatalogID = catalog.ID
+	for _, asset := range catalog.Assets {
+		if asset.ID != req.AssetID {
+			continue
+		}
+		if len(asset.Locations[0].Path) > 4096 {
+			result.Status = "budget_exceeded"
+			return nil, errBudget
+		}
+		// The selected catalog location is deterministic; hints and duplicate
+		// locations never authorize fallback filesystem searches.
+		result.SourcePath = asset.Locations[0].Path
+		data, status, err := readAsset(ctx, req.Root, result.SourcePath, asset)
+		if err != nil {
+			result.Status = status
+		}
+		return data, err
+	}
+	result.Status = "missing_asset"
+	return nil, errors.New("asset not present in catalog")
 }
 
 func readAsset(ctx context.Context, directory, name string, asset library.Asset) ([]byte, string, error) {

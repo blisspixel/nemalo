@@ -30,7 +30,7 @@ func (m *model) paint(text, color string, bold bool) string {
 func (m *model) navigation() string {
 	items := make([]string, len(modes))
 	for i, name := range modes {
-		label := fmt.Sprintf("%d %s", i+1, strings.ToUpper(name[:1])+name[1:])
+		label := fmt.Sprintf("%d %s", (i+1)%10, strings.ToUpper(name[:1])+name[1:])
 		if name == m.mode {
 			label = m.paint("["+label+"]", accent, true)
 		}
@@ -58,6 +58,8 @@ func (m *model) fields() string {
 		label, hint = "Item ID", "archive:ITEM (network metadata only; no download)"
 	case "state":
 		label, hint = "Folder", "Existing library folder; Enter reads status, F7 initializes"
+	case "read":
+		label, hint, second = "Catalog", "Catalog selected from Holdings", "Root"
 	}
 	m.input.Placeholder = hint
 	marker := " "
@@ -76,6 +78,12 @@ func (m *model) fields() string {
 }
 
 func (m *model) contextLine() string {
+	if m.mode == "read" {
+		if m.reader.asset == "" {
+			return "Local source access | Select an asset in Holdings, then r"
+		}
+		return fmt.Sprintf("Offline | No progress tracking | Asset %q", m.reader.asset)
+	}
 	if m.mode == "state" {
 		return "Local control metadata | Enter reads status | F7 initializes"
 	}
@@ -123,6 +131,12 @@ func (m *model) footer() string {
 		if m.mode == "search" && len(m.entries) > 0 && strings.HasPrefix(m.entries[m.selected].sourceID, "archive:") {
 			help += "  e evaluate"
 		}
+		if m.mode == "holdings" && len(m.entries) > 0 {
+			help += "  r source access"
+		}
+		if m.mode == "read" {
+			help = "Enter unit  n next range  r repeat  u units  F6 edit  Ctrl+C quit"
+		}
 	}
 	if m.busy {
 		help = "Working...  Esc cancel  Ctrl+C quit"
@@ -131,7 +145,7 @@ func (m *model) footer() string {
 	if m.form() {
 		help += "  Ctrl+N field"
 	}
-	help += "\nF5 full report  PgUp/PgDown scroll  Alt+1..9 jump"
+	help += "\nF5 full report  PgUp/PgDown scroll  Alt+1..9/0 jump"
 	if m.mode == "search" || m.mode == "holdings" {
 		help += "  Ctrl+Left/Right results page"
 	}
@@ -168,7 +182,7 @@ func (m *model) View() tea.View {
 func (m *model) resize() {
 	m.input.SetWidth(max(1, m.width-16))
 	m.secondary.SetWidth(max(1, m.width-16))
-	m.secondary.Placeholder = map[string]string{"snapshot": "New catalog path outside the source folder", "holdings": "Optional title, language, filename, or hash", "audit": "Explicit source directory (required)"}[m.mode]
+	m.secondary.Placeholder = map[string]string{"snapshot": "New catalog path outside the source folder", "holdings": "Optional title, language, filename, or hash", "audit": "Explicit source directory (required)", "read": "Explicit source directory (required)"}[m.mode]
 	// Layout height follows the actual wrapped navigation, context, and help.
 	reserved := lipgloss.Height(m.top()) + lipgloss.Height(m.footer()) + lipgloss.Height(m.statusText()) + lipgloss.Height(m.position()) + 2
 	m.viewport.SetHeight(max(1, m.height-reserved))
@@ -235,6 +249,8 @@ func (m *model) emptyHelp() string {
 		return "Look before acquiring.\n\nEnter archive:ITEM, or select an Archive search result and press e.\nEnter retrieves declared files, restrictions, and rights metadata only."
 	case "state":
 		return "Establish a library identity.\n\nEnter an existing folder, then Enter to read its control status.\nF7 reviews initialization before writing only Nemalo control metadata.\nThis does not import or validate content."
+	case "read":
+		return "Read from exact source bytes.\n\nSelect an asset in Holdings and press r. Enter its explicit root, then Enter lists units.\nF6 browses units; Enter retrieves text. n continues, r repeats, u lists units.\nDelivery does not record reading progress. Notes and image resources are available through content CLI references."
 	default:
 		return "Enter the fields above, then press Enter.\n\nResults stay with their operation when you switch modes.\nSources are preserved. Escape cancels active work."
 	}

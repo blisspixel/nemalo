@@ -6,6 +6,7 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
+	"github.com/blisspixel/nemalo/internal/content"
 	"github.com/blisspixel/nemalo/internal/discovery"
 	"github.com/blisspixel/nemalo/internal/library"
 	"github.com/blisspixel/nemalo/internal/present"
@@ -53,10 +54,17 @@ func (m *model) populate(data any) {
 				detail += "\nRecorded assessment (historical):\n" + present.Health(*a.Health)
 			}
 			m.entries = append(m.entries, entry{
-				title:   fmt.Sprintf("%q", title),
-				summary: fmt.Sprintf("%s | %q | %d location(s)", byteSize(a.Bytes), languages, len(a.Locations)),
-				detail:  detail,
+				title:    fmt.Sprintf("%q", title),
+				summary:  fmt.Sprintf("%s | %q | %d location(s)", byteSize(a.Bytes), languages, len(a.Locations)),
+				detail:   detail,
+				sourceID: a.ID,
 			})
+		}
+	case content.Result:
+		if p.Status == "units_available" {
+			for _, u := range p.Units {
+				m.entries = append(m.entries, entry{title: fmt.Sprintf("Unit %d: %q", u.Index, u.Member), summary: fmt.Sprintf("%d text bytes | %d gaps | %q", u.TextBytes, u.KnownGaps, u.Language), detail: fmt.Sprintf("Source unit %d\n\nMember: %q\nLanguage: %q\nDirection: %q\nLinear: %q\nParts: %d; known text gaps: %d\n\nEnter retrieves a bounded structured-text range.\nNo reading progress is recorded.", u.Index, u.Member, u.Language, u.Direction, u.Linear, u.Parts, u.KnownGaps)})
+			}
 		}
 	}
 	m.selectEntry(0)
@@ -151,6 +159,9 @@ func (m *model) browserKey(key string) (bool, tea.Cmd) {
 			return true, nil
 		}
 	case "enter":
+		if m.mode == "read" && len(m.entries) > 0 {
+			return true, m.startRead(false, m.selected, "", false)
+		}
 		if len(m.entries) > 0 {
 			m.details, m.evidence = !m.details, false
 			m.resize()
@@ -164,6 +175,30 @@ func (m *model) browserKey(key string) (bool, tea.Cmd) {
 			m.status = "Selected item. Enter requests Archive metadata; no download."
 			m.resize()
 			return true, cmd
+		}
+	case "r":
+		if m.mode == "holdings" && len(m.entries) > 0 {
+			asset, catalog := m.entries[m.selected].sourceID, m.submittedInput
+			cmd := m.switchMode("read")
+			m.reader = readerState{asset: asset}
+			m.input.SetValue(catalog)
+			m.secondary.SetValue("")
+			m.setReport("")
+			m.populate(nil)
+			m.status = "Selected asset. Enter an explicit root, then Enter lists source units."
+			m.resize()
+			return true, cmd
+		}
+		if m.mode == "read" {
+			return true, m.startRead(false, 0, "", true)
+		}
+	case "n":
+		if m.mode == "read" && m.reader.next != "" {
+			return true, m.startRead(false, 0, m.reader.next, false)
+		}
+	case "u":
+		if m.mode == "read" {
+			return true, m.startRead(true, 0, "", false)
 		}
 	}
 	return false, nil

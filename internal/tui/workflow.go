@@ -8,7 +8,7 @@ import (
 	"github.com/blisspixel/nemalo/internal/inventory"
 )
 
-var modes = []string{"search", "inspect", "check", "scan", "snapshot", "holdings", "audit", "evaluate", "state"}
+var modes = []string{"search", "inspect", "check", "scan", "snapshot", "holdings", "audit", "evaluate", "state", "read"}
 
 type draft struct {
 	input, second, content, status  string
@@ -94,6 +94,9 @@ func (m *model) turnPage(forward bool) tea.Cmd {
 }
 
 func (m *model) start(reset bool) tea.Cmd {
+	if m.mode == "read" {
+		return m.startRead(true, 0, "", false)
+	}
 	if m.busy || m.input.Value() == "" {
 		return nil
 	}
