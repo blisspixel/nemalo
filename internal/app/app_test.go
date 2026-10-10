@@ -56,8 +56,12 @@ func TestSharedServices(t *testing.T) {
 		}
 		return "", errors.New("not installed")
 	})
-	if d.Security != "not_scanned" || len(d.Capabilities) != 4 || d.Capabilities[0].Available || !d.Capabilities[2].Available {
+	if d.Security != "not_scanned" || len(d.Capabilities) != 5 || d.Capabilities[0].Available || !d.Capabilities[2].Available {
 		t.Fatalf("tool availability became scan coverage: %+v", d)
+	}
+	bridge := d.Capabilities[4]
+	if bridge.Name != "descriptor_bridge" || !bridge.Available {
+		t.Fatal(bridge)
 	}
 	if New().Providers["openlibrary"] == nil {
 		t.Fatal("missing catalog")

@@ -43,6 +43,10 @@ func statPath(name string, noFollow bool) (fs.FileInfo, error) {
 	return f.Stat()
 }
 
+// DescriptorBridge reports whether this process can reopen a held directory.
+// Windows validates path identity through an attributes-only handle.
+func DescriptorBridge() error { return nil }
+
 // Windows Root rejects reserved device paths and acquires a directory handle.
 // checkRoot binds that handle to the previously validated directory identity.
 func platformRoot(name string) (*os.Root, error)                    { return os.OpenRoot(name) }

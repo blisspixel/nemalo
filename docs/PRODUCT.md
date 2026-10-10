@@ -123,7 +123,7 @@ nemalo mcp serve --transport stdio
 ```
 
 The planned `doctor` reports archive tools, scanners, signatures, paths, and permissions.
-Today's `doctor` reports configuration paths and tool availability, without executing checks.
+Today's `doctor` reports configuration paths, tool availability, and the directory descriptor bridge, without executing scanners.
 `inspect` reports what is present without modifying source or library files; any
 temporary staging it needs is bounded and reported. `organize` stages and imports
 eligible assets under enabled format policies. `cleanup` shows or applies recorded

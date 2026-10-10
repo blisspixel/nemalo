@@ -35,6 +35,20 @@ func platformRootIn(parent *os.Root, name string) (*os.Root, error) {
 	return rootFromDirectory(f)
 }
 
+// DescriptorBridge reports whether this process can reopen a held directory.
+// Linux uses /proc/self/fd and macOS uses /dev/fd. There is no pathname fallback.
+func DescriptorBridge() error {
+	prefix := "/dev/fd"
+	if runtime.GOOS == "linux" {
+		prefix = "/proc/self/fd"
+	}
+	info, err := os.Lstat(prefix)
+	if err != nil || !info.IsDir() {
+		return fmt.Errorf("directory descriptor bridge %s is unavailable", prefix)
+	}
+	return nil
+}
+
 func rootFromDirectory(f *os.File) (*os.Root, error) {
 	// Root has no exported descriptor constructor. Reopen the held directory
 	// capability, never the mutable user pathname. These native descriptor

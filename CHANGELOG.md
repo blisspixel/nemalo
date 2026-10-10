@@ -20,6 +20,15 @@ catalogs, complete audiobook management, and MCP remain planned. See the
 
 ## Pre-release development history
 
+### Development: Omarchy desktop compatibility
+
+- Report the Linux `/proc/self/fd` and macOS `/dev/fd` directory bridge from
+  `doctor`. Import still hard-links only inside the library directory.
+- Treat `foot`, Ghostty, Alacritty, and Kitty as truecolor. Leave tmux at
+  256-color. Omarchy 4.0.4 does not bind Nemalo's Alt, F2 through F8, or Ctrl+C keys.
+- The checked Linux build remains the cgo-free `linux/amd64` archive. Hosted CI
+  runs that archive on Ubuntu. See [development notes](docs/DEVELOPMENT.md).
+
 ### Development: EPUB package identifier evidence
 
 - Record an explicit ISBN, DOI, or Open Library work/edition key from an EPUB

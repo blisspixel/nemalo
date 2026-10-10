@@ -15,6 +15,7 @@ import (
 	"github.com/blisspixel/nemalo/internal/discovery"
 	"github.com/blisspixel/nemalo/internal/inventory"
 	"github.com/blisspixel/nemalo/internal/library"
+	"github.com/blisspixel/nemalo/internal/safeio"
 	"github.com/blisspixel/nemalo/internal/scanner"
 )
 
@@ -155,6 +156,7 @@ func (s Service) Doctor(paths config.Paths, cfg config.Config, lookup func(strin
 		_, err := lookup(item.name)
 		d.Capabilities = append(d.Capabilities, Capability{Name: item.name, Available: err == nil, Use: item.use})
 	}
+	d.Capabilities = append(d.Capabilities, Capability{Name: "descriptor_bridge", Available: safeio.DescriptorBridge() == nil, Use: "required on Linux (/proc/self/fd) and macOS (/dev/fd) to reopen a library directory"})
 	return d
 }
 

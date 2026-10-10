@@ -86,8 +86,13 @@ notes, render images, or play audio. Unsupported units fail explicitly.
 
 The indigo and neutral palette adapts to light and dark terminal backgrounds.
 Amber indicates active work; errors have explicit text. `NO_COLOR` and `TERM=dumb`
-disable colored styling. Minimum size is 40 columns by 20 rows; state survives
+disable colored styling. `foot`, Ghostty, Alacritty, and Kitty, including the
+terminals selectable on Omarchy 4, keep truecolor. A tmux session stays
+256-color. Minimum size is 40 columns by 20 rows; state survives
 the resize prompt. No image, animation, or color is required for navigation.
+Omarchy's Super shortcuts and F9 dictation binding do not take Nemalo's Alt+1
+through Alt+0, F2 through F8, or Ctrl+C keys. See
+[operation and limits](DEVELOPMENT.md).
 
 Full reports remain accessible when compact browsing truncates a title. Catalog
 assessment is historical; audit current bytes before relying on identity. Scanning

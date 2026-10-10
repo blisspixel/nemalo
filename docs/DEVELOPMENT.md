@@ -236,7 +236,33 @@ arguments; `--` ends option parsing. Flags for another command are rejected.
 
 Linux defaults are `~/.config`, `~/.local/state`, and `~/.cache` when the respective
 XDG variables are absent. Relative environment paths are rejected. Reading config
-and running `doctor` do not create these directories.
+and running `doctor` do not create these directories. `doctor` also reports whether
+the directory descriptor bridge is present. That is `/proc/self/fd` on Linux and
+`/dev/fd` on macOS. It does not execute a scanner or create a hard link.
+
+## Omarchy
+
+Reviewed 2026-10-09 against Omarchy 4.0.4, an Arch Linux x86_64 desktop. The
+installer uses Arch packages, systemd, and btrfs or ext4. Hyprland is the
+compositor. Omarchy 4 defaults to the `foot` terminal; Ghostty, Alacritty, and
+Kitty remain selectable. Omarchy 3 defaulted to Alacritty.
+
+Run the published `linux/amd64` archive. That build has cgo disabled, so it does
+not need Ubuntu's C library. Hosted CI runs it on Ubuntu, not on Omarchy or Arch.
+Building this tree from source requires Go 1.27.2.
+
+Library directories use `/proc/self/fd`, which Arch provides. Import hard-links
+the stored file inside the library directory. ext4 and btrfs both support that
+link when the library stays on one filesystem. A source on another filesystem is
+copied, then linked only inside the library. `nemalo doctor` reports
+`descriptor_bridge` for the `/proc/self/fd` check.
+
+`foot`, Ghostty, Alacritty, and Kitty are recognized as truecolor. `NO_COLOR`
+and `TERM=dumb` still disable color. A tmux session stays 256-color. Omarchy
+4.0.4 binds Super shortcuts and uses F9 for dictation. It does not bind
+Alt+1 through Alt+0, F2 through F8, or Ctrl+C. Ctrl+C still quits Nemalo.
+Super+C is the desktop copy key. Nemalo does not read the Wayland clipboard.
+ClamAV is optional and is not assumed to be installed.
 
 ## Verification
 
