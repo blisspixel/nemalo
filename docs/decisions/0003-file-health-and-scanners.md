@@ -1,6 +1,6 @@
 # File health evidence and optional antivirus
 
-Date: 2026-10-08. Status: accepted and initially implemented.
+Date: 2026-10-08. Updated: 2026-10-09. Status: accepted and implemented.
 
 `internal/assessment` owns bounded file and EPUB container assessment, reused by
 the collection harness and application services. CLI/TUI call `internal/app`;
@@ -39,7 +39,25 @@ Only recognized no-detection output produces `no_detections_reported`; internal
 coverage and signature freshness are not independently established. Localized
 Defender output that cannot be interpreted remains incomplete.
 
-Scanning is explicit. Installed scanner cloud/sample-submission settings still
+Scanning is explicit and recommended for a PDF, ebook, or other file the user
+did not produce. The app still runs when no scanner is installed. A missing
+scan stays `not_scanned` and cannot mean clean.
+
+The default scanner is the one this adapter already runs. Windows uses the
+built-in Microsoft Defender command `MpCmdRun.exe`. Linux and macOS use
+installed ClamAV `clamscan`. ClamAV is the free local engine with an official
+command-line scanner and signature updates through `freshclam`. It is not
+claimed to be the strongest detector, and Nemalo does not install or update it.
+macOS does not provide an equivalent command-line scanner. On Windows, ClamAV
+is a second engine, not the default. `doctor` names the recommendation for the
+current operating system.
+
+A publisher SHA-256 confirms that the received bytes are the published bytes.
+Pass it to `check --expected-sha256`, or keep it in an intake receipt. Nemalo
+also records the SHA-256 it measured. A matching checksum does not prove those
+bytes are free of malware. A file and its published checksum can both be replaced.
+
+Installed scanner cloud/sample-submission settings still
 apply and are disclosed before invocation; Nemalo changes none of them. Local
 assessment itself makes no network requests. Temporary permissions and processes
 are not security sandboxes. No reader, script, macro, or downloaded executable is

@@ -52,8 +52,10 @@ The measured SHA-256 identifies local bytes, not a trustworthy publisher.
 
 EPUB checks use the shared bounded parser; PDF and MP3 checks establish candidate
 signatures only. Format validity, warnings, antivirus coverage, DRM, licensing,
-and semantic completeness remain separate. Use explicit `check --scan` for
-installed antivirus under its host cloud/sample-submission policy.
+and semantic completeness remain separate. A scan is recommended for a file you
+did not produce. Use `check --scan` for installed antivirus under its host
+cloud/sample-submission policy. Windows uses Microsoft Defender. Linux and macOS
+use ClamAV. A no-detection result is not proof the file is safe.
 
 ## Network and failure bounds
 

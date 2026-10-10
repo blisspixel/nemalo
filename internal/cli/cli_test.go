@@ -141,7 +141,7 @@ func execute(t *testing.T, args []string, searchErr error) (int, string, string)
 func TestHelpAndVersion(t *testing.T) {
 	for _, args := range [][]string{nil, {"help"}, {"--help"}, {"-h"}, {"inspect", "--help"}, {"library", "--help"}, {"library", "snapshot", "--help"}} {
 		code, out, _ := execute(t, args, nil)
-		if code != 0 || !strings.Contains(out, "Nemalo") {
+		if code != 0 || !strings.Contains(out, "Nemalo") || !strings.Contains(out, "recommended for") || !strings.Contains(out, "--expected-sha256") {
 			t.Fatal(code, out)
 		}
 	}

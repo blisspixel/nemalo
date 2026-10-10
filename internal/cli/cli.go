@@ -23,7 +23,7 @@ import (
 	"github.com/blisspixel/nemalo/internal/tui"
 )
 
-const Version = "0.1.0-alpha.1"
+const Version = "0.1.0-alpha.2"
 
 const help = `Nemalo
 Find knowledge. Care for it. Realize its potential.
@@ -89,8 +89,13 @@ authorize a scan. A library-directory audit compares managed holdings only.
 
 Check uses a private temporary snapshot (up to 256 MiB). EPUB text/document counts
 are measured; fixed pages, PDF page counts, and audio duration are not inferred.
---scan invokes installed antivirus without remediation. External scanner cloud
-and sample-submission settings apply. Missing/failed scans cannot mean clean.
+--scan invokes installed antivirus without remediation. It is recommended for
+a file you did not produce. Windows uses Microsoft Defender. Linux and macOS
+use ClamAV (clamscan) after you install it and update signatures with freshclam.
+External scanner cloud and sample-submission settings apply. Missing/failed
+scans cannot mean clean. A no-detection result is not proof the file is safe.
+When a publisher supplies a SHA-256, pass --expected-sha256. A match shows the
+bytes are the published bytes. It does not prove those bytes are safe.
 
 Inventory does not extract archives, validate books, or scan for malware.
 library import copies one assessed file into an initialized library and preserves

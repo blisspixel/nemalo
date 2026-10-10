@@ -95,8 +95,10 @@ through Alt+0, F2 through F8, or Ctrl+C keys. See
 [operation and limits](DEVELOPMENT.md).
 
 Full reports remain accessible when compact browsing truncates a title. Catalog
-assessment is historical; audit current bytes before relying on identity. Scanning
-is explicit and the installed scanner's cloud/sample policy applies. See
+assessment is historical; audit current bytes before relying on identity. A scan
+is recommended for a file you did not produce. It stays explicit, and the
+installed scanner's cloud/sample policy applies. A no-detection result is not
+proof the file is safe. See
 [operation and limits](DEVELOPMENT.md) for the full capability boundaries.
 
 ## Application-view captures

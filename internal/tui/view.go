@@ -48,7 +48,7 @@ func (m *model) fields() string {
 	case "check":
 		label, hint = "File", "Explicit file for local health checks"
 	case "scan":
-		label, hint = "File", "File for health + antivirus; scanner cloud/sample policy applies"
+		label, hint = "File", "Recommended for a file you did not produce; scanner cloud/sample policy applies; not proof of safety"
 	case "snapshot":
 		label, hint, second = "Folder", "Explicit source folder", "New output"
 	case "holdings":

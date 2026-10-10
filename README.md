@@ -18,7 +18,9 @@ AI service. Future agent interfaces will use the same application services.
 - Acquire a selected Archive EPUB, PDF, or MP3 into exclusive untrusted intake,
   with source checksums, local checks, and a provenance receipt.
 - Inventory explicit folders; check file structure, size, hashes, and EPUB text
-  measurements, with optional installed antivirus.
+  measurements. A scan is recommended for a file you did not produce and stays
+  optional: Defender on Windows, ClamAV on Linux and macOS. Pass a publisher
+  SHA-256 when one exists.
 - Save portable catalog snapshots, browse holdings, and audit changed/missing files.
 - Initialize library control state with locking and resumable initialization.
 - Import one EPUB, PDF, or MP3, or a completed intake packet, into an initialized

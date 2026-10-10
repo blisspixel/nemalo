@@ -438,7 +438,8 @@ update policy, and removal strategy. Pin versions and review changes to `go.sum`
 Do not add provider SDKs when a small standard-library HTTP adapter suffices.
 
 External executables and signature databases count in the dependency inventory.
-`doctor` reports required versus optional capabilities for the selected policy.
+`doctor` reports tool availability, the directory descriptor bridge, and the
+recommended scanner for this operating system. It does not execute scanners.
 Do not auto-install software or download executable plugins as part of book intake.
 Go release builds should avoid cgo; race instrumentation may need a C toolchain in CI.
 

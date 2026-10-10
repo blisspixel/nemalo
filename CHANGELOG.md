@@ -1,5 +1,26 @@
 # Changelog
 
+## 0.1.0-alpha.2
+
+Second native prerelease. This remains an early library, not 1.0.
+
+- Import one assessed EPUB, PDF, MP3, or completed intake packet into an
+  initialized library. Preview writes nothing. `checked` requires a passed EPUB
+  check and a recorded no-detection scan. Other assessed files stay in review.
+- Record an explicit ISBN, DOI, or Open Library work or edition key from an
+  EPUB package as evidence. Each file stays under its SHA-256.
+- Report the directory descriptor bridge and the recommended scanner from
+  `doctor`. Windows uses Microsoft Defender. Linux and macOS use ClamAV.
+- Compare a publisher SHA-256 with `--expected-sha256` when one is supplied.
+  Nemalo also records the SHA-256 it measured.
+
+A scan is recommended for a file you did not produce. Nothing is installed
+automatically. A matching checksum shows the bytes are the published bytes.
+A no-detection scan and a matching checksum do not prove the file is free of
+malware. Cleanup, archive extraction, download resume, recording and track
+identities, PDF page trees, decoded audio, and MCP remain planned. Hosted CI
+runs on Ubuntu, macOS, and Windows. It does not boot Omarchy.
+
 ## 0.1.0-alpha.1
 
 First native prerelease. This is an early library/discovery foundation, not 1.0.
@@ -18,7 +39,17 @@ Resumable downloads, archive extraction, checked publication, mutable managed
 catalogs, complete audiobook management, and MCP remain planned. See the
 [roadmap](ROADMAP.md) and [capability limits](docs/DEVELOPMENT.md).
 
-## Pre-release development history
+## Development history
+
+### Since 0.1.0-alpha.1
+
+### Development: scanner and checksum recommendations
+
+- Recommend Microsoft Defender on Windows and ClamAV `clamscan` on Linux and
+  macOS for a file the user did not produce. `doctor` names that default.
+- A publisher SHA-256 confirms the published bytes. Nemalo records its own
+  SHA-256 either way. Neither a checksum nor a no-detection scan proves the
+  file is safe. Nothing is installed automatically.
 
 ### Development: Omarchy desktop compatibility
 
@@ -54,6 +85,8 @@ catalogs, complete audiobook management, and MCP remain planned. See the
 - Work and edition identity, archive extraction, download resume, folder cleanup,
   and a full checked-library policy remain outstanding. See
   [decision 0009](docs/decisions/0009-managed-epub-import.md).
+
+### Before 0.1.0-alpha.1
 
 ### Development: structured EPUB access
 
@@ -146,4 +179,4 @@ catalogs, complete audiobook management, and MCP remain planned. See the
   destinations/redirects, cancellable pacing, and Retry-After handling.
 - Update the tagline to "Find knowledge. Care for it. Realize its potential."
 
-These entries record development before the first prerelease. Current capability limits are documented above and in docs/DEVELOPMENT.md.
+These entries record development history. The version sections above are the release notes. Current capability limits are documented in docs/DEVELOPMENT.md.

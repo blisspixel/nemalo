@@ -135,29 +135,59 @@ func (s Service) Content(ctx context.Context, req content.Request) (content.Resu
 func (s Service) ContentCapabilities() content.Capabilities { return content.Available() }
 
 type Capability struct {
-	Name      string `json:"name"`
-	Available bool   `json:"available"`
-	Use       string `json:"use"`
+	Name        string `json:"name"`
+	Available   bool   `json:"available"`
+	Recommended bool   `json:"recommended,omitempty"`
+	Use         string `json:"use"`
 }
 
 type Doctor struct {
-	Platform     string        `json:"platform"`
-	Go           string        `json:"go"`
-	Paths        config.Paths  `json:"paths"`
-	Config       config.Config `json:"configuration"`
-	Security     string        `json:"security_status"`
-	Capabilities []Capability  `json:"capabilities"`
+	Platform               string        `json:"platform"`
+	Go                     string        `json:"go"`
+	Paths                  config.Paths  `json:"paths"`
+	Config                 config.Config `json:"configuration"`
+	Security               string        `json:"security_status"`
+	ScannerRecommendation  string        `json:"scanner_recommendation"`
+	ChecksumRecommendation string        `json:"checksum_recommendation"`
+	Capabilities           []Capability  `json:"capabilities"`
 }
 
 // Doctor checks availability only; it never executes scanners or claims scan coverage.
 func (s Service) Doctor(paths config.Paths, cfg config.Config, lookup func(string) (string, error)) Doctor {
-	d := Doctor{Platform: runtime.GOOS + "/" + runtime.GOARCH, Go: runtime.Version(), Paths: paths, Config: cfg, Security: "not_scanned", Capabilities: []Capability{}}
-	for _, item := range []struct{ name, use string }{{"clamscan", "optional antivirus for check --scan"}, {"MpCmdRun.exe", "optional Windows Defender antivirus for check --scan"}, {"7z", "optional future archive adapter"}, {"epubcheck", "optional future EPUB conformance check"}} {
+	d := Doctor{Platform: runtime.GOOS + "/" + runtime.GOARCH, Go: runtime.Version(), Paths: paths, Config: cfg, Security: "not_scanned", ScannerRecommendation: scannerRecommendation(), ChecksumRecommendation: checksumRecommendation, Capabilities: []Capability{}}
+	for _, item := range []struct {
+		name, use string
+	}{
+		{"clamscan", "Recommended on Linux and macOS for a file you did not produce. Windows uses Microsoft Defender instead. A no-detection result is not proof the file is safe."},
+		{"MpCmdRun.exe", "Recommended on Windows for a file you did not produce. This is the built-in Microsoft Defender scanner. A no-detection result is not proof the file is safe."},
+		{"7z", "optional future archive adapter"},
+		{"epubcheck", "optional future EPUB conformance check"},
+	} {
 		_, err := lookup(item.name)
-		d.Capabilities = append(d.Capabilities, Capability{Name: item.name, Available: err == nil, Use: item.use})
+		d.Capabilities = append(d.Capabilities, Capability{Name: item.name, Available: err == nil, Recommended: recommendedScanner(item.name), Use: item.use})
 	}
 	d.Capabilities = append(d.Capabilities, Capability{Name: "descriptor_bridge", Available: safeio.DescriptorBridge() == nil, Use: "required on Linux (/proc/self/fd) and macOS (/dev/fd) to reopen a library directory"})
 	return d
+}
+
+const checksumRecommendation = "When a publisher supplies a SHA-256, pass it to check --expected-sha256 or keep the intake receipt. A match shows the bytes are the published bytes. Nemalo also records the SHA-256 it measured. A checksum does not prove those bytes are free of malware."
+
+func recommendedScanner(name string) bool {
+	if runtime.GOOS == "windows" {
+		return name == "MpCmdRun.exe"
+	}
+	return name == "clamscan"
+}
+
+func scannerRecommendation() string {
+	switch runtime.GOOS {
+	case "windows":
+		return "Microsoft Defender is the default scanner. Run check FILE --scan or library import --scan. ClamAV is a free second engine and is not the default on Windows. Nothing is installed automatically."
+	case "darwin":
+		return "ClamAV is the default free local scanner Nemalo can run. macOS does not provide an equivalent command-line scanner. Install ClamAV so clamscan is on PATH, update signatures with freshclam, then run check FILE --scan. Nothing is installed automatically."
+	default:
+		return "ClamAV is the default free local scanner. Install the distributor package that provides clamscan, update signatures with freshclam, then run check FILE --scan. On Arch, including Omarchy, that package is clamav. Nothing is installed automatically."
+	}
 }
 
 func Lookup(name string) (string, error) {

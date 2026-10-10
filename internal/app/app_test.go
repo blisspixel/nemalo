@@ -3,6 +3,8 @@ package app
 import (
 	"context"
 	"errors"
+	"runtime"
+	"strings"
 	"testing"
 
 	"github.com/blisspixel/nemalo/internal/config"
@@ -62,6 +64,26 @@ func TestSharedServices(t *testing.T) {
 	bridge := d.Capabilities[4]
 	if bridge.Name != "descriptor_bridge" || !bridge.Available {
 		t.Fatal(bridge)
+	}
+	if d.ScannerRecommendation == "" || d.ChecksumRecommendation == "" || !strings.Contains(d.ChecksumRecommendation, "does not prove") {
+		t.Fatal(d.ScannerRecommendation, d.ChecksumRecommendation)
+	}
+	switch runtime.GOOS {
+	case "windows":
+		if d.Capabilities[0].Recommended || !d.Capabilities[1].Recommended || !strings.Contains(d.ScannerRecommendation, "Microsoft Defender") {
+			t.Fatal(d.Capabilities[:2], d.ScannerRecommendation)
+		}
+	case "darwin":
+		if !d.Capabilities[0].Recommended || d.Capabilities[1].Recommended || !strings.Contains(d.ScannerRecommendation, "macOS does not provide") {
+			t.Fatal(d.Capabilities[:2], d.ScannerRecommendation)
+		}
+	default:
+		if !d.Capabilities[0].Recommended || d.Capabilities[1].Recommended || !strings.Contains(d.ScannerRecommendation, "including Omarchy") {
+			t.Fatal(d.Capabilities[:2], d.ScannerRecommendation)
+		}
+	}
+	if d.Capabilities[2].Recommended || d.Capabilities[3].Recommended {
+		t.Fatal(d.Capabilities)
 	}
 	if New().Providers["openlibrary"] == nil {
 		t.Fatal("missing catalog")

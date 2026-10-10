@@ -88,9 +88,14 @@ Milestone 1 remains in progress. Managed holdings record EPUB package
 identifier evidence for an explicit ISBN, DOI, or Open Library work or edition
 key, and they do not merge files on that evidence. See
 [decision 0010](docs/decisions/0010-bibliographic-identity.md). Recording and
-track identities remain outstanding. Cleanup, archive extraction, and download
-resume are also outstanding. Native archive/checksum packaging is
-implemented; releases still require the actual verification and publication gates.
+track identities remain outstanding. A scan is recommended for a file the user
+did not produce. The default is Microsoft Defender on Windows and installed
+ClamAV on Linux and macOS. `doctor` names that default. A supplied publisher
+SHA-256 confirms the published bytes. Nemalo does not install or update a
+scanner, and a no-detection result or a checksum match is not proof of safety.
+Cleanup, archive extraction, and download resume are also outstanding. Native
+archive/checksum packaging is implemented; releases still require the actual
+verification and publication gates.
 Milestone 2
 has inventory and standalone signatures/private snapshots, without archive
 extraction or production staging. Milestone 5 has
@@ -222,9 +227,11 @@ Acceptance:
 
 ## Milestone 3: assess and publish EPUBs
 
-Status: partial. Shared EPUB checks, optional scanners, and single-asset managed
-import exist. Work and edition identities, archive extraction, cleanup, and a
-full checked-library policy remain. Depends on milestone 2.
+Status: partial. Shared EPUB checks, Defender and ClamAV adapters, and
+single-asset managed import exist. EPUB package identifiers can be recorded as
+evidence. `doctor` names the default scanner. Recording and track identities,
+cross-file work relationships, archive extraction, cleanup, and a full
+checked-library policy remain. Depends on milestone 2.
 
 Deliver EPUB package checks, content checks, scanner adapters, metadata handling,
 exact duplicate detection, and verified library publication.

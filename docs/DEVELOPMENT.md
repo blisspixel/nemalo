@@ -107,15 +107,21 @@ embedded-resource, and encryption indicators require review; absence proves noth
 PDF checks only recognize header/end markers; MP3 checks only recognize candidate
 signatures. Page trees, PDF active content, and audio decoding remain unsupported.
 
-`--expected-bytes` and `--expected-sha256` compare known external expectations;
-a locally computed hash alone does not authenticate a source. File size without
+`--expected-bytes` and `--expected-sha256` compare known external expectations.
+Pass a publisher SHA-256 when one exists. A match shows the bytes are the
+published bytes. A locally computed hash alone does not authenticate a source,
+and a checksum does not prove the file is free of malware. File size without
 edition evidence cannot decide whether a poem, novel, or scan is complete.
 `limited_checks_passed` means exactly those checks passed, even when antivirus is
 `not_scanned`. Review/invalid/incomplete results exit 1 and never publish content.
 
-`--scan` (or TUI scan mode) invokes installed Defender on Windows, otherwise ClamAV.
-Nothing is installed or updated. Calls use argument arrays and no remediation,
-with two-minute deadlines and 64 KiB combined output. ClamAV requests limit and
+`--scan` (or TUI scan mode) is recommended for a file you did not produce. It
+invokes installed Defender on Windows, otherwise ClamAV. `doctor` names that
+default. Nothing is installed or updated. On Linux and macOS, install the
+distributor package that provides `clamscan` and update signatures with
+`freshclam` first. On Arch, including Omarchy, that package is `clamav`. Calls
+use argument arrays and no remediation, with two-minute deadlines and 64 KiB
+combined output. ClamAV requests limit and
 encryption alerts. A post-scan hash/identity check binds evidence to the snapshot.
 Unknown output, failure, timeout, truncation, and missing tools remain unsuccessful;
 Defender output in unsupported languages may be incomplete. No-detection output
@@ -262,7 +268,9 @@ and `TERM=dumb` still disable color. A tmux session stays 256-color. Omarchy
 4.0.4 binds Super shortcuts and uses F9 for dictation. It does not bind
 Alt+1 through Alt+0, F2 through F8, or Ctrl+C. Ctrl+C still quits Nemalo.
 Super+C is the desktop copy key. Nemalo does not read the Wayland clipboard.
-ClamAV is optional and is not assumed to be installed.
+ClamAV is the recommended scanner and is not installed by default. `doctor`
+reports whether `clamscan` is available. A missing scanner leaves the file
+unscanned. Update signatures with `freshclam` before relying on a scan.
 
 ## Verification
 
