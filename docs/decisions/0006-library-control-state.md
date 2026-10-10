@@ -13,7 +13,9 @@ This is an initialization journal, not a mutable content catalog, general job
 engine, or import/cleanup recovery system. Snapshot/list/audit keep their contracts.
 Work, edition, recording, track, and asset relationships remain separate domain
 work. Initialization does not inspect, import, assess, open, reorganize, or delete
-any content.
+any content. Managed import uses separate journals; see
+[decision 0009](0009-managed-epub-import.md). It does not extend this
+two-record initialization journal.
 
 ## Control files and state
 
@@ -37,9 +39,11 @@ and inconsistent IDs are rejected. Invalid state is never truncated, overwritten
 or silently repaired. A crash before the initial record is complete can leave an
 empty/partial control namespace requiring review.
 
-The directory must contain exactly the two expected regular files. Unexpected
-artifacts, control symlinks/reparse points, hard-linked control files, and changed
-file identities are rejected. Files open relative to `os.Root`; source content is
+The directory must contain the two required regular files. Decision 0009 allows
+optional regular `operations.jsonl` and `holdings.jsonl` files. Any other entry,
+directory, duplicate, or empty managed journal is rejected. Control
+symlinks/reparse points, hard-linked control files, and changed file identities
+are rejected. Files open relative to `os.Root`; source content is
 never opened. New control directories/files request Unix modes 0700/0600; Windows
 access follows host ACL inheritance. The user must control library write access.
 These checks are not a sandbox against a privileged or noncooperating actor

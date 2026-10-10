@@ -23,12 +23,20 @@ func unlockState(f *os.File) error {
 	return windows.UnlockFileEx(windows.Handle(f.Fd()), 0, 1, 0, &windows.Overlapped{})
 }
 
-func singleLink(f *os.File) error {
+func linkCount(f *os.File) (uint64, error) {
 	var info windows.ByHandleFileInformation
 	if err := windows.GetFileInformationByHandle(windows.Handle(f.Fd()), &info); err != nil {
+		return 0, err
+	}
+	return uint64(info.NumberOfLinks), nil
+}
+
+func singleLink(f *os.File) error {
+	n, err := linkCount(f)
+	if err != nil {
 		return err
 	}
-	if info.NumberOfLinks != 1 {
+	if n != 1 {
 		return ErrStateReview
 	}
 	return nil

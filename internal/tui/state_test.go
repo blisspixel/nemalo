@@ -1,10 +1,13 @@
 package tui
 
 import (
+	"archive/zip"
+	"bytes"
 	"context"
 	"errors"
 	"os"
 	"path/filepath"
+	"sort"
 	"strconv"
 	"strings"
 	"testing"
@@ -12,6 +15,7 @@ import (
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 	"github.com/blisspixel/nemalo/internal/app"
+	"github.com/blisspixel/nemalo/internal/library"
 )
 
 func TestStateInitializationReviewAndDispatch(t *testing.T) {
@@ -104,4 +108,103 @@ func TestStateReviewLayoutAndQuit(t *testing.T) {
 	if cmd == nil {
 		t.Fatal("quit blocked by review")
 	}
+}
+
+func TestStateImportReviewCancelAndApply(t *testing.T) {
+	root := t.TempDir()
+	if _, err := library.Initialize(context.Background(), root); err != nil {
+		t.Fatal(err)
+	}
+	source := writeStateEPUB(t, t.TempDir())
+	m := newModel(context.Background(), app.New())
+	m.switchMode("state")
+	m.Update(key(tea.KeyF8))
+	if m.confirmRoot != "" {
+		t.Fatal("empty import entered review")
+	}
+	m.input.SetValue(root)
+	m.Update(key(tea.KeyF8))
+	if m.confirmRoot != "" {
+		t.Fatal("missing source entered review")
+	}
+	m.secondary.SetValue(source)
+	m.Update(key(tea.KeyF8))
+	if m.confirmKind != "import" || m.confirmRoot != root || !strings.Contains(m.report, strconv.Quote(source)) {
+		t.Fatal("import review lost scope", m.report)
+	}
+	for _, size := range [][2]int{{40, 20}, {80, 24}} {
+		m.Update(tea.WindowSizeMsg{Width: size[0], Height: size[1]})
+		view := m.View().Content
+		if lipgloss.Width(view) > size[0] || lipgloss.Height(view) > size[1] {
+			t.Fatal("import review overflow", size, lipgloss.Width(view), lipgloss.Height(view))
+		}
+	}
+	m.Update(key(tea.KeyF7))
+	if m.confirmRoot != "" {
+		t.Fatal("cancelled import stayed in review")
+	}
+	if _, err := os.Stat(filepath.Join(root, ".nemalo", "operations.jsonl")); !errors.Is(err, os.ErrNotExist) {
+		t.Fatal("cancelled import wrote", err)
+	}
+	m.Update(key(tea.KeyF8))
+	m.Update(key(tea.KeyEscape))
+	m.Update(key(tea.KeyF8))
+	m.Update(key(tea.KeyF8))
+	if m.confirmRoot != "" {
+		t.Fatal("second F8 did not return")
+	}
+	m.Update(key(tea.KeyF8))
+	_, cmd := m.Update(key(tea.KeyEnter))
+	if cmd == nil || !m.busy || m.confirmRoot != "" {
+		t.Fatal("confirmed import not dispatched")
+	}
+	if _, err := os.Stat(filepath.Join(root, ".nemalo", "operations.jsonl")); !errors.Is(err, os.ErrNotExist) {
+		t.Fatal("write happened outside service command")
+	}
+	m.Update(cmd())
+	if m.busy || !strings.Contains(m.report, `Status: "review"`) || !strings.Contains(m.report, `Title: "Test"`) {
+		t.Fatal("import evidence missing", m.report)
+	}
+}
+
+func writeStateEPUB(t *testing.T, dir string) string {
+	t.Helper()
+	files := map[string]string{
+		"mimetype":               "application/epub+zip",
+		"META-INF/container.xml": `<container xmlns="urn:oasis:names:tc:opendocument:xmlns:container"><rootfiles><rootfile full-path="book.opf" media-type="application/oebps-package+xml"/></rootfiles></container>`,
+		"book.opf":               `<package xmlns="http://www.idpf.org/2007/opf"><metadata xmlns:dc="http://purl.org/dc/elements/1.1/"><dc:title>Test</dc:title><dc:language>ja</dc:language></metadata><manifest><item id="c" href="chapter.xhtml" media-type="application/xhtml+xml"/></manifest><spine><itemref idref="c"/></spine></package>`,
+		"chapter.xhtml":          `<html xmlns="http://www.w3.org/1999/xhtml"><body><p>Hello</p></body></html>`,
+	}
+	var buf bytes.Buffer
+	z := zip.NewWriter(&buf)
+	header, err := z.CreateHeader(&zip.FileHeader{Name: "mimetype", Method: zip.Store})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := header.Write([]byte(files["mimetype"])); err != nil {
+		t.Fatal(err)
+	}
+	delete(files, "mimetype")
+	names := make([]string, 0, len(files))
+	for name := range files {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+	for _, name := range names {
+		entry, err := z.Create(name)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := entry.Write([]byte(files[name])); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := z.Close(); err != nil {
+		t.Fatal(err)
+	}
+	path := filepath.Join(dir, "book.epub")
+	if err := os.WriteFile(path, buf.Bytes(), 0600); err != nil {
+		t.Fatal(err)
+	}
+	return path
 }

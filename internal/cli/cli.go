@@ -43,8 +43,12 @@ Usage: nemalo <command> [options]
                       Save a new portable byte-identity catalog outside the root
   library list CATALOG [--query TEXT]
                       Browse local file holdings and optional EPUB metadata
+  library import LIBRARY SOURCE [--apply] [--scan]
+                      Assess one EPUB, PDF, MP3, or intake packet; --apply stores it
   library audit CATALOG --root DIRECTORY
-                      Report changed, missing, added, and unverified file locations
+                      Compare a snapshot catalog with files under an explicit root
+  library audit LIBRARY
+                      Compare managed holdings with their stored bytes
   library init DIRECTORY
                       Initialize local control state in an existing explicit folder
   library status DIRECTORY
@@ -73,13 +77,15 @@ Inspect options: --hashes, --max-entries 10000, --max-depth 32,
 Check options: --scan, --expected-bytes N, --expected-sha256 HASH
 Library snapshot options: --output FILE, --assess (local health/EPUB metadata)
 Library list options: --query TEXT, --format all|epub|pdf|mp3, --limit 10, --offset 0
-Library audit options: --root DIRECTORY
+Library import options: --apply, --scan
+Library audit options: --root DIRECTORY for a snapshot catalog
 Content read options: --unit 0, --text-offset 0, --max-bytes 4096, --cursor TOKEN
                      --representation epub-text/1|epub-structure/1, --part ID
 Content extraction is plain text, not rendered layout or acknowledgement of reading.
-Snapshot/audit also accept inventory max-* limits. Snapshots hash all regular files,
-account for excluded links, refuse incomplete inventories, and never overwrite.
-Audit always requires an explicit root; the catalog cannot authorize a scan.
+Snapshot and snapshot audit also accept inventory max-* limits. Snapshots hash
+all regular files, account for excluded links, refuse incomplete inventories,
+and never overwrite. Snapshot audit requires --root; the catalog cannot
+authorize a scan. A library-directory audit compares managed holdings only.
 
 Check uses a private temporary snapshot (up to 256 MiB). EPUB text/document counts
 are measured; fixed pages, PDF page counts, and audio duration are not inferred.
@@ -87,8 +93,11 @@ are measured; fixed pages, PDF page counts, and audio duration are not inferred.
 and sample-submission settings apply. Missing/failed scans cannot mean clean.
 
 Inventory does not extract archives, validate books, or scan for malware.
-Resumable transfers, checked publication, cleanup, MCP, and audiobook management
-are planned. PDF/MP3 checks currently establish candidate signatures only.
+library import copies one assessed file into an initialized library and preserves
+the source. Without --apply it writes nothing. checked requires an EPUB whose
+limited checks passed and whose scan reported no detections. PDF, MP3, unscanned,
+and other results stay in review. This is not folder cleanup, archive extraction,
+or download resume. PDF/MP3 checks currently establish candidate signatures only.
 Exit codes: 0 success, 1 operation failed/incomplete, 2 invalid usage/configuration.
 `
 
@@ -138,6 +147,7 @@ func Execute(ctx context.Context, args []string, out, errOut io.Writer, service 
 	format := flags.String("format", "all", "exact holdings filename suffix filter")
 	auditRoot := flags.String("root", "", "explicit audit root")
 	assess := flags.Bool("assess", false, "include local health facts without antivirus")
+	apply := flags.Bool("apply", false, "store the assessed import")
 	contentRequest := content.Request{SchemaVersion: 1}
 	flags.StringVar(&contentRequest.AssetID, "asset", "", "exact catalog asset ID")
 	flags.IntVar(&contentRequest.Unit, "unit", 0, "zero-based reading-order document")
@@ -278,8 +288,18 @@ func Execute(ctx context.Context, args []string, out, errOut io.Writer, service 
 		}
 		return write(data, nil, 0)
 	case "library":
+		if action == "import" {
+			if flags.NArg() != 2 {
+				return write(nil, errors.New("use library import LIBRARY SOURCE"), 2)
+			}
+			data, err := service.Import(ctx, library.ImportRequest{Library: flags.Arg(0), Source: flags.Arg(1), Scan: checkOptions.Scan, Apply: *apply})
+			if err != nil {
+				return write(data, err, 1)
+			}
+			return write(data, nil, 0)
+		}
 		if flags.NArg() != 1 || (action != "snapshot" && action != "list" && action != "audit" && action != "init" && action != "status") {
-			return write(nil, errors.New("use library init/status DIRECTORY, snapshot DIRECTORY, list CATALOG, or audit CATALOG"), 2)
+			return write(nil, errors.New("use library init/status DIRECTORY, import LIBRARY SOURCE, snapshot DIRECTORY, list CATALOG, or audit CATALOG or LIBRARY"), 2)
 		}
 		if action == "init" || action == "status" {
 			var r library.State
@@ -316,6 +336,26 @@ func Execute(ctx context.Context, args []string, out, errOut io.Writer, service 
 				return write(r, err, 1)
 			}
 			return write(r, nil, 0)
+		}
+		info, statErr := os.Lstat(flags.Arg(0))
+		if statErr != nil {
+			return write(nil, statErr, 1)
+		}
+		if info.IsDir() && info.Mode()&os.ModeSymlink == 0 {
+			extra := false
+			flags.Visit(func(f *flag.Flag) {
+				if f.Name == "root" || strings.HasPrefix(f.Name, "max-") {
+					extra = true
+				}
+			})
+			if extra {
+				return write(nil, errors.New("managed library audit accepts only the library directory"), 2)
+			}
+			managed, err := service.AuditManaged(ctx, flags.Arg(0))
+			if err != nil {
+				return write(managed, err, 1)
+			}
+			return write(managed, nil, 0)
 		}
 		if *auditRoot == "" {
 			return write(nil, errors.New("library audit requires an explicit --root DIRECTORY"), 2)
@@ -409,6 +449,8 @@ func flagApplies(command, action, name string) bool {
 			return name == "output" || name == "assess" || strings.HasPrefix(name, "max-")
 		case "list":
 			return name == "query" || name == "format" || name == "limit" || name == "offset"
+		case "import":
+			return name == "apply" || name == "scan"
 		case "audit":
 			return name == "root" || strings.HasPrefix(name, "max-")
 		}
@@ -476,6 +518,12 @@ func printData(out io.Writer, data any) error {
 		return err
 	case library.Audit:
 		_, err := io.WriteString(out, present.Audit(value))
+		return err
+	case library.ImportResult:
+		_, err := io.WriteString(out, present.Import(value))
+		return err
+	case library.ManagedAudit:
+		_, err := io.WriteString(out, present.ManagedAudit(value))
 		return err
 	case assessment.Report:
 		_, err := io.WriteString(out, present.Health(value))

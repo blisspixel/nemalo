@@ -53,10 +53,13 @@ type model struct {
 	resultsFocused   bool
 	details          bool
 	evidence         bool
+	confirmKind      string
 	confirmRoot      string
+	confirmSource    string
 	confirmReport    string
 	confirmStatus    string
 	initializeAction bool
+	importAction     bool
 	mode             string
 	source           string
 	format           string
@@ -175,6 +178,10 @@ func (m *model) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 			data = []byte(present.Holdings(value))
 		case library.Audit:
 			data = []byte(present.Audit(value))
+		case library.ImportResult:
+			data = []byte(present.Import(value))
+		case library.ManagedAudit:
+			data = []byte(present.ManagedAudit(value))
 		case assessment.Report:
 			data = []byte(present.Health(value))
 		case discovery.Page:
@@ -207,6 +214,10 @@ func (m *model) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		if msg.String() == "f7" && m.mode == "state" && !m.busy {
 			m.requestInitialization()
+			return m, nil
+		}
+		if msg.String() == "f8" && m.mode == "state" && !m.busy {
+			m.requestImport()
 			return m, nil
 		}
 		if handled, cmd := m.browserKey(msg.String()); handled {
@@ -331,7 +342,7 @@ func (m *model) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m *model) form() bool {
-	return m.mode == "snapshot" || m.mode == "holdings" || m.mode == "audit" || m.mode == "read" || m.mode == "evaluate"
+	return m.mode == "snapshot" || m.mode == "holdings" || m.mode == "audit" || m.mode == "read" || m.mode == "evaluate" || m.mode == "state"
 }
 
 func Run(ctx context.Context, service app.Service, in io.Reader, out io.Writer) error {

@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"time"
@@ -102,6 +103,10 @@ func LibraryStatus(ctx context.Context, directory string) (report State, err err
 	if err = ctx.Err(); err != nil {
 		return report, err
 	}
+	if err = validateManaged(c.root, report.LibraryID); err != nil {
+		report.Status = "needs_review"
+		return report, err
+	}
 	if len(events) == 1 {
 		return report, ErrInitializationPending
 	}
@@ -170,6 +175,10 @@ func initialize(ctx context.Context, directory string, checkpoint func(string) e
 			return report, err
 		}
 		applyEvents(&report, events)
+	}
+	if err = validateManaged(c.root, report.LibraryID); err != nil {
+		report.Status = "needs_review"
+		return report, err
 	}
 	if len(events) == 1 {
 		e := events[0]
@@ -335,19 +344,28 @@ func validateControl(root *os.Root) error {
 		return err
 	}
 	defer f.Close()
-	entries, err := f.ReadDir(3)
-	if err != nil && !errors.Is(err, io.EOF) {
+	entries, err := f.ReadDir(-1)
+	if err != nil {
 		return err
 	}
-	if len(entries) != 2 {
-		return ErrStateReview
-	}
-	names := map[string]bool{lockName: true, journalName: true}
-	for _, e := range entries {
-		if !names[e.Name()] || !e.Type().IsRegular() {
+	seen := map[string]fs.DirEntry{}
+	for _, entry := range entries {
+		if _, ok := seen[entry.Name()]; ok {
 			return ErrStateReview
 		}
-		delete(names, e.Name())
+		seen[entry.Name()] = entry
+	}
+	for _, name := range []string{lockName, journalName} {
+		entry, ok := seen[name]
+		if !ok || !entry.Type().IsRegular() {
+			return ErrStateReview
+		}
+		delete(seen, name)
+	}
+	for name, entry := range seen {
+		if (name != operationsName && name != holdingsName) || !entry.Type().IsRegular() {
+			return ErrStateReview
+		}
 	}
 	return nil
 }

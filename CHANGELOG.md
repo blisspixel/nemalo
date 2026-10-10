@@ -20,6 +20,23 @@ catalogs, complete audiobook management, and MCP remain planned. See the
 
 ## Pre-release development history
 
+### Development: managed single-file import
+
+- Copy one assessed EPUB, PDF, MP3, or completed intake packet into an initialized
+  library through shared services, CLI, and a terminal review that does not scan.
+- Sync import intent before the copy. Resume only one trailing intent for the same
+  source. Retain corrupt journals. A later import without a scan does not downgrade
+  a checked EPUB.
+- Store the bytes beside `.nemalo` by SHA-256. Leave a conflicting file in place,
+  reject an unexpected extra hard link, and reject a store parent that is not a
+  real directory before writing a new intent.
+- Record `checked` only when limited EPUB checks passed and the scan reported no
+  detections. Name a scan-only gap with the scanner status. Managed reads use the
+  256 MiB import cap; snapshot reads stay 32 MiB.
+- Work and edition identity, archive extraction, download resume, folder cleanup,
+  and a full checked-library policy remain outstanding. See
+  [decision 0009](docs/decisions/0009-managed-epub-import.md).
+
 ### Development: structured EPUB access
 
 - Address the EPUB scope of issues 1 and 2 with versioned capability negotiation,

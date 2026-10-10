@@ -307,3 +307,28 @@ collection manifests can help build classics by language without unbounded mirro
 Acquisition ranking should explain format, language, edition, rights, and available
 quality evidence. Download popularity, publisher reputation, and deterministic
 keyword scores do not prove completeness, relevance, safety, or peer review.
+
+## Reviewed and declined
+
+Library Genesis was reviewed on 2026-10-09 as a possible optional search source.
+It is not a Nemalo provider.
+
+It is a shadow library. The [Wikipedia article](https://en.wikipedia.org/wiki/Library_Genesis)
+describes file-sharing access to works that are otherwise paywalled, and records
+publisher litigation and domain seizures. A search hit from that catalog is
+file-location evidence, not a rights declaration.
+[Decision 0005](decisions/0005-provider-search-and-evaluation.md) requires one
+fixed HTTPS host and no configurable endpoints. Public descriptions list several
+domains, and those domains change under blocking and seizure. The JSON interface
+at [libgen.li/json.php](https://libgen.li/json.php), reviewed the same day, returns
+object records by identifier, DOI, hash, or time range. It does not define title
+search, an automated-use quota, or a stability promise. Community clients scrape
+HTML and then request those records. That fails the fixed-host and non-scraping
+adapter rules above.
+
+Open Library remains the bibliographic search provider. Textbook and scholarly
+coverage stays with the sources in this directory that publish access terms,
+including OpenStax, LibreTexts, DOAB, OAPEN, OpenAlex, and Unpaywall. Revisit
+Library Genesis only if one operator publishes a fixed-host metadata search
+contract, an automated-use policy, and item-level rights that can be stored as
+declarations. File retrieval from it is out of scope.

@@ -3,6 +3,7 @@ package tui
 import (
 	"fmt"
 	"strings"
+	"unicode/utf8"
 
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
@@ -57,7 +58,7 @@ func (m *model) fields() string {
 	case "evaluate":
 		label, hint, second = "Item ID", "archive:ITEM (Enter retrieves metadata only)", "Intake"
 	case "state":
-		label, hint = "Folder", "Existing library folder; Enter reads status, F7 initializes"
+		label, hint, second = "Folder", "Existing library folder; Enter reads status", "Source"
 	case "read":
 		label, hint, second = "Catalog", "Catalog selected from Holdings", "Root"
 	}
@@ -85,7 +86,7 @@ func (m *model) contextLine() string {
 		return fmt.Sprintf("Offline | No progress tracking | Asset %q", m.reader.asset)
 	}
 	if m.mode == "state" {
-		return "Local control metadata | Enter reads status | F7 initializes"
+		return "Enter status | F7 init | F8 import"
 	}
 	if m.mode == "search" {
 		return m.source + "; F2 changes provider | Explicit network search"
@@ -126,7 +127,11 @@ func (m *model) footer() string {
 		return lipgloss.Wrap(m.paint("Enter acquire  Esc back  PgUp/PgDown review  Ctrl+C quit", warning, false), max(1, m.width-2), " ")
 	}
 	if m.confirmRoot != "" {
-		return lipgloss.Wrap(m.paint("Enter initialize  Esc back  PgUp/PgDown review  Ctrl+C quit", warning, false), max(1, m.width-2), " ")
+		verb := "initialize"
+		if m.confirmKind == "import" {
+			verb = "import"
+		}
+		return lipgloss.Wrap(m.paint("Enter "+verb+"  Esc back  PgUp/PgDown review  Ctrl+C quit", warning, false), max(1, m.width-2), " ")
 	}
 	help := "Enter run  F6 browse  Tab/Shift+Tab modes  Ctrl+C quit"
 	if m.resultsFocused {
@@ -187,8 +192,10 @@ func (m *model) View() tea.View {
 
 func (m *model) resize() {
 	m.input.SetWidth(max(1, m.width-16))
+	m.input.SetCursor(m.input.Position())
 	m.secondary.SetWidth(max(1, m.width-16))
-	m.secondary.Placeholder = map[string]string{"snapshot": "New catalog path outside the source folder", "holdings": "Optional title, language, filename, or hash", "audit": "Explicit source directory (required)", "read": "Explicit source directory (required)", "evaluate": "New untrusted intake directory, for d acquire"}[m.mode]
+	m.secondary.SetCursor(m.secondary.Position())
+	m.secondary.Placeholder = map[string]string{"snapshot": "New catalog path outside the source folder", "holdings": "Optional title, language, filename, or hash", "audit": "Explicit source directory (required)", "read": "Explicit source directory (required)", "evaluate": "New untrusted intake directory, for d acquire", "state": "EPUB, PDF, MP3, or completed intake packet"}[m.mode]
 	// Layout height follows the actual wrapped navigation, context, and help.
 	reserved := lipgloss.Height(m.top()) + lipgloss.Height(m.footer()) + lipgloss.Height(m.statusText()) + lipgloss.Height(m.position()) + 2
 	m.viewport.SetHeight(max(1, m.height-reserved))
@@ -204,7 +211,40 @@ func (m *model) resize() {
 
 func (m *model) setReport(text string) {
 	m.report = text
-	m.viewport.SetContent(lipgloss.Wrap(text, max(1, m.viewport.Width()), ""))
+	m.viewport.SetContent(hardWrap(text, max(1, m.viewport.Width())))
+}
+
+// hardWrap keeps every displayed line inside the viewport, including paths that
+// contain no spaces. The stored report text is unchanged.
+func hardWrap(text string, width int) string {
+	if width < 1 {
+		width = 1
+	}
+	var b strings.Builder
+	lines := strings.Split(lipgloss.Wrap(text, width, ""), "\n")
+	for i, line := range lines {
+		for lipgloss.Width(line) > width {
+			cut := len(line)
+			for cut > 0 && lipgloss.Width(line[:cut]) > width {
+				cut--
+				for cut > 0 && !utf8.RuneStart(line[cut]) {
+					cut--
+				}
+			}
+			if cut < 1 {
+				_, size := utf8.DecodeRuneInString(line)
+				cut = max(1, size)
+			}
+			b.WriteString(line[:cut])
+			b.WriteByte('\n')
+			line = line[cut:]
+		}
+		b.WriteString(line)
+		if i != len(lines)-1 {
+			b.WriteByte('\n')
+		}
+	}
+	return b.String()
 }
 
 func (m *model) statusText() string {
@@ -220,7 +260,11 @@ func (m *model) position() string {
 		return fmt.Sprintf("Review acquisition | Scroll %.0f%%", m.viewport.ScrollPercent()*100)
 	}
 	if m.confirmRoot != "" {
-		return fmt.Sprintf("Review initialization | Scroll %.0f%%", m.viewport.ScrollPercent()*100)
+		label := "initialization"
+		if m.confirmKind == "import" {
+			label = "import"
+		}
+		return fmt.Sprintf("Review %s | Scroll %.0f%%", label, m.viewport.ScrollPercent()*100)
 	}
 	position := fmt.Sprintf("Results | Scroll %.0f%%", m.viewport.ScrollPercent()*100)
 	if m.report == "" {
@@ -257,7 +301,7 @@ func (m *model) emptyHelp() string {
 	case "evaluate":
 		return "Look before acquiring.\n\nEnter archive:ITEM, or select an Archive search result and press e.\nEnter retrieves metadata only. F6 browses source files.\nEnter a new intake folder with Ctrl+N; select a file and press d to review acquisition.\nDownloads remain untrusted; existing intake is never overwritten."
 	case "state":
-		return "Establish a library identity.\n\nEnter an existing folder, then Enter to read its control status.\nF7 reviews initialization before writing only Nemalo control metadata.\nThis does not import or validate content."
+		return "Establish a library identity.\n\nEnter an existing folder, then Enter to read its control status.\nF7 reviews initialization before writing control metadata.\nCtrl+N sets one source. F8 reviews import and does not scan or delete it."
 	case "read":
 		return "Read from exact source bytes.\n\nSelect an asset in Holdings and press r. Enter its explicit root, then Enter lists units.\nF6 browses units; Enter retrieves text. n continues, r repeats, u lists units.\nDelivery does not record reading progress. Notes and image resources are available through content CLI references."
 	default:

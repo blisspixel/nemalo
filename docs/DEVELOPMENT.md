@@ -8,7 +8,7 @@ needed for the application, tests, or first-party tooling.
 ## Current operations
 
 `help`, `version`, `doctor`, `search`, `evaluate`, `acquire`, `inspect`, `check`, `library snapshot`,
-`library list`, `library audit`, `library init`, `library status`, `content units`,
+`library list`, `library audit`, `library import`, `library init`, `library status`, `content units`,
 `content read`, `content source`, `content resource`, `content capabilities`, and
 `tui` are implemented.
 Search defaults to Open Library work metadata; `--source archive` selects Internet
@@ -178,7 +178,37 @@ Writes sync journal files. Directory-entry power-loss persistence and network
 filesystem coordination are not guaranteed. See the
 [state decision](decisions/0006-library-control-state.md) for the full boundaries.
 The TUI's State operation reads on Enter; F7 reviews initialization before a
-second Enter writes.
+second Enter writes. Ctrl+N sets one source and F8 reviews import. That review
+does not scan.
+
+## Managed import
+
+```sh
+nemalo library import /path/to/library /path/to/book.epub
+nemalo library import /path/to/library /path/to/book.epub --apply
+nemalo library import /path/to/library /path/to/intake --apply --scan
+nemalo library audit /path/to/library
+nemalo content read /path/to/library --root /path/to/library --asset sha256:HASH
+```
+
+Import requires an initialized library. The source is an EPUB, PDF, or MP3 file
+outside that library, or a completed intake directory with exactly one
+`content.epub`, `content.pdf`, or `content.mp3` and a matching `receipt.json`.
+Without `--apply`, nothing is written. `--apply` copies the assessed bytes and
+leaves the source in place. `--scan` can invoke installed antivirus. `checked`
+requires an EPUB whose limited checks passed and whose scan reported no
+detections. Other results stay in review. A later import without `--scan` does
+not downgrade `checked`. A scan gap with no other finding is recorded as
+`scan_` plus the scanner status. A conflicting stored file, an unexpected extra
+hard link, or a store path whose parent is not a real directory fails before a
+new intent is written. The existing bytes stay in place.
+
+Stored files live under `assets/sha256/` beside `.nemalo`. Operations and
+holdings journals are separate from the initialization journal. A trailing
+import intent resumes only for the same source. Corrupt journals are retained.
+`library audit` on the library directory reports missing, changed, and review
+holdings and does not repair them. Snapshot audit still requires `--root`.
+See [decision 0009](decisions/0009-managed-epub-import.md).
 
 ## Configuration
 
@@ -223,10 +253,9 @@ by a `CGO_ENABLED=0` binary smoke. Review actual runs before claiming platform s
 
 ## Next bounded work
 
-Finish milestone 1 domain identities, mutable content catalogs, and import journal recovery before
-mutating library content. Follow with bounded archive staging and production
-assessment/publication policy. Reuse shared file checks/scanners. Keep real
-acquisition in the first complete lifecycle; do not turn this discovery foundation
-into a download-only or inspection-only product.
+Single-asset import is in place. Finish work, edition, recording, and track
+identities before treating the library as a full catalog. Archive extraction,
+download resume, and recoverable cleanup remain separate gates. Reuse shared
+file checks and scanners. Keep real acquisition in the first complete lifecycle.
 Add those operations to CLI and TUI together. MCP remains a scoped adapter over
 the same services. Generated analysis and model/harness integrations remain post-1.0.

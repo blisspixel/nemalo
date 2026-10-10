@@ -59,6 +59,43 @@ func Audit(a library.Audit) string {
 	return b.String()
 }
 
+func Import(r library.ImportResult) string {
+	var b strings.Builder
+	fmt.Fprintf(&b, "Library: %q\nSource: %q\nKind: %q\nApplied: %t | Resumed: %t | Already held: %t\n", r.Library, r.Source, r.SourceKind, r.Applied, r.Resumed, r.AlreadyHeld)
+	fmt.Fprintf(&b, "Asset: %q\nFormat: %q | Bytes: %d\nSHA-256: %q\nStatus: %q\nReason: %q\nPath: %q\n", r.AssetID, r.Format, r.Bytes, r.SHA256, r.Status, r.Reason, r.Path)
+	for _, title := range r.Titles {
+		fmt.Fprintf(&b, "Title: %q\n", title)
+	}
+	for _, language := range r.Languages {
+		fmt.Fprintf(&b, "Language: %q\n", language)
+	}
+	if r.Antivirus != "" {
+		fmt.Fprintf(&b, "Antivirus: %q\n", r.Antivirus)
+	}
+	for _, finding := range r.Findings {
+		fmt.Fprintf(&b, "Finding: %q\n", finding)
+	}
+	for _, note := range r.Limitations {
+		fmt.Fprintf(&b, "Limitation: %q\n", note)
+	}
+	fmt.Fprintf(&b, "Durability: %q\n", r.Durability)
+	if !r.Applied {
+		b.WriteString("Preview only. No library files were written.\n")
+	}
+	b.WriteString("The source was preserved. Review is not a safety guarantee.\n")
+	return b.String()
+}
+
+func ManagedAudit(a library.ManagedAudit) string {
+	var b strings.Builder
+	fmt.Fprintf(&b, "Library: %q\nRoot: %q\nAssets: %d\nChecked matches: %d\nAntivirus: %q\n", a.LibraryID, a.Root, a.Assets, a.Matching, a.Security)
+	for _, finding := range a.Findings {
+		fmt.Fprintf(&b, "Review: %q %q %q\n", finding.Path, finding.Status, finding.Detail)
+	}
+	b.WriteString("Stored files were not changed. Review is not a safety guarantee.\n")
+	return b.String()
+}
+
 func LibraryState(s library.State) string {
 	var b strings.Builder
 	fmt.Fprintf(&b, "Library root: %q\nControl state: %q\nLibrary ID: %q\nJournal records: %d\nCreated: %t | Resumed: %t\n", s.Root, s.Status, s.LibraryID, s.JournalRecords, s.Created, s.Resumed)

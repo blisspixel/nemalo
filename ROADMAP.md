@@ -77,11 +77,16 @@ These snapshots do not implement checked publication or a mutable library journa
 Explicit initialization/status provide a stable library ID, nonblocking OS
 reader/writer locks, and a synced two-record initialization journal. Valid
 interrupted initialization resumes the same identity; corrupt state is retained.
-This does not implement content catalog mutations or import/cleanup recovery.
 See [decision 0006](docs/decisions/0006-library-control-state.md).
+Single-asset import into that library is implemented: one EPUB, PDF, MP3, or
+completed intake packet, with a separate operations/holdings journal, crash
+resume, and managed audit. Checked status is limited to an EPUB whose checks
+passed and whose scan reported no detections. See
+[decision 0009](docs/decisions/0009-managed-epub-import.md).
 
-Milestone 1 remains in progress: richer domain identities, mutable content catalogs,
-and import/cleanup recovery are outstanding. Native archive/checksum packaging is
+Milestone 1 remains in progress: work, edition, recording, and track identities
+are outstanding. Cleanup, archive extraction, and download resume are also
+outstanding. Native archive/checksum packaging is
 implemented; releases still require the actual verification and publication gates.
 Milestone 2
 has inventory and standalone signatures/private snapshots, without archive
@@ -161,7 +166,9 @@ Delivered increment: versioned immutable byte-asset snapshots, duplicate locatio
 holdings queries, and preservation audits. See the
 [catalog decision](docs/decisions/0004-portable-library-snapshots.md).
 Library identity, initialization/status, reader/writer locking, and initialization
-recovery are implemented separately from planned content mutations.
+recovery are implemented. Single-file managed import is a separate journal; see
+[decision 0009](docs/decisions/0009-managed-epub-import.md). Work, edition,
+recording, and track identities remain outstanding.
 
 Deliver `doctor`, configuration loading, explicit library/review paths, a versioned
 catalog schema, and a durable run journal. Use JSON metadata initially; the catalog
@@ -210,8 +217,9 @@ Acceptance:
 
 ## Milestone 3: assess and publish EPUBs
 
-Status: partial. Shared EPUB checks and optional scanners exist; checked
-publication and library policy remain planned. Depends on milestone 2.
+Status: partial. Shared EPUB checks, optional scanners, and single-asset managed
+import exist. Work and edition identities, archive extraction, cleanup, and a
+full checked-library policy remain. Depends on milestone 2.
 
 Deliver EPUB package checks, content checks, scanner adapters, metadata handling,
 exact duplicate detection, and verified library publication.

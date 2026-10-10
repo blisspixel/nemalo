@@ -116,6 +116,17 @@ func (s Service) LibraryStatus(ctx context.Context, root string) (library.State,
 	return library.LibraryStatus(ctx, root)
 }
 
+func (s Service) Import(ctx context.Context, request library.ImportRequest) (library.ImportResult, error) {
+	if request.Scan && request.Scanner == nil {
+		request.Scanner = s.Scanner
+	}
+	return library.Import(ctx, request)
+}
+
+func (s Service) AuditManaged(ctx context.Context, directory string) (library.ManagedAudit, error) {
+	return library.AuditManaged(ctx, directory)
+}
+
 func (s Service) Content(ctx context.Context, req content.Request) (content.Result, error) {
 	return content.Get(ctx, req)
 }

@@ -42,7 +42,8 @@ Enter. Downloads remain untrusted; Check/Scan are staged afterward. See
 | F3 in inspect, snapshot, audit | Select bounded 1 GiB / 5 GiB read budget |
 | F4 in holdings | Cycle EPUB / PDF / MP3 / all filename filters |
 | F7 in State | Review initialization of an explicit existing folder |
-| Ctrl+N in two-field forms | Switch between fields |
+| F8 in State | Review import of the folder and one source; no antivirus scan |
+| Ctrl+N in two-field forms | Switch between fields, including State source |
 | Ctrl+A in snapshot | Toggle historical health metadata |
 | e in Archive results | Prepare selected-item evaluation, without requesting it |
 | d in Evaluate results | Review selected-file acquisition into a new intake directory |
@@ -57,9 +58,12 @@ filename filtering does not validate content. Snapshot success fills empty
 holdings/audit forms but does not automatically open or audit anything.
 
 State (operation 9) reads local control identity/status on Enter. F7 reviews the
-exact folder and control-file writes; a second Enter initializes it. Escape returns
-without writing. Review freezes fields/navigation and supports PageUp/PageDown.
-This establishes control state, not a checked content library; see
+exact folder and control-file writes; a second Enter initializes it. Ctrl+N sets
+one EPUB, PDF, MP3, or completed intake packet. F8 reviews that import; a second
+Enter copies it into the library without scanning. Escape, F7, and F8 leave
+either review without a new write. Review freezes fields/navigation and supports
+PageUp/PageDown. Initialization is not import. Terminal import cannot newly mark
+a file checked; see [decision 0009](decisions/0009-managed-epub-import.md) and
 [the state contract](decisions/0006-library-control-state.md).
 
 ## Source access

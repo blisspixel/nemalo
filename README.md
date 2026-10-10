@@ -21,12 +21,16 @@ AI service. Future agent interfaces will use the same application services.
   measurements, with optional installed antivirus.
 - Save portable catalog snapshots, browse holdings, and audit changed/missing files.
 - Initialize library control state with locking and resumable initialization.
+- Import one EPUB, PDF, or MP3, or a completed intake packet, into an initialized
+  library. Preview writes nothing. Checked status requires a passed EPUB check
+  and a recorded no-detection scan; other assessed files stay in review.
 - Retrieve bounded EPUB text in CLI/JSON/TUI, with exact continuation, source parts,
   note references, local image bytes, and explicit extraction gaps.
 - Use CLI, versioned JSON, or an interactive terminal interface.
 
-Resumable transfers, archive intake, checked publication, import recovery,
-reader/player handoff, complete audiobook management, and MCP are planned.
+Resumable transfers, archive intake, folder cleanup, reader/player handoff,
+complete audiobook management, and MCP are planned. Single-file import is not
+a full checked-library policy.
 File checks report limited evidence, never a safety or completeness guarantee.
 See [current capabilities and limits](docs/DEVELOPMENT.md) and the [roadmap](ROADMAP.md).
 Native prerelease archives and checksums are on [GitHub Releases](https://github.com/blisspixel/nemalo/releases).

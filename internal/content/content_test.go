@@ -342,6 +342,13 @@ func TestTextBoundariesAndLimits(t *testing.T) {
 	if _, _, err := readAsset(ctx, "", "", library.Asset{Bytes: maxInput + 1}); err != errBudget {
 		t.Fatal(err)
 	}
+	if _, _, err := readAsset(ctx, "", "", library.Asset{Bytes: maxManagedInput + 1, Locations: []library.Location{{CandidateKind: "managed_holding"}}}); err != errBudget {
+		t.Fatal(err)
+	}
+	_, status, err := readAsset(ctx, t.TempDir(), "missing", library.Asset{Bytes: maxInput + 1, SHA256: strings.Repeat("ab", 32), Locations: []library.Location{{Path: "missing", CandidateKind: "managed_holding"}}})
+	if errors.Is(err, errBudget) || status == "budget_exceeded" {
+		t.Fatal("managed holding kept the snapshot byte cap", status, err)
+	}
 	req := fixture(t, []string{"Text"}, nil)
 	target := filepath.Join(req.Root, "book.epub")
 	if err := os.Remove(target); err != nil {

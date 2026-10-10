@@ -343,8 +343,10 @@ record all regular files and historical optional health evidence; they are not a
 checked publication catalog, backup, authenticated manifest, or recovery journal.
 Library identity/init/status and a synced initialization journal now share that
 seam, with native reader/writer locks and resumable valid initialization. See
-[decision 0006](decisions/0006-library-control-state.md). This does not import or
-validate content. The mutable content operations below remain planned.
+[decision 0006](decisions/0006-library-control-state.md). Single-asset import
+stores one assessed file beside `.nemalo` and records it in separate journals.
+See [decision 0009](decisions/0009-managed-epub-import.md). Folder cleanup,
+archive extraction, and download resume remain planned.
 
 Use a versioned JSON catalog and per-asset provenance initially. Keep catalog
 indexes rebuildable. Use a separate durable journal for in-progress operations;

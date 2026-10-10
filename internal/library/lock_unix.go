@@ -23,12 +23,20 @@ func lockState(f *os.File, write bool) error {
 
 func unlockState(f *os.File) error { return unix.Flock(int(f.Fd()), unix.LOCK_UN) }
 
-func singleLink(f *os.File) error {
+func linkCount(f *os.File) (uint64, error) {
 	var stat unix.Stat_t
 	if err := unix.Fstat(int(f.Fd()), &stat); err != nil {
+		return 0, err
+	}
+	return uint64(stat.Nlink), nil
+}
+
+func singleLink(f *os.File) error {
+	n, err := linkCount(f)
+	if err != nil {
 		return err
 	}
-	if stat.Nlink != 1 {
+	if n != 1 {
 		return ErrStateReview
 	}
 	return nil

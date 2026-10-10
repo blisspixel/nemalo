@@ -6,6 +6,7 @@ import (
 	tea "charm.land/bubbletea/v2"
 	"github.com/blisspixel/nemalo/internal/assessment"
 	"github.com/blisspixel/nemalo/internal/inventory"
+	"github.com/blisspixel/nemalo/internal/library"
 )
 
 var modes = []string{"search", "inspect", "check", "scan", "snapshot", "holdings", "audit", "evaluate", "state", "read"}
@@ -114,8 +115,10 @@ func (m *model) start(reset bool) tea.Cmd {
 	id, mode, value, source := m.id, m.mode, m.input.Value(), m.source
 	if mode == "state" && m.initializeAction {
 		mode = "initialize"
+	} else if mode == "state" && m.importAction {
+		mode = "import"
 	}
-	m.initializeAction = false
+	m.initializeAction, m.importAction = false, false
 	second, assess, offset, format := m.secondary.Value(), m.assess, m.offset, m.format
 	limits := inventory.Defaults()
 	if m.largeBudget {
@@ -130,6 +133,9 @@ func (m *model) start(reset bool) tea.Cmd {
 		switch mode {
 		case "initialize":
 			data, err := m.service.InitializeLibrary(ctx, value)
+			return result{id, data, err}
+		case "import":
+			data, err := m.service.Import(ctx, library.ImportRequest{Library: value, Source: second, Apply: true})
 			return result{id, data, err}
 		case "state":
 			data, err := m.service.LibraryStatus(ctx, value)

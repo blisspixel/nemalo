@@ -30,6 +30,19 @@ package/member paths, spine order, `linear` declarations, extracted byte counts,
 and `supported_plain_text` or `unsupported_document`. It does not invent labels
 from text. Nonlinear documents remain explicit, in spine order.
 
+An initialized library can be both arguments when they are the same absolute
+non-link directory:
+
+```sh
+nemalo content read /path/library --root /path/library --asset sha256:HASH --json
+```
+
+The asset ID comes from `library import`. This reads that one managed holding
+and rechecks its size and SHA-256. It does not search the library, and review
+status does not become checked because the text was read. A managed holding may
+be read up to the 256 MiB import cap. A different root is refused. Snapshot
+catalogs remain files with their own `--root` and keep the 32 MiB source cap.
+
 The first recorded location is selected deterministically and reported. Missing
 or changed bytes do not trigger an undisclosed search of duplicate locations.
 Every request reads a bounded immutable in-memory copy, checks size and SHA-256,
@@ -82,7 +95,8 @@ Multiple package renditions are unsupported rather than concatenated as one work
 ## Bounds and failures
 
 - Catalog: existing strict 16 MiB snapshot loader; explicit paths at most 4096 bytes.
-- Source: nonempty regular asset, at most 32 MiB; exact size/hash required.
+- Source: nonempty regular asset, at most 32 MiB for a snapshot and 256 MiB for
+  a managed holding; exact size/hash required.
 - Container: shared assessment parser, 2 MiB ZIP metadata-read budget, 10,000
   members, 32 MiB/member, 128 MiB declared expansion, CRC/length checks.
 - Extraction: at most 512 units, 8 MiB total extracted text, UTF-8 XHTML with XML

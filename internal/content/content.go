@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 	"unicode/utf8"
@@ -24,6 +25,7 @@ import (
 
 const Extractor = "nemalo.epub.text/1"
 const maxInput = 32 << 20
+const maxManagedInput = 256 << 20
 const maxText = 8 << 20
 const maxUnits = 512
 
@@ -333,6 +335,13 @@ func Get(ctx context.Context, req Request) (result Result, err error) {
 
 func resolveSource(ctx context.Context, req Request, result *Result) ([]byte, error) {
 	result.Status = "unavailable"
+	info, err := os.Lstat(req.Catalog)
+	if err != nil {
+		return nil, err
+	}
+	if info.IsDir() && info.Mode()&os.ModeSymlink == 0 {
+		return resolveManaged(ctx, req, result)
+	}
 	catalog, err := library.Load(req.Catalog)
 	if err != nil {
 		return nil, err
@@ -359,8 +368,43 @@ func resolveSource(ctx context.Context, req Request, result *Result) ([]byte, er
 	return nil, errors.New("asset not present in catalog")
 }
 
+func resolveManaged(ctx context.Context, req Request, result *Result) ([]byte, error) {
+	catalog, err := filepath.Abs(req.Catalog)
+	if err != nil {
+		return nil, err
+	}
+	root, err := filepath.Abs(req.Root)
+	if err != nil {
+		return nil, err
+	}
+	if catalog != root {
+		return nil, errors.New("managed content requires the library directory as both catalog and root")
+	}
+	asset, libraryID, err := library.ManagedAsset(ctx, catalog, req.AssetID)
+	if err != nil {
+		if strings.Contains(err.Error(), "not present") {
+			result.Status = "missing_asset"
+		}
+		return nil, err
+	}
+	result.CatalogID = libraryID
+	result.SourcePath = asset.Locations[0].Path
+	data, status, err := readAsset(ctx, catalog, result.SourcePath, asset)
+	if err != nil {
+		result.Status = status
+	}
+	return data, err
+}
+
+func sourceBudget(asset library.Asset) int64 {
+	if len(asset.Locations) == 1 && asset.Locations[0].CandidateKind == "managed_holding" {
+		return maxManagedInput
+	}
+	return maxInput
+}
+
 func readAsset(ctx context.Context, directory, name string, asset library.Asset) ([]byte, string, error) {
-	if asset.Bytes <= 0 || asset.Bytes > maxInput {
+	if asset.Bytes <= 0 || asset.Bytes > sourceBudget(asset) {
 		return nil, "budget_exceeded", errBudget
 	}
 	root, err := safeio.OpenResolvedRoot(directory)
