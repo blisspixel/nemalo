@@ -21,4 +21,8 @@ func TestLibraryEvidenceAndTerminalEscaping(t *testing.T) {
 	if !strings.Contains(s, "Unique byte assets: 1") || !strings.Contains(s, "File locations: 2") || !strings.Contains(p, "historical") || !strings.Contains(p, "Title:") || !strings.Contains(p, "Language:") || !strings.Contains(u, "not_scanned") {
 		t.Fatal(s, p, u)
 	}
+	imported := Import(library.ImportResult{Library: "lib", Source: "book", IdentitiesRecorded: true, IdentifiersOmitted: 1, Identities: []library.Identity{{Role: "edition", ID: "isbn:9780306406157"}}})
+	if !strings.Contains(imported, `Identity: "edition" "isbn:9780306406157"`) || !strings.Contains(imported, "Package identifiers recorded: 1") || !strings.Contains(imported, "Identifiers omitted: 1") {
+		t.Fatal(imported)
+	}
 }

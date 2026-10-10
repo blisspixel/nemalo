@@ -84,9 +84,12 @@ resume, and managed audit. Checked status is limited to an EPUB whose checks
 passed and whose scan reported no detections. See
 [decision 0009](docs/decisions/0009-managed-epub-import.md).
 
-Milestone 1 remains in progress: work, edition, recording, and track identities
-are outstanding. Cleanup, archive extraction, and download resume are also
-outstanding. Native archive/checksum packaging is
+Milestone 1 remains in progress. Managed holdings record EPUB package
+identifier evidence for an explicit ISBN, DOI, or Open Library work or edition
+key, and they do not merge files on that evidence. See
+[decision 0010](docs/decisions/0010-bibliographic-identity.md). Recording and
+track identities remain outstanding. Cleanup, archive extraction, and download
+resume are also outstanding. Native archive/checksum packaging is
 implemented; releases still require the actual verification and publication gates.
 Milestone 2
 has inventory and standalone signatures/private snapshots, without archive
@@ -167,8 +170,10 @@ holdings queries, and preservation audits. See the
 [catalog decision](docs/decisions/0004-portable-library-snapshots.md).
 Library identity, initialization/status, reader/writer locking, and initialization
 recovery are implemented. Single-file managed import is a separate journal; see
-[decision 0009](docs/decisions/0009-managed-epub-import.md). Work, edition,
-recording, and track identities remain outstanding.
+[decision 0009](docs/decisions/0009-managed-epub-import.md). EPUB package
+identifier evidence is recorded on those holdings; see
+[decision 0010](docs/decisions/0010-bibliographic-identity.md). Recording, track,
+and cross-file work relationships remain outstanding.
 
 Deliver `doctor`, configuration loading, explicit library/review paths, a versioned
 catalog schema, and a durable run journal. Use JSON metadata initially; the catalog

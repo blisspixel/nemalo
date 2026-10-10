@@ -73,12 +73,26 @@ func TestMeasuredEPUB(t *testing.T) {
 		t.Fatal(r, err)
 	}
 	e := r.Checks.EPUB
-	if e.TextCharacters != 5 || e.ReadingOrderDocuments != 1 || e.Images != 1 || e.Languages[0] != "ja" || e.Titles[0] != "Test" || e.ExpandedBytes == 0 || !strings.HasPrefix(e.PageCountStatus, "unknown") {
+	if e.TextCharacters != 5 || e.ReadingOrderDocuments != 1 || e.Images != 1 || e.Languages[0] != "ja" || e.Titles[0] != "Test" || e.ExpandedBytes == 0 || !strings.HasPrefix(e.PageCountStatus, "unknown") || e.Identifiers == nil || len(e.Identifiers) != 0 || e.IdentifiersOmitted != 0 {
 		t.Fatal(e)
 	}
 	got, _ := os.ReadFile(p)
 	if !bytes.Equal(got, data) {
 		t.Fatal("source mutated")
+	}
+}
+
+func TestEPUBPackageIdentifiersAreMeasured(t *testing.T) {
+	data := book(t, `<html xmlns="http://www.w3.org/1999/xhtml"><body><p>Hello</p></body></html>`, func(files map[string]string) {
+		files["book.opf"] = `<package xmlns="http://www.idpf.org/2007/opf" unique-identifier="isbn" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:opf="http://www.idpf.org/2007/opf"><metadata><dc:title>Test</dc:title><dc:language>ja</dc:language><dc:identifier id="isbn" opf:scheme="ISBN">978-0-306-40615-7</dc:identifier><dc:identifier>bad` + "\n" + `id</dc:identifier></metadata><manifest><item id="c" href="chapter.xhtml" media-type="application/xhtml+xml"/><item id="i" href="image.png" media-type="image/png"/></manifest><spine><itemref idref="c"/></spine></package>`
+	})
+	r, err := Check(context.Background(), write(t, "book.epub", data), Options{}, nil)
+	if err != nil || r.Checks.EPUB == nil || r.Checks.EPUB.IdentifiersOmitted != 1 || len(r.Checks.EPUB.Identifiers) != 1 {
+		t.Fatal(r.Checks.EPUB, err)
+	}
+	got := r.Checks.EPUB.Identifiers[0]
+	if got.Value != "978-0-306-40615-7" || got.Scheme != "ISBN" || !got.PackageUnique {
+		t.Fatal(got)
 	}
 }
 

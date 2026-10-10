@@ -16,7 +16,9 @@ links/special files. All regular files are accounted for, including receipts,
 archives, unknown types, and empty files. Equal hashes share one asset while
 retaining locations. Different editions, translations, and narrations are not
 merged by filename or approximate similarity. Work, edition, recording, track,
-rights, and collection identities remain future domain work.
+rights, and collection identities remain future domain work for snapshots.
+Managed holdings record EPUB package identifier evidence separately; see
+[decision 0010](0010-bibliographic-identity.md).
 
 `--assess` records historical shared file-health evidence for recognized EPUB,
 PDF, and MP3 filenames. One supported location per byte asset is checked against

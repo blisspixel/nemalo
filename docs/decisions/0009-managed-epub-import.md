@@ -12,7 +12,9 @@ CLI, JSON, and TUI use `internal/app` and `internal/library`. Human output uses
 
 This stores one EPUB, PDF, or MP3. It does not extract archives, resume a
 download, organize a folder, delete a source, or invent work, edition,
-recording, or track identities. It is not the full checked-library policy.
+recording, or track identities. [Decision 0010](0010-bibliographic-identity.md)
+records stated EPUB package identifiers as evidence and still does not merge
+files. It is not the full checked-library policy.
 
 The initialization journal from decision 0006 stays two records. Import uses
 separate journals.

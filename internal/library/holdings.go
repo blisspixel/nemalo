@@ -21,18 +21,21 @@ const maxRecord = 64 << 10
 // Holding is one committed managed asset. Later lines for the same ID supersede
 // earlier ones. Paths are slash-separated and are not authoritative identity.
 type Holding struct {
-	SchemaVersion int      `json:"schema_version"`
-	LibraryID     string   `json:"library_id"`
-	ID            string   `json:"id"`
-	SHA256        string   `json:"sha256"`
-	Bytes         int64    `json:"bytes"`
-	Format        string   `json:"format"`
-	Status        string   `json:"status"`
-	Reason        string   `json:"reason"`
-	Path          string   `json:"path"`
-	Titles        []string `json:"titles"`
-	Languages     []string `json:"languages"`
-	Sources       []Source `json:"sources"`
+	SchemaVersion      int        `json:"schema_version"`
+	LibraryID          string     `json:"library_id"`
+	ID                 string     `json:"id"`
+	SHA256             string     `json:"sha256"`
+	Bytes              int64      `json:"bytes"`
+	Format             string     `json:"format"`
+	Status             string     `json:"status"`
+	Reason             string     `json:"reason"`
+	Path               string     `json:"path"`
+	Titles             []string   `json:"titles"`
+	Languages          []string   `json:"languages"`
+	IdentitiesRecorded bool       `json:"identities_recorded,omitempty"`
+	IdentifiersOmitted int        `json:"identifiers_omitted,omitempty"`
+	Identities         []Identity `json:"identities,omitempty"`
+	Sources            []Source   `json:"sources"`
 }
 
 // Source records where a stored asset came from. Rights strings are declarations.
@@ -234,6 +237,12 @@ func validHolding(h Holding, libraryID string) bool {
 		return false
 	}
 	if h.Titles == nil || h.Languages == nil || len(h.Sources) == 0 || len(h.Titles) > 32 || len(h.Languages) > 32 {
+		return false
+	}
+	if !validIdentities(h.Identities, h.IdentitiesRecorded, h.IdentifiersOmitted) {
+		return false
+	}
+	if h.IdentitiesRecorded && h.Format != "epub" {
 		return false
 	}
 	for _, value := range append(append([]string{}, h.Titles...), h.Languages...) {

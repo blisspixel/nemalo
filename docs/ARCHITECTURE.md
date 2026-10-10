@@ -130,6 +130,12 @@ identifies an edition; an Archive item may contain multiple formats or recording
 Represent uncertain relationships with evidence and confidence. Never collapse
 two records merely because title and author strings match.
 
+Managed holdings implement a narrow part of this model. [Decision 0010](decisions/0010-bibliographic-identity.md)
+records stated EPUB package identifiers and leaves the asset SHA-256 as the
+storage, duplicate, and retrieval identity. Recording, track, and cross-file
+relationships are not created from titles or filenames. Snapshots do not carry
+these identifiers.
+
 Keep bibliographic language separate from the language of a specific asset or
 recording. Preserve raw provider values alongside normalized language tags. Unknown
 language does not satisfy a requested language filter. Multilingual recordings and

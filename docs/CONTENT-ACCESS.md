@@ -117,7 +117,9 @@ transport response cannot be treated as success by a caller.
 `malformed_content` reports failure in the supported parser, not a universal EPUB
 conformance verdict; unsupported XML entity/encoding forms can also cause it.
 
-Rights/edition metadata remain unknown where the snapshot lacks them. Retrieval
+Rights/edition metadata remain unknown where the snapshot lacks them. A managed
+EPUB holding can record package identifier evidence; that evidence is not a
+retrieval locator and does not replace the asset hash. Retrieval
 does not certify safety, grant redistribution rights, trigger a scan, or infer
 reading/listening. Future provenance must extend the shared contract deliberately.
 

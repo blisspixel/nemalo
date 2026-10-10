@@ -20,6 +20,15 @@ catalogs, complete audiobook management, and MCP remain planned. See the
 
 ## Pre-release development history
 
+### Development: EPUB package identifier evidence
+
+- Record an explicit ISBN, DOI, or Open Library work/edition key from an EPUB
+  package as identity evidence. Preserve other package identifiers as unassigned.
+- Keep each file under its SHA-256. The same identifier on two files does not
+  merge them, and a title match assigns no work, recording, or track.
+- Leave PDF and MP3 bibliographic identifiers unread. See
+  [decision 0010](docs/decisions/0010-bibliographic-identity.md).
+
 ### Development: managed single-file import
 
 - Copy one assessed EPUB, PDF, MP3, or completed intake packet into an initialized

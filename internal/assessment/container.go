@@ -37,13 +37,23 @@ type Checks struct {
 }
 
 type EPUBFacts struct {
-	Titles                []string `json:"titles"`
-	Languages             []string `json:"languages"`
-	ReadingOrderDocuments int      `json:"reading_order_documents"`
-	Images                int      `json:"images"`
-	TextCharacters        int      `json:"non_whitespace_body_text_characters"`
-	ExpandedBytes         uint64   `json:"expanded_bytes"`
-	PageCountStatus       string   `json:"page_count_status"`
+	Titles                []string         `json:"titles"`
+	Languages             []string         `json:"languages"`
+	Identifiers           []EPUBIdentifier `json:"identifiers"`
+	IdentifiersOmitted    int              `json:"identifiers_omitted,omitempty"`
+	ReadingOrderDocuments int              `json:"reading_order_documents"`
+	Images                int              `json:"images"`
+	TextCharacters        int              `json:"non_whitespace_body_text_characters"`
+	ExpandedBytes         uint64           `json:"expanded_bytes"`
+	PageCountStatus       string           `json:"page_count_status"`
+}
+
+// EPUBIdentifier is one package identifier string. It is not a work, edition,
+// recording, or track assignment.
+type EPUBIdentifier struct {
+	Value         string `json:"value"`
+	Scheme        string `json:"scheme,omitempty"`
+	PackageUnique bool   `json:"package_unique,omitempty"`
 }
 
 // Inspect performs bounded container checks without rendering or executing content.
@@ -200,7 +210,7 @@ func inspectEPUB(ctx context.Context, r io.ReaderAt, size int64, c *Checks, visi
 		}
 	}
 	c.Members, c.ZIPCRC = len(files), "passed"
-	c.EPUB = &EPUBFacts{ExpandedBytes: expanded, PageCountStatus: "unknown_no_fixed_page_count", Titles: []string{}, Languages: []string{}}
+	c.EPUB = &EPUBFacts{ExpandedBytes: expanded, PageCountStatus: "unknown_no_fixed_page_count", Titles: []string{}, Languages: []string{}, Identifiers: []EPUBIdentifier{}}
 	if files["META-INF/encryption.xml"] != nil {
 		c.Warnings = append(c.Warnings, "encryption declarations present; may include font obfuscation")
 		c.AccessRestrictions = append(c.AccessRestrictions, "encryption_declarations")
@@ -232,10 +242,12 @@ func inspectEPUB(ctx context.Context, r io.ReaderAt, size int64, c *Checks, visi
 			return err
 		}
 		var pkg struct {
-			XMLName   xml.Name `xml:"http://www.idpf.org/2007/opf package"`
-			Titles    []string `xml:"metadata>title"`
-			Languages []string `xml:"metadata>language"`
-			Items     []struct {
+			XMLName     xml.Name        `xml:"http://www.idpf.org/2007/opf package"`
+			UniqueID    string          `xml:"unique-identifier,attr"`
+			Titles      []string        `xml:"metadata>title"`
+			Languages   []string        `xml:"metadata>language"`
+			Identifiers []opfIdentifier `xml:"metadata>identifier"`
+			Items       []struct {
 				ID         string `xml:"id,attr"`
 				Href       string `xml:"href,attr"`
 				Media      string `xml:"media-type,attr"`
@@ -254,6 +266,9 @@ func inspectEPUB(ctx context.Context, r io.ReaderAt, size int64, c *Checks, visi
 		documents := map[string]EPUBDocument{}
 		c.EPUB.Titles = append(c.EPUB.Titles, pkg.Titles...)
 		c.EPUB.Languages = append(c.EPUB.Languages, pkg.Languages...)
+		kept, omitted := collectIdentifiers(c.EPUB.Identifiers, pkg.UniqueID, pkg.Identifiers)
+		c.EPUB.Identifiers = kept
+		c.EPUB.IdentifiersOmitted += omitted
 		if len(pkg.Titles) == 0 || len(pkg.Languages) == 0 {
 			c.Warnings = append(c.Warnings, "title or language metadata missing")
 		}
@@ -357,6 +372,51 @@ func inspectEPUB(ctx context.Context, r io.ReaderAt, size int64, c *Checks, visi
 		}
 	}
 	return nil
+}
+
+type opfIdentifier struct {
+	ID       string `xml:"id,attr"`
+	Scheme   string `xml:"scheme,attr"`
+	SchemeNS string `xml:"http://www.idpf.org/2007/opf scheme,attr"`
+	Value    string `xml:",chardata"`
+}
+
+func collectIdentifiers(existing []EPUBIdentifier, unique string, raw []opfIdentifier) ([]EPUBIdentifier, int) {
+	omitted := 0
+	unique = strings.TrimSpace(unique)
+	if len(unique) > 200 || strings.ContainsAny(unique, "\x00\r\n") {
+		unique = ""
+	}
+	for _, item := range raw {
+		if len(existing) >= 32 {
+			omitted++
+			continue
+		}
+		scheme, ok := oneIdentifierScheme(item.Scheme, item.SchemeNS)
+		value := strings.TrimSpace(item.Value)
+		id := strings.TrimSpace(item.ID)
+		if !ok || value == "" || len(value) > 1000 || strings.ContainsAny(value, "\x00\r\n") || len(id) > 200 || strings.ContainsAny(id, "\x00\r\n") {
+			omitted++
+			continue
+		}
+		existing = append(existing, EPUBIdentifier{Value: value, Scheme: scheme, PackageUnique: unique != "" && id == unique})
+	}
+	return existing, omitted
+}
+
+func oneIdentifierScheme(plain, namespaced string) (string, bool) {
+	plain = strings.TrimSpace(plain)
+	namespaced = strings.TrimSpace(namespaced)
+	if len(plain) > 64 || len(namespaced) > 64 || strings.ContainsAny(plain, "\x00\r\n") || strings.ContainsAny(namespaced, "\x00\r\n") {
+		return "", false
+	}
+	if plain != "" && namespaced != "" && !strings.EqualFold(plain, namespaced) {
+		return "", false
+	}
+	if namespaced != "" {
+		return namespaced, true
+	}
+	return plain, true
 }
 
 type metadataReader struct {

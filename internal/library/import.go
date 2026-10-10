@@ -30,27 +30,30 @@ type ImportRequest struct {
 
 // ImportResult is the assessed disposition. Applied false means no library write.
 type ImportResult struct {
-	SchemaVersion int      `json:"schema_version"`
-	Applied       bool     `json:"applied"`
-	Resumed       bool     `json:"resumed"`
-	AlreadyHeld   bool     `json:"already_held"`
-	LibraryID     string   `json:"library_id,omitempty"`
-	Library       string   `json:"library"`
-	Source        string   `json:"source"`
-	SourceKind    string   `json:"source_kind,omitempty"`
-	AssetID       string   `json:"asset_id,omitempty"`
-	Format        string   `json:"format,omitempty"`
-	Bytes         int64    `json:"bytes,omitempty"`
-	SHA256        string   `json:"sha256,omitempty"`
-	Status        string   `json:"status,omitempty"`
-	Reason        string   `json:"reason,omitempty"`
-	Path          string   `json:"path,omitempty"`
-	Titles        []string `json:"titles"`
-	Languages     []string `json:"languages"`
-	Antivirus     string   `json:"antivirus,omitempty"`
-	Findings      []string `json:"findings"`
-	Limitations   []string `json:"limitations"`
-	Durability    string   `json:"durability"`
+	SchemaVersion      int        `json:"schema_version"`
+	Applied            bool       `json:"applied"`
+	Resumed            bool       `json:"resumed"`
+	AlreadyHeld        bool       `json:"already_held"`
+	LibraryID          string     `json:"library_id,omitempty"`
+	Library            string     `json:"library"`
+	Source             string     `json:"source"`
+	SourceKind         string     `json:"source_kind,omitempty"`
+	AssetID            string     `json:"asset_id,omitempty"`
+	Format             string     `json:"format,omitempty"`
+	Bytes              int64      `json:"bytes,omitempty"`
+	SHA256             string     `json:"sha256,omitempty"`
+	Status             string     `json:"status,omitempty"`
+	Reason             string     `json:"reason,omitempty"`
+	Path               string     `json:"path,omitempty"`
+	Titles             []string   `json:"titles"`
+	Languages          []string   `json:"languages"`
+	IdentitiesRecorded bool       `json:"identities_recorded,omitempty"`
+	IdentifiersOmitted int        `json:"identifiers_omitted,omitempty"`
+	Identities         []Identity `json:"identities,omitempty"`
+	Antivirus          string     `json:"antivirus,omitempty"`
+	Findings           []string   `json:"findings"`
+	Limitations        []string   `json:"limitations"`
+	Durability         string     `json:"durability"`
 }
 
 type selected struct {
@@ -190,6 +193,7 @@ func assessPlan(ctx context.Context, result ImportResult, source selected, reque
 	result.Path = assetRel(result.SHA256, result.Format)
 	result.Titles = metaList(report)
 	result.Languages = languageList(report)
+	applyIdentities(&result, report)
 	if note := omittedDeclared(source.receipt); note != "" {
 		result.Limitations = append(result.Limitations, note)
 	}
@@ -234,6 +238,7 @@ func finish(ctx context.Context, control *control, store *os.Root, libraryID str
 		status, reason = intent.Status, intent.Reason
 	}
 	result.Titles, result.Languages = metaList(report), languageList(report)
+	applyIdentities(&result, report)
 	current := latestHoldings(lines)[result.AssetID]
 	if !resume && current.ID == result.AssetID && !request.Scan {
 		status, reason = current.Status, current.Reason
@@ -241,7 +246,7 @@ func finish(ctx context.Context, control *control, store *os.Root, libraryID str
 	result.Status, result.Reason = status, reason
 	result.Path = assetRel(result.SHA256, result.Format)
 	add := sourceRecord(source)
-	holding := Holding{SchemaVersion: 1, LibraryID: libraryID, ID: result.AssetID, SHA256: result.SHA256, Bytes: result.Bytes, Format: result.Format, Status: status, Reason: reason, Path: result.Path, Titles: result.Titles, Languages: result.Languages, Sources: mergeSources(current, add)}
+	holding := Holding{SchemaVersion: 1, LibraryID: libraryID, ID: result.AssetID, SHA256: result.SHA256, Bytes: result.Bytes, Format: result.Format, Status: status, Reason: reason, Path: result.Path, Titles: result.Titles, Languages: result.Languages, IdentitiesRecorded: result.IdentitiesRecorded, IdentifiersOmitted: result.IdentifiersOmitted, Identities: result.Identities, Sources: mergeSources(current, add)}
 	if note := omittedDeclared(source.receipt); note != "" {
 		result.Limitations = append(result.Limitations, note)
 	}
@@ -256,7 +261,7 @@ func finish(ctx context.Context, control *control, store *os.Root, libraryID str
 	if err != nil {
 		return result, err
 	}
-	recorded := !resume && sameFact(current, fact) && sourceKnown(current, add)
+	recorded := !resume && sameFact(current, fact) && sourceKnown(current, add) && sameIdentity(current, holding)
 	if obj.present && obj.exclusive && recorded {
 		result.AlreadyHeld, result.Applied = true, true
 		return result, nil
@@ -268,7 +273,7 @@ func finish(ctx context.Context, control *control, store *os.Root, libraryID str
 		result.AlreadyHeld, result.Applied = true, true
 		return result, nil
 	}
-	writeHolding := !sameFact(current, fact) || !sourceKnown(current, add)
+	writeHolding := !sameFact(current, fact) || !sourceKnown(current, add) || !sameIdentity(current, holding)
 	now := time.Now().UTC().Format(time.RFC3339Nano)
 	if !resume {
 		intent = operation{SchemaVersion: 1, Sequence: len(events) + 1, LibraryID: libraryID, OperationID: newStateID("operation"), Event: "import_intent", Source: userSource, AssetID: holding.ID, Format: holding.Format, Bytes: holding.Bytes, Status: holding.Status, Reason: holding.Reason, At: now}
@@ -529,6 +534,10 @@ func normalizeFormat(report assessment.Report, file string) assessment.Report {
 		report.DetectedFormat = "epub"
 	}
 	return report
+}
+
+func applyIdentities(result *ImportResult, report assessment.Report) {
+	result.Identities, result.IdentifiersOmitted, result.IdentitiesRecorded = identitiesFrom(report)
 }
 
 func fillReport(result *ImportResult, report assessment.Report) {
@@ -1018,6 +1027,7 @@ func importLimitations() []string {
 		"Import copies the assessed bytes and preserves the source. Nothing is deleted.",
 		"checked requires an EPUB whose limited checks passed and whose scan reported no detections. Other results stay in review.",
 		"Review is not a safety guarantee. PDF page trees, audio decoding, archive extraction, and cleanup are not part of this operation.",
+		"An EPUB package identifier is recorded evidence. It does not merge files or assign a recording or track.",
 		"File sync is required. Directory-entry durability across power loss depends on the filesystem.",
 	}
 }

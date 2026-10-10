@@ -208,7 +208,12 @@ holdings journals are separate from the initialization journal. A trailing
 import intent resumes only for the same source. Corrupt journals are retained.
 `library audit` on the library directory reports missing, changed, and review
 holdings and does not repair them. Snapshot audit still requires `--root`.
-See [decision 0009](decisions/0009-managed-epub-import.md).
+An EPUB package identifier is recorded when it is an explicit ISBN, DOI, or
+Open Library work or edition key. Other package identifiers stay unassigned.
+The same identifier does not merge two files. PDF and MP3 holdings do not claim
+that their bibliographic identifiers were read. See
+[decision 0009](decisions/0009-managed-epub-import.md) and
+[decision 0010](decisions/0010-bibliographic-identity.md).
 
 ## Configuration
 
@@ -253,9 +258,11 @@ by a `CGO_ENABLED=0` binary smoke. Review actual runs before claiming platform s
 
 ## Next bounded work
 
-Single-asset import is in place. Finish work, edition, recording, and track
-identities before treating the library as a full catalog. Archive extraction,
-download resume, and recoverable cleanup remain separate gates. Reuse shared
-file checks and scanners. Keep real acquisition in the first complete lifecycle.
-Add those operations to CLI and TUI together. MCP remains a scoped adapter over
-the same services. Generated analysis and model/harness integrations remain post-1.0.
+Single-asset import is in place, and EPUB package identifiers are recorded as
+evidence without merging files. Recording and track identities still require a
+stated manifest. Archive extraction, download resume, and recoverable cleanup
+remain separate gates. Reuse shared file checks and scanners. Keep real
+acquisition in the first complete lifecycle. Add those operations to CLI and TUI
+together. MCP remains a scoped adapter over the same services. Generated
+analysis and model/harness integrations remain post-1.0. PDF page identity,
+decoded audio ranges, and MCP remain the open parts of issues 1 and 2.

@@ -69,6 +69,15 @@ func Import(r library.ImportResult) string {
 	for _, language := range r.Languages {
 		fmt.Fprintf(&b, "Language: %q\n", language)
 	}
+	if r.IdentitiesRecorded {
+		fmt.Fprintf(&b, "Package identifiers recorded: %d\n", len(r.Identities))
+	}
+	for _, item := range r.Identities {
+		fmt.Fprintf(&b, "Identity: %q %q\n", item.Role, item.ID)
+	}
+	if r.IdentifiersOmitted > 0 {
+		fmt.Fprintf(&b, "Identifiers omitted: %d\n", r.IdentifiersOmitted)
+	}
 	if r.Antivirus != "" {
 		fmt.Fprintf(&b, "Antivirus: %q\n", r.Antivirus)
 	}

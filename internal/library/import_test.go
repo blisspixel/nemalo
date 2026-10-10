@@ -384,6 +384,125 @@ func TestImportNamesScanGapsAndRejectsCraftedHoldings(t *testing.T) {
 	}
 }
 
+func TestPackageIdentifiersDoNotMergeAssets(t *testing.T) {
+	ctx := context.Background()
+	root := t.TempDir()
+	if _, err := Initialize(ctx, root); err != nil {
+		t.Fatal(err)
+	}
+	meta := `<dc:identifier id="isbn" opf:scheme="ISBN">978-0-306-40615-7</dc:identifier><dc:identifier>https://doi.org/10.1000/182</dc:identifier><dc:identifier>https://openlibrary.org/works/OL1W</dc:identifier>`
+	first := writeEPUBMetadata(t, t.TempDir(), "Alpha", meta)
+	preview, err := Import(ctx, ImportRequest{Library: root, Source: first})
+	if err != nil || preview.Applied || !preview.IdentitiesRecorded || len(preview.Identities) != 3 {
+		t.Fatal(preview, err)
+	}
+	if _, err := os.Stat(filepath.Join(root, ".nemalo", operationsName)); !errors.Is(err, os.ErrNotExist) {
+		t.Fatal("preview wrote an operations journal", err)
+	}
+	stored, err := Import(ctx, ImportRequest{Library: root, Source: first, Apply: true})
+	if err != nil || !stored.Applied || stored.AlreadyHeld {
+		t.Fatal(stored, err)
+	}
+	roles := map[string]string{}
+	for _, item := range stored.Identities {
+		roles[item.Role] = item.ID
+	}
+	if roles["edition"] != "isbn:9780306406157" || roles["publication_version"] != "doi:10.1000/182" || roles["work"] != "openlibrary_work:OL1W" {
+		t.Fatal(stored.Identities)
+	}
+	again, err := Import(ctx, ImportRequest{Library: root, Source: first, Apply: true})
+	if err != nil || !again.AlreadyHeld {
+		t.Fatal(again, err)
+	}
+	second := writeEPUBMetadata(t, t.TempDir(), "Beta", meta)
+	other, err := Import(ctx, ImportRequest{Library: root, Source: second, Apply: true})
+	if err != nil || other.AssetID == "" || other.AssetID == stored.AssetID || len(other.Identities) != len(stored.Identities) {
+		t.Fatal(other, err)
+	}
+	for i := range stored.Identities {
+		if other.Identities[i].ID != stored.Identities[i].ID || other.Identities[i].Role != stored.Identities[i].Role {
+			t.Fatal("shared package identifiers were not kept on both assets", stored.Identities, other.Identities)
+		}
+	}
+	plain := writeEPUB(t, t.TempDir())
+	titleMatch, err := Import(ctx, ImportRequest{Library: root, Source: plain, Apply: true})
+	if err != nil || !titleMatch.IdentitiesRecorded || len(titleMatch.Identities) != 0 || titleMatch.AssetID == stored.AssetID {
+		t.Fatal(titleMatch, err)
+	}
+	pdf := filepath.Join(t.TempDir(), "paper.pdf")
+	if err := os.WriteFile(pdf, []byte("%PDF-1.7\n%%EOF"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	paper, err := Import(ctx, ImportRequest{Library: root, Source: pdf, Apply: true})
+	if err != nil || paper.IdentitiesRecorded || paper.Identities != nil || paper.Format != "pdf" {
+		t.Fatal(paper, err)
+	}
+	holdings := filepath.Join(root, ".nemalo", holdingsName)
+	parts := strings.Split(strings.TrimSuffix(string(mustRead(t, holdings)), "\n"), "\n")
+	var holding Holding
+	if err := json.Unmarshal([]byte(parts[0]), &holding); err != nil {
+		t.Fatal(err)
+	}
+	holding.Identities[0].Role = "recording"
+	encoded, err := json.Marshal(holding)
+	if err != nil {
+		t.Fatal(err)
+	}
+	parts[0] = string(encoded)
+	rewritten := []byte(strings.Join(parts, "\n") + "\n")
+	if err := os.WriteFile(holdings, rewritten, 0600); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := LibraryStatus(ctx, root); !errors.Is(err, ErrStateReview) {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(rewritten, mustRead(t, holdings)) {
+		t.Fatal("crafted identity was repaired")
+	}
+}
+
+func writeEPUBMetadata(t *testing.T, dir, paragraph, metadata string) string {
+	t.Helper()
+	files := map[string]string{
+		"mimetype":               "application/epub+zip",
+		"META-INF/container.xml": `<container xmlns="urn:oasis:names:tc:opendocument:xmlns:container"><rootfiles><rootfile full-path="book.opf" media-type="application/oebps-package+xml"/></rootfiles></container>`,
+		"book.opf":               `<package xmlns="http://www.idpf.org/2007/opf" unique-identifier="isbn" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:opf="http://www.idpf.org/2007/opf"><metadata><dc:title>Test</dc:title><dc:language>ja</dc:language>` + metadata + `</metadata><manifest><item id="c" href="chapter.xhtml" media-type="application/xhtml+xml"/></manifest><spine><itemref idref="c"/></spine></package>`,
+		"chapter.xhtml":          `<html xmlns="http://www.w3.org/1999/xhtml"><body><p>` + paragraph + `</p></body></html>`,
+	}
+	var buf bytes.Buffer
+	z := zip.NewWriter(&buf)
+	header, err := z.CreateHeader(&zip.FileHeader{Name: "mimetype", Method: zip.Store})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := header.Write([]byte(files["mimetype"])); err != nil {
+		t.Fatal(err)
+	}
+	delete(files, "mimetype")
+	names := make([]string, 0, len(files))
+	for name := range files {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+	for _, name := range names {
+		entry, err := z.Create(name)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := entry.Write([]byte(files[name])); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := z.Close(); err != nil {
+		t.Fatal(err)
+	}
+	path := filepath.Join(dir, "book.epub")
+	if err := os.WriteFile(path, buf.Bytes(), 0600); err != nil {
+		t.Fatal(err)
+	}
+	return path
+}
+
 func TestSameImportSourceIsIdentityNotAnotherCaseName(t *testing.T) {
 	dir := t.TempDir()
 	lower := filepath.Join(dir, "book.epub")
