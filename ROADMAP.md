@@ -61,7 +61,10 @@ Open Library/Internet Archive metadata search, Archive item/file evaluation,
 bounded read-only inventory with optional hashing,
 capability reporting, JSON envelopes, and pinned verification/native CI configuration.
 Live source searches and Windows TUI search/inspection/holdings/evaluation/quit
-smokes were exercised. TUI navigation, session drafts, adaptive no-color/light/dark
+smokes were exercised. Desktop and terminal compatibility were reviewed on
+Omarchy 4 (Arch Linux x86_64 with Hyprland and foot; Ghostty, Alacritty, and
+Kitty preserve truecolor, and desktop shortcuts avoid Nemalo's keys).
+TUI navigation, session drafts, adaptive no-color/light/dark
 presentation, bounded budget selection, format filters, and result pagination exist.
 Search/holdings include selection, adaptive detail panes, complete report access,
 explicit focus, and staged Archive evaluation without automatic requests.
@@ -78,6 +81,9 @@ Explicit initialization/status provide a stable library ID, nonblocking OS
 reader/writer locks, and a synced two-record initialization journal. Valid
 interrupted initialization resumes the same identity; corrupt state is retained.
 See [decision 0006](docs/decisions/0006-library-control-state.md).
+`doctor` reports configuration paths, tool availability, the directory descriptor
+bridge (`/proc/self/fd` on Linux, `/dev/fd` on macOS), and scanner recommendations
+without executing scanners.
 Single-asset import into that library is implemented: one EPUB, PDF, MP3, or
 completed intake packet, with a separate operations/holdings journal, crash
 resume, and managed audit. Checked status is limited to an EPUB whose checks
@@ -195,7 +201,8 @@ Acceptance:
 - Linux XDG locations and documented macOS/Windows equivalents.
 - Stable terminal output, machine-readable JSON, exit codes, and signal handling.
 - CLI flags override environment and config; configuration precedence is documented.
-- Missing archive/scanner tools produce actionable capability reports.
+- Missing archive/scanner tools produce actionable capability reports; `doctor`
+  reports the directory descriptor bridge and scanner recommendations.
 - One native executable per release target, with checksums and build metadata.
 - Synthetic fixture tests, without personal or copyrighted source dumps in the repository.
 - Remove legacy Python source/tests/manifests/workflow and obsolete install instructions.
@@ -617,7 +624,9 @@ also builds and smokes the executable with cgo disabled. Race checks require cgo
 
 ## Remaining implementation choices
 
-1. Select the first Linux distribution/environment for native integration testing.
+1. Settle Linux environments: Ubuntu is the hosted native CI runner; Omarchy 4
+   (Arch Linux x86_64) was reviewed for desktop terminal and descriptor bridge
+   compatibility.
 2. Confirm holding-area retention before enabling permanent purge.
 3. Decide whether EPUBCheck conformance is required or an optional assessment.
 

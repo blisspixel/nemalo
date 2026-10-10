@@ -7,7 +7,8 @@ ebooks, and audiobooks, with research papers and textbooks extending the same
 collection. Find resources, evaluate sources, and care for a portable library
 under your control. Pronounced **neh-MAH-lo**: acquire and nurture knowledge.
 
-Built in Go. CLI and TUI first. Linux, macOS, and Windows. No telemetry or required
+Built in Go. CLI and TUI first. Linux, macOS, and Windows. Desktop and terminal
+compatibility were reviewed on Omarchy 4 (Arch Linux x86_64). No telemetry or required
 AI service. Future agent interfaces will use the same application services.
 
 ## Status
@@ -28,6 +29,8 @@ AI service. Future agent interfaces will use the same application services.
   and a recorded no-detection scan; other assessed files stay in review.
 - Retrieve bounded EPUB text in CLI/JSON/TUI, with exact continuation, source parts,
   note references, local image bytes, and explicit extraction gaps.
+- Report environment paths, tool availability, scanner recommendations, and the
+  directory descriptor bridge (/proc/self/fd on Linux, /dev/fd on macOS) with doctor.
 - Use CLI, versioned JSON, or an interactive terminal interface.
 
 Resumable transfers, archive intake, folder cleanup, reader/player handoff,
@@ -43,6 +46,7 @@ With Go 1.27.2 or a compatible supported toolchain:
 
 ```sh
 go build -trimpath -o bin/ ./cmd/nemalo
+go run ./cmd/nemalo doctor
 go run ./cmd/nemalo tui
 go run ./cmd/nemalo search "Jules Verne" --limit 5
 go run ./cmd/nemalo check /path/to/book.epub --json

@@ -3,8 +3,9 @@
 Design updated 2026-10-08. The Go foundation is implemented as described in
 [development and operation](DEVELOPMENT.md); the remaining production architecture
 below is planned. The stack is Go throughout first-party application code, tests,
-and executable tooling. Linux CLI use is primary; macOS and Windows are native
-targets with platform-specific filesystem and scanner adapters.
+and executable tooling. Linux CLI use is primary; macOS and Windows are native targets with platform-specific
+filesystem and scanner adapters. Desktop and terminal compatibility were reviewed
+on Omarchy 4 (Arch Linux x86_64).
 
 ## Product boundary
 
