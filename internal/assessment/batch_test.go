@@ -35,7 +35,9 @@ func allClean(files []string) []scanner.Result {
 	return out
 }
 
-func batchRoot(t *testing.T, n int) (*os.Root, []string, [][]byte) {
+// batchRoot returns the directory path too: on Unix, safeio roots are reached
+// through a descriptor bridge, so root.Name() is not a reusable pathname.
+func batchRoot(t *testing.T, n int) (*os.Root, string, []string, [][]byte) {
 	t.Helper()
 	dir := t.TempDir()
 	names, contents := []string{}, [][]byte{}
@@ -52,7 +54,7 @@ func batchRoot(t *testing.T, n int) (*os.Root, []string, [][]byte) {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { root.Close() })
-	return root, names, contents
+	return root, dir, names, contents
 }
 
 func scanAll(n int) []Options {
@@ -64,7 +66,7 @@ func scanAll(n int) []Options {
 }
 
 func TestCheckManyScansOnceAndBindsEachSnapshot(t *testing.T) {
-	root, names, contents := batchRoot(t, 3)
+	root, dir, names, contents := batchRoot(t, 3)
 	var calls [][]string
 	av := batchScanner{&calls, func(files []string) []scanner.Result {
 		for i, f := range files {
@@ -93,7 +95,7 @@ func TestCheckManyScansOnceAndBindsEachSnapshot(t *testing.T) {
 		}
 	}
 	for i, name := range names {
-		got, err := os.ReadFile(filepath.Join(root.Name(), name))
+		got, err := os.ReadFile(filepath.Join(dir, name))
 		if err != nil || !bytes.Equal(got, contents[i]) {
 			t.Fatal("source mutated", name)
 		}
@@ -101,7 +103,7 @@ func TestCheckManyScansOnceAndBindsEachSnapshot(t *testing.T) {
 }
 
 func TestCheckManyChunksBatchesAndIsolatesFailures(t *testing.T) {
-	root, names, _ := batchRoot(t, maxBatchFiles+3)
+	root, _, names, _ := batchRoot(t, maxBatchFiles+3)
 	names = append(names, "missing.epub")
 	options := scanAll(len(names))
 	options[2].Scan = false
@@ -125,7 +127,7 @@ func TestCheckManyChunksBatchesAndIsolatesFailures(t *testing.T) {
 }
 
 func TestCheckManyRejectsUnboundOrMisalignedScans(t *testing.T) {
-	root, names, _ := batchRoot(t, 2)
+	root, _, names, _ := batchRoot(t, 2)
 	var calls [][]string
 	mutating := batchScanner{&calls, func(files []string) []scanner.Result {
 		if err := os.WriteFile(files[0], []byte("changed"), 0600); err != nil {
