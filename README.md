@@ -44,7 +44,8 @@ AI service. The agent interface (MCP) uses the same application services.
   and the directory descriptor bridge (/proc/self/fd on Linux, /dev/fd on macOS)
   with doctor.
 - Use CLI, versioned JSON, an interactive terminal interface, or read-only MCP
-  tools for an agent host (`nemalo mcp serve --scope DIRECTORY`).
+  tools for an agent host (`nemalo mcp serve --scope DIRECTORY`), also packaged
+  as a Claude Code plugin and an Agent Plugins package.
 
 Byte-range transfer resume, RAR and 7z intake, folder cleanup, recording
 identity across holdings, and MCP write tools are planned. Single-file import is not
@@ -72,6 +73,15 @@ release `SHA256SUMS`, and install one executable to `~/.local/bin` or
 `%LOCALAPPDATA%\Programs\nemalo`. Pass `--version`/`-Version` to pin a release and
 `--uninstall`/`-Uninstall` to remove it. See
 [decision 0013](docs/decisions/0013-release-installer-scripts.md).
+
+With `nemalo` on PATH, add the read-only tools to Claude Code:
+
+```text
+/plugin marketplace add blisspixel/nemalo
+/plugin install nemalo@nemalo
+```
+
+See [agent integration](docs/AGENT-INTEGRATION.md#plugin-packages).
 
 ## Quick start
 
@@ -104,7 +114,7 @@ OS window capture. See [terminal guide and discovery view](docs/TUI.md).
 | [Acquisition](docs/ACQUISITION.md) | Selected downloads, intake receipts, and failure handling |
 | [Architecture](docs/ARCHITECTURE.md) | Shared services, data protection, recovery, and decisions |
 | [Sources](docs/SOURCES.md) | Provider directory, rights, and integration constraints |
-| [Agent integration](docs/AGENT-INTEGRATION.md) | Read-only MCP server, planned write tools, and Agent Plugins |
+| [Agent integration](docs/AGENT-INTEGRATION.md) | Read-only MCP server, plugin packages, and planned write tools |
 | [Validation](docs/VALIDATION.md) | External 104-resource collection, evidence, and remaining gaps |
 | [Research](docs/RESEARCH.md) | Evaluated patterns and primary references |
 | [Releases](docs/RELEASING.md) | Packaging, checksums, and native validation requirements |

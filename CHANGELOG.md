@@ -23,6 +23,11 @@
   batches; `recording.json` is written last. `--resume` keeps completed tracks
   and refetches the rest under new names. Ingest records each track's place,
   shown as "Track N of M", which earlier prereleases cannot read.
+- Install the read-only MCP tools as a Claude Code plugin
+  (`/plugin marketplace add blisspixel/nemalo`, then
+  `/plugin install nemalo@nemalo`), which asks for the library folder, or as an
+  Agent Plugins 1.0 package. Both include a skill that explains the tools and
+  how to read their evidence. The `nemalo` executable must be on PATH.
 
 ## 0.1.0-alpha.4
 

@@ -83,6 +83,8 @@ move domain policy into a terminal update handler or duplicate it for MCP.
 `internal/mcpserver` is the MCP adapter (decision 0014): tools call `internal/app`,
 return the CLI data in its envelope, scope every path, and stay read-only until
 write authorization and durable jobs exist. Network tools need `--allow-network`.
+Plugin packages are `plugins/nemalo/` (decision 0019): they run `nemalo` from PATH,
+bundle nothing, and share one portable skill; versions equal `internal/cli.Version`.
 Provider adapters use the shared metadata HTTP client in `internal/discovery`;
 preserve fixed hosts, checked direct destinations, bounded JSON, and quota handling.
 Source evaluation is declaration evidence, never file rights, safety, or write

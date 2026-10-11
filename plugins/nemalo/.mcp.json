@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "nemalo": {
+      "command": "nemalo",
+      "args": ["mcp", "serve", "--transport", "stdio", "--scope", "${user_config.scope}"]
+    }
+  }
+}

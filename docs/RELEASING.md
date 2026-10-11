@@ -6,7 +6,9 @@ native validation, cross-built artifacts, and remaining limits.
 
 ## Verification and packaging
 
-1. Update the changelog, capability docs, roadmap, and `internal/cli.Version`.
+1. Update the changelog, capability docs, roadmap, `internal/cli.Version`, and
+   the `version` in both plugin manifests under `plugins/nemalo/` (a test
+   requires them to match).
 2. Run `go run ./cmd/verify`, native `go test -race ./...`, relevant live smokes,
    documentation checks, and adversarial review for consequential changes.
 3. Commit the reviewed source and require the actual main CI run to pass on Linux,

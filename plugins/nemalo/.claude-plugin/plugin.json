@@ -1,0 +1,21 @@
+{
+  "name": "nemalo",
+  "version": "0.1.0-alpha.4",
+  "description": "Read a local Nemalo book and audiobook library through read-only MCP tools: holdings, audits, file checks, and bounded EPUB text and MP3 ranges with exact continuation.",
+  "author": {
+    "name": "blisspixel",
+    "url": "https://github.com/blisspixel"
+  },
+  "homepage": "https://github.com/blisspixel/nemalo",
+  "repository": "https://github.com/blisspixel/nemalo",
+  "license": "Apache-2.0",
+  "keywords": ["library", "ebooks", "audiobooks", "epub", "mcp"],
+  "userConfig": {
+    "scope": {
+      "type": "directory",
+      "title": "Library folder",
+      "description": "The one folder Nemalo tools may read, such as your managed library. Configured library and review folders are added.",
+      "required": true
+    }
+  }
+}

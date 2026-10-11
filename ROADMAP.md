@@ -332,8 +332,10 @@ Acceptance:
 Status: partial. A read-only stdio MCP server exposes library status, holdings,
 audits, file checks, and EPUB retrieval over the shared services, with catalog
 tools behind `--allow-network` and paths confined to configured scopes; see
-[decision 0014](docs/decisions/0014-read-only-mcp-server.md). Write tools,
-durable jobs, the Agent Plugins package, and host compatibility testing remain. Read-only tools depend on milestone 1 and the relevant provider
+[decision 0014](docs/decisions/0014-read-only-mcp-server.md). Claude Code and
+Agent Plugins packages share one skill and were validated in Claude Code on
+Windows ([decision 0019](docs/decisions/0019-agent-plugin-packages.md)). Write
+tools, durable jobs, and a broader host and platform matrix remain. Read-only tools depend on milestone 1 and the relevant provider
 slice from 5; inspection needs 2; import/acquisition need 3; source cleanup needs 4.
 
 Deliver stdio MCP using the official Go SDK, typed tools over shared services,

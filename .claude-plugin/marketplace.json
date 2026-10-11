@@ -1,0 +1,15 @@
+{
+  "name": "nemalo",
+  "description": "Nemalo, a local library for books, ebooks, and audiobooks.",
+  "owner": {
+    "name": "blisspixel",
+    "url": "https://github.com/blisspixel"
+  },
+  "plugins": [
+    {
+      "name": "nemalo",
+      "source": "./plugins/nemalo",
+      "description": "Read-only MCP tools and a skill for a local Nemalo library. Requires the nemalo executable on PATH."
+    }
+  ]
+}

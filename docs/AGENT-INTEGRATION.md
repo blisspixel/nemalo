@@ -1,8 +1,9 @@
 # MCP and Agent Plugins
 
 Research checked 2026-10-08. A read-only stdio server is implemented
-([decision 0014](decisions/0014-read-only-mcp-server.md)); write tools, durable
-jobs, and the Agent Plugins package below remain design.
+([decision 0014](decisions/0014-read-only-mcp-server.md)), with Claude Code and
+Agent Plugins packages ([decision 0019](decisions/0019-agent-plugin-packages.md));
+write tools and durable jobs remain design.
 Nemalo provides tools to an agent host; it does not need to embed an LLM or implement
 an agent runtime. All executable Nemalo components use Go.
 
@@ -119,63 +120,42 @@ caller-scoped authorization and private cache behavior. Redact credentials, sign
 URLs, and unnecessary absolute paths. Keep service errors useful without exposing
 environment secrets.
 
-## Agent Plugins package
+## Plugin packages
 
-Proposed package layout:
+Implemented in `plugins/nemalo/`
+([decision 0019](decisions/0019-agent-plugin-packages.md)). One directory carries
+a Claude Code plugin and an [Agent Plugins 1.0.0](https://agent-plugins.org/specification)
+package, sharing one skill:
 
 ```text
-nemalo-plugin/
-  plugin.json
-  mcp.json
-  skills/
-    nemalo/
-      SKILL.md
+plugins/nemalo/
+  .claude-plugin/plugin.json   Claude Code manifest, with a folder option
+  .mcp.json                    Claude Code MCP server: --scope from that option
+  plugin.json                  Agent Plugins manifest
+  mcp.json                     Agent Plugins MCP server: configured folders only
+  skills/nemalo/SKILL.md       Agent Skills frontmatter fields only
 ```
 
-An illustrative manifest using the
-[canonical plugin schema](https://agent-plugins.org/schemas/1.0.0/plugin.schema.json):
+The repository root holds `.claude-plugin/marketplace.json`. In Claude Code:
 
-```json
-{
-  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
-  "name": "nemalo",
-  "description": "Inspect downloads, discover publications, and manage a local collection."
-}
+```text
+/plugin marketplace add blisspixel/nemalo
+/plugin install nemalo@nemalo
 ```
 
-An illustrative MCP configuration using the
-[canonical MCP schema](https://agent-plugins.org/schemas/1.0.0/mcp.schema.json):
+Claude Code asks for one library folder at install and passes it as `--scope`;
+the configured library and review folders are added. Agent Plugins has no user
+configuration, so that package runs `nemalo mcp serve` with Nemalo's configured
+folders, and the server refuses to start without one. Both run the installed
+`nemalo` executable from PATH. They bundle no binaries, run no installer, fetch
+nothing, and leave network catalog tools off.
 
-```json
-{
-  "$schema": "https://agent-plugins.org/schemas/1.0.0/mcp.schema.json",
-  "mcpServers": {
-    "nemalo": {
-      "type": "stdio",
-      "command": "nemalo",
-      "args": ["mcp", "serve", "--transport", "stdio"]
-    }
-  }
-}
-```
-
-The baseline package requires the native Nemalo binary installed on the host PATH.
-It does not run an installer, fetch executables, or require Node/Python. If binaries
-are later bundled, use platform-specific packages and plugin-relative commands.
-Declare an actual package version when publishing and use the repository's Apache-2.0
-license. The illustrative package is not a released MCP integration.
-
-Keep `plugin.json` and root `mcp.json` on matching specification schema versions.
-Use fixed component paths; MCP configuration is not inline in the manifest.
-Commands are executable tokens with separate arguments. Hosts provide
-`PLUGIN_ROOT` and persistent `PLUGIN_DATA`; configured environments cannot override
-them or embed secrets. Use plugin data only for integration state, not as an
-implicit intake root or user library. These are packaging constraints from the
-[specification](https://agent-plugins.org/specification), not executable enforcement.
-
-The future skill explains discovery, format policies, explicit scope, plan/apply
-semantics, and evidence interpretation. It routes operations through the tools or
-Go CLI rather than supplying scripts that duplicate library logic.
+Manifest versions equal the executable version and change with each release.
+Use fixed component paths and keep both MCP files on matching schema versions.
+`PLUGIN_ROOT` and `PLUGIN_DATA` are not used; plugin data is not an intake root
+or library. The skill explains tools, scopes, cursors, and evidence, and routes
+changes to CLI commands the user runs. It is guidance, not permission
+enforcement; the server's scope check and read-only tools are.
 
 ## Post-1.0 processing and knowledge workspaces
 
