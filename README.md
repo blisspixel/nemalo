@@ -9,7 +9,7 @@ under your control. Pronounced **neh-MAH-lo**: acquire and nurture knowledge.
 
 Built in Go. CLI and TUI first. Linux, macOS, and Windows. Desktop and terminal
 compatibility were reviewed on Omarchy 4 (Arch Linux x86_64). No telemetry or required
-AI service. Future agent interfaces will use the same application services.
+AI service. The agent interface (MCP) uses the same application services.
 
 ## Status
 
@@ -25,6 +25,8 @@ AI service. Future agent interfaces will use the same application services.
   optional: Defender on Windows, ClamAV on Linux and macOS. Pass a publisher
   SHA-256 when one exists.
 - Save portable catalog snapshots, browse holdings, and audit changed/missing files.
+- List and search a managed library, and open a holding in a reader or player
+  through a verified read-only copy, so readers never modify stored files.
 - Initialize library control state with locking and resumable initialization.
 - Import one EPUB, PDF, or MP3, or a completed intake packet, into an initialized
   library. Preview writes nothing. Checked status requires a passed EPUB check
@@ -40,8 +42,8 @@ AI service. Future agent interfaces will use the same application services.
 - Use CLI, versioned JSON, an interactive terminal interface, or read-only MCP
   tools for an agent host (`nemalo mcp serve --scope DIRECTORY`).
 
-Resumable transfers, archive intake, folder cleanup, reader/player handoff,
-complete audiobook management, and MCP write tools are planned. Single-file import is not
+Resumable transfers, archive intake, folder cleanup, complete audiobook
+management, and MCP write tools are planned. Single-file import is not
 a full checked-library policy.
 File checks report limited evidence, never a safety or completeness guarantee.
 See [current capabilities and limits](docs/DEVELOPMENT.md) and the [roadmap](ROADMAP.md).

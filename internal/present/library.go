@@ -175,3 +175,15 @@ func ManagedHoldings(p library.ManagedPage) string {
 	b.WriteString("Recorded journal facts; run library audit to recheck stored bytes.\n")
 	return b.String()
 }
+
+func Export(r library.ExportResult) string {
+	var b strings.Builder
+	fmt.Fprintf(&b, "Holding: %q\nTitle: %q\nCopy: %q\nVerified SHA-256: %q (%d bytes)\nRead-only: %t | Reused: %t\n", r.AssetID, r.Title, r.Path, r.SHA256, r.Bytes, r.ReadOnly, r.Reused)
+	if r.Launched != "" {
+		fmt.Fprintf(&b, "Opened with: %q\n", r.Launched)
+	}
+	for _, note := range r.Limitations {
+		fmt.Fprintf(&b, "Limitation: %q\n", note)
+	}
+	return b.String()
+}

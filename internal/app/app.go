@@ -4,7 +4,9 @@ package app
 import (
 	"context"
 	"errors"
+	"fmt"
 	"github.com/blisspixel/nemalo/internal/acquisition"
+	"os"
 	"os/exec"
 	"runtime"
 	"strings"
@@ -15,6 +17,7 @@ import (
 	"github.com/blisspixel/nemalo/internal/content"
 	"github.com/blisspixel/nemalo/internal/discovery"
 	"github.com/blisspixel/nemalo/internal/inventory"
+	"github.com/blisspixel/nemalo/internal/launch"
 	"github.com/blisspixel/nemalo/internal/library"
 	"github.com/blisspixel/nemalo/internal/safeio"
 	"github.com/blisspixel/nemalo/internal/scanner"
@@ -52,6 +55,49 @@ type Service struct {
 	// OnDetection is the configured detection policy for requests that do not
 	// name one: "quarantine" (also when empty) or "delete".
 	OnDetection string
+	// Handoff is the Nemalo-owned directory for read-only reader copies.
+	Handoff string
+	// Launch opens a file with app, or the default application when app is
+	// empty. Nil uses the platform launcher; tests substitute it.
+	Launch func(ctx context.Context, app, file string) error
+}
+
+// Export copies a holding into an explicit directory, verified and never
+// overwriting.
+func (s Service) Export(ctx context.Context, request library.ExportRequest) (library.ExportResult, error) {
+	return library.Export(ctx, request)
+}
+
+// Open hands a reader or player a verified read-only copy in the handoff
+// directory, never the stored file, then launches the application on it.
+func (s Service) Open(ctx context.Context, libraryDir, assetID, app string) (library.ExportResult, error) {
+	if s.Handoff == "" {
+		return library.ExportResult{}, errors.New("open requires a handoff directory")
+	}
+	if err := os.MkdirAll(s.Handoff, 0o700); err != nil {
+		return library.ExportResult{}, err
+	}
+	r, err := library.Export(ctx, library.ExportRequest{Library: libraryDir, AssetID: assetID, Directory: s.Handoff, ReadOnly: true, Reuse: true})
+	if err != nil {
+		return r, err
+	}
+	launcher := s.Launch
+	if launcher == nil {
+		launcher = func(ctx context.Context, app, file string) error {
+			if app != "" {
+				return launch.With(ctx, app, file)
+			}
+			return launch.Default(ctx, file)
+		}
+	}
+	if err := launcher(ctx, app, r.Path); err != nil {
+		return r, fmt.Errorf("the verified copy is at %s, but the application did not start: %w", r.Path, err)
+	}
+	r.Launched = app
+	if app == "" {
+		r.Launched = "default application"
+	}
+	return r, nil
 }
 
 func (s Service) scanner() assessment.Scanner {

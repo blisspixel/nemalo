@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"net/http"
+	"os"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -218,5 +219,40 @@ func TestAcquireAppliesServiceDetectionPolicy(t *testing.T) {
 	_, err = s.Acquire(context.Background(), acquisition.Request{SourceID: "archive:demo", File: "a.epub", Output: filepath.Join(t.TempDir(), "p"), MaxBytes: 10})
 	if err == nil || !strings.Contains(err.Error(), "quarantine directory") {
 		t.Fatal("quarantine requirement not enforced", err)
+	}
+}
+
+func TestOpenHandsAReaderOnlyAVerifiedCopy(t *testing.T) {
+	ctx := context.Background()
+	root := t.TempDir()
+	if _, err := library.Initialize(ctx, root); err != nil {
+		t.Fatal(err)
+	}
+	src := filepath.Join(t.TempDir(), "paper.pdf")
+	if err := os.WriteFile(src, []byte("%PDF-1.7\n%%EOF"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	held, err := library.Import(ctx, library.ImportRequest{Library: root, Source: src, Apply: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	var launched []string
+	s := Service{Handoff: filepath.Join(t.TempDir(), "handoff"), Launch: func(_ context.Context, app, file string) error {
+		launched = append(launched, app+"|"+file)
+		return nil
+	}}
+	r, err := s.Open(ctx, root, held.AssetID, "")
+	if err != nil || r.Launched != "default application" || len(launched) != 1 || !strings.HasPrefix(r.Path, s.Handoff) || strings.HasPrefix(r.Path, root) {
+		t.Fatal("reader was not handed a handoff copy", r, launched, err)
+	}
+	if _, err := s.Open(ctx, root, held.AssetID, "reader-app"); err != nil || launched[1] != "reader-app|"+r.Path {
+		t.Fatal("explicit application or copy reuse", launched, err)
+	}
+	s.Launch = func(context.Context, string, string) error { return errors.New("no display") }
+	if _, err := s.Open(ctx, root, held.AssetID, ""); err == nil || !strings.Contains(err.Error(), r.Path) {
+		t.Fatal("launch failure must name the verified copy", err)
+	}
+	if _, err := (Service{}).Open(ctx, root, held.AssetID, ""); err == nil {
+		t.Fatal("open without a handoff directory accepted")
 	}
 }

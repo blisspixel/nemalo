@@ -53,6 +53,7 @@ item's other files for a new, deliberate review. See
 | e in Archive results | Prepare selected-item evaluation, without requesting it |
 | d in Evaluate results | Review selected-file acquisition into a new intake directory |
 | r in Holdings results | Stage source access; explicit root still required |
+| o in managed Holdings results | Open a verified read-only copy in the default application |
 | Enter in Read results | Retrieve the selected source unit |
 | n / r / u in Read results | Next range / repeat last request / list units |
 | Escape | Back; cancel active work |

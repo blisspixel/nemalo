@@ -110,3 +110,38 @@ func TestLibraryListManagedHoldings(t *testing.T) {
 		}
 	}
 }
+
+func TestLibraryOpenAndExportCommands(t *testing.T) {
+	root, state, dest := t.TempDir(), t.TempDir(), t.TempDir()
+	opened := ""
+	s := app.Service{Scanner: fakeScanner("no_detections_reported"), Launch: func(_ context.Context, _, file string) error {
+		opened = file
+		return nil
+	}}
+	run := func(args ...string) (int, string) {
+		var out, errOut bytes.Buffer
+		code := Execute(context.Background(), args, &out, &errOut, s, func(string) string { return "" }, func() (config.Paths, error) {
+			return config.Paths{Config: filepath.Join(state, "none"), State: state}, nil
+		}, nil)
+		return code, out.String() + errOut.String()
+	}
+	run("library", "init", root)
+	_, out := run("library", "import", root, epubFile(t, t.TempDir()), "--apply", "--json")
+	asset := out[strings.Index(out, `"asset_id":"`)+12:]
+	asset = asset[:strings.Index(asset, `"`)]
+	code, out := run("library", "open", root, "--asset", asset)
+	if code != 0 || !strings.HasPrefix(opened, filepath.Join(state, "handoff")) || !strings.Contains(out, "Read-only: true") {
+		t.Fatal(code, out, opened)
+	}
+	if code, out := run("library", "export", root, "--asset", asset, "--output", dest, "--json"); code != 0 || !strings.Contains(out, `"read_only":false`) {
+		t.Fatal(code, out)
+	}
+	if code, _ := run("library", "export", root, "--asset", asset, "--output", dest); code != 1 {
+		t.Fatal("export overwrote an existing copy")
+	}
+	for _, args := range [][]string{{"library", "open", root}, {"library", "export", root, "--asset", asset}, {"library", "open", root, "--asset", asset, "--output", dest}, {"library", "export", root, "--asset", asset, "--output", dest, "--app", "x"}} {
+		if code, _ := run(args...); code != 2 {
+			t.Fatal("invalid open/export usage accepted", args, code)
+		}
+	}
+}

@@ -50,6 +50,10 @@ Usage: nemalo <command> [options]
                       Assess one EPUB, PDF, MP3, or intake packet; --apply stores it
   library rescan LIBRARY [--apply]
                       Scan review EPUBs that lack scan evidence; --apply records results
+  library open LIBRARY --asset sha256:HASH [--app APPLICATION]
+                      Open a verified read-only copy in a reader or player
+  library export LIBRARY --asset sha256:HASH --output DIRECTORY
+                      Copy one holding out, verified, never overwriting
   library audit CATALOG --root DIRECTORY
                       Compare a snapshot catalog with files under an explicit root
   library audit LIBRARY
@@ -180,6 +184,7 @@ func Execute(ctx context.Context, args []string, out, errOut io.Writer, service 
 	flags.Var(&scopes, "scope", "directory MCP tools may read (repeatable)")
 	allowNetwork := flags.Bool("allow-network", false, "register MCP catalog tools that contact providers")
 	transport := flags.String("transport", "stdio", "MCP transport")
+	application := flags.String("app", "", "application to open a library copy with")
 	onDetection := flags.String("on-detection", "quarantine", "quarantine or delete a detected download")
 	contentRequest := content.Request{SchemaVersion: 1}
 	flags.StringVar(&contentRequest.AssetID, "asset", "", "exact catalog asset ID")
@@ -274,6 +279,9 @@ func Execute(ctx context.Context, args []string, out, errOut io.Writer, service 
 	if service.OnDetection == "" {
 		service.OnDetection = c.OnDetection
 	}
+	if service.Handoff == "" && p.State != "" {
+		service.Handoff = filepath.Join(p.State, "handoff")
+	}
 	// guide prints one next step after human output when scan evidence is missing.
 	guide := func(code int, antivirus string, scanRequested bool) int {
 		if hint := service.ScanGuidance(antivirus, scanRequested); hint != "" && !*jsonMode {
@@ -350,6 +358,22 @@ func Execute(ctx context.Context, args []string, out, errOut io.Writer, service 
 				return write(data, err, 1)
 			}
 			return guide(write(data, nil, 0), data.Antivirus, checkOptions.Scan)
+		}
+		if action == "open" || action == "export" {
+			if flags.NArg() != 1 || contentRequest.AssetID == "" || (action == "export" && *output == "") {
+				return write(nil, fmt.Errorf("use library %s LIBRARY --asset sha256:HASH%s", action, map[string]string{"open": " [--app APPLICATION]", "export": " --output DIRECTORY"}[action]), 2)
+			}
+			var data library.ExportResult
+			var err error
+			if action == "open" {
+				data, err = service.Open(ctx, flags.Arg(0), contentRequest.AssetID, *application)
+			} else {
+				data, err = service.Export(ctx, library.ExportRequest{Library: flags.Arg(0), AssetID: contentRequest.AssetID, Directory: *output})
+			}
+			if err != nil {
+				return write(data, err, 1)
+			}
+			return write(data, nil, 0)
 		}
 		if action == "rescan" {
 			if flags.NArg() != 1 {
@@ -580,6 +604,10 @@ func flagApplies(command, action, name string) bool {
 			return name == "apply" || name == "scan"
 		case "rescan":
 			return name == "apply"
+		case "open":
+			return name == "asset" || name == "app"
+		case "export":
+			return name == "asset" || name == "output"
 		case "audit":
 			return name == "root" || strings.HasPrefix(name, "max-")
 		}
@@ -659,6 +687,9 @@ func printData(out io.Writer, data any) error {
 		return err
 	case library.RescanResult:
 		_, err := io.WriteString(out, present.Rescan(value))
+		return err
+	case library.ExportResult:
+		_, err := io.WriteString(out, present.Export(value))
 		return err
 	case assessment.Report:
 		_, err := io.WriteString(out, present.Health(value))

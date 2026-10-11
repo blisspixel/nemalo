@@ -124,6 +124,15 @@ func (m *model) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 			m.cancel = nil
 		}
 		m.status = "Complete."
+		// Opening a copy leaves the holdings list and report in place.
+		if value, ok := msg.data.(library.ExportResult); ok {
+			m.status = fmt.Sprintf("Opened a verified read-only copy: %q", value.Path)
+			if msg.err != nil {
+				m.status = fmt.Sprintf("Open failed: %q", msg.err.Error())
+			}
+			m.resize()
+			return m, nil
+		}
 		switch value := msg.data.(type) {
 		case acquisition.Result:
 			if msg.err == nil {
@@ -193,6 +202,8 @@ func (m *model) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 			data = []byte(present.Holdings(value))
 		case library.ManagedPage:
 			data = []byte(present.ManagedHoldings(value))
+		case library.ExportResult:
+			data = []byte(present.Export(value))
 		case library.Audit:
 			data = []byte(present.Audit(value))
 		case library.ImportResult:

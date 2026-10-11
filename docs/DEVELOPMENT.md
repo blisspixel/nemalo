@@ -210,6 +210,8 @@ nemalo library import /path/to/library /path/to/book.epub --apply
 nemalo library import /path/to/library /path/to/intake --apply --scan
 nemalo library audit /path/to/library
 nemalo library list /path/to/library --query "verne" --status checked
+nemalo library open /path/to/library --asset sha256:HASH
+nemalo library export /path/to/library --asset sha256:HASH --output /path/to/folder
 nemalo content read /path/to/library --root /path/to/library --asset sha256:HASH
 ```
 
@@ -234,6 +236,11 @@ import intent resumes only for the same source. Corrupt journals are retained.
 `library list` on the library directory lists current holdings in import order,
 with a literal `--query` over titles, languages, identifiers, paths, and source
 IDs, and `--format` and `--status checked|review` filters. It reads journals only.
+`library open` hands the default application, or `--app`, a verified read-only
+copy in `<state>/handoff`, never the stored file, because some readers write
+annotations into the files they open. `library export` makes the same verified
+copy in an explicit directory and never overwrites; see
+[decision 0016](decisions/0016-reader-handoff-copies.md).
 `library audit` on the library directory reports missing, changed, and review
 holdings and does not repair them. Snapshot audit still requires `--root`.
 An EPUB package identifier is recorded when it is an explicit ISBN, DOI, or

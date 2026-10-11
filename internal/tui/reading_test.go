@@ -191,3 +191,28 @@ func TestHoldingsListsAManagedLibraryAndStagesItsRoot(t *testing.T) {
 		t.Fatal("managed holding not readable", m.status, m.report)
 	}
 }
+
+func TestHoldingsOpenKeepsTheListAndUsesACopy(t *testing.T) {
+	root := t.TempDir()
+	if _, err := library.Initialize(context.Background(), root); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := library.Import(context.Background(), library.ImportRequest{Library: root, Source: writeStateEPUB(t, t.TempDir()), Apply: true}); err != nil {
+		t.Fatal(err)
+	}
+	opened := ""
+	service := app.Service{Handoff: filepath.Join(t.TempDir(), "handoff"), Launch: func(_ context.Context, _, file string) error { opened = file; return nil }}
+	m := newModel(context.Background(), service)
+	m.switchMode("holdings")
+	m.input.SetValue(root)
+	m.Update(m.start(true)())
+	m.Update(key(tea.KeyF6))
+	_, cmd := m.Update(tea.KeyPressMsg{Code: 'o', Text: "o"})
+	if cmd == nil {
+		t.Fatal("open not dispatched")
+	}
+	m.Update(cmd())
+	if len(m.entries) != 1 || !strings.Contains(m.status, "read-only copy") || !strings.HasPrefix(opened, service.Handoff) {
+		t.Fatal("open lost the list or used the stored file", m.status, opened)
+	}
+}

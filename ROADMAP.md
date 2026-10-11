@@ -371,6 +371,8 @@ issue is complete.
 
 - Initial local access: resolve a stable library ID to exact assets/provenance,
   export/open in an explicitly configured reader, and report changed/missing files.
+  Implemented for managed holdings: list and search, and open or export a
+  verified copy ([decision 0016](docs/decisions/0016-reader-handoff-copies.md)).
 - Content access: bounded format-specific extraction, full-text search, and locators
   for citations; unsupported extraction stays explicit. Derived indexes are rebuildable.
   Preserve actual source order and natural-unit evidence; distinguish result caps

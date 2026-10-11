@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
@@ -88,7 +89,7 @@ func (m *model) populate(data any) {
 			for _, src := range h.Sources {
 				detail += fmt.Sprintf("Source: %q %q %q\n", src.Path, src.SourceID, src.SourceFile)
 			}
-			detail += fmt.Sprintf("\nID: %q\n\nRecorded journal facts. Audit rechecks stored bytes.\nr stages Read for this holding.\n", h.ID)
+			detail += fmt.Sprintf("\nID: %q\n\nRecorded journal facts. Audit rechecks stored bytes.\nr stages Read for this holding.\no opens a verified read-only copy in the default application.\n", h.ID)
 			m.entries = append(m.entries, entry{title: fmt.Sprintf("%q", title), summary: fmt.Sprintf("%s | %s | %s | %q", h.Format, h.Status, byteSize(h.Bytes), h.Languages), detail: detail, sourceID: h.ID, audio: h.Format == "mp3", managed: true})
 		}
 	case content.Result:
@@ -239,6 +240,22 @@ func (m *model) browserKey(key string) (bool, tea.Cmd) {
 		}
 		if m.mode == "read" {
 			return true, m.startRead(false, 0, "", true)
+		}
+	case "o":
+		// Open hands the reader a verified read-only copy, never the stored file.
+		if m.mode == "holdings" && len(m.entries) > 0 && m.entries[m.selected].managed {
+			asset, libraryDir, service := m.entries[m.selected].sourceID, m.submittedInput, m.service
+			ctx, cancel := context.WithCancel(m.ctx)
+			m.cancel = cancel
+			m.id++
+			id := m.id
+			m.busy = true
+			m.status = "Copying and verifying a read-only copy for the default application."
+			m.resize()
+			return true, func() tea.Msg {
+				data, err := service.Open(ctx, libraryDir, asset, "")
+				return result{id: id, data: data, err: err}
+			}
 		}
 	case "n":
 		if m.mode == "read" && m.reader.next != "" {

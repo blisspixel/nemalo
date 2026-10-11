@@ -5,6 +5,10 @@
 - List and search a managed library: `library list LIBRARY` with `--query`,
   `--format`, and `--status checked|review`, in the TUI Holdings operation, and
   through the MCP `library_list` tool.
+- Open a holding in the default application or `--app` through a verified
+  read-only copy in the Nemalo handoff folder (TUI: `o`), and export a verified
+  copy with `library export`. Stored files are never handed to readers, because
+  some readers write annotations into the files they open.
 
 ## 0.1.0-alpha.4
 
