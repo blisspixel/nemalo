@@ -1,0 +1,269 @@
+package mcpserver
+
+import (
+	"archive/zip"
+	"bytes"
+	"context"
+	"encoding/json"
+	"os"
+	"path/filepath"
+	"slices"
+	"strings"
+	"testing"
+
+	"github.com/modelcontextprotocol/go-sdk/mcp"
+
+	"github.com/blisspixel/nemalo/internal/app"
+	"github.com/blisspixel/nemalo/internal/content"
+	"github.com/blisspixel/nemalo/internal/discovery"
+	"github.com/blisspixel/nemalo/internal/library"
+	"github.com/blisspixel/nemalo/internal/scanner"
+)
+
+// noScanner fails the test if any tool reaches an installed scanner.
+type noScanner struct{ t *testing.T }
+
+func (n noScanner) Scan(context.Context, string) scanner.Result {
+	n.t.Fatal("an MCP tool invoked a scanner")
+	return scanner.Result{}
+}
+
+type catalog struct{ calls *int }
+
+func (c catalog) Search(_ context.Context, q string, _, _ int) (discovery.Page, error) {
+	*c.calls++
+	return discovery.Page{Query: q, Order: "relevance", Results: []discovery.Result{}}, nil
+}
+
+func epub(t *testing.T, dir, body string) string {
+	t.Helper()
+	var buf bytes.Buffer
+	z := zip.NewWriter(&buf)
+	for _, f := range []struct{ name, body string }{
+		{"mimetype", "application/epub+zip"},
+		{"META-INF/container.xml", `<container xmlns="urn:oasis:names:tc:opendocument:xmlns:container"><rootfiles><rootfile full-path="book.opf" media-type="application/oebps-package+xml"/></rootfiles></container>`},
+		{"book.opf", `<package xmlns="http://www.idpf.org/2007/opf"><metadata xmlns:dc="http://purl.org/dc/elements/1.1/"><dc:title>Tool</dc:title><dc:language>en</dc:language></metadata><manifest><item id="c" href="c.xhtml" media-type="application/xhtml+xml"/></manifest><spine><itemref idref="c"/></spine></package>`},
+		{"c.xhtml", `<html xmlns="http://www.w3.org/1999/xhtml"><body>` + body + `</body></html>`},
+	} {
+		method := zip.Deflate
+		if f.name == "mimetype" {
+			method = zip.Store
+		}
+		w, err := z.CreateHeader(&zip.FileHeader{Name: f.name, Method: method})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := w.Write([]byte(f.body)); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := z.Close(); err != nil {
+		t.Fatal(err)
+	}
+	p := filepath.Join(dir, "book.epub")
+	if err := os.WriteFile(p, buf.Bytes(), 0600); err != nil {
+		t.Fatal(err)
+	}
+	return p
+}
+
+// managedLibrary returns an initialized library holding one EPUB, and its asset.
+func managedLibrary(t *testing.T) (string, string) {
+	t.Helper()
+	root := t.TempDir()
+	if _, err := library.Initialize(context.Background(), root); err != nil {
+		t.Fatal(err)
+	}
+	r, err := library.Import(context.Background(), library.ImportRequest{Library: root, Source: epub(t, t.TempDir(), `<p>Before</p><img src="i.png" alt="A map"/><p>After the picture.</p>`), Apply: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	return root, r.AssetID
+}
+
+func connect(t *testing.T, service app.Service, opts Options) *mcp.ClientSession {
+	t.Helper()
+	server, err := New(service, opts)
+	if err != nil {
+		t.Fatal(err)
+	}
+	st, ct := mcp.NewInMemoryTransports()
+	ctx, cancel := context.WithCancel(context.Background())
+	t.Cleanup(cancel)
+	go func() { _ = server.Run(ctx, st) }()
+	session, err := mcp.NewClient(&mcp.Implementation{Name: "test", Version: "1"}, nil).Connect(ctx, ct, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { session.Close() })
+	return session
+}
+
+func call(t *testing.T, s *mcp.ClientSession, tool string, args any) (*mcp.CallToolResult, map[string]any) {
+	t.Helper()
+	res, err := s.CallTool(context.Background(), &mcp.CallToolParams{Name: tool, Arguments: args})
+	if err != nil {
+		t.Fatal(tool, err)
+	}
+	b, err := json.Marshal(res.StructuredContent)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var env map[string]any
+	if err := json.Unmarshal(b, &env); err != nil {
+		t.Fatal(tool, err, string(b))
+	}
+	return res, env
+}
+
+func toolNames(t *testing.T, s *mcp.ClientSession) []string {
+	t.Helper()
+	list, err := s.ListTools(context.Background(), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	names := []string{}
+	for _, tool := range list.Tools {
+		if tool.Annotations == nil || !tool.Annotations.ReadOnlyHint {
+			t.Fatal("tool not declared read-only", tool.Name)
+		}
+		names = append(names, tool.Name)
+	}
+	slices.Sort(names)
+	return names
+}
+
+func TestToolsAreReadOnlyAndNetworkIsExplicit(t *testing.T) {
+	calls := 0
+	service := app.Service{Providers: map[string]app.Searcher{"openlibrary": catalog{&calls}}, Scanner: noScanner{t}}
+	offline := toolNames(t, connect(t, service, Options{Scopes: []string{t.TempDir()}, Version: "test"}))
+	want := []string{"content_capabilities", "content_read", "content_resource", "content_source", "content_units", "file_check", "library_audit", "library_list", "library_status", "nemalo_capabilities"}
+	if !slices.Equal(offline, want) {
+		t.Fatal("offline tools", offline)
+	}
+	online := connect(t, service, Options{Scopes: []string{t.TempDir()}, Network: true, Version: "test"})
+	if names := toolNames(t, online); !slices.Contains(names, "catalog_search") || !slices.Contains(names, "catalog_evaluate") {
+		t.Fatal("network tools missing with --allow-network", names)
+	}
+	res, env := call(t, online, "catalog_search", map[string]any{"query": "Verne"})
+	if res.IsError || calls != 1 || env["tool"] != "catalog_search" {
+		t.Fatal(res, env)
+	}
+	_, env = call(t, online, "nemalo_capabilities", map[string]any{})
+	data := env["data"].(map[string]any)
+	if data["read_only"] != true || data["network"] != true || len(data["tools"].([]any)) != 12 {
+		t.Fatal("capabilities", data)
+	}
+}
+
+func TestContentThroughMCPMatchesTheService(t *testing.T) {
+	root, asset := managedLibrary(t)
+	service := app.Service{Scanner: noScanner{t}}
+	s := connect(t, service, Options{Scopes: []string{root}, Version: "test"})
+	res, env := call(t, s, "content_read", map[string]any{"catalog": root, "root": root, "asset": asset, "max_bytes": 65536})
+	if res.IsError || env["error"] != nil {
+		t.Fatal(env)
+	}
+	direct, err := service.Content(context.Background(), content.Request{SchemaVersion: 1, Catalog: root, Root: root, AssetID: asset, MaxBytes: 65536})
+	if err != nil {
+		t.Fatal(err)
+	}
+	want, _ := json.Marshal(direct)
+	got, _ := json.Marshal(env["data"])
+	var a, b any
+	_ = json.Unmarshal(want, &a)
+	_ = json.Unmarshal(got, &b)
+	if !jsonEqual(a, b) {
+		t.Fatalf("MCP result differs from the shared service\n%s\n%s", want, got)
+	}
+	if direct.Text != "Before\nAfter the picture.\n" || len(direct.Gaps) != 1 {
+		t.Fatal(direct.Text, direct.Gaps)
+	}
+	_, env = call(t, s, "content_units", map[string]any{"catalog": root, "root": root, "asset": asset})
+	if env["data"].(map[string]any)["status"] != "units_available" {
+		t.Fatal(env)
+	}
+	// A failed read is a tool error that still carries the stable status.
+	res, env = call(t, s, "content_read", map[string]any{"catalog": root, "root": root, "asset": asset, "cursor": "not-a-cursor"})
+	if !res.IsError || env["error"] == nil || env["data"].(map[string]any)["status"] != "invalid_request" || env["data"].(map[string]any)["text"] != nil {
+		t.Fatal("failure facts lost", env)
+	}
+	_, env = call(t, s, "library_status", map[string]any{"library": root})
+	if env["data"].(map[string]any)["status"] != "initialized" {
+		t.Fatal(env)
+	}
+	res, env = call(t, s, "library_audit", map[string]any{"catalog": root})
+	if env["data"].(map[string]any)["assets"] != float64(1) {
+		t.Fatal(res, env)
+	}
+	before, _ := os.ReadFile(filepath.Join(root, ".nemalo", "holdings.jsonl"))
+	res, env = call(t, s, "file_check", map[string]any{"file": filepath.Join(root, filepath.FromSlash("assets/sha256/"+asset[7:9]+"/"+asset[7:]+".epub"))})
+	if res.IsError || env["data"].(map[string]any)["antivirus"].(map[string]any)["status"] != "not_scanned" {
+		t.Fatal("check", env)
+	}
+	if after, _ := os.ReadFile(filepath.Join(root, ".nemalo", "holdings.jsonl")); !bytes.Equal(before, after) {
+		t.Fatal("a read-only tool changed library state")
+	}
+}
+
+func jsonEqual(a, b any) bool {
+	x, _ := json.Marshal(a)
+	y, _ := json.Marshal(b)
+	return bytes.Equal(x, y)
+}
+
+func TestPathsMustResolveInsideScopes(t *testing.T) {
+	root, asset := managedLibrary(t)
+	inside := t.TempDir()
+	s := connect(t, app.Service{Scanner: noScanner{t}}, Options{Scopes: []string{inside}, Version: "test"})
+	for _, args := range []map[string]any{
+		{"catalog": root, "root": root, "asset": asset},
+		{"catalog": "relative/catalog.json", "root": inside, "asset": asset},
+		{"catalog": filepath.Join(inside, "missing.json"), "root": inside, "asset": asset},
+		{"catalog": inside + string(filepath.Separator) + ".." + string(filepath.Separator) + filepath.Base(root), "root": inside, "asset": asset},
+	} {
+		res, env := call(t, s, "content_read", args)
+		if !res.IsError || env["error"] == nil {
+			t.Fatal("path outside scope accepted", args, env)
+		}
+	}
+	link := filepath.Join(inside, "escape")
+	if err := os.Symlink(root, link); err == nil {
+		res, env := call(t, s, "library_status", map[string]any{"library": link})
+		if !res.IsError || !strings.Contains(env["error"].(string), "outside") {
+			t.Fatal("a link out of scope was followed", env)
+		}
+	}
+}
+
+func TestServerConfiguration(t *testing.T) {
+	if _, err := New(app.Service{}, Options{}); err == nil {
+		t.Fatal("server without scope or network accepted")
+	}
+	for _, scopes := range [][]string{{"relative"}, {filepath.Join(t.TempDir(), "missing")}} {
+		if _, err := New(app.Service{}, Options{Scopes: scopes}); err == nil {
+			t.Fatal("invalid scope accepted", scopes)
+		}
+	}
+	file := filepath.Join(t.TempDir(), "file")
+	if err := os.WriteFile(file, nil, 0600); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := New(app.Service{}, Options{Scopes: []string{file}}); err == nil {
+		t.Fatal("file scope accepted")
+	}
+	dir := t.TempDir()
+	s, err := newScope([]string{dir, dir})
+	if err != nil || len(s.roots) != 1 {
+		t.Fatal("duplicate scopes", s, err)
+	}
+	if _, err := s.path(strings.Repeat("a", 5000)); err == nil {
+		t.Fatal("oversized path accepted")
+	}
+	if got := boundDiagnostic(strings.Repeat("é", 2000)); len(got) > 2100 || !strings.HasSuffix(got, "(diagnostic truncated)") {
+		t.Fatal("diagnostic not bounded")
+	}
+	if _, err := contentRequest(s, contentInput{Catalog: dir, Root: dir, Asset: "bad"}, "read"); err == nil {
+		t.Fatal("invalid asset accepted")
+	}
+}

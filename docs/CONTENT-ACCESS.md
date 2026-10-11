@@ -4,8 +4,9 @@ Implemented EPUB access, 2026-10-08. Tracks
 [issue 1](https://github.com/blisspixel/nemalo/issues/1) and
 [issue 2](https://github.com/blisspixel/nemalo/issues/2); full cross-format/caller
 acceptance remains open. CLI/JSON and TUI use `internal/app.Service.Content` and
-`internal/content`. There is no MCP server, PDF extractor, audio-range service,
-or Kilo adapter yet. This work does not bypass production import/publication gates.
+`internal/content`; the read-only MCP `content_*` tools call the same service
+([decision 0014](decisions/0014-read-only-mcp-server.md)). There is no PDF
+extractor, audio-range service, or Kilo adapter yet. This work does not bypass production import/publication gates.
 
 The default representation is `epub-text/2`
 ([decision 0011](decisions/0011-default-text-with-located-gaps.md)): plain text

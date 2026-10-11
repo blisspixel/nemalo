@@ -36,10 +36,11 @@ AI service. Future agent interfaces will use the same application services.
 - Report environment paths, tool availability, scanner setup and signature age,
   and the directory descriptor bridge (/proc/self/fd on Linux, /dev/fd on macOS)
   with doctor.
-- Use CLI, versioned JSON, or an interactive terminal interface.
+- Use CLI, versioned JSON, an interactive terminal interface, or read-only MCP
+  tools for an agent host (`nemalo mcp serve --scope DIRECTORY`).
 
 Resumable transfers, archive intake, folder cleanup, reader/player handoff,
-complete audiobook management, and MCP are planned. Single-file import is not
+complete audiobook management, and MCP write tools are planned. Single-file import is not
 a full checked-library policy.
 File checks report limited evidence, never a safety or completeness guarantee.
 See [current capabilities and limits](docs/DEVELOPMENT.md) and the [roadmap](ROADMAP.md).
@@ -96,7 +97,7 @@ OS window capture. See [terminal guide and discovery view](docs/TUI.md).
 | [Acquisition](docs/ACQUISITION.md) | Selected downloads, intake receipts, and failure handling |
 | [Architecture](docs/ARCHITECTURE.md) | Shared services, data protection, recovery, and decisions |
 | [Sources](docs/SOURCES.md) | Provider directory, rights, and integration constraints |
-| [Agent integration](docs/AGENT-INTEGRATION.md) | Planned MCP and Agent Plugins boundaries |
+| [Agent integration](docs/AGENT-INTEGRATION.md) | Read-only MCP server, planned write tools, and Agent Plugins |
 | [Validation](docs/VALIDATION.md) | External 104-resource collection, evidence, and remaining gaps |
 | [Research](docs/RESEARCH.md) | Evaluated patterns and primary references |
 | [Releases](docs/RELEASING.md) | Packaging, checksums, and native validation requirements |

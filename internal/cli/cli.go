@@ -19,9 +19,11 @@ import (
 	"github.com/blisspixel/nemalo/internal/discovery"
 	"github.com/blisspixel/nemalo/internal/inventory"
 	"github.com/blisspixel/nemalo/internal/library"
+	"github.com/blisspixel/nemalo/internal/mcpserver"
 	"github.com/blisspixel/nemalo/internal/present"
 	"github.com/blisspixel/nemalo/internal/textsafe"
 	"github.com/blisspixel/nemalo/internal/tui"
+	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
 const Version = "0.1.0-alpha.3"
@@ -66,6 +68,8 @@ Usage: nemalo <command> [options]
                       Read referenced local image bytes as base64; never render
   content capabilities
                       Report supported representation versions and limits
+  mcp serve --scope DIRECTORY
+                      Serve read-only MCP tools over stdio for an agent host
   version             Show the development version
   help                Show this help
 
@@ -93,6 +97,9 @@ Content read options: --unit 0, --text-offset 0, --max-bytes 4096, --cursor TOKE
 The default epub-text/2 omits images, tables, mathematics, and media from the
 text and locates each omission as a gap. A continuation keeps the representation
 it was issued for. Extraction is not rendered layout or acknowledgement of reading.
+MCP options: --scope DIRECTORY (repeatable; the configured library and review
+             folders are added), --allow-network (catalog search and evaluation),
+             --transport stdio. Tools are read-only; stdout carries protocol only.
 Snapshot and snapshot audit also accept inventory max-* limits. Snapshots hash
 all regular files, account for excluded links, refuse incomplete inventories,
 and never overwrite. Snapshot audit requires --root; the catalog cannot
@@ -140,7 +147,7 @@ func Execute(ctx context.Context, args []string, out, errOut io.Writer, service 
 	command := args[0]
 	action := ""
 	arguments := args[1:]
-	if (command == "library" || command == "content") && len(arguments) > 0 {
+	if (command == "library" || command == "content" || command == "mcp") && len(arguments) > 0 {
 		action = arguments[0]
 		arguments = arguments[1:]
 		if action == "--help" || action == "-h" {
@@ -166,6 +173,10 @@ func Execute(ctx context.Context, args []string, out, errOut io.Writer, service 
 	assess := flags.Bool("assess", false, "include local health facts without antivirus")
 	apply := flags.Bool("apply", false, "store the assessed import")
 	noScan := flags.Bool("no-scan", false, "skip the post-download scan")
+	var scopes multiFlag
+	flags.Var(&scopes, "scope", "directory MCP tools may read (repeatable)")
+	allowNetwork := flags.Bool("allow-network", false, "register MCP catalog tools that contact providers")
+	transport := flags.String("transport", "stdio", "MCP transport")
 	onDetection := flags.String("on-detection", "quarantine", "quarantine or delete a detected download")
 	contentRequest := content.Request{SchemaVersion: 1}
 	flags.StringVar(&contentRequest.AssetID, "asset", "", "exact catalog asset ID")
@@ -238,7 +249,7 @@ func Execute(ctx context.Context, args []string, out, errOut io.Writer, service 
 		}
 		return write(service.ContentCapabilities(), nil, 0)
 	}
-	if command != "doctor" && command != "search" && command != "evaluate" && command != "acquire" && command != "inspect" && command != "check" && command != "tui" && command != "library" && command != "content" {
+	if command != "doctor" && command != "search" && command != "evaluate" && command != "acquire" && command != "inspect" && command != "check" && command != "tui" && command != "library" && command != "content" && command != "mcp" {
 		return write(nil, fmt.Errorf("unknown command %q; use nemalo help", command), 2)
 	}
 	p, err := paths()
@@ -462,8 +473,47 @@ func Execute(ctx context.Context, args []string, out, errOut io.Writer, service 
 		if err := terminal(ctx, service); err != nil {
 			return write(nil, err, 1)
 		}
+	case "mcp":
+		// Stdout belongs to the protocol from here on; diagnostics go to stderr.
+		fail := func(err error, code int) int {
+			_, _ = fmt.Fprintf(errOut, "nemalo: %q\n", err.Error())
+			return code
+		}
+		if action != "serve" || flags.NArg() != 0 || *transport != "stdio" || *jsonMode {
+			return fail(errors.New("use mcp serve --transport stdio --scope DIRECTORY"), 2)
+		}
+		for _, configured := range []string{c.Library, c.Review} {
+			if configured != "" {
+				scopes = append(scopes, configured)
+			}
+		}
+		server, err := mcpserver.New(service, mcpserver.Options{Scopes: scopes, Network: *allowNetwork, Version: Version})
+		if err != nil {
+			return fail(err, 2)
+		}
+		err = server.Run(ctx, &mcp.IOTransport{Reader: io.NopCloser(mcpInput), Writer: nopWriteCloser{out}})
+		if err != nil && !errors.Is(err, io.EOF) && !errors.Is(err, mcp.ErrConnectionClosed) && ctx.Err() == nil {
+			return fail(err, 1)
+		}
 	}
 	return 0
+}
+
+// mcpInput is the protocol input stream; tests replace it.
+var mcpInput io.Reader = os.Stdin
+
+type nopWriteCloser struct{ io.Writer }
+
+func (nopWriteCloser) Close() error { return nil }
+
+// multiFlag collects a repeatable string flag.
+type multiFlag []string
+
+func (m *multiFlag) String() string { return strings.Join(*m, ",") }
+
+func (m *multiFlag) Set(v string) error {
+	*m = append(*m, v)
+	return nil
 }
 
 func flagApplies(command, action, name string) bool {
@@ -472,6 +522,9 @@ func flagApplies(command, action, name string) bool {
 	}
 	if command == "content" && action == "capabilities" {
 		return false
+	}
+	if command == "mcp" {
+		return name == "scope" || name == "allow-network" || name == "transport" || name == "config" || name == "library" || name == "review"
 	}
 	if command == "version" {
 		return false

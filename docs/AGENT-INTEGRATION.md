@@ -1,6 +1,8 @@
 # MCP and Agent Plugins
 
-Research checked 2026-10-08. This is a design, not a shipped server or plugin.
+Research checked 2026-10-08. A read-only stdio server is implemented
+([decision 0014](decisions/0014-read-only-mcp-server.md)); write tools, durable
+jobs, and the Agent Plugins package below remain design.
 Nemalo provides tools to an agent host; it does not need to embed an LLM or implement
 an agent runtime. All executable Nemalo components use Go.
 
@@ -28,8 +30,19 @@ transport support must be tested before claiming compatibility.
 Start with a local stdio server launched by the host:
 
 ```sh
-nemalo mcp serve --transport stdio
+nemalo mcp serve --transport stdio --scope /path/to/library
+nemalo mcp serve --scope /path/to/library --allow-network
 ```
+
+Implemented tools are all read-only: `nemalo_capabilities`, `library_status`,
+`library_list`, `library_audit`, `file_check` (no antivirus), and
+`content_capabilities`, `content_units`, `content_read`, `content_source`,
+`content_resource`. `catalog_search` and `catalog_evaluate` exist only with
+`--allow-network`. Each returns the CLI's data in a
+`{schema_version, tool, data, error}` envelope; failures are tool errors that keep
+the service status. Paths must resolve inside a `--scope` directory or the
+configured library and review folders. At most four calls run at once, each with
+a ten-minute deadline.
 
 Stdout carries protocol messages only. Diagnostics go to stderr with redaction.
 Set limits on message sizes, result sizes, concurrency, time, and queued work.
@@ -49,8 +62,8 @@ Proposed names and behavior, to be versioned with JSON schemas:
 
 The [EPUB content service and CLI JSON contract](CONTENT-ACCESS.md) now exist,
 including [versioned structured parts and resources](STRUCTURED-EPUB.md).
-Future `content_get` must reuse their source identity, continuation, gap,
-and failure semantics. No MCP tool or external Kilo integration is implemented.
+The implemented `content_*` tools reuse their source identity, continuation, gap,
+and failure semantics unchanged. No external Kilo integration is implemented.
 Retrieval has no consumption side effects; acknowledgements belong to the caller.
 Expose capability/version negotiation and preserve per-range coverage, part links,
 original-markup versus text offsets, and parent/member resource identity. Following

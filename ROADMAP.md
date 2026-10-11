@@ -324,7 +324,11 @@ Acceptance:
 
 ## Milestone 6: local agent integration
 
-Status: planned. Read-only tools depend on milestone 1 and the relevant provider
+Status: partial. A read-only stdio MCP server exposes library status, holdings,
+audits, file checks, and EPUB retrieval over the shared services, with catalog
+tools behind `--allow-network` and paths confined to configured scopes; see
+[decision 0014](docs/decisions/0014-read-only-mcp-server.md). Write tools,
+durable jobs, the Agent Plugins package, and host compatibility testing remain. Read-only tools depend on milestone 1 and the relevant provider
 slice from 5; inspection needs 2; import/acquisition need 3; source cleanup needs 4.
 
 Deliver stdio MCP using the official Go SDK, typed tools over shared services,
@@ -359,8 +363,9 @@ image-member identity, and per-range gaps from
 [issue 1](https://github.com/blisspixel/nemalo/issues/1) and
 [issue 2](https://github.com/blisspixel/nemalo/issues/2).
 Table grids and rendered mathematics are explicitly unsupported, with original
-markup available separately. MCP, PDF/OCR, decoded audio ranges, and external
-caller validation remain open; neither full issue is complete.
+markup available separately. The read-only MCP `content_*` tools expose the same
+contract. PDF/OCR, decoded audio ranges, and external caller validation remain
+open; neither full issue is complete.
 
 - Initial local access: resolve a stable library ID to exact assets/provenance,
   export/open in an explicitly configured reader, and report changed/missing files.

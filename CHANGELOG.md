@@ -28,6 +28,10 @@ issues 3 through 8.
   succeeds.
 - Add `scripts/install.sh` and `scripts/install.ps1`, which verify release
   archives against `SHA256SUMS`.
+- Add `nemalo mcp serve`, a read-only MCP server on stdio built on the official
+  Go SDK v1.8.0. Its tools call the same services as the CLI and return the
+  same data; catalog tools need `--allow-network`, and every path must resolve
+  inside a configured scope.
 - Fix the journal check that reported an interrupted scan-upgrade import of an
   already held EPUB as corrupt state.
 

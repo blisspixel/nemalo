@@ -9,8 +9,8 @@ needed for the application, tests, or first-party tooling.
 
 `help`, `version`, `doctor`, `search`, `evaluate`, `acquire`, `inspect`, `check`, `library snapshot`,
 `library list`, `library audit`, `library import`, `library rescan`, `library init`, `library status`, `content units`,
-`content read`, `content source`, `content resource`, `content capabilities`, and
-`tui` are implemented.
+`content read`, `content source`, `content resource`, `content capabilities`,
+`mcp serve`, and `tui` are implemented.
 Search defaults to Open Library work metadata; `--source archive` selects Internet
 Archive text/audio item search. Neither search resolves download permissions.
 Results keep the provider's relevance ranking, and the result names its order.
@@ -52,7 +52,7 @@ Content retrieval uses CLI/JSON and the TUI Read operation over shared services.
 The default `epub-text/2` returns readable text with each omitted image, table,
 or other element located as a gap. Capability negotiation, structured EPUB parts,
 note references, original markup, and bounded local image bytes are available in
-CLI/JSON. MCP remains planned.
+CLI/JSON, and through the read-only MCP server.
 See [source-bound access](CONTENT-ACCESS.md) and [structured EPUB](STRUCTURED-EPUB.md)
 for supported representations, exact contracts, bounds, and remaining issue scope.
 
@@ -237,6 +237,20 @@ The same identifier does not merge two files. PDF and MP3 holdings do not claim
 that their bibliographic identifiers were read. See
 [decision 0009](decisions/0009-managed-epub-import.md) and
 [decision 0010](decisions/0010-bibliographic-identity.md).
+
+### MCP server
+
+```sh
+nemalo mcp serve --scope /path/to/library
+```
+
+`mcp serve` runs read-only MCP tools on stdio for an agent host: library status,
+holdings, audit, file checks without antivirus, and EPUB content retrieval, each
+over the same services and JSON data as the CLI. `--allow-network` adds catalog
+search and Archive evaluation. Tool paths must resolve inside a `--scope`
+directory or the configured library and review folders. Stdout carries protocol
+messages only. See [agent integration](AGENT-INTEGRATION.md) and
+[decision 0014](decisions/0014-read-only-mcp-server.md).
 
 ### Rescan review holdings
 

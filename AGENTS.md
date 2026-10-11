@@ -80,6 +80,9 @@ Shared operations belong in `internal/app`; CLI and TUI use those services and
 root-scoped inventory is in `internal/inventory`; configuration is in
 `internal/config`. Verification logic is tested in `internal/verify`. Do not
 move domain policy into a terminal update handler or duplicate it for MCP.
+`internal/mcpserver` is the MCP adapter (decision 0014): tools call `internal/app`,
+return the CLI data in its envelope, scope every path, and stay read-only until
+write authorization and durable jobs exist. Network tools need `--allow-network`.
 Provider adapters use the shared metadata HTTP client in `internal/discovery`;
 preserve fixed hosts, checked direct destinations, bounded JSON, and quota handling.
 Source evaluation is declaration evidence, never file rights, safety, or write
