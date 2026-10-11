@@ -37,6 +37,8 @@ type Request struct {
 	Quarantine  string `json:"quarantine,omitempty"`
 	// Scanner is the installed antivirus adapter. Nil means no scan.
 	Scanner assessment.Scanner `json:"-"`
+	// Recording is set only for a track of acquire --recording.
+	Recording *RecordingPosition `json:"recording,omitempty"`
 }
 
 func (r Request) Validate() error {
@@ -155,74 +157,128 @@ func Acquire(ctx context.Context, provider Provider, request Request) (result Re
 		return result, err
 	}
 	defer parent.Close()
+	return acquireInto(ctx, outer, provider, parent, abs, evaluation, file, request, result)
+}
+
+// acquireInto creates the new packet directory abs inside parent and runs one
+// selected file through intent, transfer, checks, scan, and receipt. ctx bounds
+// the transfer phases; outer is the caller's context and bounds the scan.
+func acquireInto(ctx, outer context.Context, provider Provider, parent *os.Root, abs string, evaluation discovery.Evaluation, file discovery.OfferedFile, request Request, result Result) (Result, error) {
+	p, result, err := transferPacket(ctx, provider, parent, abs, evaluation, file, request, result)
+	if err != nil {
+		return result, err
+	}
+	var scan *scanner.Result
+	if request.Scanner != nil && !request.NoScan {
+		// The scan has its own scanner deadline and is not cut short by the
+		// transfer deadline; the caller's cancellation still applies.
+		s := request.Scanner.Scan(outer, result.ContentPath)
+		scan = &s
+	}
+	return finishPacket(outer, p, result, scan)
+}
+
+// packetState is a transferred, inspected, and read-back-verified packet whose
+// receipt is not yet written. It holds the packet root and the open content.
+type packetState struct {
+	root         *os.Root
+	f            *os.File
+	name         string
+	request      Request
+	evaluation   discovery.Evaluation
+	alternatives []Alternative
+}
+
+func (p *packetState) close() {
+	_ = p.f.Close()
+	_ = p.root.Close()
+}
+
+// transferPacket reserves the packet directory, syncs intent, transfers and
+// inspects the content, and verifies it by read-back. On success the caller
+// must pass the state to finishPacket.
+func transferPacket(ctx context.Context, provider Provider, parent *os.Root, abs string, evaluation discovery.Evaluation, file discovery.OfferedFile, request Request, result Result) (_ *packetState, _ Result, err error) {
+	base := filepath.Base(abs)
 	if err := parent.Mkdir(base, 0700); err != nil {
 		if errors.Is(err, os.ErrExist) {
-			return result, errors.New("output must be a new directory; existing or inaccessible intake is preserved")
+			return nil, result, errors.New("output must be a new directory; existing or inaccessible intake is preserved")
 		}
-		return result, err
+		return nil, result, err
 	}
 	result.Output, result.Status = abs, "retained_incomplete"
 	root, err := safeio.OpenRootIn(parent, base)
 	if err != nil {
-		return result, err
+		return nil, result, err
 	}
-	defer root.Close()
-	alternatives := alternativesFor(evaluation, file, request.MaxBytes)
+	p := &packetState{root: root, request: request}
+	defer func() {
+		if err != nil {
+			if p.f != nil {
+				_ = p.f.Close()
+			}
+			_ = root.Close()
+		}
+	}()
+	p.alternatives = alternativesFor(evaluation, file, request.MaxBytes)
 	// Keep selected-asset provenance without copying an entire source inventory.
-	evaluation.Files = []discovery.OfferedFile{file}
+	evaluation.Files, evaluation.Recordings = []discovery.OfferedFile{file}, nil
+	p.evaluation = evaluation
 	request.Output = abs
 	result.Intent = &Intent{SchemaVersion: 1, RequestedAt: time.Now().UTC(), Request: request, Selection: evaluation}
 	if err := writeRecord(root, "intent.json", result.Intent); err != nil {
-		return result, err
+		return nil, result, err
 	}
 	resp, err := provider.Download(ctx, file)
 	if err != nil {
-		return result, err
+		return nil, result, err
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK || resp.Uncompressed || (resp.Header.Get("Content-Encoding") != "" && resp.Header.Get("Content-Encoding") != "identity") {
-		return result, fmt.Errorf("download requires an unencoded HTTP 200 response; received %d", resp.StatusCode)
+		return nil, result, fmt.Errorf("download requires an unencoded HTTP 200 response; received %d", resp.StatusCode)
 	}
 	if resp.ContentLength > request.MaxBytes || (resp.ContentLength >= 0 && resp.ContentLength != *file.Bytes) {
-		return result, errors.New("HTTP size differs from source metadata or exceeds budget")
+		return nil, result, errors.New("HTTP size differs from source metadata or exceeds budget")
 	}
-	name := "content." + format(file.Name)
-	f, err := root.OpenFile(name, os.O_RDWR|os.O_CREATE|os.O_EXCL, 0600)
+	p.name = "content." + format(file.Name)
+	p.f, err = root.OpenFile(p.name, os.O_RDWR|os.O_CREATE|os.O_EXCL, 0600)
 	if err != nil {
-		return result, err
+		return nil, result, err
 	}
-	result.ContentPath = filepath.Join(abs, name)
-	defer f.Close()
-	result.Transfer, err = transfer.Copy(ctx, f, resp.Body, request.MaxBytes, transfer.Expectation{Bytes: *file.Bytes, MD5: file.MD5, SHA1: file.SHA1})
+	result.ContentPath = filepath.Join(abs, p.name)
+	result.Transfer, err = transfer.Copy(ctx, p.f, resp.Body, request.MaxBytes, transfer.Expectation{Bytes: *file.Bytes, MD5: file.MD5, SHA1: file.SHA1})
 	// Retain whatever was transferred on failure, including cancellation.
-	if syncErr := f.Sync(); err != nil || syncErr != nil {
-		return result, errors.Join(err, syncErr)
+	if syncErr := p.f.Sync(); err != nil || syncErr != nil {
+		return nil, result, errors.Join(err, syncErr)
 	}
 	if err := resp.Body.Close(); err != nil {
-		return result, err
+		return nil, result, err
 	}
 	result.TransferComplete = true
 	result.FinalURL = file.DownloadURL
 	if resp.Request != nil && resp.Request.URL != nil {
 		result.FinalURL = resp.Request.URL.String()
 	}
-	checks, err := assessment.InspectContext(ctx, f, result.Transfer.Bytes, format(file.Name))
+	checks, err := assessment.InspectContext(ctx, p.f, result.Transfer.Bytes, format(file.Name))
 	result.Checks = &checks
 	if err != nil {
 		result.Status = "retained_for_review"
-		return result, err
+		return nil, result, err
 	}
-	if err := verifyIntake(ctx, root, name, f, result.Transfer, request.MaxBytes); err != nil {
-		return result, err
+	if err := verifyIntake(ctx, root, p.name, p.f, result.Transfer, request.MaxBytes); err != nil {
+		return nil, result, err
 	}
-	if request.Scanner != nil && !request.NoScan {
-		// The scan has its own scanner deadline and is not cut short by the
-		// transfer deadline; the caller's cancellation still applies.
-		scan := request.Scanner.Scan(outer, result.ContentPath)
-		result.Scan, result.Antivirus = &scan, scan.Status
+	return p, result, nil
+}
+
+// finishPacket binds an optional scan result to the verified bytes and writes
+// the receipt, or handles a detection. It always releases the packet state.
+func finishPacket(outer context.Context, p *packetState, result Result, scan *scanner.Result) (Result, error) {
+	defer p.close()
+	if scan != nil {
+		result.Scan, result.Antivirus = scan, scan.Status
 		// Bind the scan to the receipt bytes. Host antivirus acting on its own
 		// (removal, quarantine) surfaces here as a changed or missing file.
-		if err := verifyIntake(outer, root, name, f, result.Transfer, request.MaxBytes); err != nil {
+		if err := verifyIntake(outer, p.root, p.name, p.f, result.Transfer, p.request.MaxBytes); err != nil {
 			changed := errors.Join(errors.New("intake bytes changed or were removed during the scan; host antivirus may have acted"), err)
 			if scan.Status != "findings" {
 				result.Antivirus = "incomplete"
@@ -230,13 +286,13 @@ func Acquire(ctx context.Context, provider Provider, request Request) (result Re
 			}
 			// A reported detection stays a detection, and is recorded, even
 			// though the bytes can no longer be quarantined by Nemalo.
-			return recordDetection(root, result, "detected_changed_during_scan", alternatives, evaluation, changed)
+			return recordDetection(p.root, result, "detected_changed_during_scan", p.alternatives, p.evaluation, changed)
 		}
 		if scan.Status == "findings" {
-			return detected(outer, root, name, f, result, request, alternatives, evaluation)
+			return detected(outer, p.root, p.name, p.f, result, p.request, p.alternatives, p.evaluation)
 		}
 	}
-	if err := f.Close(); err != nil {
+	if err := p.f.Close(); err != nil {
 		return result, err
 	}
 	// Transfer phases ran under the five-minute deadline; a scan may finish
@@ -246,7 +302,7 @@ func Acquire(ctx context.Context, provider Provider, request Request) (result Re
 	}
 	now := time.Now().UTC()
 	result.CompletedAt, result.Complete, result.Status = &now, true, "untrusted_intake"
-	if err := writeRecord(root, "receipt.json", result); err != nil {
+	if err := writeRecord(p.root, "receipt.json", result); err != nil {
 		result.Complete, result.Status, result.CompletedAt = false, "retained_incomplete", nil
 		return result, err
 	}
@@ -332,7 +388,7 @@ func quarantine(ctx context.Context, f *os.File, name, directory string, transfe
 		return "", err
 	}
 	defer q.Close()
-	entry := time.Now().UTC().Format("20060102T150405Z") + "-" + transferred.SHA256[:16]
+	entry := time.Now().UTC().Format("20060102T150405.000000000Z") + "-" + transferred.SHA256[:16]
 	if err := q.Mkdir(entry, 0o700); err != nil {
 		return "", err
 	}

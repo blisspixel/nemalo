@@ -41,6 +41,18 @@ func Evaluation(e discovery.Evaluation) string {
 			fmt.Fprintf(&b, "   Finding: %q\n", finding)
 		}
 	}
+	for _, r := range e.Recordings {
+		fmt.Fprintf(&b, "\nRecording %q: %d track(s), %d declared bytes, order from %q, acquirable: %t\n", r.Format, len(r.Tracks), r.Bytes, r.OrderSource, r.Acquirable)
+		for _, t := range r.Tracks {
+			fmt.Fprintf(&b, "   %d. %q %q\n", t.Position, t.File, t.Title)
+		}
+		for _, finding := range r.Findings {
+			fmt.Fprintf(&b, "   Finding: %q\n", finding)
+		}
+		if r.Acquirable {
+			fmt.Fprintf(&b, "   Acquire all: nemalo acquire %s --recording %q --output NEW_DIRECTORY\n", e.ID, r.Format)
+		}
+	}
 	for _, limitation := range e.Limitations {
 		fmt.Fprintf(&b, "Limit: %q\n", limitation)
 	}

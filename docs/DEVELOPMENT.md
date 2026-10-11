@@ -78,8 +78,10 @@ downloads. Other URLs are escaped candidates constructed on the fixed source hos
 `complete` means bounded metadata interpretation succeeded, including a restricted
 item. No candidate URLs are probed or acquired; no files are scanned or opened.
 An Archive audio item is not necessarily an audiobook, and multiple formats may
-represent the same tracks. Actual edition/recording identity, complete track sets,
-rights policy, complete recording acquisition, and checked publication remain planned.
+represent the same tracks. `recordings` groups MP3 files by declared format in
+declared track order, with `order_source` and an `acquirable` verdict; see
+[decision 0018](decisions/0018-whole-recording-acquisition.md). Actual
+edition/recording identity, rights policy, and checked publication remain planned.
 
 ## File health and scanning
 
@@ -366,9 +368,10 @@ by a `CGO_ENABLED=0` binary smoke. Review actual runs before claiming platform s
 
 Single-asset import is in place, and EPUB package identifiers are recorded as
 evidence without merging files. Downloads are scanned on acquisition, detections
-are quarantined, and review holdings can be rescanned in one command. Recording
-and track identities still require a stated manifest. Archive extraction,
-download resume, and recoverable cleanup remain separate gates. Reuse shared file checks and scanners. Keep real
+are quarantined, and review holdings can be rescanned in one command. Folders
+and ZIP archives ingest through the single-file import, and whole recordings are
+acquired in declared order with track-level resume. A recording entity and
+manifest, byte-range resume, and recoverable cleanup remain separate gates. Reuse shared file checks and scanners. Keep real
 acquisition in the first complete lifecycle. Add those operations to CLI and TUI
 together. MCP remains a scoped adapter over the same services. Generated
 analysis and model/harness integrations remain post-1.0. PDF page identity,

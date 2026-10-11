@@ -167,6 +167,9 @@ func ManagedHoldings(p library.ManagedPage) string {
 		for _, src := range h.Sources {
 			if src.SourceID != "" {
 				fmt.Fprintf(&b, "  Source: %q %q\n", src.SourceID, src.SourceFile)
+				if src.Recording != nil {
+					fmt.Fprintf(&b, "  Track %d of %d in %q (declared order)\n", src.Recording.Position, src.Recording.Tracks, src.Recording.Format)
+				}
 			} else {
 				fmt.Fprintf(&b, "  Source: %q\n", src.Path)
 			}

@@ -209,10 +209,15 @@ func Ingest(ctx context.Context, request IngestRequest) (result IngestResult, er
 }
 
 // planIngest turns inventory entries into import units and records every
-// entry that is not imported. A packet's parts are its receipt.json and its
-// content file; every other entry, including other files inside a packet
+// entry that is not imported. A packet's parts are its receipt.json, intent,
+// and content file; every other entry, including other files inside a packet
 // folder or beside a packet at the top level, is handled on its own.
 func planIngest(folder string, entries []inventory.Entry, result *IngestResult) []ingestUnit {
+	present := make(map[string]bool, len(entries))
+	for _, e := range entries {
+		present[e.Path] = true
+	}
+	has := func(name string) bool { return present[name] }
 	packets, parts := map[string]bool{}, map[string]string{}
 	for _, e := range entries {
 		if path.Base(e.Path) != "receipt.json" {
@@ -220,13 +225,31 @@ func planIngest(folder string, entries []inventory.Entry, result *IngestResult) 
 		}
 		dir := path.Dir(e.Path)
 		for _, f := range []string{"content.epub", "content.pdf", "content.mp3"} {
-			if has(entries, path.Join(dir, f)) {
+			if has(path.Join(dir, f)) {
 				packets[dir] = true
 				parts[path.Join(dir, f)] = dir
 			}
 		}
 		if packets[dir] {
 			parts[e.Path] = dir
+			if has(path.Join(dir, "intent.json")) {
+				parts[path.Join(dir, "intent.json")] = dir
+			}
+		}
+	}
+	// A packet with an intent and content but no receipt is an interrupted or
+	// failed acquisition. Its partial content is never imported as a file.
+	incomplete := map[string]bool{}
+	for _, e := range entries {
+		dir := path.Dir(e.Path)
+		if path.Base(e.Path) != "intent.json" || packets[dir] {
+			continue
+		}
+		for _, f := range []string{"content.epub", "content.pdf", "content.mp3"} {
+			if has(path.Join(dir, f)) {
+				incomplete[path.Join(dir, f)] = true
+				incomplete[e.Path] = true
+			}
 		}
 	}
 	dirs := make([]string, 0, len(packets))
@@ -247,6 +270,10 @@ func planIngest(folder string, entries []inventory.Entry, result *IngestResult) 
 			continue
 		case parts[e.Path] != "":
 			item.Outcome, item.Detail = "packet_part", "imported with packet "+parts[e.Path]
+		case incomplete[e.Path]:
+			item.Outcome, item.Detail = "not_imported", "intake packet without a receipt; retained for review"
+		case (path.Base(e.Path) == "recording.json" || path.Base(e.Path) == "recording-intent.json") && has(path.Join(path.Dir(e.Path), "recording-intent.json")):
+			item.Outcome, item.Detail = "packet_part", "recording record; its track packets are imported on their own"
 		case strings.EqualFold(path.Ext(e.Path), ".zip"):
 			archive := filepath.Join(folder, filepath.FromSlash(e.Path))
 			if strings.Contains(archive, "!/") {
@@ -347,15 +374,6 @@ func ingestArchive(ctx context.Context, src *os.Root, folder, dir string, u inge
 		importOne(IngestItem{Source: u.item.Source + "!/" + m.Name, Kind: "archive_member"}, filepath.Join(dir, m.Staged), u.file+"!/"+m.Name)
 	}
 	return nil
-}
-
-func has(entries []inventory.Entry, name string) bool {
-	for _, e := range entries {
-		if e.Path == name {
-			return true
-		}
-	}
-	return false
 }
 
 func firstNonEmpty(values ...string) string {

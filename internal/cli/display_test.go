@@ -165,3 +165,78 @@ func TestAcquireDetectionPolicyFromConfigurationAndFlag(t *testing.T) {
 		t.Fatal("flag did not override configuration", out)
 	}
 }
+
+// recordingCatalog declares a two-track recording; fail names a track whose
+// download fails until it is cleared.
+type recordingCatalog struct {
+	displayCatalog
+	fail *string
+}
+
+func (recordingCatalog) Evaluate(context.Context, string) (discovery.Evaluation, error) {
+	e := discovery.Evaluation{ID: "archive:demo", Source: "archive", Complete: true, Access: "no_item_restriction_declared"}
+	r := discovery.Recording{Format: "64Kbps MP3", OrderSource: "declared_track", Acquirable: true}
+	for i, name := range []string{"one_64kb.mp3", "two_64kb.mp3"} {
+		body := "ID3 " + name
+		n := int64(len(body))
+		md := md5.Sum([]byte(body))
+		e.Files = append(e.Files, discovery.OfferedFile{Name: name, Bytes: &n, MD5: hex.EncodeToString(md[:]), Access: "public_file_candidate", DownloadURL: "https://archive.org/download/demo/" + name})
+		r.Tracks = append(r.Tracks, discovery.RecordingTrack{Position: i + 1, File: name, Bytes: n})
+		r.Bytes += n
+	}
+	e.Recordings = []discovery.Recording{r}
+	return e, nil
+}
+
+func (c recordingCatalog) Download(_ context.Context, f discovery.OfferedFile) (*http.Response, error) {
+	if *c.fail == f.Name {
+		return nil, errors.New("connection reset")
+	}
+	body := "ID3 " + f.Name
+	return &http.Response{StatusCode: 200, ContentLength: int64(len(body)), Body: io.NopCloser(strings.NewReader(body)), Header: http.Header{}}, nil
+}
+
+func TestAcquireRecordingCommandResumesAndIngestsInOrder(t *testing.T) {
+	fail := "two_64kb.mp3"
+	s := app.Service{Providers: map[string]app.Searcher{"archive": recordingCatalog{fail: &fail}}, Scanner: fakeScanner("unavailable")}
+	state := t.TempDir()
+	run := func(args ...string) (int, string) {
+		t.Helper()
+		var out, stderr bytes.Buffer
+		code := Execute(context.Background(), args, &out, &stderr, s, func(string) string { return "" }, func() (config.Paths, error) {
+			return config.Paths{Config: filepath.Join(t.TempDir(), "none"), State: state}, nil
+		}, nil)
+		return code, out.String() + stderr.String()
+	}
+	output := filepath.Join(t.TempDir(), "recording")
+	code, out := run("acquire", "archive:demo", "--recording", "64Kbps MP3", "--output", output, "--no-scan")
+	if code != 1 || !strings.Contains(out, "--resume") || !strings.Contains(out, "connection reset") {
+		t.Fatal("interrupted recording", code, out)
+	}
+	fail = ""
+	code, out = run("acquire", "archive:demo", "--recording", "64Kbps MP3", "--output", output, "--no-scan", "--resume", "--json")
+	if code != 0 || !strings.Contains(out, `"reused":true`) || !strings.Contains(out, `"complete":true`) {
+		t.Fatal("resume", code, out)
+	}
+	library := t.TempDir()
+	for _, args := range [][]string{{"library", "init", library}, {"library", "ingest", library, output, "--apply"}} {
+		if code, out := run(args...); code != 0 {
+			t.Fatal(args, code, out)
+		}
+	}
+	if code, out := run("library", "list", library, "--format", "mp3"); code != 0 || !strings.Contains(out, "Track 1 of 2") || !strings.Contains(out, "Track 2 of 2") {
+		t.Fatal("recording order not listed", code, out)
+	}
+	for _, args := range [][]string{
+		{"acquire", "archive:demo", "--resume", "--output", output},
+		{"acquire", "archive:demo", "--recording", "64Kbps MP3", "--file", "one_64kb.mp3", "--output", output},
+		{"acquire", "archive:demo", "--recording", "64Kbps MP3"},
+		{"acquire", "archive:demo", "--recording", "64Kbps MP3", "--output", output, "--max-recording-bytes", "17179869185"},
+		{"acquire", "archive:demo", "--recording", "64Kbps MP3", "--output", output, "--max-file-bytes", "1000"},
+		{"acquire", "archive:demo", "--file", "one_64kb.mp3", "--output", output, "--max-recording-bytes", "1000"},
+	} {
+		if code, _ := run(args...); code != 2 {
+			t.Fatal("bad recording usage", args, code)
+		}
+	}
+}

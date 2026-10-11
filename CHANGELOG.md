@@ -14,7 +14,15 @@
   ZIP members extracted into private staging with path, size, ratio, and CRC
   checks, through the same import and journal. Every entry is accounted for and
   the folder is never changed. Archive members are recorded as
-  `ARCHIVE!/MEMBER`, which earlier prereleases cannot read.
+  `ARCHIVE!/MEMBER`, which earlier prereleases cannot read. An intake packet
+  without a receipt is listed, never imported as a loose file.
+- Acquire a whole LibriVox recording with `acquire archive:ITEM --recording
+  FORMAT --output DIRECTORY` (TUI: `a` in Evaluate). Evaluation lists each
+  item's recordings in declared track order. Tracks become ordinary intake
+  packets with shared checks, scans, and quarantine; ClamAV scans them in
+  batches; `recording.json` is written last. `--resume` keeps completed tracks
+  and refetches the rest under new names. Ingest records each track's place,
+  shown as "Track N of M", which earlier prereleases cannot read.
 
 ## 0.1.0-alpha.4
 

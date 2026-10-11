@@ -180,6 +180,11 @@ func (m *model) browserKey(key string) (bool, tea.Cmd) {
 			m.requestDownload()
 			return true, nil
 		}
+	case "a":
+		if m.mode == "evaluate" && len(m.entries) > 0 && m.recordingFor(m.entries[m.selected].sourceID) != nil {
+			m.requestRecording()
+			return true, nil
+		}
 	case "esc":
 		return true, m.focusForm()
 	case "up", "down", "home", "end":

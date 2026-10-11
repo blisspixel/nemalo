@@ -197,7 +197,10 @@ type Evaluation struct {
 	Access         string            `json:"access_status"`
 	Restrictions   map[string]string `json:"restriction_evidence"`
 	Files          []OfferedFile     `json:"files"`
-	Limitations    []string          `json:"limitations"`
+	// Recordings groups MP3 files into declared track sets. It is empty for
+	// items without MP3 files and is not part of single-file selection.
+	Recordings  []Recording `json:"recordings,omitempty"`
+	Limitations []string    `json:"limitations"`
 }
 
 type archiveFile struct {
@@ -208,6 +211,10 @@ type archiveFile struct {
 	SHA1       string          `json:"sha1"`
 	Private    json.RawMessage `json:"private"`
 	Restricted json.RawMessage `json:"access-restricted-item"`
+	Original   json.RawMessage `json:"original"`
+	Track      json.RawMessage `json:"track"`
+	Title      json.RawMessage `json:"title"`
+	Length     json.RawMessage `json:"length"`
 }
 
 func (p *Archive) Evaluate(ctx context.Context, id string) (Evaluation, error) {
@@ -319,6 +326,7 @@ func (p *Archive) Evaluate(ctx context.Context, id string) (Evaluation, error) {
 		}
 		e.Files = append(e.Files, o)
 	}
+	e.Recordings = recordings(*wire.Files, e.Files)
 	e.Complete = true
 	return e, nil
 }

@@ -20,6 +20,8 @@ AI service. The agent interface (MCP) uses the same application services.
 - Acquire a selected Archive EPUB, PDF, or MP3 into exclusive untrusted intake,
   with source checksums, local checks, a scan by the installed antivirus, and a
   provenance receipt. A detection is quarantined and other files are offered.
+  Acquire a whole LibriVox recording in declared track order, and resume an
+  interrupted one without fetching completed tracks again.
 - Inventory explicit folders; check file structure, size, hashes, and EPUB text
   measurements. A scan is recommended for a file you did not produce and stays
   optional: Defender on Windows, ClamAV on Linux and macOS. Pass a publisher
@@ -44,8 +46,8 @@ AI service. The agent interface (MCP) uses the same application services.
 - Use CLI, versioned JSON, an interactive terminal interface, or read-only MCP
   tools for an agent host (`nemalo mcp serve --scope DIRECTORY`).
 
-Resumable transfers, RAR and 7z intake, folder cleanup, complete audiobook
-management, and MCP write tools are planned. Single-file import is not
+Byte-range transfer resume, RAR and 7z intake, folder cleanup, recording
+identity across holdings, and MCP write tools are planned. Single-file import is not
 a full checked-library policy.
 File checks report limited evidence, never a safety or completeness guarantee.
 See [current capabilities and limits](docs/DEVELOPMENT.md) and the [roadmap](ROADMAP.md).

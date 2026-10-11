@@ -71,6 +71,7 @@ type model struct {
 	cancel           context.CancelFunc
 	reader           readerState
 	downloadReview   *acquisition.Request
+	recordingReview  *acquisition.RecordingRequest
 	// lastEvaluation lets a detected download offer the item's other files.
 	lastEvaluation *discovery.Evaluation
 }
@@ -143,6 +144,10 @@ func (m *model) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 					m.drafts[mode] = d
 				}
 			}
+		case acquisition.RecordingResult:
+			if msg.err == nil {
+				m.status = fmt.Sprintf("Downloaded %d track(s) to untrusted intake. Ingest the recording directory into a library to keep their order.", len(value.Tracks))
+			}
 		case discovery.Evaluation:
 			if msg.err == nil {
 				m.lastEvaluation = &value
@@ -192,6 +197,8 @@ func (m *model) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 		switch value := msg.data.(type) {
 		case acquisition.Result:
 			data = []byte(present.Acquisition(value))
+		case acquisition.RecordingResult:
+			data = []byte(present.Recording(value))
 		case library.State:
 			data = []byte(present.LibraryState(value))
 		case discovery.Evaluation:
@@ -238,7 +245,7 @@ func (m *model) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 			return m, m.focusForm()
 		}
 	case tea.KeyPressMsg:
-		if m.downloadReview != nil {
+		if m.reviewingDownload() {
 			return m, m.confirmDownload(msg)
 		}
 		if m.confirmRoot != "" {

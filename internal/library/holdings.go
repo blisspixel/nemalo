@@ -47,6 +47,20 @@ type Source struct {
 	DeclaredURL      string   `json:"declared_url,omitempty"`
 	DeclaredRights   []string `json:"declared_rights,omitempty"`
 	DeclaredLicenses []string `json:"declared_licenses,omitempty"`
+	// Recording places a track packet in a declared recording, as recorded by
+	// acquire --recording. It is a source declaration of order, not a check.
+	Recording *SourceRecording `json:"recording,omitempty"`
+}
+
+// SourceRecording is a track's declared place in a recording.
+type SourceRecording struct {
+	Format   string `json:"source_format"`
+	Position int    `json:"position"`
+	Tracks   int    `json:"tracks"`
+}
+
+func validRecording(r *SourceRecording) bool {
+	return r == nil || (validNote(r.Format, 200) && r.Position >= 1 && r.Position <= r.Tracks && r.Tracks <= 1000)
 }
 
 type operation struct {
@@ -276,6 +290,9 @@ func validHolding(h Holding, libraryID string) bool {
 			return false
 		}
 		if !validDeclaredList(source.DeclaredRights) || !validDeclaredList(source.DeclaredLicenses) {
+			return false
+		}
+		if source.Recording != nil && (source.Kind != "packet" || h.Format != "mp3" || !validRecording(source.Recording)) {
 			return false
 		}
 	}

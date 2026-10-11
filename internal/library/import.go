@@ -89,8 +89,9 @@ type packetReceipt struct {
 	} `json:"transfer"`
 	Intent *struct {
 		Request struct {
-			SourceID string `json:"source_id"`
-			File     string `json:"source_file"`
+			SourceID  string           `json:"source_id"`
+			File      string           `json:"source_file"`
+			Recording *SourceRecording `json:"recording"`
 		} `json:"request"`
 		Selection struct {
 			Rights   []string `json:"rights_statements"`
@@ -500,6 +501,10 @@ func sourceRecord(source selected) Source {
 	}
 	record.SourceID = boundToken(source.receipt.Intent.Request.SourceID)
 	record.SourceFile = boundToken(source.receipt.Intent.Request.File)
+	if r := source.receipt.Intent.Request.Recording; r != nil && validRecording(r) && importFormat(source.file) == "mp3" {
+		recording := *r
+		record.Recording = &recording
+	}
 	if url := source.receipt.FinalURL; strings.HasPrefix(url, "https://") && len(url) <= 2000 && !strings.ContainsAny(url, " \r\n\x00") {
 		record.DeclaredURL = url
 	}

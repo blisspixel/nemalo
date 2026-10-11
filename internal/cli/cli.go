@@ -40,6 +40,8 @@ Usage: nemalo <command> [options]
                       Inspect source-declared files, rights, and access restrictions
   acquire archive:ITEM --file NAME --output NEW_DIRECTORY
                       Download a selected EPUB/PDF/MP3 into untrusted intake
+  acquire archive:ITEM --recording FORMAT --output NEW_DIRECTORY [--resume]
+                      Download every track of a declared recording, in order
   inspect DIRECTORY   Read-only inventory of an explicitly selected folder
   check FILE          Bounded file health assessment, without rendering content
   library snapshot DIRECTORY --output FILE
@@ -86,9 +88,12 @@ Search options: --source openlibrary|archive (default openlibrary), --limit 10, 
                 identifier pages stably, downloads ranks by declared popularity)
 Acquire options: --file exact-source-filename, --output new-directory,
                  --max-file-bytes 268435456 (maximum 256 MiB),
-                 --no-scan, --on-detection quarantine|delete
+                 --no-scan, --on-detection quarantine|delete,
+                 --recording "64Kbps MP3" (a format listed under recordings by
+                 evaluate), --max-recording-bytes 4294967296 (maximum 16 GiB),
+                 --resume (continue a recording directory; completed tracks stay)
 Acquisition creates missing parent folders, retains incomplete output, and never
-overwrites or resumes it. When a scanner is installed it scans the downloaded
+overwrites it. Only a recording resumes, with --resume, keeping completed tracks. When a scanner is installed it scans the downloaded
 bytes once. A detection moves them to the Nemalo quarantine (or deletes them)
 and lists other files from the same item. Rights remain unresolved.
 Inspect options: --hashes, --max-entries 10000, --max-depth 32,
@@ -189,6 +194,9 @@ func Execute(ctx context.Context, args []string, out, errOut io.Writer, service 
 	transport := flags.String("transport", "stdio", "MCP transport")
 	application := flags.String("app", "", "application to open a library copy with")
 	onDetection := flags.String("on-detection", "quarantine", "quarantine or delete a detected download")
+	recordingFormat := flags.String("recording", "", "declared recording format to acquire as a whole")
+	resume := flags.Bool("resume", false, "continue an existing recording directory")
+	maxRecording := flags.Int64("max-recording-bytes", 4<<30, "declared total byte budget for a recording")
 	contentRequest := content.Request{SchemaVersion: 1}
 	flags.StringVar(&contentRequest.AssetID, "asset", "", "exact catalog asset ID")
 	flags.IntVar(&contentRequest.Unit, "unit", 0, "zero-based reading-order document")
@@ -303,6 +311,25 @@ func Execute(ctx context.Context, args []string, out, errOut io.Writer, service 
 				detection = *onDetection
 			}
 		})
+		fileLimit, recordingLimit := false, false
+		flags.Visit(func(f *flag.Flag) {
+			fileLimit = fileLimit || f.Name == "max-file-bytes"
+			recordingLimit = recordingLimit || f.Name == "max-recording-bytes"
+		})
+		if *recordingFormat != "" || *resume || recordingLimit {
+			if *recordingFormat == "" || *sourceFile != "" || fileLimit {
+				return write(nil, errors.New("use acquire archive:ITEM --recording FORMAT --output DIRECTORY [--resume] [--max-recording-bytes N], without --file or --max-file-bytes"), 2)
+			}
+			recording := acquisition.RecordingRequest{SourceID: flags.Arg(0), Format: *recordingFormat, Output: *output, MaxBytes: *maxRecording, Resume: *resume, NoScan: *noScan, OnDetection: detection}
+			if err := recording.Validate(); err != nil {
+				return write(nil, err, 2)
+			}
+			data, err := service.AcquireRecording(ctx, recording)
+			if err != nil {
+				return write(data, err, 1)
+			}
+			return guide(write(data, nil, 0), recordingAntivirus(data), true)
+		}
 		request := acquisition.Request{SourceID: flags.Arg(0), File: *sourceFile, Output: *output, MaxBytes: limits.FileBytes, NoScan: *noScan, OnDetection: detection}
 		if err := request.Validate(); err != nil {
 			return write(nil, err, 2)
@@ -629,7 +656,7 @@ func flagApplies(command, action, name string) bool {
 	}
 	switch command {
 	case "acquire":
-		return name == "file" || name == "output" || name == "max-file-bytes" || name == "no-scan" || name == "on-detection"
+		return name == "file" || name == "output" || name == "max-file-bytes" || name == "no-scan" || name == "on-detection" || name == "recording" || name == "resume" || name == "max-recording-bytes"
 	case "search":
 		return name == "limit" || name == "offset" || name == "source" || name == "sort"
 	case "check":
@@ -675,6 +702,9 @@ func printData(out io.Writer, data any) error {
 	switch value := data.(type) {
 	case acquisition.Result:
 		_, err := io.WriteString(out, present.Acquisition(value))
+		return err
+	case acquisition.RecordingResult:
+		_, err := io.WriteString(out, present.Recording(value))
 		return err
 	case library.State:
 		_, err := io.WriteString(out, present.LibraryState(value))
@@ -727,4 +757,15 @@ func printData(out io.Writer, data any) error {
 		return err
 	}
 	return textsafe.WriteJSON(out, data, true)
+}
+
+// recordingAntivirus summarizes track scans for the next-step hint: any track
+// without a no-detection result means scan evidence is missing.
+func recordingAntivirus(r acquisition.RecordingResult) string {
+	for _, t := range r.Tracks {
+		if t.Antivirus != "no_detections_reported" {
+			return t.Antivirus
+		}
+	}
+	return "no_detections_reported"
 }

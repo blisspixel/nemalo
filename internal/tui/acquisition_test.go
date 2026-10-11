@@ -146,3 +146,94 @@ func TestTerminalDetectionOffersTheItemsOtherFiles(t *testing.T) {
 		}
 	}
 }
+
+type recordingTUIProvider struct{ calls *int }
+
+func (recordingTUIProvider) Search(context.Context, string, int, int) (discovery.Page, error) {
+	return discovery.Page{}, nil
+}
+
+func (recordingTUIProvider) Evaluate(context.Context, string) (discovery.Evaluation, error) {
+	e := discovery.Evaluation{ID: "archive:demo", Source: "archive", Complete: true, Access: "no_item_restriction_declared"}
+	r := discovery.Recording{Format: "64Kbps MP3", OrderSource: "declared_track", Acquirable: true}
+	for i, name := range []string{"one_64kb.mp3", "two_64kb.mp3"} {
+		body := "ID3 " + name
+		n := int64(len(body))
+		md := md5.Sum([]byte(body))
+		e.Files = append(e.Files, discovery.OfferedFile{Name: name, Access: "public_file_candidate", Bytes: &n, MD5: hex.EncodeToString(md[:]), DownloadURL: "https://archive.org/download/demo/" + name})
+		r.Tracks = append(r.Tracks, discovery.RecordingTrack{Position: i + 1, File: name, Bytes: n})
+		r.Bytes += n
+	}
+	e.Recordings = []discovery.Recording{r}
+	return e, nil
+}
+
+func (p recordingTUIProvider) Download(_ context.Context, f discovery.OfferedFile) (*http.Response, error) {
+	*p.calls++
+	body := "ID3 " + f.Name
+	return &http.Response{StatusCode: 200, ContentLength: int64(len(body)), Header: http.Header{}, Body: io.NopCloser(strings.NewReader(body))}, nil
+}
+
+func TestTerminalRecordingRequiresReviewAndAcquiresEveryTrack(t *testing.T) {
+	calls := 0
+	p := recordingTUIProvider{&calls}
+	m := newModel(context.Background(), app.Service{Providers: map[string]app.Searcher{"archive": p}, Scanner: tuiScanner("no_detections_reported"), Quarantine: filepath.Join(t.TempDir(), "q")})
+	m.switchMode("evaluate")
+	m.input.SetValue("archive:demo")
+	m.submittedInput = "archive:demo"
+	e, _ := p.Evaluate(context.Background(), "archive:demo")
+	m.id++
+	m.Update(result{m.id, e, nil})
+	m.secondary.SetValue(filepath.Join(t.TempDir(), "recording"))
+	m.resultsFocused = true
+	m.selectEntry(1)
+	if !strings.Contains(strings.Join(strings.Fields(m.footer()), " "), "a all tracks") {
+		t.Fatal("recording action not offered", m.footer())
+	}
+	m.browserKey("a")
+	if m.recordingReview == nil || calls != 0 || !strings.Contains(m.report, "Acquire every track") || !strings.Contains(m.View().Content, "Review acquisition") {
+		t.Fatal("missing recording review", m.report)
+	}
+	m.Update(tea.KeyPressMsg{Code: tea.KeyEscape})
+	if m.recordingReview != nil || calls != 0 {
+		t.Fatal("cancelled review wrote")
+	}
+	m.resultsFocused = true
+	m.browserKey("a")
+	output := m.recordingReview.Output
+	_, cmd := m.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
+	if cmd == nil || !m.busy || m.recordingReview != nil {
+		t.Fatal("confirmed recording missing")
+	}
+	m.Update(cmd())
+	if calls != 2 || !strings.Contains(m.status, "2 track(s)") || !strings.Contains(m.report, "Track") {
+		t.Fatal(calls, m.status, m.report)
+	}
+	if _, err := os.Stat(filepath.Join(output, "recording.json")); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestTerminalRecordingIsNotOfferedForUnusableRecordings(t *testing.T) {
+	calls := 0
+	p := recordingTUIProvider{&calls}
+	m := newModel(context.Background(), app.Service{Providers: map[string]app.Searcher{"archive": p}})
+	m.switchMode("evaluate")
+	m.input.SetValue("archive:demo")
+	m.submittedInput = "archive:demo"
+	e, _ := p.Evaluate(context.Background(), "archive:demo")
+	e.Recordings[0].Acquirable = false
+	m.id++
+	m.Update(result{m.id, e, nil})
+	m.resultsFocused = true
+	m.selectEntry(0)
+	if handled, _ := m.browserKey("a"); handled || m.recordingReview != nil || strings.Contains(strings.Join(strings.Fields(m.footer()), " "), "a all tracks") {
+		t.Fatal("unusable recording offered")
+	}
+	m.input.SetValue("archive:other")
+	e.Recordings[0].Acquirable = true
+	m.lastEvaluation = &e
+	if m.recordingFor("one_64kb.mp3") != nil {
+		t.Fatal("stale evaluation offered a recording")
+	}
+}

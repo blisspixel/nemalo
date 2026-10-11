@@ -126,7 +126,7 @@ func (m *model) top() string {
 }
 
 func (m *model) footer() string {
-	if m.downloadReview != nil {
+	if m.reviewingDownload() {
 		return lipgloss.Wrap(m.paint("Enter acquire  Esc back  PgUp/PgDown review  Ctrl+C quit", warning, false), max(1, m.width-2), " ")
 	}
 	if m.confirmRoot != "" {
@@ -147,6 +147,9 @@ func (m *model) footer() string {
 		}
 		if m.mode == "evaluate" && len(m.entries) > 0 {
 			help += "  d acquire"
+			if m.recordingFor(m.entries[m.selected].sourceID) != nil {
+				help += "  a all tracks"
+			}
 		}
 		if m.mode == "read" {
 			help = "Enter unit  n next range  r repeat  u units  F6 edit  Ctrl+C quit"
@@ -175,7 +178,7 @@ func (m *model) View() tea.View {
 	}
 	state := m.statusText()
 	color := accent
-	if m.busy || m.confirmRoot != "" || m.downloadReview != nil {
+	if m.busy || m.confirmRoot != "" || m.reviewingDownload() {
 		color = warning
 	} else if strings.Contains(state, "Incomplete") || strings.Contains(state, "error") {
 		color = danger
@@ -259,7 +262,7 @@ func (m *model) statusText() string {
 }
 
 func (m *model) position() string {
-	if m.downloadReview != nil {
+	if m.reviewingDownload() {
 		return fmt.Sprintf("Review acquisition | Scroll %.0f%%", m.viewport.ScrollPercent()*100)
 	}
 	if m.confirmRoot != "" {

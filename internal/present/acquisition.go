@@ -56,3 +56,37 @@ func writeAlternatives(b *strings.Builder, r acquisition.Result) {
 		fmt.Fprintf(b, "Search for another source:\n  nemalo search %q --source archive\n", r.SearchSuggestion)
 	}
 }
+
+// Recording summarizes a whole-recording acquisition, one line per track.
+func Recording(r acquisition.RecordingResult) string {
+	var b strings.Builder
+	fmt.Fprintf(&b, "Recording: %q\nComplete: %t\nSource: %q\nFormat: %q | Order from: %q\nOutput: %q\nTracks: %d | Declared bytes: %d\n", r.Status, r.Complete, r.SourceID, r.Format, r.OrderSource, r.Output, len(r.Tracks), r.DeclaredBytes)
+	for _, t := range r.Tracks {
+		fmt.Fprintf(&b, "%d. %q %s", t.Position, t.File, t.Status)
+		if t.Packet != "" {
+			fmt.Fprintf(&b, " in %q", t.Packet)
+		}
+		if t.Antivirus != "" {
+			fmt.Fprintf(&b, " | antivirus %s", t.Antivirus)
+		}
+		if t.Reused {
+			b.WriteString(" (kept from an earlier run)")
+		}
+		b.WriteString("\n")
+		if t.Detail != "" {
+			fmt.Fprintf(&b, "   %q\n", t.Detail)
+		}
+	}
+	for _, note := range r.Limitations {
+		fmt.Fprintf(&b, "Limitation: %q\n", note)
+	}
+	switch {
+	case r.Complete:
+		fmt.Fprintf(&b, "Next: nemalo library ingest LIBRARY %q --apply\n", r.Output)
+	case r.Status == "stopped_on_detection":
+		b.WriteString("A scanner flagged a track, so the recording stopped. Review that track before resuming. A detection can be a false positive.\n")
+	case r.Output != "":
+		fmt.Fprintf(&b, "Retained for review. Continue with: nemalo acquire %s --recording %q --output %q --resume\n", r.SourceID, r.Format, r.Output)
+	}
+	return b.String()
+}

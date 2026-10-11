@@ -89,6 +89,9 @@ func holdingMatches(h Holding, query string) bool {
 	}
 	for _, s := range h.Sources {
 		values = append(values, s.Path, s.SourceID, s.SourceFile)
+		if s.Recording != nil {
+			values = append(values, s.Recording.Format)
+		}
 	}
 	for _, v := range values {
 		if strings.Contains(strings.ToLower(v), query) {

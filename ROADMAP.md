@@ -104,15 +104,16 @@ deleted by configuration), never imported, and other files from the item are
 offered. A clean acquisition scan bound to the same bytes lets a packet import
 as checked, and `library rescan` scans review holdings in ClamAV batches. See
 [decision 0012](docs/decisions/0012-scan-on-acquire-quarantine-and-rescan.md).
-Cleanup, archive extraction, and download resume are also outstanding. Native
+Cleanup and byte-range download resume are also outstanding. Native
 archive/checksum packaging and checksum-verifying install scripts are
 implemented; releases still require the actual verification and publication gates.
 Milestone 2
-has inventory and standalone signatures/private snapshots, without archive
-extraction or production staging. Milestone 5 has
+has inventory, standalone signatures/private snapshots, and folder ingest with
+ZIP extraction into private staging. Milestone 5 has
 two discovery adapters, source-declared Archive file/access/rights evaluation,
 and selected EPUB/PDF/MP3 acquisition into exclusive untrusted intake packets.
-Validator-bound resume, complete track sets, and checked publication remain planned.
+Whole recordings are acquired as ordered track packets with track-level resume.
+Validator-bound byte resume, a recording manifest, and checked publication remain planned.
 All remaining production
 capabilities stay planned. A configured CI workflow is not itself a hosted pass.
 The initial foundation passed hosted native CI on Linux, macOS, and Windows.
@@ -244,9 +245,9 @@ Acceptance:
 Status: partial. Shared EPUB checks, Defender and ClamAV adapters with batched
 ClamAV scans, and single-asset managed import and rescan exist. EPUB package
 identifiers can be recorded as evidence. `doctor` names the default scanner,
-its setup command, and signature age. Recording and track identities,
-cross-file work relationships, archive extraction, cleanup, and a full
-checked-library policy remain. Depends on milestone 2.
+its setup command, and signature age. ZIP extraction is in milestone 2 ingest.
+Recording and track identities, cross-file work relationships, cleanup, and a
+full checked-library policy remain. Depends on milestone 2.
 
 Deliver EPUB package checks, content checks, scanner adapters, metadata handling,
 exact duplicate detection, and verified library publication.
@@ -298,9 +299,11 @@ Acceptance:
 Status: partial. Open Library/Archive search with explicit result order, Archive
 source evaluation, and selected-file intake acquisition with a post-download
 scan and quarantine exist in CLI/JSON/TUI. See the
-[acquisition contract](docs/ACQUISITION.md). Resume, complete recording downloads,
-Gutenberg production integration, and broader provider contracts remain
-planned. Transfers and checked publication use milestones 2 and 3. Source cleanup
+[acquisition contract](docs/ACQUISITION.md). Whole declared recordings are
+acquired as ordered track packets with track-level resume
+([decision 0018](docs/decisions/0018-whole-recording-acquisition.md)). Byte-range
+resume within a file, Gutenberg production integration, and broader provider
+contracts remain planned. Transfers and checked publication use milestones 2 and 3. Source cleanup
 is independent and requires 4.
 
 Complete Gutenberg and Archive acquisition over the existing Go provider core.
@@ -427,9 +430,12 @@ Acceptance:
 Status: partial. Single MP3 files have a frame index with probed versus
 declared timing, ID3 chapters, and decodable frame-aligned ranges through the
 shared content contract; see
-[decision 0015](docs/decisions/0015-mpeg-audio-frame-index.md). Recording and
-narration identity, ordered track sets, M4B, and complete recording acquisition
-remain. Depends on shared assessment/publication and recovery milestones.
+[decision 0015](docs/decisions/0015-mpeg-audio-frame-index.md). Whole Archive
+recordings are acquired in declared track order with track-level resume, and
+ingest records each track's declared place
+([decision 0018](docs/decisions/0018-whole-recording-acquisition.md)). A recording
+entity with narrator identity and completeness across holdings, a versioned
+recording manifest, byte-range resume, and M4B remain. Depends on shared assessment/publication and recovery milestones.
 Can follow milestone 5 independently of paper-provider expansion.
 
 Deliver local MP3/M4B intake and LibriVox acquisition, permitted Archive audio

@@ -1,8 +1,9 @@
 # Selected source acquisition
 
 Implemented in CLI, JSON, and TUI through `internal/app` and
-`internal/acquisition`. This is an early single-file intake workflow, not checked
-library publication, complete audiobook acquisition, or a resumable transfer queue.
+`internal/acquisition`. It acquires one selected file, or every track of one
+declared recording, into untrusted intake. It is not checked library publication
+or a byte-range resumable transfer queue.
 Scanning, quarantine, and alternatives follow
 [decision 0012](decisions/0012-scan-on-acquire-quarantine-and-rescan.md).
 
@@ -83,6 +84,45 @@ declared title and creator. Nothing else is requested automatically. A
 detection can be a false positive, and a no-detection result is not proof the
 file is safe. Scanner cloud and sample-submission settings belong to the host.
 
+## Whole recordings
+
+```sh
+nemalo evaluate archive:art_of_war_librivox
+nemalo acquire archive:art_of_war_librivox --recording "64Kbps MP3" \
+  --output /path/to/new-recording-directory
+nemalo library ingest /path/to/library /path/to/new-recording-directory --apply
+```
+
+Evaluation lists `recordings`: the item's MP3 files grouped by declared Archive
+format, in declared track order. Derivative files take their order from the
+original they name. `order_source` is `file_name` when the source declares no
+distinct track numbers. Only an `acquirable` recording, where every track has
+public access, a usable size, and a checksum, can be acquired as a whole.
+`--max-recording-bytes` (default 4294967296, at most 16 GiB) bounds the declared
+total; each track keeps the 256 MiB file limit.
+
+| File | Purpose |
+| --- | --- |
+| `recording-intent.json` | Request, fresh item evidence, the selected recording, and its track files; synced before any request |
+| `0001/`, `0002/`, ... | One ordinary intake packet per track, by position; each intent and receipt records `recording: {source_format, position, tracks}` |
+| `recording.json` | Every track's packet, bytes, SHA-256, and scan; written last, only when every track has a receipt |
+
+ClamAV scans groups of up to 32 tracks or 256 MiB at once, and their receipts
+wait for that scan. With Defender, which scans one file at a time, or with
+`--no-scan`, each track's receipt is written before the next track is
+requested. A detection stops the recording.
+
+`--resume` with the same item, format, and output continues an interrupted
+recording. Fresh declarations must still list the same files, sizes, and
+checksums in order, or nothing is requested. A track packet is kept only when its
+receipt completes that file at that position and its content still matches the
+declared checksum and the receipt hash. A kept track keeps its original scan
+result. Any other attempt is retained untouched, and the track is fetched again
+as `0003-2` (up to nine attempts). A leftover `.pending` record from an
+interrupted write stops the resume for review. Track order, titles, and durations are declarations, not
+checks of the audio. See
+[decision 0018](decisions/0018-whole-recording-acquisition.md).
+
 ## Network and failure bounds
 
 - At most 256 MiB per selected file, configurable lower with `--max-file-bytes`.
@@ -99,7 +139,8 @@ file is safe. Scanner cloud and sample-submission settings belong to the host.
   overwrite, clean up, or publish those bytes into a library.
 
 Keep a failed packet for review and choose a new output for a deliberate retry.
-Automatic validator-bound resume and packet recovery remain planned. A receipt
+A recording resumes at track granularity (above). Byte-range resume within a
+file, bound to a remote validator, and packet recovery remain planned. A receipt
 is historical evidence; recheck current bytes before relying on it.
 
 The validation harness shares the transfer primitive and checked download client.
@@ -116,4 +157,6 @@ content path in Check and Scan without starting either operation, and the status
 line states the scan result. After a detection the list shows the item's other
 files, so F6 and `d` review another one; editing the Item evaluates another
 source. Failed intake retains its report and output; cancellation does not
-remove partial files.
+remove partial files. When the selected file belongs to an acquirable recording,
+`a` reviews acquiring every track of that recording into the Intake directory;
+resume a partial recording with the CLI `--resume`.

@@ -95,7 +95,9 @@ these tested building blocks; do not grow a second transfer or publication polic
 Selected acquisition is in `internal/acquisition`, sharing `internal/transfer` and
 the checked file HTTP adapter with the harness. Preserve fresh evaluation, exact
 selection, exclusive packets, synced intent, retained failures, and untrusted status;
-see decision 0007. Resume and checked publication are not implemented.
+see decision 0007. Recordings reuse the same packet code per track (decision 0018):
+resume only reuses a receipt-complete, rehashed track; never adopt or remove a
+retained attempt. Byte-range resume and checked publication are not implemented.
 Use `internal/safeio` for capability-bound roots and existing-file opens and
 `internal/textsafe` for JSON/generated prose. Preserve parent aliases, opened
 identity checks, lifetime compressed-reader budgets, and parse-equivalent escaping;

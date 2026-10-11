@@ -46,6 +46,25 @@ func (s Service) Acquire(ctx context.Context, request acquisition.Request) (acqu
 	return acquisition.Acquire(ctx, provider, request)
 }
 
+// AcquireRecording acquires every track of one declared recording with the
+// same scan and detection policy as Acquire.
+func (s Service) AcquireRecording(ctx context.Context, request acquisition.RecordingRequest) (acquisition.RecordingResult, error) {
+	provider, ok := s.Providers["archive"].(acquisition.Provider)
+	if !ok {
+		return acquisition.RecordingResult{}, errors.New("archive acquisition is unavailable")
+	}
+	if !request.NoScan && request.Scanner == nil {
+		request.Scanner = s.scanner()
+	}
+	if request.Quarantine == "" {
+		request.Quarantine = s.Quarantine
+	}
+	if request.OnDetection == "" {
+		request.OnDetection = s.OnDetection
+	}
+	return acquisition.AcquireRecording(ctx, provider, request)
+}
+
 type Service struct {
 	Providers map[string]Searcher
 	Scanner   assessment.Scanner

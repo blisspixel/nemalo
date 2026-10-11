@@ -8,6 +8,7 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 	"github.com/blisspixel/nemalo/internal/acquisition"
+	"github.com/blisspixel/nemalo/internal/discovery"
 )
 
 func (m *model) requestDownload() {
@@ -43,7 +44,7 @@ func (m *model) confirmDownload(msg tea.KeyPressMsg) tea.Cmd {
 	case "ctrl+c":
 		return tea.Quit
 	case "esc":
-		m.downloadReview = nil
+		m.downloadReview, m.recordingReview = nil, nil
 		m.setReport(m.confirmReport)
 		m.status = m.confirmStatus
 		m.confirmReport, m.confirmStatus, m.evidence = "", "", false
@@ -54,21 +55,80 @@ func (m *model) confirmDownload(msg tea.KeyPressMsg) tea.Cmd {
 		m.viewport, cmd = m.viewport.Update(msg)
 		return cmd
 	case "enter":
-		request := *m.downloadReview
-		m.downloadReview = nil
-		m.confirmReport, m.confirmStatus = "", ""
 		ctx, cancel := context.WithCancel(m.ctx)
 		m.cancel = cancel
 		m.id++
 		id := m.id
 		m.busy = true
+		m.confirmReport, m.confirmStatus = "", ""
 		m.status = "Acquiring to untrusted intake. Escape cancels; partial output is retained."
 		m.setReport("")
 		m.populate(nil)
 		m.resize()
+		if m.recordingReview != nil {
+			request := *m.recordingReview
+			m.recordingReview = nil
+			m.status = "Acquiring every track to untrusted intake. Escape cancels; completed tracks are kept for a resume."
+			return func() tea.Msg { data, err := m.service.AcquireRecording(ctx, request); return result{id, data, err} }
+		}
+		request := *m.downloadReview
+		m.downloadReview = nil
 		return func() tea.Msg { data, err := m.service.Acquire(ctx, request); return result{id, data, err} }
 	}
 	return nil
+}
+
+func (m *model) reviewingDownload() bool {
+	return m.downloadReview != nil || m.recordingReview != nil
+}
+
+// recordingFor returns the declared recording that holds file in the item
+// evaluated last, if it can be acquired as a whole.
+func (m *model) recordingFor(file string) *discovery.Recording {
+	if m.lastEvaluation == nil || m.lastEvaluation.ID != m.submittedInput || m.input.Value() != m.submittedInput {
+		return nil
+	}
+	for i, r := range m.lastEvaluation.Recordings {
+		for _, t := range r.Tracks {
+			if t.File == file && r.Acquirable {
+				return &m.lastEvaluation.Recordings[i]
+			}
+		}
+	}
+	return nil
+}
+
+// requestRecording reviews acquiring every track of the recording that holds
+// the selected file. Nothing is requested until Enter.
+func (m *model) requestRecording() {
+	if m.input.Value() != m.submittedInput {
+		m.status = "Item changed. Evaluate again before selecting a download."
+		m.resize()
+		return
+	}
+	recording := m.recordingFor(m.entries[m.selected].sourceID)
+	// The review shows the declared total, so the budget is exactly that total;
+	// a recording over the 16 GiB maximum is refused here, before review.
+	request := acquisition.RecordingRequest{SourceID: m.submittedInput, Format: recording.Format, Output: m.secondary.Value(), MaxBytes: recording.Bytes}
+	if err := request.Validate(); err != nil {
+		m.status = fmt.Sprintf("Acquisition error: %q", err.Error())
+		m.resize()
+		return
+	}
+	abs, err := filepath.Abs(request.Output)
+	if err != nil {
+		m.status = fmt.Sprintf("Acquisition error: %q", err.Error())
+		return
+	}
+	request.Output = abs
+	m.recordingReview, m.confirmReport, m.confirmStatus = &request, m.report, m.status
+	m.input.Blur()
+	m.secondary.Blur()
+	m.evidence = true
+	m.status = "Review acquisition. Enter confirms; Escape returns without downloading."
+	m.setReport(fmt.Sprintf("Acquire every track of one recording\n\nSource: %q\nRecording: %q, %d track(s), %d declared bytes\nTrack order from: %q\nNew recording directory: %q\nBudget: the declared total, at most 16 GiB\n\nRequests fresh Archive metadata, then each track in declared order as its own intake packet (0001, 0002, ...), with the same checks, scan, and quarantine as a single file. A detection stops the recording. recording.json is written only when every track has a receipt.\n\nAn interrupted recording is retained; acquire --recording with --resume keeps completed tracks. Track order and titles are source declarations. This is untrusted intake, not checked publication.\n\nEnter acquires this recording. Escape returns without writing.\n", request.SourceID, recording.Format, len(recording.Tracks), recording.Bytes, recording.OrderSource, request.Output))
+	m.viewport.GotoTop()
+	m.resize()
 }
 
 // acquisitionStatus summarizes the scan outcome of a completed intake.
