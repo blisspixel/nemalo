@@ -98,12 +98,39 @@ type Track struct {
 	Findings          []string  `json:"findings"`
 	Decoded           string    `json:"decoded"`
 
-	offsets []int64
-	headers []header
+	// stream holds the parameters every indexed frame shares; frames holds the
+	// small per-frame facts, so the index stays near 16 bytes per frame.
+	stream header
+	frames []frameRec
+}
+
+type frameRec struct {
+	offset    int64
+	length    uint16
+	bitrate   uint16
+	protected bool
+}
+
+func (t Track) frameLen(i int) int { return int(t.frames[i].length) }
+
+// dataStart is the offset of frame i's main data after header, CRC, and side
+// information.
+func (t Track) dataStart(i int) int {
+	n := 4 + t.stream.sideInfo()
+	if t.frames[i].protected {
+		n += 2
+	}
+	return n
 }
 
 // Offsets returns the byte offset of each indexed audio frame.
-func (t Track) Offsets() []int64 { return append([]int64(nil), t.offsets...) }
+func (t Track) Offsets() []int64 {
+	out := make([]int64, len(t.frames))
+	for i, f := range t.frames {
+		out[i] = f.offset
+	}
+	return out
+}
 
 type header struct {
 	version, layer        int // version 1, 2, or 25 (MPEG-2.5)
@@ -251,13 +278,13 @@ func Probe(ctx context.Context, data []byte) (Track, error) {
 	}
 	infoChecked := false
 	for o := first; o < end; {
-		if len(t.offsets)%4096 == 0 {
+		if len(t.frames)%4096 == 0 {
 			if err := ctx.Err(); err != nil {
 				return t, err
 			}
 		}
 		h, ok := parseHeader(data[o:min(o+4, end)])
-		if ok && len(t.headers) > 0 && !sameStream(t.headers[0], h) {
+		if ok && len(t.frames) > 0 && !sameStream(t.stream, h) {
 			ok = false
 		}
 		if ok && o+h.length <= end {
@@ -271,17 +298,20 @@ func Probe(ctx context.Context, data []byte) (Track, error) {
 					continue
 				}
 			}
-			if len(t.offsets) >= maxFrames {
+			if len(t.frames) >= maxFrames {
 				return t, ErrBudget
 			}
-			t.offsets = append(t.offsets, int64(o))
-			t.headers = append(t.headers, h)
+			if len(t.frames) == 0 {
+				t.stream = h
+			}
+			// Frame lengths are at most 1,729 bytes and bitrates at most 448 kbps.
+			t.frames = append(t.frames, frameRec{offset: int64(o), length: uint16(h.length), bitrate: uint16(h.bitrate), protected: h.protected})
 			o += h.length
 			continue
 		}
 		next := -1
 		for p := o + 1; p+4 <= end && p-o <= maxResync; p++ {
-			if c, ok := parseHeader(data[p:]); ok && (len(t.headers) == 0 || sameStream(t.headers[0], c)) && confirmed(data, p, end) {
+			if c, ok := parseHeader(data[p:]); ok && (len(t.frames) == 0 || sameStream(t.stream, c)) && confirmed(data, p, end) {
 				next = p
 				break
 			}
@@ -300,20 +330,20 @@ func Probe(ctx context.Context, data []byte) (Track, error) {
 		t.Gaps = append(t.Gaps, Region{kind, int64(o), int64(next)})
 		o = next
 	}
-	if len(t.offsets) == 0 {
+	if len(t.frames) == 0 {
 		return t, ErrNotMPEG
 	}
-	h := t.headers[0]
+	h := t.stream
 	t.Format, t.SampleRate, t.Channels, t.ChannelMode, t.SamplesPerFrame = h.format(), h.rate, h.channels, modeName(h.mode), h.samples
-	t.Frames = len(t.offsets)
-	t.AudioStart = t.offsets[0]
-	last := len(t.offsets) - 1
-	t.AudioEnd = t.offsets[last] + int64(t.headers[last].length)
+	t.Frames = len(t.frames)
+	t.AudioStart = t.frames[0].offset
+	last := len(t.frames) - 1
+	t.AudioEnd = t.frames[last].offset + int64(t.frameLen(last))
 	t.EncodedSamples = int64(t.Frames) * int64(h.samples)
 	t.EncodedDurationMs = t.EncodedSamples * 1000 / int64(h.rate)
 	t.Bitrate = fmt.Sprintf("constant_%d_kbps", h.bitrate)
-	for _, x := range t.headers {
-		if x.bitrate != h.bitrate {
+	for _, x := range t.frames {
+		if int(x.bitrate) != h.bitrate {
 			t.Bitrate = "variable"
 			break
 		}
@@ -553,7 +583,10 @@ func frames(body []byte, major byte, visit func(string, []byte), m *Metadata) {
 			return
 		}
 		data := body[p+10 : p+10+size]
-		unsupported := (major == 3 && fl&0x00C0 != 0) || (major == 4 && fl&0x000F != 0)
+		// Compression, encryption, and grouping (v2.3) or grouping,
+		// compression, encryption, unsynchronisation, and data length (v2.4)
+		// change the frame body layout; such frames are named, not read.
+		unsupported := (major == 3 && fl&0x00E0 != 0) || (major == 4 && fl&0x004F != 0)
 		if unsupported {
 			m.Skipped = "encoded_frame_not_read"
 		} else {
@@ -568,7 +601,8 @@ func chapter(data []byte, major byte) (Chapter, bool) {
 	for i < len(data) && data[i] != 0 && i < 256 {
 		i++
 	}
-	if i >= len(data) || i == 0 || i+17 > len(data) {
+	// The element ID must end in a NUL within its 256-byte bound.
+	if i >= len(data) || data[i] != 0 || i == 0 || i+17 > len(data) {
 		return Chapter{}, false
 	}
 	c := Chapter{ID: string(data[:i])}
@@ -596,6 +630,18 @@ func text(data []byte) string {
 		return ""
 	}
 	enc, b := data[0], data[1:]
+	// Decode only what can survive truncation: at most 4 input bytes per
+	// output byte kept. A frame may be hundreds of MiB; decoding all of it
+	// first would allocate several times its size.
+	if len(b) > 4*maxText {
+		b = b[:4*maxText]
+		if enc == 3 {
+			// Drop a UTF-8 sequence split by the cut, at most three bytes.
+			for i := 0; i < 3 && len(b) > 0 && !utf8.Valid(b); i++ {
+				b = b[:len(b)-1]
+			}
+		}
+	}
 	var s string
 	switch enc {
 	case 0:

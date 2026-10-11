@@ -314,24 +314,33 @@ func contentRequest(s scope, in contentInput, operation string) (content.Request
 	return req, req.Validate()
 }
 
-// scope holds resolved, absolute directories. A tool path must resolve, through
-// any links, to one of them or below. Paths are resolved at call time; the
-// services then open them through their own capability-bound checks.
-type scope struct{ roots []string }
+// scope holds the configured directories as given (cleaned) and as resolved
+// through links. A tool path must first lie lexically inside one of them, so a
+// path elsewhere, including a UNC or device path on Windows, is refused without
+// any filesystem or network access. Only then is it resolved, and the resolved
+// path must lie inside a resolved scope. Both failures return the same error,
+// so the server never reveals whether a path outside its scopes exists. The
+// services then open paths through their own capability-bound checks; this is a
+// policy boundary, not an operating-system sandbox.
+type scope struct{ lexical, roots []string }
 
 func newScope(dirs []string) (scope, error) {
-	s := scope{roots: []string{}}
+	s := scope{lexical: []string{}, roots: []string{}}
 	for _, d := range dirs {
 		if !filepath.IsAbs(d) {
 			return s, fmt.Errorf("scope %q must be an absolute directory", d)
 		}
-		resolved, err := filepath.EvalSymlinks(filepath.Clean(d))
+		clean := filepath.Clean(d)
+		resolved, err := filepath.EvalSymlinks(clean)
 		if err != nil {
 			return s, fmt.Errorf("scope %q: %w", d, err)
 		}
 		info, err := os.Stat(resolved)
 		if err != nil || !info.IsDir() {
 			return s, fmt.Errorf("scope %q must be an existing directory", d)
+		}
+		if !slices.Contains(s.lexical, clean) {
+			s.lexical = append(s.lexical, clean)
 		}
 		if !slices.Contains(s.roots, resolved) {
 			s.roots = append(s.roots, resolved)
@@ -340,22 +349,28 @@ func newScope(dirs []string) (scope, error) {
 	return s, nil
 }
 
-func (s scope) path(p string) (string, error) {
-	if p == "" || len(p) > 4096 || strings.ContainsRune(p, 0) {
-		return "", errors.New("an absolute path inside a configured scope is required")
-	}
-	if !filepath.IsAbs(p) {
-		return "", fmt.Errorf("path %q must be absolute", p)
-	}
-	resolved, err := filepath.EvalSymlinks(filepath.Clean(p))
-	if err != nil {
-		return "", fmt.Errorf("path %q is not accessible", p)
-	}
-	for _, root := range s.roots {
-		rel, err := filepath.Rel(root, resolved)
+func within(roots []string, p string) bool {
+	for _, root := range roots {
+		rel, err := filepath.Rel(root, p)
 		if err == nil && (rel == "." || filepath.IsLocal(rel)) {
-			return resolved, nil
+			return true
 		}
 	}
-	return "", fmt.Errorf("path %q is outside the configured scopes", p)
+	return false
+}
+
+func (s scope) path(p string) (string, error) {
+	refused := fmt.Errorf("path %q is not an accessible path inside the configured scopes", p)
+	if p == "" || len(p) > 4096 || strings.ContainsRune(p, 0) || !filepath.IsAbs(p) {
+		return "", errors.New("an absolute path inside a configured scope is required")
+	}
+	clean := filepath.Clean(p)
+	if !within(s.lexical, clean) && !within(s.roots, clean) {
+		return "", refused
+	}
+	resolved, err := filepath.EvalSymlinks(clean)
+	if err != nil || !within(s.roots, resolved) {
+		return "", refused
+	}
+	return resolved, nil
 }

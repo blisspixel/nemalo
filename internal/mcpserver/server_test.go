@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -230,9 +231,46 @@ func TestPathsMustResolveInsideScopes(t *testing.T) {
 	link := filepath.Join(inside, "escape")
 	if err := os.Symlink(root, link); err == nil {
 		res, env := call(t, s, "library_status", map[string]any{"library": link})
-		if !res.IsError || !strings.Contains(env["error"].(string), "outside") {
+		if !res.IsError || !strings.Contains(env["error"].(string), "not an accessible path inside the configured scopes") {
 			t.Fatal("a link out of scope was followed", env)
 		}
+	}
+}
+
+// Refusals must not reveal whether a path outside the scopes exists, and paths
+// outside every scope, such as UNC paths, are refused before any filesystem or
+// network access (lexical containment comes first).
+func TestScopeRefusalsAreUniformAndLexicalFirst(t *testing.T) {
+	inside, outside := t.TempDir(), t.TempDir()
+	s, err := newScope([]string{inside})
+	if err != nil {
+		t.Fatal(err)
+	}
+	existing, missing := filepath.Join(outside, "present"), filepath.Join(outside, "absent")
+	if err := os.WriteFile(existing, nil, 0600); err != nil {
+		t.Fatal(err)
+	}
+	_, errExisting := s.path(existing)
+	_, errMissing := s.path(missing)
+	if errExisting == nil || errMissing == nil || strings.ReplaceAll(errExisting.Error(), strconv.Quote(existing), "P") != strings.ReplaceAll(errMissing.Error(), strconv.Quote(missing), "P") {
+		t.Fatal("refusal reveals existence", errExisting, errMissing)
+	}
+	for _, p := range []string{`\unreachable.invalid\share\a`, "//unreachable.invalid/share/a", `\?\C:\Windows`, `\.\C:\Windows`} {
+		if filepath.IsAbs(p) {
+			if _, err := s.path(p); err == nil {
+				t.Fatal("network or device path accepted", p)
+			}
+		}
+	}
+	if _, err := s.path(filepath.Join(inside, "missing")); err == nil {
+		t.Fatal("missing path inside the scope accepted")
+	}
+	f := filepath.Join(inside, "f")
+	if err := os.WriteFile(f, nil, 0600); err != nil {
+		t.Fatal(err)
+	}
+	if got, err := s.path(f); err != nil || !strings.HasSuffix(got, "f") {
+		t.Fatal(got, err)
 	}
 }
 

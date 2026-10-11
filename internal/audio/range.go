@@ -46,11 +46,11 @@ func (t Track) FrameForSample(sample int64) (int, error) {
 // stops before one, and the next range starts after it.
 func (t Track) Range(data []byte, first, maxBytes int) (Range, error) {
 	r := Range{SampleRate: t.SampleRate, Channels: t.Channels, SamplesPerFrame: t.SamplesPerFrame, PresentationNote: "Encoded samples. A decoder adds its own delay; the declared encoder delay and padding are not applied or verified."}
-	if first < 0 || first >= len(t.offsets) {
-		return r, fmt.Errorf("frame must be 0 through %d", len(t.offsets)-1)
+	if first < 0 || first >= len(t.frames) {
+		return r, fmt.Errorf("frame must be 0 through %d", len(t.frames)-1)
 	}
 	contiguous := func(i int) bool { // frame i ends where frame i+1 begins
-		return t.offsets[i]+int64(t.headers[i].length) == t.offsets[i+1]
+		return t.frames[i].offset+int64(t.frameLen(i)) == t.frames[i+1].offset
 	}
 	// depth counts the contiguous frames before frame i whose main data covers
 	// the bytes i borrows from the bit reservoir.
@@ -65,8 +65,7 @@ func (t Track) Range(data []byte, first, maxBytes int) (Range, error) {
 			if !contiguous(j-1) || n >= maxPrerollFrame {
 				return n, false
 			}
-			h := t.headers[j-1]
-			have += h.length - h.dataStart()
+			have += t.frameLen(j-1) - t.dataStart(j-1)
 			n++
 		}
 		return n, true
@@ -77,7 +76,7 @@ func (t Track) Range(data []byte, first, maxBytes int) (Range, error) {
 	// history; MPEG-2 and 2.5 frames hold one, so two earlier frames are. Each
 	// history frame also needs its own bit reservoir.
 	pre, complete := 0, true
-	if h := t.headers[first]; h.layer == 3 && first > 0 {
+	if h := t.stream; h.layer == 3 && first > 0 {
 		history := 1
 		if h.version != 1 {
 			history = 2
@@ -98,15 +97,15 @@ func (t Track) Range(data []byte, first, maxBytes int) (Range, error) {
 	}
 	r.PrerollComplete = complete
 	start := first - pre
-	r.FirstFrame, r.PrerollFrames, r.ByteStart = first, pre, t.offsets[start]
+	r.FirstFrame, r.PrerollFrames, r.ByteStart = first, pre, t.frames[start].offset
 	size := 0
 	for i := start; i < first; i++ {
-		size += t.headers[i].length
+		size += t.frameLen(i)
 	}
 	last := first
 	for {
-		size += t.headers[last].length
-		if last+1 >= len(t.offsets) || !contiguous(last) || size+t.headers[last+1].length > maxBytes {
+		size += t.frameLen(last)
+		if last+1 >= len(t.frames) || !contiguous(last) || size+t.frameLen(last+1) > maxBytes {
 			break
 		}
 		last++
@@ -116,10 +115,10 @@ func (t Track) Range(data []byte, first, maxBytes int) (Range, error) {
 		return r, ErrRangeTooSmall
 	}
 	r.Frames = last - first + 1
-	r.ByteEnd = t.offsets[last] + int64(t.headers[last].length)
+	r.ByteEnd = t.frames[last].offset + int64(t.frameLen(last))
 	spf := int64(t.SamplesPerFrame)
 	r.SampleStart, r.SampleEnd, r.PrerollStart = int64(first)*spf, int64(last+1)*spf, int64(start)*spf
-	r.EndOfTrack = last == len(t.offsets)-1
+	r.EndOfTrack = last == len(t.frames)-1
 	if !r.EndOfTrack {
 		r.NextFrame = last + 1
 		r.StoppedAtGap = !contiguous(last)
@@ -130,12 +129,12 @@ func (t Track) Range(data []byte, first, maxBytes int) (Range, error) {
 // reservoir returns how many main-data bytes frame i borrows from earlier
 // frames (Layer III main_data_begin), or 0 when it cannot be read.
 func (t Track) reservoir(data []byte, i int) int {
-	h := t.headers[i]
+	h := t.stream
 	if h.layer != 3 {
 		return 0
 	}
-	p := int(t.offsets[i]) + 4
-	if h.protected {
+	p := int(t.frames[i].offset) + 4
+	if t.frames[i].protected {
 		p += 2
 	}
 	if p+2 > len(data) {

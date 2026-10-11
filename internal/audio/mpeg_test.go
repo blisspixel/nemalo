@@ -351,8 +351,9 @@ func FuzzProbe(f *testing.F) {
 			return
 		}
 		prev := int64(-1)
-		for i, o := range tr.offsets {
-			if o <= prev || o+int64(tr.headers[i].length) > int64(len(data)) {
+		for i, f := range tr.frames {
+			o := f.offset
+			if o <= prev || o+int64(tr.frameLen(i)) > int64(len(data)) {
 				t.Fatal("frame index out of order or bounds")
 			}
 			prev = o
@@ -388,5 +389,31 @@ func TestPrerollHistoryDependsOnGranulesPerFrame(t *testing.T) {
 	tr = probe(t, data)
 	if r, err := tr.Range(data, 1, 1<<20); err != nil || r.PrerollFrames != 1 || !r.PrerollComplete {
 		t.Fatalf("reservoir at stream start %+v %v", r, err)
+	}
+}
+
+// Regressions from review: oversized text frames are capped before decoding,
+// chapter IDs must be NUL-terminated within bounds, and grouped frames are
+// skipped rather than read with a shifted encoding byte.
+func TestID3ReviewRegressions(t *testing.T) {
+	huge := append([]byte{0}, bytes.Repeat([]byte{'A'}, 4<<20)...)
+	allocs := testing.AllocsPerRun(1, func() { _ = text(huge) })
+	if s := text(huge); len(s) != maxText || allocs > 10 {
+		t.Fatal("text not bounded before decoding", len(s), allocs)
+	}
+	split := append([]byte{3}, bytes.Repeat([]byte("é"), 4*maxText)...)
+	split = split[:1+4*maxText+1] // cut inside a two-byte rune past the cap
+	if s := text(split); s == "" || !strings.HasSuffix(s, "é") {
+		t.Fatal("UTF-8 split at the cap rejected the whole value")
+	}
+	long := append(bytes.Repeat([]byte{'x'}, 300), make([]byte, 20)...)
+	if _, ok := chapter(long, 4); ok {
+		t.Fatal("chapter ID without a NUL in bounds accepted")
+	}
+	grouped := id3Frame("TIT2", false, []byte{7, 3, 'T'})
+	grouped[9] = 0x20 // v2.3 grouping identity flag
+	tr := probe(t, append(id3Tag(3, 0, grouped), stream(mp3, 3)...))
+	if tr.Metadata.Title != "" || tr.Metadata.Skipped != "encoded_frame_not_read" {
+		t.Fatal("grouped frame read with a shifted encoding byte", tr.Metadata)
 	}
 }

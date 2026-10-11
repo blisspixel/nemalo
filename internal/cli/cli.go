@@ -484,10 +484,18 @@ func Execute(ctx context.Context, args []string, out, errOut io.Writer, service 
 		if action != "serve" || flags.NArg() != 0 || *transport != "stdio" || *jsonMode {
 			return fail(errors.New("use mcp serve --transport stdio --scope DIRECTORY"), 2)
 		}
+		// Configured folders join the scopes when they exist; a folder that has
+		// not been created yet is reported and skipped rather than blocking the
+		// explicit --scope list.
 		for _, configured := range []string{c.Library, c.Review} {
-			if configured != "" {
-				scopes = append(scopes, configured)
+			if configured == "" {
+				continue
 			}
+			if info, err := os.Stat(configured); err != nil || !info.IsDir() {
+				_, _ = fmt.Fprintf(errOut, "nemalo: configured folder %q is not an existing directory; not added to MCP scopes\n", configured)
+				continue
+			}
+			scopes = append(scopes, configured)
 		}
 		server, err := mcpserver.New(service, mcpserver.Options{Scopes: scopes, Network: *allowNetwork, Version: Version})
 		if err != nil {

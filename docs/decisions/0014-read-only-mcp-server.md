@@ -36,9 +36,17 @@ integration document and are a later increment.
 ## Scope
 
 Tool paths must be absolute and must resolve, through any links, to a configured
-scope or below it. Scopes are the repeatable `--scope` directories plus the
-configured `library` and `review` folders. A server with no scope refuses to
-start unless `--allow-network` is set. The check runs when a tool is called; the
+scope or below it. A path is first checked lexically, after cleaning, against
+the scopes as given and as resolved; a path outside them is refused before any
+filesystem access. This matters on Windows, where resolving a UNC path would
+open an SMB connection and could expose credentials to the remote host. Only an
+inside path is then resolved, and the resolved path must also be inside a
+resolved scope. Missing and outside paths return the same error, so the server
+does not reveal whether a path elsewhere exists. Scopes are the repeatable
+`--scope` directories plus the configured `library` and `review` folders; a
+configured folder that does not exist yet is reported on stderr and skipped. A
+server with no scope refuses to start unless `--allow-network` is set. A link
+inside a scope that points to a network location is still resolved. The check runs when a tool is called; the
 services then open paths through their own capability-bound checks. This is a
 policy boundary over the CLI's services, not an operating-system sandbox. The
 deprecated MCP roots feature is not used; paths come from configuration and

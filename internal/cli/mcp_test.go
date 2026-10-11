@@ -95,3 +95,22 @@ func TestMCPServeUsage(t *testing.T) {
 		}
 	}
 }
+
+func TestMCPServeSkipsMissingConfiguredFolders(t *testing.T) {
+	scope := t.TempDir()
+	mcpInput = strings.NewReader("")
+	t.Cleanup(func() { mcpInput = nil })
+	missing := filepath.Join(scope, "not-created-yet")
+	var out, stderr bytes.Buffer
+	code := Execute(context.Background(), []string{"mcp", "serve", "--scope", scope}, &out, &stderr, app.Service{}, func(name string) string {
+		if name == "NEMALO_REVIEW" {
+			return missing
+		}
+		return ""
+	}, func() (config.Paths, error) {
+		return config.Paths{Config: filepath.Join(scope, "none"), State: scope}, nil
+	}, nil)
+	if code != 0 || out.Len() != 0 || !strings.Contains(stderr.String(), "not added to MCP scopes") {
+		t.Fatal("a missing configured folder blocked an explicit scope", code, out.String(), stderr.String())
+	}
+}

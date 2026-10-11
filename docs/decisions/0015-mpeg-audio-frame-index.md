@@ -66,12 +66,14 @@ MPEG-2 ranges differed from a whole-file decode in the first requested frame.
 ## Bounds
 
 Sources stay within the existing 32 MiB snapshot and 256 MiB managed limits. The
-index holds at most 2,000,000 frames and 1,024 unindexed regions; resynchronization
+index holds at most 2,000,000 frames, at about 16 bytes each with the stream
+parameters stored once, and 1,024 unindexed regions; resynchronization
 searches at most 64 KiB, and the first frame must appear within 1 MiB. A frame is
 accepted only when the next header continues the same stream or the frame ends
-the data. ID3 text is bounded to 2,000 bytes per value and 1,024 chapters.
-Unsynchronised, compressed, or encrypted ID3 content, and ID3v2.2, are skipped
-and named, never guessed. Free-format bitrates are unsupported.
+the data. ID3 text is bounded to 2,000 bytes per value, and at most four times that is
+decoded, so a huge text frame cannot multiply memory use; chapters are bounded
+to 1,024. Unsynchronised, compressed, encrypted, or grouped ID3 frames, and
+ID3v2.2, are skipped and named, never guessed. Free-format bitrates are unsupported.
 
 ## Validation
 
