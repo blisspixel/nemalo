@@ -189,12 +189,15 @@ func TestAcquireScanRequiresAQuarantineOrDelete(t *testing.T) {
 }
 
 func TestCleanScanAfterTransferDeadlineKeepsTheReceipt(t *testing.T) {
-	transferDeadline = 200 * time.Millisecond
+	// The deadline leaves a slow runner ample time for the local transfer; the
+	// scan then ends only after the deadline has certainly passed.
+	transferDeadline = 2 * time.Second
 	t.Cleanup(func() { transferDeadline = 5 * time.Minute })
 	p, r := fixture(), request(t)
 	r.Quarantine = filepath.Join(t.TempDir(), "q")
+	started := time.Now()
 	r.Scanner = scanFunc(func(context.Context, string) scanner.Result {
-		time.Sleep(400 * time.Millisecond) // Longer than the transfer deadline.
+		time.Sleep(time.Until(started.Add(transferDeadline + 200*time.Millisecond)))
 		return scanner.Result{Status: "no_detections_reported"}
 	})
 	result, err := Acquire(context.Background(), p, r)
