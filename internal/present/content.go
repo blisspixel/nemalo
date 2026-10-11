@@ -16,7 +16,8 @@ import (
 func Content(r content.Result) string {
 	var b strings.Builder
 	fmt.Fprintf(&b, "Source access: %q\nAsset: %q\nRepresentation: %q\n", r.Status, r.AssetID, r.Representation)
-	if r.Status == "units_available" {
+	// An audio track is one unit, described by its index below.
+	if r.Status == "units_available" && r.Audio == nil {
 		writeUnits(&b, r)
 	}
 	if r.Locator != nil {

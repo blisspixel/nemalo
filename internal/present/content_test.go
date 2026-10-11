@@ -72,4 +72,8 @@ func TestContentPresentsAudioIndexAndRangeWithoutBytes(t *testing.T) {
 	if strings.Contains(s, "raw audio bytes") || strings.Contains(s, "\x1b") {
 		t.Fatal("audio bytes or control characters printed", s)
 	}
+	r.Status, r.AudioRange, r.Resource, r.Units = "units_available", nil, nil, []content.Unit{{Kind: "mpeg_audio_track"}}
+	if units := Content(r); strings.Contains(units, "Reading-order units") || !strings.Contains(units, "Indexed frames: 3") {
+		t.Fatal("audio units described as EPUB reading order", units)
+	}
 }
