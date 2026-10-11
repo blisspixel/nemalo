@@ -209,6 +209,10 @@ Remaining work, without moving post-1.0 analysis ahead of library delivery:
   OCR/gaps, publication version and bibliographic provenance.
 - Milestone 8: recording/narration identity, ordered track hashes, declared/probed/
   decoded timing, actual bounded source ranges, explicit gaps, and audio fixtures.
+- External caller: Claude Code on Windows, through `nemalo mcp serve`, read,
+  switched works, and resumed from a continuation at the exact stopping byte
+  ([decision 0014](decisions/0014-read-only-mcp-server.md)). Other hosts and
+  platforms remain untested.
 - External Kilo Rust adapter: named bounded tool with explicit roots; no arbitrary
   host shell or private-state mounts. Atomic idempotent acknowledgements, failed/
   truncated transport handling, crash/restart and independent work continuity belong

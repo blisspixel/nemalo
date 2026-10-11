@@ -9,7 +9,10 @@ import (
 
 // Session delivery references are navigation aids, never consumption records.
 type readerState struct {
-	asset                   string
+	asset string
+	// representation is chosen when an asset is staged from holdings:
+	// mpeg-audio/1 for an MP3 location, otherwise epub-structure/1.
+	representation          string
 	next                    string
 	boundCatalog, boundRoot string
 	last                    content.Request
@@ -36,6 +39,10 @@ func (m *model) startRead(units bool, unit int, cursor string, repeat bool) tea.
 		SchemaVersion: 1, Catalog: m.input.Value(), Root: m.secondary.Value(),
 		AssetID: m.reader.asset, Representation: "epub-structure/1",
 		UnitsOnly: units, Unit: unit, Cursor: cursor, MaxBytes: 4096,
+	}
+	if m.reader.representation == "mpeg-audio/1" {
+		// Whole frames plus decoder preroll need more than a text page.
+		req.Representation, req.MaxBytes = "mpeg-audio/1", 65536
 	}
 	if repeat {
 		req = m.reader.last

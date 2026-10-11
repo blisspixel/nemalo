@@ -82,6 +82,9 @@ Use Ctrl+N to enter the explicit source root, then Enter lists EPUB spine units.
 F6 focuses the list; Enter retrieves up to 4096 structured-text bytes from the
 selected unit. The report preserves lines and escapes terminal control bytes.
 It reports extraction gaps and references outside the delivered range.
+An MP3 holding is read as `mpeg-audio/1`: Enter lists the track's frame index,
+timing, and declared chapters, and a range reports its frames, samples, and file
+bytes without printing or playing audio.
 
 In focused Read results, `n` requests the returned continuation, `r` repeats the
 last request, and `u` lists units again. Failed requests retain the previous next

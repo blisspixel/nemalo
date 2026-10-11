@@ -6,8 +6,11 @@
   channels, frames, and encoded duration, kept separate from declared info-frame
   counts, encoder delay and padding, and ID3 text, length, and chapters. Reads
   return whole-frame byte ranges with decoder preroll and exact sample bounds,
-  over CLI, JSON, and MCP. Nothing is decoded. Ranges decoded bit-exactly
+  over CLI, JSON, MCP, and TUI Read. Nothing is decoded. Ranges decoded bit-exactly
   against a whole-file FFmpeg decode on synthesized and LibriVox files.
+- Validated the MCP server with a real host: Claude Code on Windows read one
+  book, switched to another, and resumed the first from its continuation at
+  the exact byte where it stopped.
 
 ## 0.1.0-alpha.3
 

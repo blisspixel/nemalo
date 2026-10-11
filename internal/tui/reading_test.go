@@ -129,3 +129,38 @@ func TestSourceAccessStagesReadsRetriesAndRetainsFailedContinuation(t *testing.T
 		t.Fatal("read created control state", err)
 	}
 }
+
+func TestHoldingsStageMP3ForAudioIndexAndRanges(t *testing.T) {
+	root := t.TempDir()
+	frame := make([]byte, 417)
+	copy(frame, []byte{0xFF, 0xFB, 0x90, 0x40})
+	if err := os.WriteFile(filepath.Join(root, "track.mp3"), bytes.Repeat(frame, 400), 0600); err != nil {
+		t.Fatal(err)
+	}
+	catalog := filepath.Join(t.TempDir(), "catalog.json")
+	service := app.New()
+	if _, err := service.Snapshot(context.Background(), root, catalog, inventory.Defaults(), false); err != nil {
+		t.Fatal(err)
+	}
+	m := newModel(context.Background(), service)
+	m.switchMode("holdings")
+	m.format = "all"
+	m.input.SetValue(catalog)
+	m.Update(m.start(true)())
+	m.Update(key(tea.KeyF6))
+	m.Update(tea.KeyPressMsg{Code: 'r', Text: "r"})
+	if m.reader.representation != "mpeg-audio/1" {
+		t.Fatal("MP3 holding staged as text", m.reader)
+	}
+	m.secondary.SetValue(root)
+	m.Update(m.start(true)())
+	if len(m.entries) != 1 || !strings.Contains(m.entries[0].title, "MP3 track") || !strings.Contains(m.report, "Indexed frames: 400") {
+		t.Fatal("audio index missing", m.status, m.report)
+	}
+	m.Update(key(tea.KeyF6))
+	_, cmd := m.Update(key(tea.KeyEnter))
+	m.Update(cmd())
+	if !strings.Contains(m.report, "Frames 0..") || m.reader.next == "" || strings.Contains(m.report, "\xff\xfb") {
+		t.Fatal("audio range missing or bytes printed", m.status, m.report)
+	}
+}

@@ -12,7 +12,10 @@ import (
 	"github.com/blisspixel/nemalo/internal/present"
 )
 
-type entry struct{ title, summary, detail, sourceID string }
+type entry struct {
+	title, summary, detail, sourceID string
+	audio                            bool
+}
 
 // Browsing is a presentation of shared service results, not another catalog.
 func (m *model) populate(data any) {
@@ -66,10 +69,14 @@ func (m *model) populate(data any) {
 				summary:  fmt.Sprintf("%s | %q | %d location(s)", byteSize(a.Bytes), languages, len(a.Locations)),
 				detail:   detail,
 				sourceID: a.ID,
+				audio:    len(a.Locations) > 0 && strings.HasSuffix(strings.ToLower(a.Locations[0].Path), ".mp3"),
 			})
 		}
 	case content.Result:
-		if p.Status == "units_available" {
+		if p.Status == "units_available" && p.Audio != nil {
+			a := p.Audio
+			m.entries = append(m.entries, entry{title: fmt.Sprintf("MP3 track: %s", a.Format), summary: fmt.Sprintf("%d Hz | %d ch | %d frames | %d ms encoded", a.SampleRate, a.Channels, a.Frames, a.EncodedDurationMs), detail: fmt.Sprintf("MP3 track\n\nFormat: %s\nSample rate: %d Hz\nChannels: %d\nIndexed frames: %d\nEncoded duration: %d ms\nDeclared chapters: %d\nUnindexed regions: %d\n\nEnter retrieves a frame range from the start; n continues.\nAudio bytes are not shown or played here.\nNo listening progress is recorded.", a.Format, a.SampleRate, a.Channels, a.Frames, a.EncodedDurationMs, len(a.Chapters), len(a.Gaps))})
+		} else if p.Status == "units_available" {
 			for _, u := range p.Units {
 				m.entries = append(m.entries, entry{title: fmt.Sprintf("Unit %d: %q", u.Index, u.Member), summary: fmt.Sprintf("%d text bytes | %d gaps | %q", u.TextBytes, u.KnownGaps, u.Language), detail: fmt.Sprintf("Source unit %d\n\nMember: %q\nLanguage: %q\nDirection: %q\nLinear: %q\nParts: %d; known text gaps: %d\n\nEnter retrieves a bounded structured-text range.\nNo reading progress is recorded.", u.Index, u.Member, u.Language, u.Direction, u.Linear, u.Parts, u.KnownGaps)})
 			}
@@ -192,8 +199,12 @@ func (m *model) browserKey(key string) (bool, tea.Cmd) {
 	case "r":
 		if m.mode == "holdings" && len(m.entries) > 0 {
 			asset, catalog := m.entries[m.selected].sourceID, m.submittedInput
+			representation := "epub-structure/1"
+			if m.entries[m.selected].audio {
+				representation = "mpeg-audio/1"
+			}
 			cmd := m.switchMode("read")
-			m.reader = readerState{asset: asset}
+			m.reader = readerState{asset: asset, representation: representation}
 			m.input.SetValue(catalog)
 			m.secondary.SetValue("")
 			m.setReport("")

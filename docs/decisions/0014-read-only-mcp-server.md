@@ -70,5 +70,14 @@ status-carrying tool errors, scope refusal for relative, missing, parent-escapin
 and link-escaping paths, and no library writes or scanner calls. A CLI test runs
 `mcp serve` over pipes and requires every stdout line to be JSON-RPC. A live check
 launched the built binary as a stdio subprocess with the official SDK client,
-negotiated protocol 2026-07-28, and read a managed Project Gutenberg EPUB. No
-specific agent host is claimed as supported until it is tested on each platform.
+negotiated protocol 2026-07-28, and read a managed Project Gutenberg EPUB.
+
+Real host, 2026-10-11: Claude Code 2.1.296 on Windows, in headless mode with a
+project MCP configuration launching `nemalo mcp serve --scope LIBRARY` and only
+`content_read` allowed, read 300 bytes of Treasure Island, switched to Alice's
+Adventures in Wonderland, then resumed Treasure Island with the saved
+continuation. The resumed locator started at byte 300 of the same unit, the end
+of the first read, with no skip or replay. This shows one host on one platform;
+other hosts and platforms are not claimed until tested. Acknowledging what was
+actually read, and recovering from a truncated transport, remain the client's
+responsibility.
