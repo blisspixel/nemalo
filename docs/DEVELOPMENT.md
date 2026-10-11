@@ -384,9 +384,9 @@ Single-asset import is in place, and EPUB package identifiers are recorded as
 evidence without merging files. Downloads are scanned on acquisition, detections
 are quarantined, and review holdings can be rescanned in one command. Folders
 and ZIP archives ingest through the single-file import, and whole recordings are
-acquired in declared order with track-level resume. A recording entity and
-manifest, byte-range resume, and recoverable cleanup remain separate gates. Reuse shared file checks and scanners. Keep real
+acquired in declared order with track-level resume and listed as ordered
+manifests. Byte-range resume and recoverable cleanup remain separate gates. Reuse shared file checks and scanners. Keep real
 acquisition in the first complete lifecycle. Add those operations to CLI and TUI
 together. MCP remains a scoped adapter over the same services. Generated
-analysis and model/harness integrations remain post-1.0. PDF page identity,
-decoded audio ranges, and MCP remain the open parts of issues 1 and 2.
+analysis and model/harness integrations remain post-1.0. Issues 1 and 2 are
+closed; their remaining OCR, column, narrator, and M4B work is milestone 7 and 8.

@@ -1,6 +1,8 @@
 # Changelog
 
-## Unreleased
+## 0.1.0-alpha.6
+
+Sixth native prerelease. This remains an early library, not 1.0. Closes issues 1 and 2.
 
 - PDF pages and text: `--representation pdf-text/1` reads one unit per physical
   page with its printed page label, text in content-stream order, and located

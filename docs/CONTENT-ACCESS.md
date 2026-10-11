@@ -1,9 +1,9 @@
 # Source-bound content access
 
-Implemented EPUB access, 2026-10-08. Tracks
-[issue 1](https://github.com/blisspixel/nemalo/issues/1) and
-[issue 2](https://github.com/blisspixel/nemalo/issues/2); full cross-format/caller
-acceptance remains open. CLI/JSON and TUI use `internal/app.Service.Content` and
+Implemented EPUB access, 2026-10-08; PDF and recording access, 2026-10-11. This
+contract came from [issue 1](https://github.com/blisspixel/nemalo/issues/1) and
+[issue 2](https://github.com/blisspixel/nemalo/issues/2), closed 2026-10-11 with
+the remaining OCR, column, narrator, and M4B work moved to milestones 7 and 8. CLI/JSON and TUI use `internal/app.Service.Content` and
 `internal/content`; the read-only MCP `content_*` tools call the same service
 ([decision 0014](decisions/0014-read-only-mcp-server.md)). MP3 tracks have a
 frame index and decodable ranges (`mpeg-audio/1`, below), PDFs have pages,

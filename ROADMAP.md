@@ -372,9 +372,13 @@ image-member identity, and per-range gaps from
 Table grids and rendered mathematics are explicitly unsupported, with original
 markup available separately. The read-only MCP `content_*` tools expose the same
 contract. MP3 tracks have probed timing and decodable frame ranges
-([decision 0015](docs/decisions/0015-mpeg-audio-frame-index.md)). PDF/OCR,
-multi-file recordings, and external caller validation remain open; neither full
-issue is complete.
+([decision 0015](docs/decisions/0015-mpeg-audio-frame-index.md)), recordings have
+ordered manifests ([decision 0020](docs/decisions/0020-recording-manifest.md)), and
+PDFs have page indexes, printed labels, text with located gaps, and exact
+quotation spans ([decision 0021](docs/decisions/0021-pdf-pages-and-text.md)).
+Claude Code validated the MCP contract as an external caller. Both issues are
+closed; OCR, column reconstruction, narrator identity, and M4B continue in
+milestones 7 and 8.
 
 - Initial local access: resolve a stable library ID to exact assets/provenance,
   export/open in an explicitly configured reader, and report changed/missing files.
