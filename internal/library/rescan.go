@@ -3,7 +3,6 @@ package library
 import (
 	"context"
 	"errors"
-	"fmt"
 	"path/filepath"
 	"sort"
 	"time"
@@ -104,7 +103,7 @@ func Rescan(ctx context.Context, request RescanRequest) (result RescanResult, er
 		}
 	}
 	if len(events) > 0 && events[len(events)-1].Event == "import_intent" {
-		return result, fmt.Errorf("import is pending for %s; repeat library import --apply with that source first", events[len(events)-1].Source)
+		return result, pendingError(events[len(events)-1].Source)
 	}
 	current := latestHoldings(lines)
 	ids := make([]string, 0, len(current))

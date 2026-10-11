@@ -145,3 +145,33 @@ func TestLibraryOpenAndExportCommands(t *testing.T) {
 		}
 	}
 }
+
+func TestLibraryIngestCommand(t *testing.T) {
+	root, state, folder := t.TempDir(), t.TempDir(), t.TempDir()
+	epubFile(t, folder)
+	if err := os.WriteFile(filepath.Join(folder, "notes.txt"), []byte("x"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	s := app.Service{Scanner: fakeScanner("no_detections_reported")}
+	run := func(args ...string) (int, string) {
+		var out, errOut bytes.Buffer
+		code := Execute(context.Background(), args, &out, &errOut, s, func(string) string { return "" }, func() (config.Paths, error) {
+			return config.Paths{Config: filepath.Join(state, "none"), State: state}, nil
+		}, nil)
+		return code, out.String() + errOut.String()
+	}
+	run("library", "init", root)
+	code, out := run("library", "ingest", root, folder)
+	if code != 0 || !strings.Contains(out, "Preview only") || !strings.Contains(out, "Imported: 1") {
+		t.Fatal(code, out)
+	}
+	code, out = run("library", "ingest", root, folder, "--apply", "--scan", "--json")
+	if code != 0 || !strings.Contains(out, `"checked":1`) || !strings.Contains(out, `"not_imported":1`) {
+		t.Fatal(code, out)
+	}
+	for _, args := range [][]string{{"library", "ingest", root}, {"library", "ingest", root, folder, "--asset", "x"}} {
+		if code, _ := run(args...); code != 2 {
+			t.Fatal("invalid ingest usage accepted", args)
+		}
+	}
+}

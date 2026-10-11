@@ -85,7 +85,15 @@ func Export(ctx context.Context, request ExportRequest) (ExportResult, error) {
 		}
 		r.Path = filepath.Join(shown, name)
 		if request.Reuse {
-			if same, err := identical(ctx, dest, name, h); err == nil && same {
+			same, err := identical(ctx, dest, name, h)
+			if err == nil && same && request.ReadOnly {
+				// A reused copy is reported read-only only once it is: the mode
+				// is applied again, then the bytes are checked again after it.
+				if same, err = reuseReadOnly(ctx, dest, name, h); err != nil {
+					return r, err
+				}
+			}
+			if err == nil && same {
 				r.Reused = true
 				return r, nil
 			} else if err == nil {
@@ -217,4 +225,20 @@ func identical(ctx context.Context, dest *os.Root, name string, h Holding) (bool
 		return false, err
 	}
 	return hex.EncodeToString(sum.Sum(nil)) == h.SHA256, nil
+}
+
+// reuseReadOnly removes write permission from an identical earlier copy and
+// confirms its bytes did not change while it was still writable.
+func reuseReadOnly(ctx context.Context, dest *os.Root, name string, h Holding) (bool, error) {
+	info, err := dest.Lstat(name)
+	if err != nil {
+		return false, err
+	}
+	if info.Mode().Perm()&0o222 == 0 {
+		return true, nil
+	}
+	if err := dest.Chmod(name, 0o444); err != nil {
+		return false, err
+	}
+	return identical(ctx, dest, name, h)
 }

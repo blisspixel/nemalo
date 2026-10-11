@@ -250,3 +250,24 @@ func TestStateRescanReviewCancelAndApply(t *testing.T) {
 		t.Fatal("rescan evidence missing", m.report)
 	}
 }
+
+func TestStateImportOfAPlainFolderIngestsIt(t *testing.T) {
+	root, folder := t.TempDir(), t.TempDir()
+	if _, err := library.Initialize(context.Background(), root); err != nil {
+		t.Fatal(err)
+	}
+	writeStateEPUB(t, folder)
+	m := newModel(context.Background(), app.New())
+	m.switchMode("state")
+	m.input.SetValue(root)
+	m.secondary.SetValue(folder)
+	m.Update(key(tea.KeyF8))
+	if !strings.Contains(m.report, "A plain folder is ingested") {
+		t.Fatal("review does not describe folder ingest", m.report)
+	}
+	_, cmd := m.Update(key(tea.KeyEnter))
+	m.Update(cmd())
+	if !strings.Contains(m.report, "Imported: 1") || !strings.Contains(m.report, "Applied: true") {
+		t.Fatal("folder was not ingested", m.report)
+	}
+}

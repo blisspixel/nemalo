@@ -53,6 +53,17 @@ func TestHandoffReusesIdenticalCopiesAndKeepsChangedOnes(t *testing.T) {
 	if err != nil || !again.Reused || again.Path != first.Path {
 		t.Fatal("identical copy not reused", again, err)
 	}
+	// Regression: a reused copy someone made writable is read-only again
+	// before it is reported read-only.
+	if err := os.Chmod(first.Path, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if again, err = Export(ctx, req); err != nil || !again.Reused {
+		t.Fatal("writable identical copy not reused", again, err)
+	}
+	if info, err := os.Stat(first.Path); err != nil || info.Mode().Perm()&0o222 != 0 {
+		t.Fatal("reused copy reported read-only while writable", info, err)
+	}
 	// A reader writes annotations into its copy, as calibre does for EPUBs.
 	if err := os.Chmod(first.Path, 0o644); err != nil {
 		t.Fatal(err)

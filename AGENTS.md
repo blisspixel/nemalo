@@ -117,6 +117,9 @@ decision 0006. The initialization journal stays two records. Managed operations
 are separate intent/completed pairs (import, rescan); every writer completes a
 trailing rescan intent before its own work. Preserve explicit roots,
 retained corrupt state, canonical records, OS-held locks, and TUI write review.
+Archive extraction is `internal/staging` (decision 0017): flat indexed staging
+names, never member paths; one archive staged at a time; account for every
+member and every entry beside a packet; ingest reuses Import.
 Readers and players get verified copies (`library open`/`export`), never stored
 files; launch only through `internal/launch` argument arrays (decision 0016).
 Never remove a lock file to release an active writer or treat initialization as

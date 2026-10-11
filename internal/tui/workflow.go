@@ -3,6 +3,7 @@ package tui
 import (
 	"context"
 	"os"
+	"path/filepath"
 
 	tea "charm.land/bubbletea/v2"
 	"github.com/blisspixel/nemalo/internal/assessment"
@@ -139,6 +140,13 @@ func (m *model) start(reset bool) tea.Cmd {
 			data, err := m.service.InitializeLibrary(ctx, value)
 			return result{id, data, err}
 		case "import":
+			// A plain folder (not an intake packet) is ingested as a whole.
+			if info, statErr := os.Lstat(second); statErr == nil && info.IsDir() {
+				if _, receiptErr := os.Lstat(filepath.Join(second, "receipt.json")); receiptErr != nil {
+					data, err := m.service.Ingest(ctx, library.IngestRequest{Library: value, Folder: second, Apply: true})
+					return result{id, data, err}
+				}
+			}
 			data, err := m.service.Import(ctx, library.ImportRequest{Library: value, Source: second, Apply: true})
 			return result{id, data, err}
 		case "rescan":

@@ -208,6 +208,7 @@ records the results.
 nemalo library import /path/to/library /path/to/book.epub
 nemalo library import /path/to/library /path/to/book.epub --apply
 nemalo library import /path/to/library /path/to/intake --apply --scan
+nemalo library ingest /path/to/library /path/to/downloads --apply --scan
 nemalo library audit /path/to/library
 nemalo library list /path/to/library --query "verne" --status checked
 nemalo library open /path/to/library --asset sha256:HASH
@@ -229,6 +230,13 @@ not downgrade `checked`. A scan gap with no other finding is recorded as
 `scan_` plus the scanner status. A conflicting stored file, an unexpected extra
 hard link, or a store path whose parent is not a real directory fails before a
 new intent is written. The existing bytes stay in place.
+
+`library ingest` imports a whole folder: every EPUB, PDF, MP3, intake packet,
+and supported ZIP member, through the same import and journal, and lists every
+other entry with a reason. ZIP members are extracted into private temporary
+staging with path, size, ratio, and CRC checks and recorded as
+`ARCHIVE!/MEMBER`. The folder and its archives are never changed. See
+[decision 0017](decisions/0017-folder-and-zip-ingest.md).
 
 Stored files live under `assets/sha256/` beside `.nemalo`. Operations and
 holdings journals are separate from the initialization journal. A trailing

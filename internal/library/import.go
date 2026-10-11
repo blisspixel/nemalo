@@ -27,6 +27,19 @@ type ImportRequest struct {
 	Scan    bool
 	Apply   bool
 	Scanner assessment.Scanner
+	// Label, when set, names an archive member as "ARCHIVE!/MEMBER". The source
+	// is then a private staging copy; the label is what provenance records and
+	// what an interrupted import is resumed by, because staging is temporary.
+	Label string
+}
+
+// provenance is the stable name of the import source: the label for an
+// archive member, otherwise the absolute source path.
+func (r ImportRequest) provenance(source string) string {
+	if r.Label != "" {
+		return r.Label
+	}
+	return source
 }
 
 // ImportResult is the assessed disposition. Applied false means no library write.
@@ -148,7 +161,7 @@ func importLibrary(ctx context.Context, request ImportRequest, stage importStage
 			return result, pendingErr
 		}
 		if pending != "" {
-			return result, fmt.Errorf("import is pending for %s; repeat library import --apply with that source", pending)
+			return result, pendingError(pending)
 		}
 		return assessPlan(ctx, result, selected, request)
 	}
@@ -171,8 +184,8 @@ func importLibrary(ctx context.Context, request ImportRequest, stage importStage
 	}
 	if len(events) > 0 && events[len(events)-1].Event == "import_intent" {
 		pending := events[len(events)-1].Source
-		if !sameImportSource(pending, source) {
-			return result, fmt.Errorf("import is pending for %s; repeat library import --apply with that source", pending)
+		if !sameImportSource(pending, request.provenance(source)) {
+			return result, pendingError(pending)
 		}
 		return finish(ctx, control, store, state.LibraryID, events, lines, selected, request, stage, true)
 	}
@@ -219,6 +232,12 @@ func finish(ctx context.Context, control *control, store *os.Root, libraryID str
 	if err != nil {
 		return result, err
 	}
+	if request.Label != "" {
+		if len(request.Label) > 4096 || strings.ContainsAny(request.Label, "\x00\r\n") {
+			return result, errors.New("archive member label is outside the record limits")
+		}
+		userSource = request.Label
+	}
 	result.Library, result.Source = libraryRoot, userSource
 	var intent operation
 	if resume {
@@ -262,6 +281,9 @@ func finish(ctx context.Context, control *control, store *os.Root, libraryID str
 	result.Status, result.Reason = status, reason
 	result.Path = assetRel(result.SHA256, result.Format)
 	add := sourceRecord(source)
+	if request.Label != "" {
+		add.Kind, add.Path = "archive_member", request.Label
+	}
 	holding := Holding{SchemaVersion: 1, LibraryID: libraryID, ID: result.AssetID, SHA256: result.SHA256, Bytes: result.Bytes, Format: result.Format, Status: status, Reason: reason, Path: result.Path, Titles: result.Titles, Languages: result.Languages, IdentitiesRecorded: result.IdentitiesRecorded, IdentifiersOmitted: result.IdentifiersOmitted, Identities: result.Identities, Sources: mergeSources(current, add)}
 	if note := omittedDeclared(source.receipt); note != "" {
 		result.Limitations = append(result.Limitations, note)
@@ -547,6 +569,13 @@ func sourceKnown(current Holding, add Source) bool {
 func sameImportSource(recorded, requested string) bool {
 	if recorded == requested {
 		return true
+	}
+	// An archive member label names a file and a member inside it: the archive
+	// part follows filesystem identity, the member name compares exactly.
+	recordedArchive, recordedMember, recordedLabel := strings.Cut(recorded, "!/")
+	requestedArchive, requestedMember, requestedLabel := strings.Cut(requested, "!/")
+	if recordedLabel || requestedLabel {
+		return recordedLabel && requestedLabel && recordedMember == requestedMember && sameImportSource(recordedArchive, requestedArchive)
 	}
 	if !strings.EqualFold(recorded, requested) {
 		return false
@@ -1197,4 +1226,13 @@ func latestList(lines []Holding) []Holding {
 		out = append(out, holding)
 	}
 	return out
+}
+
+// pendingError tells how to finish an interrupted import. An archive member
+// is named "ARCHIVE!/MEMBER" and resumes through ingest of its folder.
+func pendingError(pending string) error {
+	if strings.Contains(pending, "!/") {
+		return fmt.Errorf("import is pending for %s; repeat library ingest --apply with the folder that contains that archive", pending)
+	}
+	return fmt.Errorf("import is pending for %s; repeat library import --apply with that source", pending)
 }

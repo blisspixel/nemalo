@@ -187,3 +187,28 @@ func Export(r library.ExportResult) string {
 	}
 	return b.String()
 }
+
+func Ingest(r library.IngestResult) string {
+	var b strings.Builder
+	fmt.Fprintf(&b, "Library: %q\nFolder: %q\nApplied: %t | Complete: %t\nImported: %d (checked %d, review %d) | Not imported: %d | Failed: %d\n", r.Library, r.Folder, r.Applied, r.Complete, r.Imported, r.Checked, r.Review, r.NotImported, r.Failed)
+	for _, it := range r.Items {
+		line := fmt.Sprintf("\n%s %q [%s]", it.Outcome, it.Source, it.Kind)
+		if it.Import != nil && it.Import.Status != "" {
+			line += fmt.Sprintf(" %s %s", it.Import.Status, it.Import.Reason)
+			if it.Import.AlreadyHeld {
+				line += " (already held)"
+			}
+		}
+		b.WriteString(line + "\n")
+		if it.Detail != "" {
+			fmt.Fprintf(&b, "  %q\n", it.Detail)
+		}
+	}
+	for _, note := range r.Limitations {
+		fmt.Fprintf(&b, "Limitation: %q\n", note)
+	}
+	if !r.Applied {
+		b.WriteString("Preview only. No library files were written.\n")
+	}
+	return b.String()
+}

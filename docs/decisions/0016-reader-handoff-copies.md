@@ -17,7 +17,8 @@ stored file could silently change a checked holding.
   holding) copies the holding into the Nemalo handoff folder, `<state>/handoff`,
   then opens the copy. The copy is hashed while it is written, must equal the
   holding's size and SHA-256, is synced, and is made read-only. An identical
-  earlier copy is reused. A copy that a reader changed is left in place and a
+  earlier copy is reused; if it was made writable, it is made read-only again
+  and its bytes are checked once more before it is reused. A copy that a reader changed is left in place and a
   fresh copy is made beside it, so the reader's annotations are not destroyed.
 - `library export LIBRARY --asset ID --output DIRECTORY` makes the same verified
   copy, writable, in an explicit existing directory, and never overwrites.

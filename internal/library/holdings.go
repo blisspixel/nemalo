@@ -269,7 +269,7 @@ func validHolding(h Holding, libraryID string) bool {
 		}
 	}
 	for _, source := range h.Sources {
-		if (source.Kind != "file" && source.Kind != "packet") || !validNote(source.Path, 4096) || !validToken(source.SourceID) || !validToken(source.SourceFile) {
+		if (source.Kind != "file" && source.Kind != "packet" && source.Kind != "archive_member") || !validNote(source.Path, 4096) || !validToken(source.SourceID) || !validToken(source.SourceFile) {
 			return false
 		}
 		if source.DeclaredURL != "" && !(strings.HasPrefix(source.DeclaredURL, "https://") && validNote(source.DeclaredURL, 2000) && !strings.Contains(source.DeclaredURL, " ")) {

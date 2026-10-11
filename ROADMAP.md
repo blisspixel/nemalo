@@ -217,8 +217,10 @@ Acceptance:
 
 ## Milestone 2: inspect and stage local downloads
 
-Status: partial. Inventory and standalone file checks exist; production staging
-and archive extraction remain planned. Depends on milestone 1.
+Status: partial. Inventory, standalone file checks, and folder ingest with ZIP
+extraction into private staging exist
+([decision 0017](docs/decisions/0017-folder-and-zip-ingest.md)). RAR, 7z,
+multipart sets, nested archives, and PAR2 remain planned. Depends on milestone 1.
 
 Deliver recursive inventory, file-signature checks, ZIP handling, additional archive
 adapters, and private staging. Inventory includes links and unsupported entries as

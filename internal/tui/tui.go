@@ -204,6 +204,8 @@ func (m *model) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 			data = []byte(present.ManagedHoldings(value))
 		case library.ExportResult:
 			data = []byte(present.Export(value))
+		case library.IngestResult:
+			data = []byte(present.Ingest(value))
 		case library.Audit:
 			data = []byte(present.Audit(value))
 		case library.ImportResult:

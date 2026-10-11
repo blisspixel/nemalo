@@ -31,7 +31,9 @@ AI service. The agent interface (MCP) uses the same application services.
 - Import one EPUB, PDF, or MP3, or a completed intake packet, into an initialized
   library. Preview writes nothing. Checked status requires a passed EPUB check
   and a recorded no-detection scan; other assessed files stay in review.
-  `library rescan` scans review holdings in one batched command.
+  `library ingest` imports a whole folder, including intake packets and ZIP
+  members, and preserves the folder. `library rescan` scans review holdings in
+  one batched command.
 - Retrieve bounded EPUB text in CLI/JSON/TUI, with exact continuation, source parts,
   note references, local image bytes, and explicit extraction gaps. Illustrated
   chapters stay readable; each omitted image or table is located. MP3 tracks
@@ -42,7 +44,7 @@ AI service. The agent interface (MCP) uses the same application services.
 - Use CLI, versioned JSON, an interactive terminal interface, or read-only MCP
   tools for an agent host (`nemalo mcp serve --scope DIRECTORY`).
 
-Resumable transfers, archive intake, folder cleanup, complete audiobook
+Resumable transfers, RAR and 7z intake, folder cleanup, complete audiobook
 management, and MCP write tools are planned. Single-file import is not
 a full checked-library policy.
 File checks report limited evidence, never a safety or completeness guarantee.

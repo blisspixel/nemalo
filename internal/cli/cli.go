@@ -48,6 +48,9 @@ Usage: nemalo <command> [options]
                       Browse a snapshot's files, or a managed library's holdings
   library import LIBRARY SOURCE [--apply] [--scan]
                       Assess one EPUB, PDF, MP3, or intake packet; --apply stores it
+  library ingest LIBRARY FOLDER [--apply] [--scan]
+                      Import every EPUB, PDF, MP3, intake packet, and ZIP member
+                      in a folder; the folder and its archives are preserved
   library rescan LIBRARY [--apply]
                       Scan review EPUBs that lack scan evidence; --apply records results
   library open LIBRARY --asset sha256:HASH [--app APPLICATION]
@@ -359,6 +362,16 @@ func Execute(ctx context.Context, args []string, out, errOut io.Writer, service 
 			}
 			return guide(write(data, nil, 0), data.Antivirus, checkOptions.Scan)
 		}
+		if action == "ingest" {
+			if flags.NArg() != 2 {
+				return write(nil, errors.New("use library ingest LIBRARY FOLDER [--apply] [--scan]"), 2)
+			}
+			data, err := service.Ingest(ctx, library.IngestRequest{Library: flags.Arg(0), Folder: flags.Arg(1), Apply: *apply, Scan: checkOptions.Scan})
+			if err != nil {
+				return write(data, err, 1)
+			}
+			return write(data, nil, 0)
+		}
 		if action == "open" || action == "export" {
 			if flags.NArg() != 1 || contentRequest.AssetID == "" || (action == "export" && *output == "") {
 				return write(nil, fmt.Errorf("use library %s LIBRARY --asset sha256:HASH%s", action, map[string]string{"open": " [--app APPLICATION]", "export": " --output DIRECTORY"}[action]), 2)
@@ -604,6 +617,8 @@ func flagApplies(command, action, name string) bool {
 			return name == "apply" || name == "scan"
 		case "rescan":
 			return name == "apply"
+		case "ingest":
+			return name == "apply" || name == "scan"
 		case "open":
 			return name == "asset" || name == "app"
 		case "export":
@@ -690,6 +705,9 @@ func printData(out io.Writer, data any) error {
 		return err
 	case library.ExportResult:
 		_, err := io.WriteString(out, present.Export(value))
+		return err
+	case library.IngestResult:
+		_, err := io.WriteString(out, present.Ingest(value))
 		return err
 	case assessment.Report:
 		_, err := io.WriteString(out, present.Health(value))

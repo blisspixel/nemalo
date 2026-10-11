@@ -107,6 +107,14 @@ func (s Service) scanner() assessment.Scanner {
 	return scanner.New()
 }
 
+// Ingest imports every supported file, packet, and ZIP member of a folder.
+func (s Service) Ingest(ctx context.Context, request library.IngestRequest) (library.IngestResult, error) {
+	if request.Scan && request.Scanner == nil {
+		request.Scanner = s.scanner()
+	}
+	return library.Ingest(ctx, request)
+}
+
 // Rescan scans review holdings whose only gap is scan evidence.
 func (s Service) Rescan(ctx context.Context, request library.RescanRequest) (library.RescanResult, error) {
 	if request.Scanner == nil {

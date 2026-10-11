@@ -50,7 +50,7 @@ func (m *model) requestImport() {
 	m.input.Blur()
 	m.secondary.Blur()
 	m.status = "Review import. Enter confirms; Escape returns without writing."
-	m.setReport(fmt.Sprintf("Import one file into this library\n\nLibrary: %q\nSource: %q\n\nCopies one assessed EPUB, PDF, or MP3, or the single content file in a completed intake packet. The source stays in place. Nothing is deleted.\n\nThis review does not run antivirus. A new result stays in review. An asset already recorded as checked keeps that status.\n\nEnter imports this exact source. Escape, F7, or F8 returns without a new write.\n", root, source))
+	m.setReport(fmt.Sprintf("Import one file into this library\n\nLibrary: %q\nSource: %q\n\nCopies one assessed EPUB, PDF, or MP3, or the single content file in a completed intake packet. A plain folder is ingested: every supported file, packet, and ZIP member in it is imported. Sources stay in place. Nothing is deleted.\n\nThis review does not run antivirus. A new result stays in review. An asset already recorded as checked keeps that status.\n\nEnter imports this exact source. Escape, F7, or F8 returns without a new write.\n", root, source))
 	m.viewport.GotoTop()
 	m.resize()
 }

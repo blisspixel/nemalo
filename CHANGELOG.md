@@ -9,6 +9,12 @@
   read-only copy in the Nemalo handoff folder (TUI: `o`), and export a verified
   copy with `library export`. Stored files are never handed to readers, because
   some readers write annotations into the files they open.
+- Ingest a whole folder with `library ingest LIBRARY FOLDER [--apply] [--scan]`
+  (TUI: F8 with a folder): loose EPUB, PDF, and MP3 files, intake packets, and
+  ZIP members extracted into private staging with path, size, ratio, and CRC
+  checks, through the same import and journal. Every entry is accounted for and
+  the folder is never changed. Archive members are recorded as
+  `ARCHIVE!/MEMBER`, which earlier prereleases cannot read.
 
 ## 0.1.0-alpha.4
 
