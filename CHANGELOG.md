@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased
+
+- Recording manifests: `library recordings LIBRARY [--source archive:ITEM]`,
+  the MCP `library_recordings` tool, and `t` in TUI Holdings list each held
+  recording's tracks in declared order with exact assets, missing positions, and
+  conflicts. With a source, each track's stored bytes are verified and indexed
+  for probed duration, chapters, and offset in the recording. Track titles and
+  declared durations are now recorded at acquisition.
+
 ## 0.1.0-alpha.5
 
 Fifth native prerelease. This remains an early library, not 1.0.

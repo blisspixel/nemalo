@@ -80,8 +80,12 @@ item. No candidate URLs are probed or acquired; no files are scanned or opened.
 An Archive audio item is not necessarily an audiobook, and multiple formats may
 represent the same tracks. `recordings` groups MP3 files by declared format in
 declared track order, with `order_source` and an `acquirable` verdict; see
-[decision 0018](decisions/0018-whole-recording-acquisition.md). Actual
-edition/recording identity, rights policy, and checked publication remain planned.
+[decision 0018](decisions/0018-whole-recording-acquisition.md). After ingest,
+`library recordings LIBRARY [--source archive:ITEM]` lists held recordings in
+declared order with missing positions and, with `--source`, verified and indexed
+track timing ([decision 0020](decisions/0020-recording-manifest.md)). Actual
+edition identity, narrator identity, rights policy, and checked publication
+remain planned.
 
 ## File health and scanning
 

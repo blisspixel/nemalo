@@ -435,9 +435,11 @@ shared content contract; see
 [decision 0015](docs/decisions/0015-mpeg-audio-frame-index.md). Whole Archive
 recordings are acquired in declared track order with track-level resume, and
 ingest records each track's declared place
-([decision 0018](docs/decisions/0018-whole-recording-acquisition.md)). A recording
-entity with narrator identity and completeness across holdings, a versioned
-recording manifest, byte-range resume, and M4B remain. Depends on shared assessment/publication and recovery milestones.
+([decision 0018](docs/decisions/0018-whole-recording-acquisition.md)).
+`recording-manifest/1` reports held tracks in order with exact hashes, missing
+positions, conflicts, and probed timing and offsets
+([decision 0020](docs/decisions/0020-recording-manifest.md)). Narrator identity,
+byte-range resume, M4B, and decoded timing remain. Depends on shared assessment/publication and recovery milestones.
 Can follow milestone 5 independently of paper-provider expansion.
 
 Deliver local MP3/M4B intake and LibriVox acquisition, permitted Archive audio

@@ -23,6 +23,14 @@ type RecordingPosition struct {
 	Format   string `json:"source_format"`
 	Position int    `json:"position"`
 	Tracks   int    `json:"tracks"`
+	// Title and DeclaredSeconds are the source's declarations for this track.
+	Title           string  `json:"title,omitempty"`
+	DeclaredSeconds float64 `json:"declared_seconds,omitempty"`
+}
+
+// samePlace compares the place of a track, not its declared title or length.
+func (p RecordingPosition) samePlace(o RecordingPosition) bool {
+	return p.Format == o.Format && p.Position == o.Position && p.Tracks == o.Tracks
 }
 
 // RecordingRequest acquires every track of one declared recording, such as a
@@ -204,14 +212,15 @@ func AcquireRecording(ctx context.Context, provider Provider, request RecordingR
 
 	// Plan every track: reuse a completed packet, or pick the next free name.
 	type plannedTrack struct {
-		track  RecordingTrack
-		file   discovery.OfferedFile
-		packet string
+		track    RecordingTrack
+		file     discovery.OfferedFile
+		packet   string
+		position RecordingPosition
 	}
 	plan, trackIndex := []plannedTrack{}, map[int]int{}
 	for i, t := range recording.Tracks {
 		rt := RecordingTrack{Position: t.Position, File: t.File}
-		position := RecordingPosition{Format: recording.Format, Position: t.Position, Tracks: len(recording.Tracks)}
+		position := RecordingPosition{Format: recording.Format, Position: t.Position, Tracks: len(recording.Tracks), Title: t.Title, DeclaredSeconds: t.DeclaredSeconds}
 		packet, reused, findErr := trackPacket(ctx, root, request.SourceID, position, files[i])
 		switch {
 		case findErr != nil:
@@ -222,7 +231,7 @@ func AcquireRecording(ctx context.Context, provider Provider, request RecordingR
 			rt.Packet, rt.Status, rt.Bytes, rt.SHA256, rt.Antivirus, rt.Reused = packet, "untrusted_intake", reused.Transfer.Bytes, reused.Transfer.SHA256, reused.Antivirus, true
 		default:
 			rt.Packet, rt.Status = packet, "pending"
-			plan = append(plan, plannedTrack{rt, files[i], packet})
+			plan = append(plan, plannedTrack{rt, files[i], packet, position})
 		}
 		trackIndex[t.Position] = len(result.Tracks)
 		result.Tracks = append(result.Tracks, rt)
@@ -254,7 +263,7 @@ func AcquireRecording(ctx context.Context, provider Provider, request RecordingR
 			}
 			trackCtx, cancel := context.WithTimeout(ctx, transferDeadline)
 			req := Request{SourceID: request.SourceID, File: p.file.Name, Output: filepath.Join(abs, p.packet), MaxBytes: *p.file.Bytes, NoScan: request.NoScan, OnDetection: request.OnDetection, Quarantine: request.Quarantine, Scanner: request.Scanner,
-				Recording: &RecordingPosition{Format: recording.Format, Position: p.track.Position, Tracks: len(recording.Tracks)}}
+				Recording: &p.position}
 			initial := Result{SchemaVersion: 1, Status: "not_started", Antivirus: "not_scanned", Durability: "files_synced_directory_entries_filesystem_dependent"}
 			state, transferred, transferErr := transferPacket(trackCtx, provider, root, req.Output, evaluation, p.file, req, initial)
 			cancel()
@@ -437,7 +446,7 @@ func trackPacket(ctx context.Context, root *os.Root, sourceID string, position R
 			_ = packet.Close()
 			return name, nil, fmt.Errorf("track %d was detected by the scanner in %s; review it before resuming", position.Position, name)
 		}
-		placed := sameTrack && receipt.Intent.Request.Recording != nil && *receipt.Intent.Request.Recording == position
+		placed := sameTrack && receipt.Intent.Request.Recording != nil && receipt.Intent.Request.Recording.samePlace(position)
 		if placed && receipt.Complete && receipt.Status == "untrusted_intake" && verifyStored(ctx, packet, "content.mp3", file, receipt.Transfer) == nil {
 			_ = packet.Close()
 			return name, &receipt, nil

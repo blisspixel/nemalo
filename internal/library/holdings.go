@@ -54,13 +54,16 @@ type Source struct {
 
 // SourceRecording is a track's declared place in a recording.
 type SourceRecording struct {
-	Format   string `json:"source_format"`
-	Position int    `json:"position"`
-	Tracks   int    `json:"tracks"`
+	Format          string  `json:"source_format"`
+	Position        int     `json:"position"`
+	Tracks          int     `json:"tracks"`
+	Title           string  `json:"title,omitempty"`
+	DeclaredSeconds float64 `json:"declared_seconds,omitempty"`
 }
 
 func validRecording(r *SourceRecording) bool {
-	return r == nil || (validNote(r.Format, 200) && r.Position >= 1 && r.Position <= r.Tracks && r.Tracks <= 1000)
+	return r == nil || (validNote(r.Format, 200) && r.Position >= 1 && r.Position <= r.Tracks && r.Tracks <= 1000 &&
+		(r.Title == "" || validNote(r.Title, 500)) && r.DeclaredSeconds >= 0 && r.DeclaredSeconds <= 1e6)
 }
 
 type operation struct {

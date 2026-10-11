@@ -144,6 +144,9 @@ func (m *model) footer() string {
 		}
 		if m.mode == "holdings" && len(m.entries) > 0 {
 			help += "  r source access"
+			if m.entries[m.selected].recording != "" {
+				help += "  t recording"
+			}
 		}
 		if m.mode == "evaluate" && len(m.entries) > 0 {
 			help += "  d acquire"

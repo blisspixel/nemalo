@@ -4,6 +4,9 @@ import (
 	"archive/zip"
 	"bytes"
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"strings"
@@ -214,5 +217,51 @@ func TestHoldingsOpenKeepsTheListAndUsesACopy(t *testing.T) {
 	m.Update(cmd())
 	if len(m.entries) != 1 || !strings.Contains(m.status, "read-only copy") || !strings.HasPrefix(opened, service.Handoff) {
 		t.Fatal("open lost the list or used the stored file", m.status, opened)
+	}
+}
+
+func TestHoldingsShowsATracksRecordingAndKeepsTheList(t *testing.T) {
+	root := t.TempDir()
+	if _, err := library.Initialize(context.Background(), root); err != nil {
+		t.Fatal(err)
+	}
+	frame := make([]byte, 417)
+	copy(frame, []byte{0xFF, 0xFB, 0x90, 0x40})
+	body := bytes.Repeat(frame, 20)
+	sum := sha256.Sum256(body)
+	receipt, _ := json.Marshal(map[string]any{"complete": true, "status": "untrusted_intake", "antivirus": "not_scanned",
+		"transfer": map[string]any{"bytes": len(body), "sha256": hex.EncodeToString(sum[:])},
+		"intent":   map[string]any{"request": map[string]any{"source_id": "archive:demo", "source_file": "one.mp3", "recording": map[string]any{"source_format": "64Kbps MP3", "position": 1, "tracks": 2, "title": "Chapter one"}}}})
+	packet := filepath.Join(t.TempDir(), "0001")
+	if err := os.MkdirAll(packet, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	for name, data := range map[string][]byte{"content.mp3": body, "receipt.json": receipt} {
+		if err := os.WriteFile(filepath.Join(packet, name), data, 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if _, err := library.Import(context.Background(), library.ImportRequest{Library: root, Source: packet, Apply: true}); err != nil {
+		t.Fatal(err)
+	}
+	m := newModel(context.Background(), app.Service{})
+	m.switchMode("holdings")
+	m.format = "mp3"
+	m.input.SetValue(root)
+	m.Update(m.start(true)())
+	m.Update(key(tea.KeyF6))
+	if len(m.entries) != 1 {
+		t.Fatal("holdings", m.status, m.report)
+	}
+	if m.entries[0].recording != "archive:demo" || !strings.Contains(strings.Join(strings.Fields(m.footer()), " "), "t recording") {
+		t.Fatal("recording not offered", m.entries[0], m.footer())
+	}
+	_, cmd := m.Update(tea.KeyPressMsg{Code: 't', Text: "t"})
+	if cmd == nil {
+		t.Fatal("recording not dispatched")
+	}
+	m.Update(cmd())
+	if len(m.entries) != 1 || !strings.Contains(m.report, "1 of 2 tracks held") || !strings.Contains(m.report, "Missing positions: [2]") || !strings.Contains(m.report, "Chapter one") {
+		t.Fatal("recording manifest", m.status, m.report)
 	}
 }

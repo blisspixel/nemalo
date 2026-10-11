@@ -53,6 +53,9 @@ Usage: nemalo <command> [options]
   library ingest LIBRARY FOLDER [--apply] [--scan]
                       Import every EPUB, PDF, MP3, intake packet, and ZIP member
                       in a folder; the folder and its archives are preserved
+  library recordings LIBRARY [--source archive:ITEM]
+                      List held audiobook recordings in declared track order;
+                      with --source, verify and index each track's timing
   library rescan LIBRARY [--apply]
                       Scan review EPUBs that lack scan evidence; --apply records results
   library open LIBRARY --asset sha256:HASH [--app APPLICATION]
@@ -399,6 +402,22 @@ func Execute(ctx context.Context, args []string, out, errOut io.Writer, service 
 			}
 			return write(data, nil, 0)
 		}
+		if action == "recordings" {
+			if flags.NArg() != 1 {
+				return write(nil, errors.New("use library recordings LIBRARY [--source archive:ITEM]"), 2)
+			}
+			filter := ""
+			flags.Visit(func(f *flag.Flag) {
+				if f.Name == "source" {
+					filter = *source
+				}
+			})
+			data, err := service.Recordings(ctx, flags.Arg(0), filter)
+			if err != nil {
+				return write(data, err, 1)
+			}
+			return write(data, nil, 0)
+		}
 		if action == "open" || action == "export" {
 			if flags.NArg() != 1 || contentRequest.AssetID == "" || (action == "export" && *output == "") {
 				return write(nil, fmt.Errorf("use library %s LIBRARY --asset sha256:HASH%s", action, map[string]string{"open": " [--app APPLICATION]", "export": " --output DIRECTORY"}[action]), 2)
@@ -646,6 +665,8 @@ func flagApplies(command, action, name string) bool {
 			return name == "apply"
 		case "ingest":
 			return name == "apply" || name == "scan"
+		case "recordings":
+			return name == "source"
 		case "open":
 			return name == "asset" || name == "app"
 		case "export":
@@ -705,6 +726,9 @@ func printData(out io.Writer, data any) error {
 		return err
 	case acquisition.RecordingResult:
 		_, err := io.WriteString(out, present.Recording(value))
+		return err
+	case library.RecordingsResult:
+		_, err := io.WriteString(out, present.Recordings(value))
 		return err
 	case library.State:
 		_, err := io.WriteString(out, present.LibraryState(value))

@@ -20,7 +20,7 @@ func getAudio(ctx context.Context, req Request, result Result) (Result, error) {
 	result.Limitations = []string{
 		"MPEG audio frames are indexed from their headers, not decoded. Encoded sample positions are not verified playback times.",
 		"Tags, info frames, chapters, encoder delay, and padding are untrusted declarations.",
-		"One file is one track. Recording identity, track order, and completeness across files are not established.",
+		"One read covers one track. Declared track order and completeness across files are reported by library recordings, not here.",
 		"Rights and edition metadata are not established by a byte-identity catalog; unknown.",
 		"No antivirus scan, safety guarantee, listening history, or consumption acknowledgement.",
 	}

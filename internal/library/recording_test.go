@@ -1,11 +1,14 @@
 package library
 
 import (
+	"bytes"
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -98,4 +101,123 @@ func TestRecordingPositionsAreValidatedInHoldings(t *testing.T) {
 	if !validRecording(nil) || !validRecording(&SourceRecording{Format: "VBR MP3", Position: 3, Tracks: 3}) {
 		t.Fatal("rejected a valid position")
 	}
+}
+
+// mp3Track returns n MPEG-1 Layer III frames at 128 kbps and 44.1 kHz, each
+// 1152 samples, so n frames last n*1152/44100 seconds.
+func mp3Track(n int) []byte {
+	f := make([]byte, 417)
+	copy(f, []byte{0xFF, 0xFB, 0x90, 0x40})
+	return bytes.Repeat(f, n)
+}
+
+// ingestTracks writes one track packet per position into a new folder and
+// ingests it. frames maps a position to its frame count.
+func ingestTracks(t *testing.T, root string, tracks int, frames map[int]int) {
+	t.Helper()
+	folder := t.TempDir()
+	files := map[string][]byte{}
+	for position, n := range frames {
+		body := mp3Track(n)
+		dir := fmt.Sprintf("%04d", position)
+		files[dir+"/content.mp3"] = body
+		files[dir+"/receipt.json"] = trackReceipt(t, body, position, tracks)
+	}
+	writeTree(t, folder, files)
+	if r, err := Ingest(context.Background(), IngestRequest{Library: root, Folder: folder, Apply: true}); err != nil {
+		t.Fatal(r, err)
+	}
+}
+
+func TestRecordingManifestOrdersTracksAndProbesStoredBytes(t *testing.T) {
+	ctx := context.Background()
+	root := t.TempDir()
+	if _, err := Initialize(ctx, root); err != nil {
+		t.Fatal(err)
+	}
+	ingestTracks(t, root, 3, map[int]int{1: 100, 2: 50, 3: 25})
+	listed, err := Recordings(ctx, root, "")
+	if err != nil || len(listed.Recordings) != 1 {
+		t.Fatal(listed, err)
+	}
+	m := listed.Recordings[0]
+	if m.Schema != RecordingManifestVersion || !m.Complete || m.Probed || m.HeldTracks != 3 || len(m.Missing) != 0 || m.Tracks[0].Probe != "not_requested" {
+		t.Fatal("journal-only manifest", m)
+	}
+	probed, err := Recordings(ctx, root, "archive:demo")
+	if err != nil {
+		t.Fatal(err)
+	}
+	m = probed.Recordings[0]
+	ms := func(frames int) int64 { return int64(frames) * 1152 * 1000 / 44100 }
+	if !m.Probed || m.ProbedMs == nil || *m.ProbedMs != m.Tracks[0].EncodedDurationMs+m.Tracks[1].EncodedDurationMs+m.Tracks[2].EncodedDurationMs {
+		t.Fatal("probed total", m)
+	}
+	for i, frames := range []int{100, 50, 25} {
+		track := m.Tracks[i]
+		if track.Position != i+1 || track.Probe != "indexed" || track.SampleRate != 44100 || track.EncodedSamples != int64(frames*1152) || track.StartMs == nil {
+			t.Fatal("track", track)
+		}
+		if diff := track.EncodedDurationMs - ms(frames); diff < -1 || diff > 1 {
+			t.Fatal("duration", track.EncodedDurationMs, ms(frames))
+		}
+	}
+	if *m.Tracks[2].StartMs != m.Tracks[0].EncodedDurationMs+m.Tracks[1].EncodedDurationMs {
+		t.Fatal("offsets", m.Tracks)
+	}
+	if other, err := Recordings(ctx, root, "archive:other"); err != nil || len(other.Recordings) != 0 {
+		t.Fatal("source filter", other, err)
+	}
+}
+
+func TestRecordingManifestReportsGapsConflictsAndChangedBytes(t *testing.T) {
+	ctx := context.Background()
+	root := t.TempDir()
+	if _, err := Initialize(ctx, root); err != nil {
+		t.Fatal(err)
+	}
+	ingestTracks(t, root, 4, map[int]int{1: 40, 3: 30, 4: 20})
+	m := mustRecording(t, root)
+	if m.Complete || len(m.Missing) != 1 || m.Missing[0] != 2 || m.HeldTracks != 3 || m.ProbedMs != nil {
+		t.Fatal("missing track", m)
+	}
+	if m.Tracks[0].StartMs == nil || m.Tracks[1].StartMs != nil {
+		t.Fatal("offsets must stop at a gap", m.Tracks)
+	}
+	// A different asset claims position 3.
+	ingestTracks(t, root, 4, map[int]int{2: 10, 3: 31})
+	m = mustRecording(t, root)
+	if m.Complete || len(m.Missing) != 0 || len(m.Findings) != 1 || !strings.Contains(m.Findings[0], "position 3") {
+		t.Fatal("conflict", m)
+	}
+	// Stored bytes that no longer match their holding are not indexed.
+	stored := filepath.Join(root, filepath.FromSlash(holdingPath(t, root, m.Tracks[0].AssetID)))
+	if err := os.Chmod(stored, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(stored, mp3Track(41), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	m = mustRecording(t, root)
+	if m.Tracks[0].Probe != "stored_bytes_changed" || m.Tracks[0].StartMs != nil {
+		t.Fatal("changed bytes indexed", m.Tracks[0])
+	}
+}
+
+func mustRecording(t *testing.T, root string) RecordingManifest {
+	t.Helper()
+	r, err := Recordings(context.Background(), root, "archive:demo")
+	if err != nil || len(r.Recordings) != 1 {
+		t.Fatal(r, err)
+	}
+	return r.Recordings[0]
+}
+
+func holdingPath(t *testing.T, root, assetID string) string {
+	t.Helper()
+	page, err := FindManaged(context.Background(), root, assetID, "all", "all", 1, 0)
+	if err != nil || page.Total != 1 {
+		t.Fatal(page, err)
+	}
+	return page.Holdings[0].Path
 }

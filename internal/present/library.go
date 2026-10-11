@@ -215,3 +215,55 @@ func Ingest(r library.IngestResult) string {
 	}
 	return b.String()
 }
+
+// Recordings shows each held recording and its tracks in declared order.
+func Recordings(r library.RecordingsResult) string {
+	var b strings.Builder
+	fmt.Fprintf(&b, "Library: %q\nRecordings: %d\n", r.LibraryID, len(r.Recordings))
+	for _, m := range r.Recordings {
+		fmt.Fprintf(&b, "\n%q %q: %d of %d tracks held | complete: %t", m.SourceID, m.Format, m.HeldTracks, m.DeclaredTracks, m.Complete)
+		if m.ProbedMs != nil {
+			fmt.Fprintf(&b, " | probed %s", clock(*m.ProbedMs))
+		}
+		b.WriteString("\n")
+		if len(m.Missing) > 0 {
+			fmt.Fprintf(&b, "  Missing positions: %v\n", m.Missing)
+		}
+		for _, f := range m.Findings {
+			fmt.Fprintf(&b, "  Finding: %q\n", f)
+		}
+		for _, t := range m.Tracks {
+			fmt.Fprintf(&b, "  %d. %q %s", t.Position, firstNonEmpty(t.Title, t.SourceFile), t.Status)
+			switch {
+			case t.Probe == "indexed" && t.StartMs != nil:
+				fmt.Fprintf(&b, " | starts %s, %s", clock(*t.StartMs), clock(t.EncodedDurationMs))
+			case t.Probe == "indexed":
+				fmt.Fprintf(&b, " | %s", clock(t.EncodedDurationMs))
+			case t.Probe != "not_requested":
+				fmt.Fprintf(&b, " | probe %s", t.Probe)
+			}
+			if len(t.Chapters) > 0 {
+				fmt.Fprintf(&b, " | %d chapter(s)", len(t.Chapters))
+			}
+			fmt.Fprintf(&b, "\n     %s\n", t.AssetID)
+		}
+	}
+	for _, note := range r.Limitations {
+		fmt.Fprintf(&b, "Limitation: %q\n", note)
+	}
+	return b.String()
+}
+
+// clock formats milliseconds as H:MM:SS.mmm.
+func clock(ms int64) string {
+	return fmt.Sprintf("%d:%02d:%02d.%03d", ms/3600000, ms/60000%60, ms/1000%60, ms%1000)
+}
+
+func firstNonEmpty(values ...string) string {
+	for _, v := range values {
+		if v != "" {
+			return v
+		}
+	}
+	return ""
+}

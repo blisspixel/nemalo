@@ -227,6 +227,16 @@ func TestAcquireRecordingCommandResumesAndIngestsInOrder(t *testing.T) {
 	if code, out := run("library", "list", library, "--format", "mp3"); code != 0 || !strings.Contains(out, "Track 1 of 2") || !strings.Contains(out, "Track 2 of 2") {
 		t.Fatal("recording order not listed", code, out)
 	}
+	if code, out := run("library", "recordings", library); code != 0 || !strings.Contains(out, "2 of 2 tracks held | complete: true") {
+		t.Fatal("recordings", code, out)
+	}
+	// The fixture tracks are not MPEG audio, so indexing reports it per track.
+	if code, out := run("library", "recordings", library, "--source", "archive:demo", "--json"); code != 0 || !strings.Contains(out, `"probe":"failed"`) || !strings.Contains(out, `"schema":"recording-manifest/1"`) {
+		t.Fatal("probed recordings", code, out)
+	}
+	if code, _ := run("library", "recordings", library, "--query", "x"); code != 2 {
+		t.Fatal("recordings accepted an unrelated flag")
+	}
 	for _, args := range [][]string{
 		{"acquire", "archive:demo", "--resume", "--output", output},
 		{"acquire", "archive:demo", "--recording", "64Kbps MP3", "--file", "one_64kb.mp3", "--output", output},

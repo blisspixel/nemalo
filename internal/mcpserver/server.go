@@ -99,6 +99,14 @@ func New(service app.Service, opts Options) (*mcp.Server, error) {
 			}
 			return service.HoldingsFormat(catalog, in.Query, defaultString(in.Format, "all"), defaultInt(in.Limit, 10), in.Offset)
 		})
+	add(&r, "library_recordings", "List audiobook recordings held in an initialized library, with tracks in declared order, missing positions, and conflicts. With source (archive:ITEM), each held track's stored bytes are verified and indexed for timing and chapters, without decoding.", false,
+		func(ctx context.Context, in recordingsInput) (any, error) {
+			dir, err := scopes.path(in.Library)
+			if err != nil {
+				return nil, err
+			}
+			return service.Recordings(ctx, dir, in.Source)
+		})
 	add(&r, "library_audit", "Audit stored bytes: an initialized library directory alone compares managed holdings; a catalog file with an explicit root compares a snapshot. Reports findings and changes nothing.", false,
 		func(ctx context.Context, in auditInput) (any, error) {
 			catalog, err := scopes.path(in.Catalog)
@@ -246,6 +254,11 @@ type listInput struct {
 	Format  string `json:"format,omitempty" jsonschema:"all (default), epub, pdf, or mp3; an exact filename suffix filter"`
 	Limit   int    `json:"limit,omitempty" jsonschema:"page size 1-100, default 10"`
 	Offset  int    `json:"offset,omitempty" jsonschema:"page offset 0-100000"`
+}
+
+type recordingsInput struct {
+	Library string `json:"library" jsonschema:"an initialized library directory inside a configured scope"`
+	Source  string `json:"source,omitempty" jsonschema:"archive:ITEM to verify and index that source's recordings; omit to list all from the journal"`
 }
 
 type auditInput struct {

@@ -147,7 +147,7 @@ func TestAudioReferencesGoStaleWhenTheIndexChanges(t *testing.T) {
 	if r, err := Get(context.Background(), req); err == nil || r.Status != "stale_reference" {
 		t.Fatal(r, err)
 	}
-	if !strings.Contains(strings.Join(Available().Unsupported, ","), "multi-file recording") {
+	if !strings.Contains(strings.Join(Available().Unsupported, ","), "decoded audio") {
 		t.Fatal("capabilities overstate audio support")
 	}
 }

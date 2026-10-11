@@ -19,6 +19,9 @@ type entry struct {
 	// managed marks a holding of a library directory, which is read with the
 	// same directory as catalog and root.
 	managed bool
+	// recording is the source ID of a declared recording this holding is a
+	// track of, if any.
+	recording string
 }
 
 // Browsing is a presentation of shared service results, not another catalog.
@@ -86,11 +89,19 @@ func (m *model) populate(data any) {
 			for _, id := range h.Identities {
 				detail += fmt.Sprintf("Identity: %s %q\n", id.Role, id.ID)
 			}
+			recording := ""
 			for _, src := range h.Sources {
 				detail += fmt.Sprintf("Source: %q %q %q\n", src.Path, src.SourceID, src.SourceFile)
+				if src.Recording != nil && src.SourceID != "" {
+					detail += fmt.Sprintf("Track %d of %d in %q (declared order)\n", src.Recording.Position, src.Recording.Tracks, src.Recording.Format)
+					recording = firstOf(recording, src.SourceID)
+				}
 			}
 			detail += fmt.Sprintf("\nID: %q\n\nRecorded journal facts. Audit rechecks stored bytes.\nr stages Read for this holding.\no opens a verified read-only copy in the default application.\n", h.ID)
-			m.entries = append(m.entries, entry{title: fmt.Sprintf("%q", title), summary: fmt.Sprintf("%s | %s | %s | %q", h.Format, h.Status, byteSize(h.Bytes), h.Languages), detail: detail, sourceID: h.ID, audio: h.Format == "mp3", managed: true})
+			if recording != "" {
+				detail += "t shows the whole recording: declared order, missing tracks, and indexed timing.\n"
+			}
+			m.entries = append(m.entries, entry{title: fmt.Sprintf("%q", title), summary: fmt.Sprintf("%s | %s | %s | %q", h.Format, h.Status, byteSize(h.Bytes), h.Languages), detail: detail, sourceID: h.ID, audio: h.Format == "mp3", managed: true, recording: recording})
 		}
 	case content.Result:
 		if p.Status == "units_available" && p.Audio != nil {
@@ -262,6 +273,22 @@ func (m *model) browserKey(key string) (bool, tea.Cmd) {
 				return result{id: id, data: data, err: err}
 			}
 		}
+	case "t":
+		// The recording manifest reads and indexes the held tracks' bytes.
+		if m.mode == "holdings" && len(m.entries) > 0 && m.entries[m.selected].recording != "" {
+			source, libraryDir, service := m.entries[m.selected].recording, m.submittedInput, m.service
+			ctx, cancel := context.WithCancel(m.ctx)
+			m.cancel = cancel
+			m.id++
+			id := m.id
+			m.busy = true
+			m.status = "Verifying and indexing the recording's held tracks."
+			m.resize()
+			return true, func() tea.Msg {
+				data, err := service.Recordings(ctx, libraryDir, source)
+				return result{id: id, data: data, err: err}
+			}
+		}
 	case "n":
 		if m.mode == "read" && m.reader.next != "" {
 			return true, m.startRead(false, 0, m.reader.next, false)
@@ -317,4 +344,13 @@ func (m *model) browseView() string {
 	}
 	divider := strings.TrimSuffix(strings.Repeat(" | \n", height), "\n")
 	return lipgloss.JoinHorizontal(lipgloss.Top, list, m.paint(divider, muted, false), m.preview.View())
+}
+
+func firstOf(values ...string) string {
+	for _, v := range values {
+		if v != "" {
+			return v
+		}
+	}
+	return ""
 }

@@ -261,6 +261,12 @@ func (s Service) HoldingsFormat(file, query, format string, limit, offset int) (
 }
 
 // ManagedHoldings lists an initialized library's current holdings.
+// Recordings lists held recordings; a source filter also verifies and indexes
+// each held track's stored bytes.
+func (s Service) Recordings(ctx context.Context, directory, source string) (library.RecordingsResult, error) {
+	return library.Recordings(ctx, directory, source)
+}
+
 func (s Service) ManagedHoldings(ctx context.Context, directory, query, format, status string, limit, offset int) (library.ManagedPage, error) {
 	return library.FindManaged(ctx, directory, query, format, status, limit, offset)
 }

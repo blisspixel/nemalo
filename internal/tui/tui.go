@@ -125,6 +125,18 @@ func (m *model) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 			m.cancel = nil
 		}
 		m.status = "Complete."
+		// A recording manifest is shown beside the holdings list, which stays.
+		if value, ok := msg.data.(library.RecordingsResult); ok {
+			m.status = "Recording manifest. Track order is declared by the source; no listening is recorded."
+			if msg.err != nil {
+				m.status = fmt.Sprintf("Recording manifest failed: %q", msg.err.Error())
+			} else {
+				m.setReport(present.Recordings(value))
+				m.evidence = true
+			}
+			m.resize()
+			return m, nil
+		}
 		// Opening a copy leaves the holdings list and report in place.
 		if value, ok := msg.data.(library.ExportResult); ok {
 			m.status = fmt.Sprintf("Opened a verified read-only copy: %q", value.Path)

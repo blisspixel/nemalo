@@ -1,6 +1,6 @@
 ---
 name: nemalo
-description: Use when the user asks about books, ebooks, audiobooks, or files in their local Nemalo library, or wants text or audio ranges read from them. Covers the read-only nemalo MCP tools (library_list, library_status, library_audit, file_check, content_units, content_read, content_source, content_resource) and when to suggest the nemalo CLI for changes.
+description: Use when the user asks about books, ebooks, audiobooks, or files in their local Nemalo library, or wants text or audio ranges read from them. Covers the read-only nemalo MCP tools (library_list, library_recordings, library_status, library_audit, file_check, content_units, content_read, content_source, content_resource) and when to suggest the nemalo CLI for changes.
 license: Apache-2.0
 compatibility: Requires the nemalo executable on PATH and an MCP host that starts it with nemalo mcp serve.
 ---
@@ -28,6 +28,11 @@ delete anything.
 - A holding is identified by `sha256:HASH`. Use that exact ID for content tools.
 - An audiobook track lists its place as "Track N of M" from the source's declared
   order. That order is a declaration, not a check of the audio.
+- `library_recordings` with a library directory lists held recordings, their
+  missing positions, and conflicts. Add `source` (`archive:ITEM`) to verify each
+  held track and get its probed duration, chapters, and `start_ms` offset in the
+  recording. `complete` means every declared position is held, not that the
+  audio was checked.
 - `library_status` and `library_audit` report control state and whether stored
   bytes still match. Report findings as they are; do not offer to fix them.
 
