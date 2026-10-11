@@ -1,6 +1,8 @@
 # Changelog
 
-## Unreleased
+## 0.1.0-alpha.4
+
+Fourth native prerelease. This remains an early library, not 1.0.
 
 - Index MP3 frames with `--representation mpeg-audio/1`: probed sample rate,
   channels, frames, and encoded duration, kept separate from declared info-frame
@@ -11,6 +13,12 @@
 - Validated the MCP server with a real host: Claude Code on Windows read one
   book, switched to another, and resumed the first from its continuation at
   the exact byte where it stopped.
+- Check MCP tool paths lexically against the scopes before any filesystem
+  access, so a Windows UNC path cannot trigger a network connection, and
+  return one error for missing and outside paths. Skip a configured folder
+  that does not exist yet instead of refusing to start.
+- Bound audio indexing memory: compact per-frame records and ID3 text capped
+  before decoding.
 
 ## 0.1.0-alpha.3
 
