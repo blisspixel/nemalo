@@ -22,6 +22,32 @@ func Content(r content.Result) string {
 	if r.Locator != nil {
 		fmt.Fprintf(&b, "Unit %d | bytes %d..%d (%s)\n", r.Locator.Unit, r.Locator.Start, r.Locator.End, offsetUnit(r.Locator))
 	}
+	if a := r.Audio; a != nil {
+		fmt.Fprintf(&b, "Audio: %s, %d Hz, %d channel(s) %s, %s\n", a.Format, a.SampleRate, a.Channels, a.ChannelMode, a.Bitrate)
+		fmt.Fprintf(&b, "Indexed frames: %d | encoded samples: %d | encoded duration: %d ms | bytes %d..%d\n", a.Frames, a.EncodedSamples, a.EncodedDurationMs, a.AudioStart, a.AudioEnd)
+		if a.PresentedSamples != nil {
+			fmt.Fprintf(&b, "Presented samples after declared encoder delay and padding: %d (declared, not verified)\n", *a.PresentedSamples)
+		}
+		if a.Declared.LengthMs != nil {
+			fmt.Fprintf(&b, "ID3 declared length: %d ms\n", *a.Declared.LengthMs)
+		}
+		if a.Metadata.Title != "" || a.Metadata.Artist != "" {
+			fmt.Fprintf(&b, "Declared title: %q | artist: %q\n", a.Metadata.Title, a.Metadata.Artist)
+		}
+		for _, c := range a.Chapters {
+			fmt.Fprintf(&b, "Declared chapter %q %q: %d..%d ms\n", c.ID, c.Title, c.StartMs, c.EndMs)
+		}
+		for _, g := range a.Gaps {
+			fmt.Fprintf(&b, "Unindexed bytes %d..%d: %s\n", g.Start, g.End, g.Kind)
+		}
+		for _, f := range a.Findings {
+			fmt.Fprintf(&b, "Finding: %q\n", f)
+		}
+		b.WriteString("Decoded: not decoded; timing comes from frame headers.\n")
+	}
+	if a := r.AudioRange; a != nil {
+		fmt.Fprintf(&b, "Frames %d..%d (%d preroll frame(s), complete: %t) | samples %d..%d at %d Hz | file bytes %d..%d\n", a.FirstFrame, a.FirstFrame+a.Frames, a.PrerollFrames, a.PrerollComplete, a.SampleStart, a.SampleEnd, a.SampleRate, a.ByteStart, a.ByteEnd)
+	}
 	if r.Resource != nil {
 		fmt.Fprintf(&b, "Resource %q | SHA-256 %q | %d of %d bytes. Bytes are not rendered here; use --json for base64 data.\n", r.Resource.Member, r.Resource.SHA256, len(r.Resource.Data), r.Resource.TotalBytes)
 	}

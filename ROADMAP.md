@@ -364,8 +364,10 @@ image-member identity, and per-range gaps from
 [issue 2](https://github.com/blisspixel/nemalo/issues/2).
 Table grids and rendered mathematics are explicitly unsupported, with original
 markup available separately. The read-only MCP `content_*` tools expose the same
-contract. PDF/OCR, decoded audio ranges, and external caller validation remain
-open; neither full issue is complete.
+contract. MP3 tracks have probed timing and decodable frame ranges
+([decision 0015](docs/decisions/0015-mpeg-audio-frame-index.md)). PDF/OCR,
+multi-file recordings, and external caller validation remain open; neither full
+issue is complete.
 
 - Initial local access: resolve a stable library ID to exact assets/provenance,
   export/open in an explicitly configured reader, and report changed/missing files.
@@ -418,7 +420,12 @@ Acceptance:
 
 ## Milestone 8: audiobook recordings and tracks
 
-Status: planned. Depends on shared assessment/publication and recovery milestones.
+Status: partial. Single MP3 files have a frame index with probed versus
+declared timing, ID3 chapters, and decodable frame-aligned ranges through the
+shared content contract; see
+[decision 0015](docs/decisions/0015-mpeg-audio-frame-index.md). Recording and
+narration identity, ordered track sets, M4B, and complete recording acquisition
+remain. Depends on shared assessment/publication and recovery milestones.
 Can follow milestone 5 independently of paper-provider expansion.
 
 Deliver local MP3/M4B intake and LibriVox acquisition, permitted Archive audio

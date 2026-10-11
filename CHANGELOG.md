@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased
+
+- Index MP3 frames with `--representation mpeg-audio/1`: probed sample rate,
+  channels, frames, and encoded duration, kept separate from declared info-frame
+  counts, encoder delay and padding, and ID3 text, length, and chapters. Reads
+  return whole-frame byte ranges with decoder preroll and exact sample bounds,
+  over CLI, JSON, and MCP. Nothing is decoded. Ranges decoded bit-exactly
+  against a whole-file FFmpeg decode on synthesized and LibriVox files.
+
 ## 0.1.0-alpha.3
 
 Third native prerelease. This remains an early library, not 1.0. It resolves

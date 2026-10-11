@@ -256,12 +256,13 @@ type contentInput struct {
 	Catalog        string `json:"catalog" jsonschema:"catalog snapshot file, or the library directory for a managed holding"`
 	Root           string `json:"root" jsonschema:"explicit source root; for a managed holding, the same library directory"`
 	Asset          string `json:"asset" jsonschema:"exact asset ID, sha256: followed by 64 lowercase hex digits"`
-	Representation string `json:"representation,omitempty" jsonschema:"epub-text/2 (default), epub-text/1, or epub-structure/1; a cursor keeps its own"`
+	Representation string `json:"representation,omitempty" jsonschema:"epub-text/2 (default), epub-text/1, epub-structure/1, or mpeg-audio/1 for MP3; a cursor keeps its own"`
 	Unit           int    `json:"unit,omitempty" jsonschema:"zero-based reading-order unit, 0-511"`
 	TextOffset     int    `json:"text_offset,omitempty" jsonschema:"zero-based UTF-8 byte offset inside the unit"`
 	MaxBytes       int    `json:"max_bytes,omitempty" jsonschema:"bytes to return, 4-65536, default 4096"`
 	Cursor         string `json:"cursor,omitempty" jsonschema:"continuation or reference cursor exactly as returned; not combinable with unit or text_offset"`
 	Part           string `json:"part,omitempty" jsonschema:"exact structured part ID such as id:note-1; structured and source reads only"`
+	Sample         int64  `json:"sample,omitempty" jsonschema:"encoded sample where an mpeg-audio/1 read starts"`
 }
 
 type searchInput struct {
@@ -301,7 +302,7 @@ func contentRequest(s scope, in contentInput, operation string) (content.Request
 	if err != nil {
 		return content.Request{}, err
 	}
-	req := content.Request{SchemaVersion: 1, Catalog: catalog, Root: root, AssetID: in.Asset, Unit: in.Unit, Offset: in.TextOffset, MaxBytes: defaultInt(in.MaxBytes, 4096), Cursor: in.Cursor, Representation: in.Representation, Part: in.Part}
+	req := content.Request{SchemaVersion: 1, Catalog: catalog, Root: root, AssetID: in.Asset, Unit: in.Unit, Offset: in.TextOffset, MaxBytes: defaultInt(in.MaxBytes, 4096), Cursor: in.Cursor, Representation: in.Representation, Part: in.Part, Sample: in.Sample}
 	switch operation {
 	case "units":
 		req.UnitsOnly = true

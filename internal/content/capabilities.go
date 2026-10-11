@@ -1,5 +1,7 @@
 package content
 
+import "github.com/blisspixel/nemalo/internal/audio"
+
 type RepresentationCapability struct {
 	ID          string   `json:"id"`
 	Extractor   string   `json:"extractor"`
@@ -22,5 +24,6 @@ func Available() Capabilities {
 		{ID: "epub-text/1", Extractor: Extractor, Operations: []string{"units", "read"}, Description: "Original conservative XHTML plain text. Any image, table, or media element makes its whole document unsupported."},
 		{ID: "epub-structure/1", Extractor: structuredExtractor, Operations: []string{"units", "read", "resource"}, Description: "Source parts, links, language/direction, and located extraction gaps; no rendering."},
 		{ID: "epub-source/1", Extractor: structuredExtractor, Operations: []string{"read", "source"}, Description: "Bounded original XHTML/XML member bytes or selected source part; untrusted markup."},
-	}, Unsupported: []string{"PDF text/page/OCR extraction", "MP3/M4B recording manifests and decoded audio ranges", "table grid reconstruction", "mathematical rendering"}, MaxTextBytes: 65536, MaxResultBytes: 1 << 20, ConsumptionState: "none; retrieval never acknowledges reading or listening"}
+		{ID: "mpeg-audio/1", Extractor: audio.Extractor, Operations: []string{"units", "read"}, Description: "MP3 frame index with probed versus declared timing, ID3 chapters, and frame-aligned byte ranges with decoder preroll; never decoded."},
+	}, Unsupported: []string{"PDF text/page/OCR extraction", "multi-file recording manifests, M4B, and decoded audio", "table grid reconstruction", "mathematical rendering"}, MaxTextBytes: 65536, MaxResultBytes: 1 << 20, ConsumptionState: "none; retrieval never acknowledges reading or listening"}
 }

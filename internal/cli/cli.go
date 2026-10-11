@@ -93,7 +93,8 @@ Library import options: --apply, --scan
 Library rescan options: --apply (without it, scans and reports but writes nothing)
 Library audit options: --root DIRECTORY for a snapshot catalog
 Content read options: --unit 0, --text-offset 0, --max-bytes 4096, --cursor TOKEN
-                     --representation epub-text/2|epub-text/1|epub-structure/1, --part ID
+                     --representation epub-text/2|epub-text/1|epub-structure/1|mpeg-audio/1,
+                     --part ID, --sample N (mpeg-audio/1)
 The default epub-text/2 omits images, tables, mathematics, and media from the
 text and locates each omission as a gap. A continuation keeps the representation
 it was issued for. Extraction is not rendered layout or acknowledgement of reading.
@@ -186,6 +187,7 @@ func Execute(ctx context.Context, args []string, out, errOut io.Writer, service 
 	flags.StringVar(&contentRequest.Cursor, "cursor", "", "source-bound continuation token")
 	flags.StringVar(&contentRequest.Representation, "representation", "", "negotiated content representation; a continuation selects its own")
 	flags.StringVar(&contentRequest.Part, "part", "", "exact source part ID")
+	flags.Int64Var(&contentRequest.Sample, "sample", 0, "encoded sample where an mpeg-audio/1 read starts")
 	flags.BoolVar(&checkOptions.Scan, "scan", false, "invoke installed antivirus")
 	flags.Int64Var(&checkOptions.ExpectedBytes, "expected-bytes", 0, "known expected file size")
 	flags.StringVar(&checkOptions.ExpectedSHA256, "expected-sha256", "", "known expected SHA-256")
@@ -545,7 +547,7 @@ func flagApplies(command, action, name string) bool {
 		if name == "max-bytes" || name == "cursor" {
 			return action != "units"
 		}
-		return (action == "read" || action == "source") && (name == "part" || name == "unit" || name == "text-offset")
+		return (action == "read" || action == "source") && (name == "part" || name == "unit" || name == "text-offset") || (action == "read" && name == "sample")
 	}
 	if command == "library" {
 		switch action {

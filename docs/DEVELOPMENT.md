@@ -50,7 +50,8 @@ cloud policy remain explicit. See the [terminal guide](TUI.md) for keyboard
 controls, budgets, paging, appearance, and application-view captures.
 Content retrieval uses CLI/JSON and the TUI Read operation over shared services.
 The default `epub-text/2` returns readable text with each omitted image, table,
-or other element located as a gap. Capability negotiation, structured EPUB parts,
+or other element located as a gap. `mpeg-audio/1` indexes MP3 frames and returns
+decodable frame ranges with decoder preroll; nothing is decoded. Capability negotiation, structured EPUB parts,
 note references, original markup, and bounded local image bytes are available in
 CLI/JSON, and through the read-only MCP server.
 See [source-bound access](CONTENT-ACCESS.md) and [structured EPUB](STRUCTURED-EPUB.md)

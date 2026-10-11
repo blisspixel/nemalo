@@ -4,6 +4,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/blisspixel/nemalo/internal/audio"
 	"github.com/blisspixel/nemalo/internal/content"
 )
 
@@ -52,5 +53,23 @@ func TestContentUnitsResourcesAndContinuationCommand(t *testing.T) {
 	}
 	if strings.Contains(ContentCommand(content.Result{Status: "complete_range", Text: "a", Locator: &content.Locator{}}), "--cursor") {
 		t.Fatal("cursor hint without continuation")
+	}
+}
+
+func TestContentPresentsAudioIndexAndRangeWithoutBytes(t *testing.T) {
+	presented, length := int64(1000), int64(9000)
+	r := content.Result{Status: "partial_range", Representation: "mpeg-audio/1",
+		Audio:      &audio.Track{Format: "mpeg1_layer3", SampleRate: 44100, Channels: 2, ChannelMode: "joint_stereo", Bitrate: "variable", Frames: 3, EncodedSamples: 3456, EncodedDurationMs: 78, PresentedSamples: &presented, Declared: audio.Declared{LengthMs: &length}, Metadata: audio.Metadata{Title: "Track\x1b[2J"}, Chapters: []audio.Chapter{{ID: "c1", Title: "One", EndMs: 50}}, Gaps: []audio.Region{{Kind: "trailing_unsynchronized_bytes", Start: 1, End: 2}}, Findings: []string{"finding"}},
+		AudioRange: &audio.Range{FirstFrame: 1, Frames: 2, PrerollFrames: 1, PrerollComplete: true, SampleStart: 1152, SampleEnd: 3456, SampleRate: 44100, ByteStart: 0, ByteEnd: 1251},
+		Resource:   &content.ResourceData{SHA256: "abc", TotalBytes: 2000, Data: []byte("raw audio bytes")},
+		Locator:    &content.Locator{OffsetUnit: "encoded_samples"}}
+	s := Content(r)
+	for _, want := range []string{"mpeg1_layer3, 44100 Hz", "Indexed frames: 3", "Presented samples", "ID3 declared length: 9000 ms", `Declared chapter "c1" "One"`, "trailing_unsynchronized_bytes", "Frames 1..3 (1 preroll frame(s), complete: true)", "not decoded"} {
+		if !strings.Contains(s, want) {
+			t.Fatal("missing", want, s)
+		}
+	}
+	if strings.Contains(s, "raw audio bytes") || strings.Contains(s, "\x1b") {
+		t.Fatal("audio bytes or control characters printed", s)
 	}
 }

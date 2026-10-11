@@ -18,6 +18,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/blisspixel/nemalo/internal/assessment"
+	"github.com/blisspixel/nemalo/internal/audio"
 	"github.com/blisspixel/nemalo/internal/library"
 	"github.com/blisspixel/nemalo/internal/safeio"
 	"golang.org/x/net/html"
@@ -45,6 +46,8 @@ type Request struct {
 	Representation string
 	Part           string
 	Resource       bool
+	// Sample is the encoded sample at which an mpeg-audio/1 read starts.
+	Sample int64
 }
 
 func (r Request) Validate() error {
@@ -58,7 +61,10 @@ func (r Request) Validate() error {
 	if r.Unit < 0 || r.Unit >= maxUnits || r.Offset < 0 || r.Offset > maxText || r.MaxBytes < 4 || r.MaxBytes > 65536 || len(r.Cursor) > 2048 {
 		return errors.New("content requires unit 0-511, offset 0-8388608, max-bytes 4-65536, and cursor at most 2048 bytes")
 	}
-	if r.Cursor != "" && (r.Unit != 0 || r.Offset != 0 || r.UnitsOnly) {
+	if r.Sample < 0 || r.Sample > 1<<40 || (r.Sample != 0 && r.Representation != "mpeg-audio/1") {
+		return errors.New("sample applies only to mpeg-audio/1 and must be 0 through 2^40")
+	}
+	if r.Cursor != "" && (r.Unit != 0 || r.Offset != 0 || r.UnitsOnly || r.Sample != 0) {
 		return errors.New("cursor cannot be combined with unit, offset, or units listing")
 	}
 	if len(r.Representation) > 80 || len(r.Part) > 256 || (r.Cursor != "" && r.Part != "") || (r.UnitsOnly && (r.Part != "" || r.Resource)) {
@@ -120,6 +126,8 @@ type Result struct {
 	Coverage         *Coverage     `json:"coverage,omitempty"`
 	Resource         *ResourceData `json:"resource,omitempty"`
 	Gaps             []Gap         `json:"gaps,omitempty"`
+	Audio            *audio.Track  `json:"audio,omitempty"`
+	AudioRange       *audio.Range  `json:"audio_range,omitempty"`
 }
 
 type cursor struct {
@@ -173,6 +181,7 @@ func Get(ctx context.Context, req Request) (result Result, err error) {
 			result.Text, result.Continuation, result.Locator = "", "", nil
 			result.Units = nil
 			result.Parts, result.Coverage, result.Resource, result.Gaps = nil, nil, nil, nil
+			result.Audio, result.AudioRange = nil, nil
 			result.EndOfUnit, result.EndOfSource = false, false
 		}
 	}()
@@ -210,6 +219,8 @@ func Get(ctx context.Context, req Request) (result Result, err error) {
 		return getTextV2(ctx, req, result)
 	case "epub-structure/1", "epub-source/1":
 		return getStructured(ctx, req, result)
+	case "mpeg-audio/1":
+		return getAudio(ctx, req, result)
 	default:
 		result.Status = "unsupported_representation"
 		return result, errors.New("unsupported content representation; inspect content capabilities")

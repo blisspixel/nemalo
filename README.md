@@ -32,7 +32,8 @@ AI service. Future agent interfaces will use the same application services.
   `library rescan` scans review holdings in one batched command.
 - Retrieve bounded EPUB text in CLI/JSON/TUI, with exact continuation, source parts,
   note references, local image bytes, and explicit extraction gaps. Illustrated
-  chapters stay readable; each omitted image or table is located.
+  chapters stay readable; each omitted image or table is located. MP3 tracks
+  report probed and declared timing and chapters, and return decodable ranges.
 - Report environment paths, tool availability, scanner setup and signature age,
   and the directory descriptor bridge (/proc/self/fd on Linux, /dev/fd on macOS)
   with doctor.

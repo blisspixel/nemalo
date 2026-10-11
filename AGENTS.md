@@ -125,7 +125,10 @@ Preserve stateless offline reads, exact-byte/extractor-bound references, explici
 unsupported units, no silent continuation skips, and no inferred consumption.
 The default is `epub-text/2` (decision 0011). Keep earlier representations
 selectable and their continuations valid; changed rules need a new extractor ID.
-Derive plain text from the structured extractor rather than adding a parser. Test located gaps and range
+Derive plain text from the structured extractor rather than adding a parser.
+MP3 frame indexing is `internal/audio`, exposed as `mpeg-audio/1` (decision 0015).
+Keep probed and declared timing separate and never decode in the core path.
+Re-validate range or preroll changes bit-exactly against a reference decoder. Test located gaps and range
 coverage separately from source bytes, rendering, safety, and semantic completeness.
 
 Test behavior and failure recovery, not just execution. Use synthetic fixtures;

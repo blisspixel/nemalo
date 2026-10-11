@@ -5,8 +5,9 @@ Implemented EPUB access, 2026-10-08. Tracks
 [issue 2](https://github.com/blisspixel/nemalo/issues/2); full cross-format/caller
 acceptance remains open. CLI/JSON and TUI use `internal/app.Service.Content` and
 `internal/content`; the read-only MCP `content_*` tools call the same service
-([decision 0014](decisions/0014-read-only-mcp-server.md)). There is no PDF
-extractor, audio-range service, or Kilo adapter yet. This work does not bypass production import/publication gates.
+([decision 0014](decisions/0014-read-only-mcp-server.md)). MP3 tracks have a
+frame index and decodable ranges (`mpeg-audio/1`, below). There is no PDF
+extractor, multi-file recording manifest, or Kilo adapter yet. This work does not bypass production import/publication gates.
 
 The default representation is `epub-text/2`
 ([decision 0011](decisions/0011-default-text-with-located-gaps.md)): plain text
@@ -130,6 +131,31 @@ The representation hash covers units, text, and gap descriptors, so a gap
 change invalidates earlier references. On six illustrated Project Gutenberg
 EPUBs from issue 5, version 1 read 28 of 54 units and version 2 read all 54,
 locating 84 omissions.
+
+## MP3 tracks: `mpeg-audio/1`
+
+```sh
+nemalo content units LIBRARY --root LIBRARY --asset sha256:HASH --representation mpeg-audio/1 --json
+nemalo content read LIBRARY --root LIBRARY --asset sha256:HASH --representation mpeg-audio/1 --sample 441000 --max-bytes 65536 --json
+```
+
+`units` returns one unit, the track: format, sample rate, channels, indexed
+frames, encoded samples and duration from frame headers, and, kept separate,
+what tags declare (info-frame counts, encoder delay and padding, ID3 title,
+`TLEN`, and `CHAP` chapters in milliseconds). Tag regions and unindexed byte
+regions are listed; nothing is skipped silently. Nothing is decoded.
+
+`read` returns whole frames from the frame containing encoded sample N, as
+base64 file bytes, with `audio_range` and a locator in `encoded_samples`
+(per channel, zero-based, half-open) and a continuation to the next frame. The
+bytes start with preroll frames so a Layer III decoder has its bit reservoir and
+history; discard their output. A range never spans an unindexed region. The
+byte and sample bounds also let a local player read the file directly. With
+preroll, ranges from synthesized and LibriVox files decoded bit-exactly against
+a whole-file FFmpeg decode. See
+[decision 0015](decisions/0015-mpeg-audio-frame-index.md) for the preroll rule,
+bounds, and evidence. One file is one track: recording identity, track order,
+and completeness across files are not established.
 
 ## Bounds and failures
 

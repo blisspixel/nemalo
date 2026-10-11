@@ -117,7 +117,7 @@ including JSON escaping and maximum continuation offset before issuance.
 | Per-range coverage | Partial-target disclosure, bounded parts, terminal zero-width gaps, raw-markup delivery distinguished from text omissions |
 | CLI/TUI | Negotiation/source commands; explicit-root staging, unit selection, repeat, retained failed continuation, session switching |
 | PDF/OCR and paper citations | Milestone 7; physical page index versus printed label, evidence regions, OCR confidence/gaps, citations/version provenance |
-| Audio | Milestone 8; ordered recording/track identity, declared versus decoded timing, actual range boundaries and source-bound related text |
+| Audio | Single MP3 tracks: probed versus declared timing, ID3 chapters, and bit-exact decodable frame ranges ([decision 0015](decisions/0015-mpeg-audio-frame-index.md)). Milestone 8: ordered recording/track identity across files, decoded timing, and source-bound related text |
 | MCP and external caller | Read-only MCP `content_*` tools return the same results over stdio ([decision 0014](decisions/0014-read-only-mcp-server.md)); a registered external caller's transport truncation, restart/acknowledgement, and voluntary switching still need independent validation |
 
 Neither issue is closed by EPUB delivery alone. No external caller code, paper
