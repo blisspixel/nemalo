@@ -146,6 +146,10 @@ func (m *model) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 			if msg.err == nil {
 				m.offset, m.total = value.Offset, value.Total
 			}
+		case library.ManagedPage:
+			if msg.err == nil {
+				m.offset, m.total = value.Offset, value.Total
+			}
 		case library.Snapshot:
 			if msg.err == nil {
 				m.seedLibraryForms(value.Output, value.Catalog.RootHint)
@@ -187,6 +191,8 @@ func (m *model) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 			data = []byte(present.Snapshot(value))
 		case library.Page:
 			data = []byte(present.Holdings(value))
+		case library.ManagedPage:
+			data = []byte(present.ManagedHoldings(value))
 		case library.Audit:
 			data = []byte(present.Audit(value))
 		case library.ImportResult:

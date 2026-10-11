@@ -149,3 +149,29 @@ func Rescan(r library.RescanResult) string {
 	}
 	return b.String()
 }
+
+// ManagedHoldings lists recorded holdings. Status and titles are journal facts;
+// library audit rechecks the stored bytes.
+func ManagedHoldings(p library.ManagedPage) string {
+	var b strings.Builder
+	fmt.Fprintf(&b, "Library: %q\nMatching holdings: %d; offset: %d\n", p.LibraryID, p.Total, p.Offset)
+	for _, h := range p.Holdings {
+		title := h.Path
+		if len(h.Titles) > 0 {
+			title = h.Titles[0]
+		}
+		fmt.Fprintf(&b, "\n%q\n  %s | %s %s | %d bytes | languages %q\n  ID: %q\n", title, h.Format, h.Status, h.Reason, h.Bytes, h.Languages, h.ID)
+		for _, id := range h.Identities {
+			fmt.Fprintf(&b, "  Identity: %s %q\n", id.Role, id.ID)
+		}
+		for _, src := range h.Sources {
+			if src.SourceID != "" {
+				fmt.Fprintf(&b, "  Source: %q %q\n", src.SourceID, src.SourceFile)
+			} else {
+				fmt.Fprintf(&b, "  Source: %q\n", src.Path)
+			}
+		}
+	}
+	b.WriteString("Recorded journal facts; run library audit to recheck stored bytes.\n")
+	return b.String()
+}

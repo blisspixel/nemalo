@@ -58,7 +58,9 @@ item's other files for a new, deliberate review. See
 | Escape | Back; cancel active work |
 | Ctrl+C | Quit |
 
-Edited queries require Enter before paging. Holdings start with EPUB filenames;
+Holdings accept a snapshot catalog file or an initialized library directory; a
+library lists managed holdings, and `r` stages Read with that directory as both
+catalog and root. Edited queries require Enter before paging. Holdings start with EPUB filenames;
 filename filtering does not validate content. Snapshot success fills empty
 holdings/audit forms but does not automatically open or audit anything.
 

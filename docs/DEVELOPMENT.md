@@ -209,6 +209,7 @@ nemalo library import /path/to/library /path/to/book.epub
 nemalo library import /path/to/library /path/to/book.epub --apply
 nemalo library import /path/to/library /path/to/intake --apply --scan
 nemalo library audit /path/to/library
+nemalo library list /path/to/library --query "verne" --status checked
 nemalo content read /path/to/library --root /path/to/library --asset sha256:HASH
 ```
 
@@ -230,6 +231,9 @@ new intent is written. The existing bytes stay in place.
 Stored files live under `assets/sha256/` beside `.nemalo`. Operations and
 holdings journals are separate from the initialization journal. A trailing
 import intent resumes only for the same source. Corrupt journals are retained.
+`library list` on the library directory lists current holdings in import order,
+with a literal `--query` over titles, languages, identifiers, paths, and source
+IDs, and `--format` and `--status checked|review` filters. It reads journals only.
 `library audit` on the library directory reports missing, changed, and review
 holdings and does not repair them. Snapshot audit still requires `--root`.
 An EPUB package identifier is recorded when it is an explicit ISBN, DOI, or

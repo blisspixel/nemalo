@@ -189,6 +189,10 @@ func TestContentThroughMCPMatchesTheService(t *testing.T) {
 	if !res.IsError || env["error"] == nil || env["data"].(map[string]any)["status"] != "invalid_request" || env["data"].(map[string]any)["text"] != nil {
 		t.Fatal("failure facts lost", env)
 	}
+	_, env = call(t, s, "library_list", map[string]any{"catalog": root, "status": "review"})
+	if env["data"].(map[string]any)["total_holdings"] != float64(1) {
+		t.Fatal("managed holdings through MCP", env)
+	}
 	_, env = call(t, s, "library_status", map[string]any{"library": root})
 	if env["data"].(map[string]any)["status"] != "initialized" {
 		t.Fatal(env)

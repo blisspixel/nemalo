@@ -79,3 +79,34 @@ func TestLibraryRescanCommand(t *testing.T) {
 		}
 	}
 }
+
+func TestLibraryListManagedHoldings(t *testing.T) {
+	root, state := t.TempDir(), t.TempDir()
+	s := app.Service{Scanner: fakeScanner("no_detections_reported")}
+	run := func(args ...string) (int, string) {
+		var out, errOut bytes.Buffer
+		code := Execute(context.Background(), args, &out, &errOut, s, func(string) string { return "" }, func() (config.Paths, error) {
+			return config.Paths{Config: filepath.Join(state, "none"), State: state}, nil
+		}, nil)
+		return code, out.String() + errOut.String()
+	}
+	run("library", "init", root)
+	run("library", "import", root, epubFile(t, t.TempDir()), "--apply", "--scan")
+	code, out := run("library", "list", root, "--status", "checked")
+	if code != 0 || !strings.Contains(out, "Matching holdings: 1") || !strings.Contains(out, `"Rescan"`) {
+		t.Fatal(code, out)
+	}
+	code, out = run("library", "list", root, "--status", "review", "--json")
+	if code != 0 || !strings.Contains(out, `"total_holdings":0`) {
+		t.Fatal(code, out)
+	}
+	catalog := filepath.Join(t.TempDir(), "catalog.json")
+	if code, out := run("library", "snapshot", t.TempDir(), "--output", catalog); code != 0 {
+		t.Fatal(out)
+	}
+	for _, args := range [][]string{{"library", "list", catalog, "--status", "checked"}, {"library", "list", root, "--status", "pending"}} {
+		if code, _ := run(args...); code == 0 {
+			t.Fatal("invalid status filter accepted", args)
+		}
+	}
+}

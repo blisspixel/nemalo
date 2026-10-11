@@ -187,6 +187,11 @@ func (s Service) HoldingsFormat(file, query, format string, limit, offset int) (
 	return library.FindFormat(c, query, format, limit, offset)
 }
 
+// ManagedHoldings lists an initialized library's current holdings.
+func (s Service) ManagedHoldings(ctx context.Context, directory, query, format, status string, limit, offset int) (library.ManagedPage, error) {
+	return library.FindManaged(ctx, directory, query, format, status, limit, offset)
+}
+
 func (s Service) Audit(ctx context.Context, file, root string, limits inventory.Limits) (library.Audit, error) {
 	c, err := library.Load(file)
 	if err != nil {

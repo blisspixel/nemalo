@@ -12,6 +12,7 @@ import (
 	tea "charm.land/bubbletea/v2"
 	"github.com/blisspixel/nemalo/internal/app"
 	"github.com/blisspixel/nemalo/internal/inventory"
+	"github.com/blisspixel/nemalo/internal/library"
 )
 
 func TestSourceAccessStagesReadsRetriesAndRetainsFailedContinuation(t *testing.T) {
@@ -162,5 +163,31 @@ func TestHoldingsStageMP3ForAudioIndexAndRanges(t *testing.T) {
 	m.Update(cmd())
 	if !strings.Contains(m.report, "Frames 0..") || m.reader.next == "" || strings.Contains(m.report, "\xff\xfb") {
 		t.Fatal("audio range missing or bytes printed", m.status, m.report)
+	}
+}
+
+func TestHoldingsListsAManagedLibraryAndStagesItsRoot(t *testing.T) {
+	root := t.TempDir()
+	if _, err := library.Initialize(context.Background(), root); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := library.Import(context.Background(), library.ImportRequest{Library: root, Source: writeStateEPUB(t, t.TempDir()), Apply: true}); err != nil {
+		t.Fatal(err)
+	}
+	m := newModel(context.Background(), app.New())
+	m.switchMode("holdings")
+	m.input.SetValue(root)
+	m.Update(m.start(true)())
+	if len(m.entries) != 1 || !m.entries[0].managed || !strings.Contains(m.report, "Matching holdings: 1") {
+		t.Fatal("managed holdings not listed", m.status, m.report)
+	}
+	m.Update(key(tea.KeyF6))
+	m.Update(tea.KeyPressMsg{Code: 'r', Text: "r"})
+	if m.mode != "read" || m.secondary.Value() != root || m.input.Value() != root {
+		t.Fatal("managed root not staged", m.input.Value(), m.secondary.Value())
+	}
+	m.Update(m.start(true)())
+	if len(m.entries) != 1 {
+		t.Fatal("managed holding not readable", m.status, m.report)
 	}
 }

@@ -15,6 +15,9 @@ import (
 type entry struct {
 	title, summary, detail, sourceID string
 	audio                            bool
+	// managed marks a holding of a library directory, which is read with the
+	// same directory as catalog and root.
+	managed bool
 }
 
 // Browsing is a presentation of shared service results, not another catalog.
@@ -71,6 +74,22 @@ func (m *model) populate(data any) {
 				sourceID: a.ID,
 				audio:    len(a.Locations) > 0 && strings.HasSuffix(strings.ToLower(a.Locations[0].Path), ".mp3"),
 			})
+		}
+	case library.ManagedPage:
+		for _, h := range p.Holdings {
+			title := h.Path
+			if len(h.Titles) > 0 {
+				title = h.Titles[0]
+			}
+			detail := fmt.Sprintf("%q\n\nFormat: %s\nStatus: %s (%s)\nLanguages: %q\nSize: %s (%d bytes)\nStored at: %q\n\n", title, h.Format, h.Status, h.Reason, h.Languages, byteSize(h.Bytes), h.Bytes, h.Path)
+			for _, id := range h.Identities {
+				detail += fmt.Sprintf("Identity: %s %q\n", id.Role, id.ID)
+			}
+			for _, src := range h.Sources {
+				detail += fmt.Sprintf("Source: %q %q %q\n", src.Path, src.SourceID, src.SourceFile)
+			}
+			detail += fmt.Sprintf("\nID: %q\n\nRecorded journal facts. Audit rechecks stored bytes.\nr stages Read for this holding.\n", h.ID)
+			m.entries = append(m.entries, entry{title: fmt.Sprintf("%q", title), summary: fmt.Sprintf("%s | %s | %s | %q", h.Format, h.Status, byteSize(h.Bytes), h.Languages), detail: detail, sourceID: h.ID, audio: h.Format == "mp3", managed: true})
 		}
 	case content.Result:
 		if p.Status == "units_available" && p.Audio != nil {
@@ -198,15 +217,20 @@ func (m *model) browserKey(key string) (bool, tea.Cmd) {
 		}
 	case "r":
 		if m.mode == "holdings" && len(m.entries) > 0 {
-			asset, catalog := m.entries[m.selected].sourceID, m.submittedInput
+			// Capture the selection first: switching modes clears the entries.
+			selected, catalog := m.entries[m.selected], m.submittedInput
 			representation := "epub-structure/1"
-			if m.entries[m.selected].audio {
+			if selected.audio {
 				representation = "mpeg-audio/1"
 			}
 			cmd := m.switchMode("read")
-			m.reader = readerState{asset: asset, representation: representation}
+			m.reader = readerState{asset: selected.sourceID, representation: representation}
 			m.input.SetValue(catalog)
 			m.secondary.SetValue("")
+			if selected.managed {
+				// The explicit library directory is both catalog and root.
+				m.secondary.SetValue(catalog)
+			}
 			m.setReport("")
 			m.populate(nil)
 			m.status = "Selected asset. Enter an explicit root, then Enter lists source units."

@@ -85,11 +85,17 @@ func New(service app.Service, opts Options) (*mcp.Server, error) {
 			}
 			return service.LibraryStatus(ctx, dir)
 		})
-	add(&r, "library_list", "List holdings from a portable catalog snapshot file: paths, hashes, sizes, and recorded EPUB metadata.", false,
-		func(_ context.Context, in listInput) (library.Page, error) {
+	add(&r, "library_list", "List holdings: an initialized library directory gives managed holdings with status and provenance; a catalog snapshot file gives paths, hashes, sizes, and recorded EPUB metadata.", false,
+		func(ctx context.Context, in listInput) (any, error) {
 			catalog, err := scopes.path(in.Catalog)
 			if err != nil {
-				return library.Page{}, err
+				return nil, err
+			}
+			if info, statErr := os.Lstat(catalog); statErr == nil && info.IsDir() {
+				return service.ManagedHoldings(ctx, catalog, in.Query, defaultString(in.Format, "all"), defaultString(in.Status, "all"), defaultInt(in.Limit, 10), in.Offset)
+			}
+			if in.Status != "" && in.Status != "all" {
+				return nil, errors.New("status applies to a managed library directory")
 			}
 			return service.HoldingsFormat(catalog, in.Query, defaultString(in.Format, "all"), defaultInt(in.Limit, 10), in.Offset)
 		})
@@ -234,7 +240,8 @@ type libraryInput struct {
 }
 
 type listInput struct {
-	Catalog string `json:"catalog" jsonschema:"absolute path of a catalog snapshot file inside a configured scope"`
+	Catalog string `json:"catalog" jsonschema:"an initialized library directory, or a catalog snapshot file, inside a configured scope"`
+	Status  string `json:"status,omitempty" jsonschema:"all (default), checked, or review; managed library only"`
 	Query   string `json:"query,omitempty" jsonschema:"literal text matched against paths, hashes, and recorded metadata"`
 	Format  string `json:"format,omitempty" jsonschema:"all (default), epub, pdf, or mp3; an exact filename suffix filter"`
 	Limit   int    `json:"limit,omitempty" jsonschema:"page size 1-100, default 10"`

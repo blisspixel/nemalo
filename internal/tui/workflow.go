@@ -2,6 +2,7 @@ package tui
 
 import (
 	"context"
+	"os"
 
 	tea "charm.land/bubbletea/v2"
 	"github.com/blisspixel/nemalo/internal/assessment"
@@ -153,6 +154,11 @@ func (m *model) start(reset bool) tea.Cmd {
 			data, err := m.service.Snapshot(ctx, value, second, limits, assess)
 			return result{id, data, err}
 		case "holdings":
+			// A library directory lists managed holdings; a file is a snapshot.
+			if info, statErr := os.Lstat(value); statErr == nil && info.IsDir() && info.Mode()&os.ModeSymlink == 0 {
+				data, err := m.service.ManagedHoldings(ctx, value, second, format, "all", 50, offset)
+				return result{id, data, err}
+			}
 			data, err := m.service.HoldingsFormat(value, second, format, 50, offset)
 			return result{id, data, err}
 		case "audit":

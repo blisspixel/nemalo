@@ -44,8 +44,8 @@ Usage: nemalo <command> [options]
   check FILE          Bounded file health assessment, without rendering content
   library snapshot DIRECTORY --output FILE
                       Save a new portable byte-identity catalog outside the root
-  library list CATALOG [--query TEXT]
-                      Browse local file holdings and optional EPUB metadata
+  library list CATALOG|LIBRARY [--query TEXT]
+                      Browse a snapshot's files, or a managed library's holdings
   library import LIBRARY SOURCE [--apply] [--scan]
                       Assess one EPUB, PDF, MP3, or intake packet; --apply stores it
   library rescan LIBRARY [--apply]
@@ -88,7 +88,8 @@ Inspect options: --hashes, --max-entries 10000, --max-depth 32,
                  --max-file-bytes 268435456, --max-total-bytes 1073741824
 Check options: --scan, --expected-bytes N, --expected-sha256 HASH
 Library snapshot options: --output FILE, --assess (local health/EPUB metadata)
-Library list options: --query TEXT, --format all|epub|pdf|mp3, --limit 10, --offset 0
+Library list options: --query TEXT, --format all|epub|pdf|mp3, --limit 10, --offset 0,
+                      --status all|checked|review (managed library only)
 Library import options: --apply, --scan
 Library rescan options: --apply (without it, scans and reports but writes nothing)
 Library audit options: --root DIRECTORY for a snapshot catalog
@@ -170,6 +171,7 @@ func Execute(ctx context.Context, args []string, out, errOut io.Writer, service 
 	sourceFile := flags.String("file", "", "exact selected source filename")
 	query := flags.String("query", "", "literal holdings metadata filter")
 	format := flags.String("format", "all", "exact holdings filename suffix filter")
+	holdingStatus := flags.String("status", "all", "managed holdings status filter")
 	auditRoot := flags.String("root", "", "explicit audit root")
 	assess := flags.Bool("assess", false, "include local health facts without antivirus")
 	apply := flags.Bool("apply", false, "store the assessed import")
@@ -392,6 +394,17 @@ func Execute(ctx context.Context, args []string, out, errOut io.Writer, service 
 			if !library.ValidFormatFilter(*format) {
 				return write(nil, errors.New("format filter must be all, epub, pdf, or mp3"), 2)
 			}
+			// A library directory lists managed holdings; a file is a snapshot.
+			if info, statErr := os.Lstat(flags.Arg(0)); statErr == nil && info.IsDir() && info.Mode()&os.ModeSymlink == 0 {
+				r, err := service.ManagedHoldings(ctx, flags.Arg(0), *query, *format, *holdingStatus, *limit, *offset)
+				if err != nil {
+					return write(r, err, 1)
+				}
+				return write(r, nil, 0)
+			}
+			if *holdingStatus != "all" {
+				return write(nil, errors.New("--status applies to a managed library directory, not a snapshot catalog"), 2)
+			}
 			r, err := service.HoldingsFormat(flags.Arg(0), *query, *format, *limit, *offset)
 			if err != nil {
 				return write(r, err, 1)
@@ -562,7 +575,7 @@ func flagApplies(command, action, name string) bool {
 		case "snapshot":
 			return name == "output" || name == "assess" || strings.HasPrefix(name, "max-")
 		case "list":
-			return name == "query" || name == "format" || name == "limit" || name == "offset"
+			return name == "query" || name == "format" || name == "limit" || name == "offset" || name == "status"
 		case "import":
 			return name == "apply" || name == "scan"
 		case "rescan":
@@ -631,6 +644,9 @@ func printData(out io.Writer, data any) error {
 		return err
 	case library.Page:
 		_, err := io.WriteString(out, present.Holdings(value))
+		return err
+	case library.ManagedPage:
+		_, err := io.WriteString(out, present.ManagedHoldings(value))
 		return err
 	case library.Audit:
 		_, err := io.WriteString(out, present.Audit(value))

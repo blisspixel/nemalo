@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- List and search a managed library: `library list LIBRARY` with `--query`,
+  `--format`, and `--status checked|review`, in the TUI Holdings operation, and
+  through the MCP `library_list` tool.
+
 ## 0.1.0-alpha.4
 
 Fourth native prerelease. This remains an early library, not 1.0.
