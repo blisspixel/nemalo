@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+- PDF pages and text: `--representation pdf-text/1` reads one unit per physical
+  page with its printed page label, text in content-stream order, and located
+  gaps for images, font codes without a Unicode mapping, and pages without a text
+  layer, in CLI, JSON, TUI Read, and MCP. `check` walks the page tree and records
+  page count and labels; a file with only PDF header and end markers now needs
+  review. Uses `github.com/digitorus/pdf` for object parsing, behind budgets.
+- `content locate --text` (MCP `content_locate`) finds exact quotations in EPUB
+  or PDF text and returns page or unit, offsets, and a cursor that reads each back.
 - Recording manifests: `library recordings LIBRARY [--source archive:ITEM]`,
   the MCP `library_recordings` tool, and `t` in TUI Holdings list each held
   recording's tracks in declared order with exact assets, missing positions, and

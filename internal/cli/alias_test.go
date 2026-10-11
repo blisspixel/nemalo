@@ -4,6 +4,8 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/blisspixel/nemalo/internal/pdftext/pdftest"
 )
 
 func TestFileCommandsPreserveDirectoryAliases(t *testing.T) {
@@ -13,7 +15,7 @@ func TestFileCommandsPreserveDirectoryAliases(t *testing.T) {
 	if err := os.Mkdir(dir, 0700); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(dir, "book.pdf"), []byte("%PDF-1.7\n%%EOF"), 0600); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, "book.pdf"), pdftest.Pages("", "text"), 0600); err != nil {
 		t.Fatal(err)
 	}
 	if err := os.Symlink(dir, alias); err != nil {

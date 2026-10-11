@@ -8,8 +8,9 @@ needed for the application, tests, or first-party tooling.
 ## Current operations
 
 `help`, `version`, `doctor`, `search`, `evaluate`, `acquire`, `inspect`, `check`, `library snapshot`,
-`library list`, `library audit`, `library import`, `library rescan`, `library init`, `library status`, `content units`,
-`content read`, `content source`, `content resource`, `content capabilities`,
+`library list`, `library audit`, `library import`, `library ingest`, `library rescan`, `library recordings`,
+`library open`, `library export`, `library init`, `library status`, `content units`,
+`content read`, `content locate`, `content source`, `content resource`, `content capabilities`,
 `mcp serve`, and `tui` are implemented.
 Search defaults to Open Library work metadata; `--source archive` selects Internet
 Archive text/audio item search. Neither search resolves download permissions.
@@ -220,7 +221,16 @@ nemalo library list /path/to/library --query "verne" --status checked
 nemalo library open /path/to/library --asset sha256:HASH
 nemalo library export /path/to/library --asset sha256:HASH --output /path/to/folder
 nemalo content read /path/to/library --root /path/to/library --asset sha256:HASH
+nemalo content read /path/to/library --root /path/to/library --asset sha256:HASH \
+  --representation pdf-text/1 --unit 3
+nemalo content locate /path/to/library --root /path/to/library --asset sha256:HASH \
+  --representation pdf-text/1 --text "exact quotation"
 ```
+
+A PDF reads as `pdf-text/1`: one unit per physical page, with the printed page
+label separately, text in content-stream order, and located gaps; `check`
+records its page count and labels and keeps an unreadable page tree in review
+([decision 0021](decisions/0021-pdf-pages-and-text.md)).
 
 Import requires an initialized library. The source is an EPUB, PDF, or MP3 file
 outside that library, or a completed intake directory with exactly one

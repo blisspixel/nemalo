@@ -135,6 +135,8 @@ unsupported units, no silent continuation skips, and no inferred consumption.
 The default is `epub-text/2` (decision 0011). Keep earlier representations
 selectable and their continuations valid; changed rules need a new extractor ID.
 Derive plain text from the structured extractor rather than adding a parser.
+PDF parsing is `internal/pdftext`, exposed as `pdf-text/1` (decision 0021): use the
+object parser only through its budgets and guards; unmapped codes are gaps, never guesses.
 MP3 frame indexing is `internal/audio`, exposed as `mpeg-audio/1` (decision 0015).
 Keep probed and declared timing separate and never decode in the core path.
 Re-validate range or preroll changes bit-exactly against a reference decoder. Test located gaps and range

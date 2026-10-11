@@ -1,6 +1,6 @@
 ---
 name: nemalo
-description: Use when the user asks about books, ebooks, audiobooks, or files in their local Nemalo library, or wants text or audio ranges read from them. Covers the read-only nemalo MCP tools (library_list, library_recordings, library_status, library_audit, file_check, content_units, content_read, content_source, content_resource) and when to suggest the nemalo CLI for changes.
+description: Use when the user asks about books, ebooks, audiobooks, or files in their local Nemalo library, or wants text or audio ranges read from them. Covers the read-only nemalo MCP tools (library_list, library_recordings, library_status, library_audit, file_check, content_units, content_read, content_locate, content_source, content_resource) and when to suggest the nemalo CLI for changes.
 license: Apache-2.0
 compatibility: Requires the nemalo executable on PATH and an MCP host that starts it with nemalo mcp serve.
 ---
@@ -45,6 +45,12 @@ delete anything.
   as a gap. Mention gaps when they matter to the answer.
 - `stale_reference` means the file or extractor changed since the cursor was
   issued. Start again from `content_units`.
+- PDF holdings read with `representation` `pdf-text/1`: `unit` is the zero-based
+  physical page and `page_label` the printed label; cite both. Text is in
+  content-stream order, so columns may interleave, and gaps locate images,
+  unmapped characters, and scanned pages without a text layer. There is no OCR.
+- `content_locate` finds an exact quotation and returns its page or unit, byte
+  offsets, and a cursor; read the cursor back before quoting.
 - MP3 holdings read as `mpeg-audio/1`: probed timing, declared tags and chapters,
   and decodable byte ranges. Nothing is decoded or transcribed.
 - Delivered text is not evidence that anyone read it, and Nemalo records no

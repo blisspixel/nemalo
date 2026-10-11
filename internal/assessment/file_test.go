@@ -12,6 +12,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/blisspixel/nemalo/internal/pdftext/pdftest"
 	"github.com/blisspixel/nemalo/internal/scanner"
 )
 
@@ -164,7 +165,7 @@ func TestReviewAndMalformedFiles(t *testing.T) {
 }
 
 func TestSnapshotScannerAndCleanup(t *testing.T) {
-	data := []byte("%PDF-1.7\n%%EOF")
+	data := pdftest.Pages("", "text")
 	p := write(t, "test.pdf", data)
 	var snapshot string
 	av := scanFunc(func(ctx context.Context, name string) scanner.Result {
@@ -292,5 +293,34 @@ func TestReferenceBudgetsAndCancellation(t *testing.T) {
 	}
 	if _, _, err := htmlFactsContext(ctx, []byte("<body>Text</body>")); !errors.Is(err, context.Canceled) {
 		t.Fatal(err)
+	}
+}
+
+// Regression: a file with only PDF header and end markers passed the limited
+// checks. The page tree is now walked, and one that cannot be is a finding.
+func TestPDFPageTreeIsWalked(t *testing.T) {
+	ctx := context.Background()
+	markers := []byte("%PDF-1.7\n%%EOF")
+	c, err := Inspect(bytes.NewReader(markers), int64(len(markers)), "pdf")
+	if err != nil || len(c.Warnings) != 1 || c.Warnings[0] != "pdf_page_tree_unreadable" || c.PDF != nil {
+		t.Fatal("marker-only PDF passed", c, err)
+	}
+	real := pdftest.Pages("0 << /S /r >>", "one", "two", "three")
+	c, err = InspectContext(ctx, bytes.NewReader(real), int64(len(real)), "pdf")
+	if err != nil || len(c.Warnings) != 0 || c.PDF == nil || c.PDF.Pages != 3 || !c.PDF.LabelsDeclared || c.PDF.FirstLabel != "i" || c.PDF.LastLabel != "iii" {
+		t.Fatal("page tree facts", c, err)
+	}
+}
+
+// A page tree walk that skipped nodes keeps the file in review.
+func TestPartialPDFPageTreeIsAWarning(t *testing.T) {
+	tree := pdftest.Build(
+		"<< /Type /Catalog /Pages 2 0 R >>",
+		"<< /Type /Pages /Kids [3 0 R 3 0 R] /Count 2 >>",
+		"<< /Type /Page /Parent 2 0 R >>",
+	)
+	c, err := Inspect(bytes.NewReader(tree), int64(len(tree)), "pdf")
+	if err != nil || c.PDF == nil || !c.PDF.Partial || len(c.Warnings) != 1 || c.Warnings[0] != "pdf_page_tree_partial" {
+		t.Fatal(c, err)
 	}
 }

@@ -7,6 +7,7 @@ require (
 	charm.land/bubbletea/v2 v2.0.10
 	charm.land/lipgloss/v2 v2.0.5
 	github.com/charmbracelet/colorprofile v0.4.3
+	github.com/digitorus/pdf v0.3.0
 	github.com/modelcontextprotocol/go-sdk v1.8.0
 	golang.org/x/net v0.60.0
 	golang.org/x/sys v0.48.0

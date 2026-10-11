@@ -29,6 +29,8 @@ type Gap struct {
 	Reason  string    `json:"reason"`
 	Offset  int       `json:"offset"`
 	Image   *GapImage `json:"image,omitempty"`
+	// Count is how many omissions of this kind one PDF gap stands for.
+	Count int `json:"count,omitempty"`
 }
 
 // GapImage keeps source alt text exactly. A null Alt means the source declared
@@ -72,6 +74,10 @@ func getTextV2(ctx context.Context, req Request, result Result) (Result, error) 
 	data, err := resolveSource(ctx, req, &result)
 	if err != nil {
 		return result, err
+	}
+	if bytes.HasPrefix(data, []byte("%PDF-")) {
+		result.Status = "unsupported_extraction"
+		return result, errors.New("this asset is a PDF; request representation pdf-text/1")
 	}
 	if !bytes.HasPrefix(data, []byte("PK\x03\x04")) {
 		result.Status = "unsupported_extraction"
@@ -125,6 +131,9 @@ func getTextV2(ctx context.Context, req Request, result Result) (Result, error) 
 	if req.UnitsOnly {
 		result.Status = "units_available"
 		return finishStructured(ctx, result)
+	}
+	if req.Find != "" {
+		return locate(ctx, req, result, units, texts)
 	}
 	if req.Unit >= len(texts) || req.Offset > len(texts[req.Unit]) || (req.Offset < len(texts[req.Unit]) && !utf8.RuneStart(texts[req.Unit][req.Offset])) {
 		result.Status = "invalid_request"

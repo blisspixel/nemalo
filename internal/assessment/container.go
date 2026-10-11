@@ -19,6 +19,7 @@ import (
 	"unicode"
 	"unicode/utf8"
 
+	"github.com/blisspixel/nemalo/internal/pdftext"
 	"golang.org/x/net/html"
 )
 
@@ -34,6 +35,8 @@ type Checks struct {
 	Warnings           []string   `json:"warnings,omitempty"`
 	AccessRestrictions []string   `json:"access_restrictions,omitempty"`
 	EPUB               *EPUBFacts `json:"epub,omitempty"`
+	// PDF holds the page tree facts of a PDF whose tree could be walked.
+	PDF *pdftext.Facts `json:"pdf,omitempty"`
 }
 
 type EPUBFacts struct {
@@ -136,6 +139,28 @@ func inspectContext(ctx context.Context, r io.ReaderAt, size int64, format strin
 			return c, errors.New("PDF end marker missing")
 		}
 		c.Signature = "pdf_header_and_end_marker"
+		// Walk the page tree and labels without reading page content. A tree
+		// that cannot be walked is a warning that keeps the file in review.
+		data := make([]byte, size)
+		if _, err := r.ReadAt(data, 0); err != nil && !errors.Is(err, io.EOF) {
+			return c, err
+		}
+		facts, err := pdftext.Inspect(ctx, data, pdftext.Defaults())
+		switch {
+		case ctx.Err() != nil:
+			return c, ctx.Err()
+		case errors.Is(err, pdftext.ErrEncrypted):
+			c.Warnings = append(c.Warnings, "pdf_encrypted_page_tree_not_read")
+		case errors.Is(err, pdftext.ErrBudget):
+			c.Warnings = append(c.Warnings, "pdf_page_tree_over_budget")
+		case err != nil:
+			c.Warnings = append(c.Warnings, "pdf_page_tree_unreadable")
+		default:
+			c.PDF = &facts
+			if facts.Partial {
+				c.Warnings = append(c.Warnings, "pdf_page_tree_partial")
+			}
+		}
 	case "mp3":
 		if !bytes.HasPrefix(header, []byte("ID3")) && !(len(header) >= 2 && header[0] == 0xff && header[1]&0xe0 == 0xe0) {
 			return c, errors.New("MP3 candidate signature missing")

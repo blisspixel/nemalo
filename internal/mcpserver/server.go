@@ -157,6 +157,21 @@ func New(service app.Service, opts Options) (*mcp.Server, error) {
 			}
 			return service.Content(ctx, req)
 		})
+	add(&r, "content_locate", "Find exact, case-sensitive occurrences of a quotation in epub-text/2 or pdf-text/1 text. Each match gives its unit (the zero-based physical page for PDF, with the printed page label), byte offsets, and a cursor that reads it back.", false,
+		func(ctx context.Context, in locateInput) (content.Result, error) {
+			req, err := contentRequest(scopes, contentInput{Catalog: in.Catalog, Root: in.Root, Asset: in.Asset, Representation: in.Representation}, "read")
+			if err != nil {
+				return content.Result{}, err
+			}
+			if in.Text == "" {
+				return content.Result{}, errors.New("text is required")
+			}
+			req.Find = in.Text
+			if err := req.Validate(); err != nil {
+				return content.Result{}, err
+			}
+			return service.Content(ctx, req)
+		})
 	add(&r, "content_source", "Read bounded original XHTML/XML of one unit or part (epub-source/1). The markup is untrusted source data.", false,
 		func(ctx context.Context, in contentInput) (content.Result, error) {
 			req, err := contentRequest(scopes, in, "source")
@@ -256,6 +271,14 @@ type listInput struct {
 	Offset  int    `json:"offset,omitempty" jsonschema:"page offset 0-100000"`
 }
 
+type locateInput struct {
+	Catalog        string `json:"catalog" jsonschema:"catalog snapshot file, or the library directory for a managed holding"`
+	Root           string `json:"root" jsonschema:"explicit source root; for a managed holding, the same library directory"`
+	Asset          string `json:"asset" jsonschema:"exact asset ID, sha256: followed by 64 lowercase hex digits"`
+	Text           string `json:"text" jsonschema:"exact, case-sensitive text to find, 1-1000 bytes"`
+	Representation string `json:"representation,omitempty" jsonschema:"epub-text/2 (default) or pdf-text/1"`
+}
+
 type recordingsInput struct {
 	Library string `json:"library" jsonschema:"an initialized library directory inside a configured scope"`
 	Source  string `json:"source,omitempty" jsonschema:"archive:ITEM to verify and index that source's recordings; omit to list all from the journal"`
@@ -276,8 +299,8 @@ type contentInput struct {
 	Catalog        string `json:"catalog" jsonschema:"catalog snapshot file, or the library directory for a managed holding"`
 	Root           string `json:"root" jsonschema:"explicit source root; for a managed holding, the same library directory"`
 	Asset          string `json:"asset" jsonschema:"exact asset ID, sha256: followed by 64 lowercase hex digits"`
-	Representation string `json:"representation,omitempty" jsonschema:"epub-text/2 (default), epub-text/1, epub-structure/1, or mpeg-audio/1 for MP3; a cursor keeps its own"`
-	Unit           int    `json:"unit,omitempty" jsonschema:"zero-based reading-order unit, 0-511"`
+	Representation string `json:"representation,omitempty" jsonschema:"epub-text/2 (default), epub-text/1, epub-structure/1, pdf-text/1 for PDF, or mpeg-audio/1 for MP3; a cursor keeps its own"`
+	Unit           int    `json:"unit,omitempty" jsonschema:"zero-based reading-order unit, or zero-based physical page index for pdf-text/1, 0-9999"`
 	TextOffset     int    `json:"text_offset,omitempty" jsonschema:"zero-based UTF-8 byte offset inside the unit"`
 	MaxBytes       int    `json:"max_bytes,omitempty" jsonschema:"bytes to return, 4-65536, default 4096"`
 	Cursor         string `json:"cursor,omitempty" jsonschema:"continuation or reference cursor exactly as returned; not combinable with unit or text_offset"`

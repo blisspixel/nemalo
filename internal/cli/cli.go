@@ -74,6 +74,8 @@ Usage: nemalo <command> [options]
                       List supported EPUB reading-order documents, offline
   content read CATALOG --root DIRECTORY --asset sha256:HASH
                       Retrieve bounded source text with exact continuation, offline
+  content locate CATALOG --root DIRECTORY --asset sha256:HASH --text TEXT
+                      Find exact quotations by unit or PDF page, with offsets
   content source CATALOG --root DIRECTORY --asset sha256:HASH
                       Read bounded original EPUB XML, optionally --part ID
   content resource CATALOG --root DIRECTORY --asset sha256:HASH --cursor TOKEN
@@ -109,7 +111,7 @@ Library import options: --apply, --scan
 Library rescan options: --apply (without it, scans and reports but writes nothing)
 Library audit options: --root DIRECTORY for a snapshot catalog
 Content read options: --unit 0, --text-offset 0, --max-bytes 4096, --cursor TOKEN
-                     --representation epub-text/2|epub-text/1|epub-structure/1|mpeg-audio/1,
+                     --representation epub-text/2|epub-text/1|epub-structure/1|pdf-text/1|mpeg-audio/1,
                      --part ID, --sample N (mpeg-audio/1)
 The default epub-text/2 omits images, tables, mathematics, and media from the
 text and locates each omission as a gap. A continuation keeps the representation
@@ -198,6 +200,7 @@ func Execute(ctx context.Context, args []string, out, errOut io.Writer, service 
 	application := flags.String("app", "", "application to open a library copy with")
 	onDetection := flags.String("on-detection", "quarantine", "quarantine or delete a detected download")
 	recordingFormat := flags.String("recording", "", "declared recording format to acquire as a whole")
+	findText := flags.String("text", "", "exact text to locate")
 	resume := flags.Bool("resume", false, "continue an existing recording directory")
 	maxRecording := flags.Int64("max-recording-bytes", 4<<30, "declared total byte budget for a recording")
 	contentRequest := content.Request{SchemaVersion: 1}
@@ -343,8 +346,14 @@ func Execute(ctx context.Context, args []string, out, errOut io.Writer, service 
 		}
 		return guide(write(data, nil, 0), data.Antivirus, true)
 	case "content":
-		if flags.NArg() != 1 || (action != "units" && action != "read" && action != "source" && action != "resource") {
-			return write(nil, errors.New("use content units/read/source/resource CATALOG --root DIRECTORY --asset sha256:HASH"), 2)
+		if flags.NArg() != 1 || (action != "units" && action != "read" && action != "source" && action != "resource" && action != "locate") {
+			return write(nil, errors.New("use content units/read/locate/source/resource CATALOG --root DIRECTORY --asset sha256:HASH"), 2)
+		}
+		if action == "locate" {
+			if *findText == "" {
+				return write(nil, errors.New("use content locate CATALOG --root DIRECTORY --asset sha256:HASH --text TEXT"), 2)
+			}
+			contentRequest.Find = *findText
 		}
 		contentRequest.Catalog, contentRequest.Root, contentRequest.UnitsOnly = flags.Arg(0), *auditRoot, action == "units"
 		if action == "source" {
@@ -639,14 +648,20 @@ func flagApplies(command, action, name string) bool {
 		return true
 	}
 	if command == "content" {
-		if action != "units" && action != "read" && action != "source" && action != "resource" {
+		if action != "units" && action != "read" && action != "source" && action != "resource" && action != "locate" {
 			return false
 		}
 		if name == "root" || name == "asset" {
 			return true
 		}
 		if name == "representation" {
-			return action == "read" || action == "units"
+			return action == "read" || action == "units" || action == "locate"
+		}
+		if name == "text" {
+			return action == "locate"
+		}
+		if action == "locate" {
+			return false
 		}
 		if name == "max-bytes" || name == "cursor" {
 			return action != "units"

@@ -11,7 +11,7 @@ import (
 type readerState struct {
 	asset string
 	// representation is chosen when an asset is staged from holdings:
-	// mpeg-audio/1 for an MP3 location, otherwise epub-structure/1.
+	// mpeg-audio/1 for an MP3, pdf-text/1 for a PDF, otherwise epub-structure/1.
 	representation          string
 	next                    string
 	boundCatalog, boundRoot string
@@ -43,6 +43,9 @@ func (m *model) startRead(units bool, unit int, cursor string, repeat bool) tea.
 	if m.reader.representation == "mpeg-audio/1" {
 		// Whole frames plus decoder preroll need more than a text page.
 		req.Representation, req.MaxBytes = "mpeg-audio/1", 65536
+	}
+	if m.reader.representation == "pdf-text/1" {
+		req.Representation = "pdf-text/1"
 	}
 	if repeat {
 		req = m.reader.last

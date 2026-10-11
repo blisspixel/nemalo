@@ -21,7 +21,25 @@ func Content(r content.Result) string {
 		writeUnits(&b, r)
 	}
 	if r.Locator != nil {
-		fmt.Fprintf(&b, "Unit %d | bytes %d..%d (%s)\n", r.Locator.Unit, r.Locator.Start, r.Locator.End, offsetUnit(r.Locator))
+		if r.Representation == "pdf-text/1" {
+			fmt.Fprintf(&b, "Page index %d (zero-based) | printed label %q | bytes %d..%d (%s)\n", r.Locator.Unit, r.Locator.PageLabel, r.Locator.Start, r.Locator.End, offsetUnit(r.Locator))
+		} else {
+			fmt.Fprintf(&b, "Unit %d | bytes %d..%d (%s)\n", r.Locator.Unit, r.Locator.Start, r.Locator.End, offsetUnit(r.Locator))
+		}
+	}
+	if r.Status == "matches_found" || r.Status == "matches_truncated" || r.Status == "no_matches" {
+		fmt.Fprintf(&b, "Exact matches: %d", len(r.Matches))
+		if r.Status == "matches_truncated" {
+			b.WriteString(" (more exist; refine the text)")
+		}
+		b.WriteString("\n")
+		for _, m := range r.Matches {
+			where := fmt.Sprintf("unit %d", m.Unit)
+			if r.Representation == "pdf-text/1" {
+				where = fmt.Sprintf("page index %d, label %q", m.Unit, m.PageLabel)
+			}
+			fmt.Fprintf(&b, "  %s | bytes %d..%d | read with --cursor %s\n", where, m.Start, m.End, m.Cursor)
+		}
 	}
 	if a := r.Audio; a != nil {
 		fmt.Fprintf(&b, "Audio: %s, %d Hz, %d channel(s) %s, %s\n", a.Format, a.SampleRate, a.Channels, a.ChannelMode, a.Bitrate)
@@ -91,6 +109,13 @@ func offsetUnit(l *content.Locator) string {
 }
 
 func writeUnits(b *strings.Builder, r content.Result) {
+	if r.Representation == "pdf-text/1" {
+		fmt.Fprintf(b, "Pages: %d (index is zero-based and physical; label is the printed page label)\n", len(r.Units))
+		for _, u := range r.Units {
+			fmt.Fprintf(b, "  %4d  label %-10q  %-26s  %8d text bytes  %d gaps\n", u.Index, u.PageLabel, u.Extraction, u.TextBytes, u.KnownGaps)
+		}
+		return
+	}
 	fmt.Fprintf(b, "Reading-order units: %d (not necessarily chapters)\n", len(r.Units))
 	for _, u := range r.Units {
 		fmt.Fprintf(b, "  %3d  %-26s  %8d text bytes  %d gaps  linear %s  %q\n", u.Index, u.Extraction, u.TextBytes, u.KnownGaps, u.Linear, u.Member)
@@ -148,6 +173,8 @@ func gapLabel(element, reason string, image *content.GapImage) string {
 		return "[mathematics omitted]"
 	case reason == "hidden_content_not_rendered":
 		return "[hidden content omitted]"
+	case element == "no_text_layer":
+		return "[no text layer: scanned or image-only page]"
 	}
 	return "[" + escapeLine(element) + " omitted: " + escapeLine(reason) + "]"
 }

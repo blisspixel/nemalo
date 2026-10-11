@@ -74,8 +74,12 @@ type RecordingsResult struct {
 	Limitations   []string            `json:"limitations"`
 }
 
-// maxProbedRecordingBytes bounds how much stored audio one call indexes.
-const maxProbedRecordingBytes = 4 << 30
+// maxProbedRecordingBytes bounds how much stored audio one call indexes, and
+// maxProbedTrackBytes how much of it one track may hold in memory.
+const (
+	maxProbedRecordingBytes = 4 << 30
+	maxProbedTrackBytes     = 256 << 20
+)
 
 // Recordings groups current holdings by declared recording (source ID and
 // format). With source set, only that source's recordings are returned and
@@ -195,7 +199,7 @@ func Recordings(ctx context.Context, directory, source string) (RecordingsResult
 					ordered = false
 				}
 				next = t.Position + 1
-				if t.Bytes > budget {
+				if t.Bytes > budget || t.Bytes > maxProbedTrackBytes {
 					t.Probe, t.Detail = "budget_exceeded", "the call's audio indexing budget is spent"
 					ordered = false
 					continue

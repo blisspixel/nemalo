@@ -30,6 +30,10 @@ const maxManagedInput = 256 << 20
 const maxText = 8 << 20
 const maxUnits = 512
 
+// maxRequestUnit bounds a requested unit: an EPUB reading-order document or a
+// zero-based PDF physical page index.
+const maxRequestUnit = 10000
+
 var errBudget = errors.New("content retrieval budget exceeded")
 var errUnsupported = errors.New("unsupported EPUB extraction; no excerpt returned")
 
@@ -48,6 +52,9 @@ type Request struct {
 	Resource       bool
 	// Sample is the encoded sample at which an mpeg-audio/1 read starts.
 	Sample int64
+	// Find locates every exact occurrence of this text in a text
+	// representation instead of reading a range.
+	Find string
 }
 
 func (r Request) Validate() error {
@@ -58,11 +65,14 @@ func (r Request) Validate() error {
 	if err != nil || len(b) != 32 || hex.EncodeToString(b) != r.AssetID[7:] {
 		return errors.New("invalid asset ID")
 	}
-	if r.Unit < 0 || r.Unit >= maxUnits || r.Offset < 0 || r.Offset > maxText || r.MaxBytes < 4 || r.MaxBytes > 65536 || len(r.Cursor) > 2048 {
-		return errors.New("content requires unit 0-511, offset 0-8388608, max-bytes 4-65536, and cursor at most 2048 bytes")
+	if r.Unit < 0 || r.Unit >= maxRequestUnit || r.Offset < 0 || r.Offset > maxText || r.MaxBytes < 4 || r.MaxBytes > 65536 || len(r.Cursor) > 2048 {
+		return errors.New("content requires unit 0-9999, offset 0-8388608, max-bytes 4-65536, and cursor at most 2048 bytes")
 	}
 	if r.Sample < 0 || r.Sample > 1<<40 || (r.Sample != 0 && r.Representation != "mpeg-audio/1") {
 		return errors.New("sample applies only to mpeg-audio/1 and must be 0 through 2^40")
+	}
+	if len(r.Find) > 1000 || !utf8.ValidString(r.Find) || (r.Find != "" && (r.Cursor != "" || r.UnitsOnly || r.Part != "" || r.Resource || (r.Representation != "epub-text/2" && r.Representation != "pdf-text/1" && r.Representation != ""))) {
+		return errors.New("find takes valid UTF-8 text of at most 1000 bytes and applies to epub-text/2 or pdf-text/1 without a cursor, units, or parts")
 	}
 	if r.Cursor != "" && (r.Unit != 0 || r.Offset != 0 || r.UnitsOnly || r.Sample != 0) {
 		return errors.New("cursor cannot be combined with unit, offset, or units listing")
@@ -88,6 +98,9 @@ type Unit struct {
 	Direction  string `json:"direction,omitempty"`
 	Parts      int    `json:"parts,omitempty"`
 	KnownGaps  int    `json:"known_gaps,omitempty"`
+	// PageLabel is a PDF page's printed label; Index is then the zero-based
+	// physical page index.
+	PageLabel string `json:"page_label,omitempty"`
 }
 
 // Locator offsets are zero-based and half-open in OffsetUnit. An omitted
@@ -103,6 +116,7 @@ type Locator struct {
 	End              int    `json:"end"`
 	Member           string `json:"member,omitempty"`
 	OffsetUnit       string `json:"offset_unit,omitempty"`
+	PageLabel        string `json:"page_label,omitempty"`
 }
 
 type Result struct {
@@ -128,6 +142,7 @@ type Result struct {
 	Gaps             []Gap         `json:"gaps,omitempty"`
 	Audio            *audio.Track  `json:"audio,omitempty"`
 	AudioRange       *audio.Range  `json:"audio_range,omitempty"`
+	Matches          []Match       `json:"matches,omitempty"`
 }
 
 type cursor struct {
@@ -153,7 +168,7 @@ func parseCursor(token string) (cursor, error) {
 		return c, err
 	}
 	canonical, err := json.Marshal(c)
-	if err != nil || !bytes.Equal(b, canonical) || base64.RawURLEncoding.EncodeToString(b) != token || c.SchemaVersion != 1 || c.Unit < 0 || c.Unit >= maxUnits || c.Offset < 0 || c.Offset > maxText {
+	if err != nil || !bytes.Equal(b, canonical) || base64.RawURLEncoding.EncodeToString(b) != token || c.SchemaVersion != 1 || c.Unit < 0 || c.Unit >= maxRequestUnit || c.Offset < 0 || c.Offset > maxText {
 		return c, errors.New("invalid continuation schema or fields")
 	}
 	return c, nil
@@ -181,7 +196,7 @@ func Get(ctx context.Context, req Request) (result Result, err error) {
 			result.Text, result.Continuation, result.Locator = "", "", nil
 			result.Units = nil
 			result.Parts, result.Coverage, result.Resource, result.Gaps = nil, nil, nil, nil
-			result.Audio, result.AudioRange = nil, nil
+			result.Audio, result.AudioRange, result.Matches = nil, nil, nil
 			result.EndOfUnit, result.EndOfSource = false, false
 		}
 	}()
@@ -221,6 +236,11 @@ func Get(ctx context.Context, req Request) (result Result, err error) {
 		return getStructured(ctx, req, result)
 	case "mpeg-audio/1":
 		return getAudio(ctx, req, result)
+	case "pdf-text/1":
+		if req.Part != "" || req.Resource {
+			return result, errors.New("part/resource access is unavailable for pdf-text/1")
+		}
+		return getPDFText(ctx, req, result)
 	default:
 		result.Status = "unsupported_representation"
 		return result, errors.New("unsupported content representation; inspect content capabilities")

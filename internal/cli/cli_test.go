@@ -15,11 +15,12 @@ import (
 	"github.com/blisspixel/nemalo/internal/app"
 	"github.com/blisspixel/nemalo/internal/config"
 	"github.com/blisspixel/nemalo/internal/discovery"
+	"github.com/blisspixel/nemalo/internal/pdftext/pdftest"
 )
 
 func TestHealthCommand(t *testing.T) {
 	p := filepath.Join(t.TempDir(), "paper.pdf")
-	if err := os.WriteFile(p, []byte("%PDF-1.7\n%%EOF"), 0600); err != nil {
+	if err := os.WriteFile(p, pdftest.Pages("", "text"), 0600); err != nil {
 		t.Fatal(err)
 	}
 	for _, json := range []bool{false, true} {

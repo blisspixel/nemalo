@@ -16,6 +16,7 @@ import (
 	"github.com/blisspixel/nemalo/internal/app"
 	"github.com/blisspixel/nemalo/internal/inventory"
 	"github.com/blisspixel/nemalo/internal/library"
+	"github.com/blisspixel/nemalo/internal/pdftext/pdftest"
 )
 
 func TestSourceAccessStagesReadsRetriesAndRetainsFailedContinuation(t *testing.T) {
@@ -263,5 +264,39 @@ func TestHoldingsShowsATracksRecordingAndKeepsTheList(t *testing.T) {
 	m.Update(cmd())
 	if len(m.entries) != 1 || !strings.Contains(m.report, "1 of 2 tracks held") || !strings.Contains(m.report, "Missing positions: [2]") || !strings.Contains(m.report, "Chapter one") {
 		t.Fatal("recording manifest", m.status, m.report)
+	}
+}
+
+func TestHoldingsReadsAPDFByPageAndLabel(t *testing.T) {
+	root := t.TempDir()
+	if _, err := library.Initialize(context.Background(), root); err != nil {
+		t.Fatal(err)
+	}
+	source := filepath.Join(t.TempDir(), "paper.pdf")
+	if err := os.WriteFile(source, pdftest.Pages("0 << /S /R /St 4 >>", "Page text here."), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := library.Import(context.Background(), library.ImportRequest{Library: root, Source: source, Apply: true}); err != nil {
+		t.Fatal(err)
+	}
+	m := newModel(context.Background(), app.Service{})
+	m.switchMode("holdings")
+	m.format = "pdf"
+	m.input.SetValue(root)
+	m.Update(m.start(true)())
+	m.Update(key(tea.KeyF6))
+	m.Update(tea.KeyPressMsg{Code: 'r', Text: "r"})
+	if m.reader.representation != "pdf-text/1" {
+		t.Fatal("PDF holding not staged as pdf-text/1", m.reader)
+	}
+	m.Update(m.start(true)())
+	if len(m.entries) != 1 || !strings.Contains(m.entries[0].title, `label "IV"`) {
+		t.Fatal("pages", m.status, m.entries)
+	}
+	m.Update(key(tea.KeyF6))
+	_, cmd := m.Update(key(tea.KeyEnter))
+	m.Update(cmd())
+	if !strings.Contains(m.report, "Page text here.") || !strings.Contains(m.report, `printed label "IV"`) {
+		t.Fatal("page text", m.status, m.report)
 	}
 }

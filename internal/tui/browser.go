@@ -15,7 +15,7 @@ import (
 
 type entry struct {
 	title, summary, detail, sourceID string
-	audio                            bool
+	audio, pdf                       bool
 	// managed marks a holding of a library directory, which is read with the
 	// same directory as catalog and root.
 	managed bool
@@ -77,6 +77,7 @@ func (m *model) populate(data any) {
 				detail:   detail,
 				sourceID: a.ID,
 				audio:    len(a.Locations) > 0 && strings.HasSuffix(strings.ToLower(a.Locations[0].Path), ".mp3"),
+				pdf:      len(a.Locations) > 0 && strings.HasSuffix(strings.ToLower(a.Locations[0].Path), ".pdf"),
 			})
 		}
 	case library.ManagedPage:
@@ -101,12 +102,16 @@ func (m *model) populate(data any) {
 			if recording != "" {
 				detail += "t shows the whole recording: declared order, missing tracks, and indexed timing.\n"
 			}
-			m.entries = append(m.entries, entry{title: fmt.Sprintf("%q", title), summary: fmt.Sprintf("%s | %s | %s | %q", h.Format, h.Status, byteSize(h.Bytes), h.Languages), detail: detail, sourceID: h.ID, audio: h.Format == "mp3", managed: true, recording: recording})
+			m.entries = append(m.entries, entry{title: fmt.Sprintf("%q", title), summary: fmt.Sprintf("%s | %s | %s | %q", h.Format, h.Status, byteSize(h.Bytes), h.Languages), detail: detail, sourceID: h.ID, audio: h.Format == "mp3", pdf: h.Format == "pdf", managed: true, recording: recording})
 		}
 	case content.Result:
 		if p.Status == "units_available" && p.Audio != nil {
 			a := p.Audio
 			m.entries = append(m.entries, entry{title: fmt.Sprintf("MP3 track: %s", a.Format), summary: fmt.Sprintf("%d Hz | %d ch | %d frames | %d ms encoded", a.SampleRate, a.Channels, a.Frames, a.EncodedDurationMs), detail: fmt.Sprintf("MP3 track\n\nFormat: %s\nSample rate: %d Hz\nChannels: %d\nIndexed frames: %d\nEncoded duration: %d ms\nDeclared chapters: %d\nUnindexed regions: %d\n\nEnter retrieves a frame range from the start; n continues.\nAudio bytes are not shown or played here.\nNo listening progress is recorded.", a.Format, a.SampleRate, a.Channels, a.Frames, a.EncodedDurationMs, len(a.Chapters), len(a.Gaps))})
+		} else if p.Status == "units_available" && p.Representation == "pdf-text/1" {
+			for _, u := range p.Units {
+				m.entries = append(m.entries, entry{title: fmt.Sprintf("Page %d, label %q", u.Index, u.PageLabel), summary: fmt.Sprintf("%s | %d text bytes | %d gaps", u.Extraction, u.TextBytes, u.KnownGaps), detail: fmt.Sprintf("PDF page\n\nPhysical index: %d (zero-based)\nPrinted label: %q\nExtraction: %s\nText bytes: %d; located gaps: %d\n\nText is in content-stream order; columns are not reconstructed and there is no OCR.\nEnter retrieves a bounded range of this page.\nNo reading progress is recorded.", u.Index, u.PageLabel, u.Extraction, u.TextBytes, u.KnownGaps)})
+			}
 		} else if p.Status == "units_available" {
 			for _, u := range p.Units {
 				m.entries = append(m.entries, entry{title: fmt.Sprintf("Unit %d: %q", u.Index, u.Member), summary: fmt.Sprintf("%d text bytes | %d gaps | %q", u.TextBytes, u.KnownGaps, u.Language), detail: fmt.Sprintf("Source unit %d\n\nMember: %q\nLanguage: %q\nDirection: %q\nLinear: %q\nParts: %d; known text gaps: %d\n\nEnter retrieves a bounded structured-text range.\nNo reading progress is recorded.", u.Index, u.Member, u.Language, u.Direction, u.Linear, u.Parts, u.KnownGaps)})
@@ -239,6 +244,9 @@ func (m *model) browserKey(key string) (bool, tea.Cmd) {
 			representation := "epub-structure/1"
 			if selected.audio {
 				representation = "mpeg-audio/1"
+			}
+			if selected.pdf {
+				representation = "pdf-text/1"
 			}
 			cmd := m.switchMode("read")
 			m.reader = readerState{asset: selected.sourceID, representation: representation}

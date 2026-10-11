@@ -398,7 +398,12 @@ issue is complete.
 
 ## Milestone 7: research papers and PDF collections
 
-Status: planned. Depends on shared assessment/publication and recovery milestones.
+Status: partial. A PDF parser is selected and wrapped with budgets; `check` walks
+page trees, and `pdf-text/1` gives physical page indexes, printed labels, text in
+content-stream order with located gaps, and exact quotation spans
+([decision 0021](docs/decisions/0021-pdf-pages-and-text.md)). Active content and
+attachment assessment, OCR, column reconstruction, providers, and citation export
+remain. Depends on shared assessment/publication and recovery milestones.
 
 Deliver a PDF assessment policy, a separate paper collection, arXiv and Europe
 PMC/PMC resolution, then OpenAlex discovery and Unpaywall DOI resolution. Enable

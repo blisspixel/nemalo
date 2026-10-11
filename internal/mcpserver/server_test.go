@@ -138,7 +138,7 @@ func TestToolsAreReadOnlyAndNetworkIsExplicit(t *testing.T) {
 	calls := 0
 	service := app.Service{Providers: map[string]app.Searcher{"openlibrary": catalog{&calls}}, Scanner: noScanner{t}}
 	offline := toolNames(t, connect(t, service, Options{Scopes: []string{t.TempDir()}, Version: "test"}))
-	want := []string{"content_capabilities", "content_read", "content_resource", "content_source", "content_units", "file_check", "library_audit", "library_list", "library_recordings", "library_status", "nemalo_capabilities"}
+	want := []string{"content_capabilities", "content_locate", "content_read", "content_resource", "content_source", "content_units", "file_check", "library_audit", "library_list", "library_recordings", "library_status", "nemalo_capabilities"}
 	if !slices.Equal(offline, want) {
 		t.Fatal("offline tools", offline)
 	}
@@ -152,7 +152,7 @@ func TestToolsAreReadOnlyAndNetworkIsExplicit(t *testing.T) {
 	}
 	_, env = call(t, online, "nemalo_capabilities", map[string]any{})
 	data := env["data"].(map[string]any)
-	if data["read_only"] != true || data["network"] != true || len(data["tools"].([]any)) != 13 {
+	if data["read_only"] != true || data["network"] != true || len(data["tools"].([]any)) != 14 {
 		t.Fatal("capabilities", data)
 	}
 }
@@ -188,6 +188,14 @@ func TestContentThroughMCPMatchesTheService(t *testing.T) {
 	res, env = call(t, s, "content_read", map[string]any{"catalog": root, "root": root, "asset": asset, "cursor": "not-a-cursor"})
 	if !res.IsError || env["error"] == nil || env["data"].(map[string]any)["status"] != "invalid_request" || env["data"].(map[string]any)["text"] != nil {
 		t.Fatal("failure facts lost", env)
+	}
+	_, env = call(t, s, "content_locate", map[string]any{"catalog": root, "root": root, "asset": asset, "text": "picture"})
+	matches, _ := env["data"].(map[string]any)["matches"].([]any)
+	if env["data"].(map[string]any)["status"] != "matches_found" || len(matches) != 1 {
+		t.Fatal("locate through MCP", env)
+	}
+	if res, _ := call(t, s, "content_locate", map[string]any{"catalog": root, "root": root, "asset": asset}); !res.IsError {
+		t.Fatal("locate without text accepted")
 	}
 	_, env = call(t, s, "library_list", map[string]any{"catalog": root, "status": "review"})
 	if env["data"].(map[string]any)["total_holdings"] != float64(1) {

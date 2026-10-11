@@ -38,8 +38,11 @@ AI service. The agent interface (MCP) uses the same application services.
   one batched command.
 - Retrieve bounded EPUB text in CLI/JSON/TUI, with exact continuation, source parts,
   note references, local image bytes, and explicit extraction gaps. Illustrated
-  chapters stay readable; each omitted image or table is located. MP3 tracks
-  report probed and declared timing and chapters, and return decodable ranges.
+  chapters stay readable; each omitted image or table is located. PDFs read by
+  physical page and printed label, with images, unmapped text, and scanned pages
+  located as gaps. Exact quotations can be located by page and offset. MP3
+  tracks report probed and declared timing and chapters, and return decodable
+  ranges; held recordings list their tracks in order with missing positions.
 - Report environment paths, tool availability, scanner setup and signature age,
   and the directory descriptor bridge (/proc/self/fd on Linux, /dev/fd on macOS)
   with doctor.

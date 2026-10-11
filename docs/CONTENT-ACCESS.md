@@ -6,7 +6,10 @@ Implemented EPUB access, 2026-10-08. Tracks
 acceptance remains open. CLI/JSON and TUI use `internal/app.Service.Content` and
 `internal/content`; the read-only MCP `content_*` tools call the same service
 ([decision 0014](decisions/0014-read-only-mcp-server.md)). MP3 tracks have a
-frame index and decodable ranges (`mpeg-audio/1`, below), and held recordings
+frame index and decodable ranges (`mpeg-audio/1`, below), PDFs have pages,
+printed labels, text, and located gaps (`pdf-text/1`,
+[decision 0021](decisions/0021-pdf-pages-and-text.md)), exact quotations can be
+located in EPUB or PDF text (`content locate`), and held recordings
 have an ordered manifest across tracks (`recording-manifest/1`,
 [decision 0020](decisions/0020-recording-manifest.md)). There is no Kilo adapter. This work does not bypass production import/publication gates.
 
@@ -208,8 +211,12 @@ Remaining work, without moving post-1.0 analysis ahead of library delivery:
 
 - TUI unit browsing, bounded reading, repeat, and continuation expose this service.
   Future MCP must preserve its representation negotiation and failure facts.
-- Milestone 7: physical PDF page index versus printed label, exact quotation spans,
-  OCR/gaps, publication version and bibliographic provenance.
+- Milestone 7: done for PDF access: `pdf-text/1` gives the zero-based physical
+  page index and the printed page label separately, text in content-stream order
+  with located gaps (images, unmapped font codes, pages without a text layer),
+  and `content locate` binds exact quotations to page, offsets, extractor, and
+  representation ([decision 0021](decisions/0021-pdf-pages-and-text.md)). OCR,
+  column reconstruction, and bibliographic provenance remain later work.
 - Milestone 8: done for MP3 recordings: ordered track hashes, declared versus
   probed timing, bounded source ranges with preroll, explicit gaps, and
   completeness ([decision 0020](decisions/0020-recording-manifest.md)). Narrator

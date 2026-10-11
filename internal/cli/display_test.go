@@ -18,6 +18,7 @@ import (
 	"github.com/blisspixel/nemalo/internal/app"
 	"github.com/blisspixel/nemalo/internal/config"
 	"github.com/blisspixel/nemalo/internal/discovery"
+	"github.com/blisspixel/nemalo/internal/pdftext/pdftest"
 	"github.com/blisspixel/nemalo/internal/scanner"
 )
 
@@ -28,13 +29,16 @@ type displayCatalog struct {
 
 type intakeCatalog struct{ displayCatalog }
 
+// intakePDF is a real one-page PDF, so the page tree check passes.
+var intakePDF = pdftest.Pages("", "text")
+
 func (intakeCatalog) Evaluate(context.Context, string) (discovery.Evaluation, error) {
-	n := int64(len("%PDF-1.7\n%%EOF"))
-	md := md5.Sum([]byte("%PDF-1.7\n%%EOF"))
+	n := int64(len(intakePDF))
+	md := md5.Sum(intakePDF)
 	return discovery.Evaluation{ID: "archive:demo", Source: "archive", Complete: true, Access: "no_item_restriction_declared", Files: []discovery.OfferedFile{{Name: "book.pdf", Bytes: &n, MD5: hex.EncodeToString(md[:]), Access: "public_file_candidate", DownloadURL: "https://archive.org/download/demo/book.pdf"}}}, nil
 }
 func (intakeCatalog) Download(context.Context, discovery.OfferedFile) (*http.Response, error) {
-	return &http.Response{StatusCode: 200, ContentLength: 14, Body: io.NopCloser(strings.NewReader("%PDF-1.7\n%%EOF")), Header: http.Header{}}, nil
+	return &http.Response{StatusCode: 200, ContentLength: int64(len(intakePDF)), Body: io.NopCloser(bytes.NewReader(intakePDF)), Header: http.Header{}}, nil
 }
 
 type fakeScanner string
