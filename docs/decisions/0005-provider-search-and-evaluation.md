@@ -27,9 +27,16 @@ send `start`: the observed endpoint can echo it without advancing documents.
 Archive search uses `advancedsearch.php`, requesting only identifier, title,
 creator, language, and media type. It bounds pages to 50, offsets to 10000,
 and queries to 1000 bytes. User query syntax is preserved inside a text/audio
-media filter. Results are sorted by identifier for predictable pagination; the
-remote catalog can still change between requests. Arbitrary offsets translate to
-at most two adjacent source pages, each at most 50 records and 2 MiB, under one
+media filter. Amended 2026-10-11 for
+[issue 4](https://github.com/blisspixel/nemalo/issues/4): results keep Archive's
+relevance ranking by default, because an identifier sort put digit-prefixed and
+alphabetically early items ahead of the matching work. Archive rejects an
+explicit `score` sort, so relevance has no tie-break and ties can move between
+requests. `--sort identifier` restores repeatable identifier order, and
+`--sort downloads` sorts by declared download count with an identifier
+tie-break; that is a user-selected popularity signal, not quality. Every page
+names its order. The remote catalog can still change between requests.
+Arbitrary offsets translate to at most two adjacent source pages, each at most 50 records and 2 MiB, under one
 30-second operation deadline. Unaligned pages are sliced locally. A mismatched
 response offset/count, changed total across adjacent pages, invalid/duplicate ID,
 unexpected media type, or malformed result fails the request. Tests verify actual

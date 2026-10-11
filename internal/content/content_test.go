@@ -79,7 +79,8 @@ func fixture(t *testing.T, bodies []string, mutate func(map[string]string)) Requ
 	if err := os.WriteFile(catalog, b, 0600); err != nil {
 		t.Fatal(err)
 	}
-	return Request{SchemaVersion: 1, Catalog: catalog, Root: root, AssetID: c.Assets[0].ID, MaxBytes: 4}
+	// Existing tests pin the original representation; text/2 tests select it explicitly.
+	return Request{SchemaVersion: 1, Catalog: catalog, Root: root, AssetID: c.Assets[0].ID, MaxBytes: 4, Representation: "epub-text/1"}
 }
 
 func TestSourceBoundRetrievalOver300Cycles(t *testing.T) {

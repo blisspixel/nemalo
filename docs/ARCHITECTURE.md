@@ -109,6 +109,9 @@ substitution, especially filesystem mutations, processes, clocks, and providers.
 
 Selected acquisition is implemented through shared services into exclusive
 untrusted packets; see [decision 0007](decisions/0007-selected-acquisition.md).
+Acquisition scans intake bytes through the same scanner adapter and quarantines
+detections; library rescans batch ClamAV through the shared assessment pipeline
+([decision 0012](decisions/0012-scan-on-acquire-quarantine-and-rescan.md)).
 Filesystem capability binding and display encoding use shared adapters described
 in [decision 0008](decisions/0008-filesystem-and-display-boundaries.md).
 Neither intake receipts nor portable snapshots are managed publication journals.
@@ -295,7 +298,9 @@ Do not require an editor, Git installation, wiki service, or vector database.
 ## Assessment evidence
 
 The initial implementation is `internal/assessment`, shared by `check FILE` and
-the validation harness. Optional installed antivirus uses `internal/scanner`.
+the validation harness. Installed antivirus uses `internal/scanner`, which owns
+tool resolution, single and batched scans, detection recognition, setup hints,
+and signature age; `CheckManyInRoot` binds each batched result to its snapshot.
 CLI/TUI dispatch through `internal/app` and share `internal/present`. See the
 [file-health decision](decisions/0003-file-health-and-scanners.md) for implemented
 limits and parser/scanner decisions. The production publication policy below is
@@ -439,8 +444,12 @@ update policy, and removal strategy. Pin versions and review changes to `go.sum`
 Do not add provider SDKs when a small standard-library HTTP adapter suffices.
 
 External executables and signature databases count in the dependency inventory.
-`doctor` reports tool availability, the directory descriptor bridge, and the
-recommended scanner for this operating system. It does not execute scanners.
+`doctor` reports tool availability, the directory descriptor bridge, the
+recommended scanner for this operating system, and signature age read from the
+ClamAV database header or Defender registry values. It does not execute scanners.
+The release install scripts are the one non-Go first-party tooling exception
+([decision 0013](decisions/0013-release-installer-scripts.md)): they only download,
+verify, and place a published executable.
 Do not auto-install software or download executable plugins as part of book intake.
 Go release builds should avoid cgo; race instrumentation may need a C toolchain in CI.
 

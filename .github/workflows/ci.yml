@@ -37,3 +37,48 @@ jobs:
           go build -trimpath -o bin/ ./cmd/nemalo
           ./bin/nemalo version --json
           ./bin/nemalo doctor --json
+
+  # Installers are exercised against the newest published release. They cannot
+  # test an unpublished version, so release step 7 repeats this after publishing.
+  installer:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    env:
+      GITHUB_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install, pin, replace, and uninstall (sh)
+        if: runner.os != 'Windows'
+        shell: sh
+        run: |
+          set -eu
+          dir="$RUNNER_TEMP/nemalo-bin"
+          sh scripts/install.sh --dir "$dir"
+          "$dir/nemalo" version
+          sh scripts/install.sh --dir "$dir" --version 0.1.0-alpha.1
+          test "$("$dir/nemalo" version)" = "0.1.0-alpha.1"
+          sh scripts/install.sh --dir "$dir" --uninstall
+          test ! -e "$dir/nemalo"
+          if sh scripts/install.sh --dir "$dir" --version 0.0.0-missing; then exit 1; fi
+          test ! -e "$dir/nemalo"
+      - name: Install, pin, replace, and uninstall (PowerShell 7 and Windows PowerShell 5.1)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          foreach ($host_ in @('pwsh', 'powershell')) {
+            $dir = Join-Path $env:RUNNER_TEMP "nemalo-bin-$host_"
+            $exe = Join-Path $dir 'nemalo.exe'
+            & $host_ -NoProfile -ExecutionPolicy Bypass -File scripts/install.ps1 -Dir $dir -NoPath
+            if ($LASTEXITCODE -ne 0) { throw "$host_ install failed" }
+            & $exe version
+            & $host_ -NoProfile -ExecutionPolicy Bypass -File scripts/install.ps1 -Dir $dir -Version 0.1.0-alpha.1 -NoPath
+            if ((& $exe version) -ne '0.1.0-alpha.1') { throw "$host_ pinned version not installed" }
+            & $host_ -NoProfile -ExecutionPolicy Bypass -File scripts/install.ps1 -Dir $dir -Uninstall
+            if (Test-Path -LiteralPath $exe) { throw "$host_ uninstall left the executable" }
+          }

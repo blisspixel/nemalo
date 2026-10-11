@@ -8,6 +8,7 @@ import (
 	"os/exec"
 	"runtime"
 	"strings"
+	"time"
 
 	"github.com/blisspixel/nemalo/internal/assessment"
 	"github.com/blisspixel/nemalo/internal/config"
@@ -23,10 +24,21 @@ type Searcher interface {
 	Search(context.Context, string, int, int) (discovery.Page, error)
 }
 
+// Acquire scans verified intake bytes with the installed scanner unless the
+// request opts out. Detected files go to the service quarantine directory.
 func (s Service) Acquire(ctx context.Context, request acquisition.Request) (acquisition.Result, error) {
 	provider, ok := s.Providers["archive"].(acquisition.Provider)
 	if !ok {
 		return acquisition.Result{}, errors.New("archive acquisition is unavailable")
+	}
+	if !request.NoScan && request.Scanner == nil {
+		request.Scanner = s.scanner()
+	}
+	if request.Quarantine == "" {
+		request.Quarantine = s.Quarantine
+	}
+	if request.OnDetection == "" {
+		request.OnDetection = s.OnDetection
 	}
 	return acquisition.Acquire(ctx, provider, request)
 }
@@ -34,6 +46,62 @@ func (s Service) Acquire(ctx context.Context, request acquisition.Request) (acqu
 type Service struct {
 	Providers map[string]Searcher
 	Scanner   assessment.Scanner
+	// Quarantine is the Nemalo-owned directory for detected downloads, under
+	// the platform state directory. It is created only when a file is detected.
+	Quarantine string
+	// OnDetection is the configured detection policy for requests that do not
+	// name one: "quarantine" (also when empty) or "delete".
+	OnDetection string
+}
+
+func (s Service) scanner() assessment.Scanner {
+	if s.Scanner != nil {
+		return s.Scanner
+	}
+	return scanner.New()
+}
+
+// Rescan scans review holdings whose only gap is scan evidence.
+func (s Service) Rescan(ctx context.Context, request library.RescanRequest) (library.RescanResult, error) {
+	if request.Scanner == nil {
+		request.Scanner = s.scanner()
+	}
+	return library.Rescan(ctx, request)
+}
+
+// ScanGuidance is a one-line next step after a check, import, or acquisition
+// that has no usable scan evidence, or "" when none applies. A missing scanner
+// gets the platform install command; an available but unused one gets --scan.
+func (s Service) ScanGuidance(antivirus string, scanRequested bool) string {
+	switch {
+	case antivirus == "unavailable":
+		return scanner.HostSetupHint(runtime.GOOS)
+	case antivirus == "incomplete":
+		return "The scan did not complete, so the file is treated as unscanned. Repeat it with check FILE --scan."
+	case antivirus == "not_scanned" && !scanRequested:
+		if kind, err := s.scannerKind(); err == nil {
+			return "Add --scan to scan this file with " + scannerName(kind) + "."
+		}
+		return scanner.HostSetupHint(runtime.GOOS)
+	}
+	return ""
+}
+
+func (s Service) scannerKind() (string, error) {
+	if k, ok := s.scanner().(interface{ Kind() (string, error) }); ok {
+		return k.Kind()
+	}
+	return "installed antivirus", nil
+}
+
+func scannerName(kind string) string {
+	switch kind {
+	case "defender":
+		return "Microsoft Defender"
+	case "clamav":
+		return "ClamAV"
+	}
+	return kind
 }
 
 func New() Service {
@@ -45,11 +113,29 @@ func (s Service) Search(ctx context.Context, query string, limit, offset int) (d
 }
 
 func (s Service) SearchSource(ctx context.Context, source, query string, limit, offset int) (discovery.Page, error) {
+	return s.SearchSourceOrdered(ctx, source, query, discovery.OrderRelevance, limit, offset)
+}
+
+// OrderedSearcher is implemented by providers offering an order besides relevance.
+type OrderedSearcher interface {
+	SearchOrdered(context.Context, string, string, int, int) (discovery.Page, error)
+}
+
+// SearchSourceOrdered uses provider relevance unless another supported order is
+// requested. An unsupported order fails rather than silently reverting.
+func (s Service) SearchSourceOrdered(ctx context.Context, source, query, order string, limit, offset int) (discovery.Page, error) {
 	p, ok := s.Providers[source]
 	if !ok || p == nil {
 		return discovery.Page{}, errors.New("search provider unavailable")
 	}
-	return p.Search(ctx, query, limit, offset)
+	if order == "" || order == discovery.OrderRelevance {
+		return p.Search(ctx, query, limit, offset)
+	}
+	ordered, ok := p.(OrderedSearcher)
+	if !ok {
+		return discovery.Page{}, errors.New("search provider supports relevance order only")
+	}
+	return ordered.SearchOrdered(ctx, query, order, limit, offset)
 }
 
 func (s Service) Evaluate(ctx context.Context, id string) (discovery.Evaluation, error) {
@@ -142,18 +228,25 @@ type Capability struct {
 }
 
 type Doctor struct {
-	Platform               string        `json:"platform"`
-	Go                     string        `json:"go"`
-	Paths                  config.Paths  `json:"paths"`
-	Config                 config.Config `json:"configuration"`
-	Security               string        `json:"security_status"`
-	ScannerRecommendation  string        `json:"scanner_recommendation"`
-	ChecksumRecommendation string        `json:"checksum_recommendation"`
-	Capabilities           []Capability  `json:"capabilities"`
+	Platform               string              `json:"platform"`
+	Go                     string              `json:"go"`
+	Paths                  config.Paths        `json:"paths"`
+	Config                 config.Config       `json:"configuration"`
+	Security               string              `json:"security_status"`
+	ScannerRecommendation  string              `json:"scanner_recommendation"`
+	ScannerSetup           string              `json:"scanner_setup"`
+	Signatures             *scanner.Signatures `json:"signatures,omitempty"`
+	ChecksumRecommendation string              `json:"checksum_recommendation"`
+	Capabilities           []Capability        `json:"capabilities"`
 }
 
-// Doctor checks availability only; it never executes scanners or claims scan coverage.
+// Doctor checks availability and reads signature database headers or Defender
+// registry values. It never executes scanners or claims scan coverage.
 func (s Service) Doctor(paths config.Paths, cfg config.Config, lookup func(string) (string, error)) Doctor {
+	return s.doctor(paths, cfg, lookup, func() scanner.Signatures { return scanner.HostSignatures(runtime.GOOS, time.Now()) })
+}
+
+func (s Service) doctor(paths config.Paths, cfg config.Config, lookup func(string) (string, error), signatures func() scanner.Signatures) Doctor {
 	d := Doctor{Platform: runtime.GOOS + "/" + runtime.GOARCH, Go: runtime.Version(), Paths: paths, Config: cfg, Security: "not_scanned", ScannerRecommendation: scannerRecommendation(), ChecksumRecommendation: checksumRecommendation, Capabilities: []Capability{}}
 	for _, item := range []struct {
 		name, use string
@@ -167,6 +260,19 @@ func (s Service) Doctor(paths config.Paths, cfg config.Config, lookup func(strin
 		d.Capabilities = append(d.Capabilities, Capability{Name: item.name, Available: err == nil, Recommended: recommendedScanner(item.name), Use: item.use})
 	}
 	d.Capabilities = append(d.Capabilities, Capability{Name: "descriptor_bridge", Available: safeio.DescriptorBridge() == nil, Use: "required on Linux (/proc/self/fd) and macOS (/dev/fd) to reopen a library directory"})
+	defaultScanner := "clamscan"
+	if runtime.GOOS == "windows" {
+		defaultScanner = "MpCmdRun.exe"
+	}
+	for _, c := range d.Capabilities {
+		if c.Name == defaultScanner && !c.Available {
+			d.ScannerSetup = scanner.HostSetupHint(runtime.GOOS)
+		}
+		if c.Name == defaultScanner && c.Available {
+			sig := signatures()
+			d.Signatures = &sig
+		}
+	}
 	return d
 }
 

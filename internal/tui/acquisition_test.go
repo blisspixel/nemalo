@@ -14,7 +14,14 @@ import (
 	tea "charm.land/bubbletea/v2"
 	"github.com/blisspixel/nemalo/internal/app"
 	"github.com/blisspixel/nemalo/internal/discovery"
+	"github.com/blisspixel/nemalo/internal/scanner"
 )
+
+type tuiScanner string
+
+func (s tuiScanner) Scan(context.Context, string) scanner.Result {
+	return scanner.Result{Status: string(s)}
+}
 
 type intakeProvider struct{ calls *int }
 
@@ -34,7 +41,7 @@ func (p intakeProvider) Download(context.Context, discovery.OfferedFile) (*http.
 func TestTerminalDownloadRequiresReviewAndRetainsExactSelection(t *testing.T) {
 	calls := 0
 	p := intakeProvider{&calls}
-	m := newModel(context.Background(), app.Service{Providers: map[string]app.Searcher{"archive": p}})
+	m := newModel(context.Background(), app.Service{Providers: map[string]app.Searcher{"archive": p}, Scanner: tuiScanner("no_detections_reported"), Quarantine: filepath.Join(t.TempDir(), "q")})
 	m.switchMode("evaluate")
 	m.input.SetValue("archive:demo")
 	e, _ := p.Evaluate(context.Background(), "archive:demo")
@@ -62,7 +69,7 @@ func TestTerminalDownloadRequiresReviewAndRetainsExactSelection(t *testing.T) {
 		t.Fatal("confirmed request missing")
 	}
 	m.Update(cmd())
-	if calls != 1 || m.busy || !strings.Contains(m.status, "untrusted") || !strings.HasSuffix(m.drafts["check"].input, "content.pdf") {
+	if calls != 1 || m.busy || !strings.Contains(m.status, "no detections") || !strings.HasSuffix(m.drafts["check"].input, "content.pdf") {
 		t.Fatal(calls, m.status)
 	}
 	if _, err := os.Stat(filepath.Join(output, "receipt.json")); err != nil {
@@ -103,5 +110,39 @@ func TestTerminalDownloadRejectsStaleAndIncompleteForms(t *testing.T) {
 	m.Update(cmd())
 	if !strings.Contains(m.status, "Incomplete") || !strings.Contains(m.report, "unavailable") {
 		t.Fatal("provider failure hidden", m.status, m.report)
+	}
+}
+
+func TestTerminalDetectionOffersTheItemsOtherFiles(t *testing.T) {
+	calls := 0
+	p := intakeProvider{&calls}
+	m := newModel(context.Background(), app.Service{Providers: map[string]app.Searcher{"archive": p}, Scanner: tuiScanner("findings"), Quarantine: filepath.Join(t.TempDir(), "q")})
+	m.switchMode("evaluate")
+	m.input.SetValue("archive:demo")
+	e, _ := p.Evaluate(context.Background(), "archive:demo")
+	n := int64(14)
+	e.Files = append(e.Files, discovery.OfferedFile{Name: "other.epub", Bytes: &n, Access: "public_file_candidate"})
+	m.submittedInput = "archive:demo"
+	m.id++
+	m.Update(result{m.id, e, nil})
+	m.secondary.SetValue(filepath.Join(t.TempDir(), "packet"))
+	m.resultsFocused = true
+	m.selectEntry(0)
+	m.browserKey("d")
+	_, cmd := m.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
+	m.Update(cmd())
+	if !strings.Contains(m.status, "Detection") || len(m.entries) != 1 || m.entries[0].sourceID != "other.epub" {
+		t.Fatal("detection did not offer the other file", m.status, m.entries)
+	}
+	if !strings.Contains(m.report, "detected_quarantined") || strings.Contains(m.drafts["check"].input, "content.pdf") {
+		t.Fatal("detected file staged for checking", m.report)
+	}
+	if calls != 1 {
+		t.Fatal("detection triggered another request", calls)
+	}
+	for _, tc := range []struct{ antivirus, want string }{{"not_scanned", "without a scan"}, {"unavailable", "counts as unscanned"}} {
+		if got := acquisitionStatus(tc.antivirus, ""); !strings.Contains(got, tc.want) {
+			t.Fatal(got)
+		}
 	}
 }

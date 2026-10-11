@@ -65,10 +65,22 @@ func ValidArchiveID(id string) bool {
 	return true
 }
 
+// Search ranks by Archive relevance, the order its own search uses.
 func (p *Archive) Search(ctx context.Context, query string, limit, offset int) (Page, error) {
-	page := Page{Source: "archive", Query: strings.TrimSpace(query), Offset: offset, Results: []Result{}}
+	return p.SearchOrdered(ctx, query, OrderRelevance, limit, offset)
+}
+
+// SearchOrdered selects Archive relevance, ascending identifier order, or
+// descending declared downloads with an identifier tie-break. Relevance ties
+// are not guaranteed stable between separate requests; the other two orders
+// page repeatably while the catalog is unchanged.
+func (p *Archive) SearchOrdered(ctx context.Context, query, order string, limit, offset int) (Page, error) {
+	page := Page{Source: "archive", Query: strings.TrimSpace(query), Order: order, Offset: offset, Results: []Result{}}
 	if page.Query == "" || len(page.Query) > 1000 || limit < 1 || limit > 50 || offset < 0 || offset > 10000 {
 		return page, errors.New("search requires a query of 1-1000 bytes, limit 1-50, and offset 0-10000")
+	}
+	if order != OrderRelevance && order != OrderIdentifier && order != OrderDownloads {
+		return page, errors.New("Archive search order must be relevance, identifier, or downloads")
 	}
 	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
@@ -77,7 +89,7 @@ func (p *Archive) Search(ctx context.Context, query string, limit, offset int) (
 	base, skip := offset/limit*limit, offset%limit
 	seen := map[string]bool{}
 	for request := 0; request < 2; request++ {
-		wire, err := p.searchPage(ctx, page.Query, limit, base)
+		wire, err := p.searchPage(ctx, page.Query, order, limit, base)
 		if err != nil {
 			return page, err
 		}
@@ -87,8 +99,13 @@ func (p *Archive) Search(ctx context.Context, query string, limit, offset int) (
 		page.Total = *wire.Response.Found
 		for i, d := range wire.Response.Docs {
 			id := "archive:" + d.Identifier
-			if !ValidArchiveID(id) || seen[id] || strings.TrimSpace(d.Title) == "" || (d.MediaType != "texts" && d.MediaType != "audio") {
-				return page, errors.New("Archive returned an invalid or duplicate item")
+			if !ValidArchiveID(id) || strings.TrimSpace(d.Title) == "" || (d.MediaType != "texts" && d.MediaType != "audio") {
+				return page, errors.New("Archive returned an invalid item")
+			}
+			if seen[id] {
+				// A repeat across the two pages means the ranking moved between
+				// requests; results could otherwise be silently skipped.
+				return page, errors.New("Archive result order changed between search pages; repeat the query or use identifier order")
 			}
 			seen[id] = true
 			if i < skip || len(page.Results) >= limit {
@@ -122,8 +139,16 @@ type archiveSearchPage struct {
 	} `json:"response"`
 }
 
-func (p *Archive) searchPage(ctx context.Context, query string, limit, base int) (archiveSearchPage, error) {
-	q := url.Values{"q": {"(" + query + ") AND (mediatype:texts OR mediatype:audio)"}, "output": {"json"}, "rows": {strconv.Itoa(limit)}, "page": {strconv.Itoa(base/limit + 1)}, "sort[]": {"identifier asc"}, "fl[]": {"identifier", "title", "creator", "language", "mediatype"}}
+func (p *Archive) searchPage(ctx context.Context, query, order string, limit, base int) (archiveSearchPage, error) {
+	q := url.Values{"q": {"(" + query + ") AND (mediatype:texts OR mediatype:audio)"}, "output": {"json"}, "rows": {strconv.Itoa(limit)}, "page": {strconv.Itoa(base/limit + 1)}, "fl[]": {"identifier", "title", "creator", "language", "mediatype"}}
+	// Advanced search ranks by relevance when no sort is given. It rejects an
+	// explicit score sort, so relevance cannot carry a secondary tie-break.
+	switch order {
+	case OrderIdentifier:
+		q["sort[]"] = []string{"identifier asc"}
+	case OrderDownloads:
+		q["sort[]"] = []string{"downloads desc", "identifier asc"}
+	}
 	var wire archiveSearchPage
 	if err := p.getJSON(ctx, p.endpoint+"/advancedsearch.php?"+q.Encode(), &wire); err != nil {
 		return wire, err

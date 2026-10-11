@@ -11,7 +11,10 @@ import (
 	"time"
 )
 
-var archiveDeliveryHost = regexp.MustCompile(`^(ia|dn)[0-9]{6}\.(us|ca)\.archive\.org$`)
+// Archive assigns each item to a numbered data node in one of its delivery
+// regions, independent of the client's location. The anchored pattern admits
+// only those nodes, never arbitrary archive.org subdomains.
+var archiveDeliveryHost = regexp.MustCompile(`^(ia|dn)[0-9]{6}\.(us|ca|eu)\.archive\.org$`)
 
 func ArchiveDownloadHost(host string) bool {
 	return host == "archive.org" || host == "www.archive.org" || archiveDeliveryHost.MatchString(host)

@@ -99,9 +99,14 @@ did not produce. The default is Microsoft Defender on Windows and installed
 ClamAV on Linux and macOS. `doctor` names that default. A supplied publisher
 SHA-256 confirms the published bytes. Nemalo does not install or update a
 scanner, and a no-detection result or a checksum match is not proof of safety.
+Selected downloads are scanned on acquisition; a detection is quarantined (or
+deleted by configuration), never imported, and other files from the item are
+offered. A clean acquisition scan bound to the same bytes lets a packet import
+as checked, and `library rescan` scans review holdings in ClamAV batches. See
+[decision 0012](docs/decisions/0012-scan-on-acquire-quarantine-and-rescan.md).
 Cleanup, archive extraction, and download resume are also outstanding. Native
-archive/checksum packaging is implemented; releases still require the actual
-verification and publication gates.
+archive/checksum packaging and checksum-verifying install scripts are
+implemented; releases still require the actual verification and publication gates.
 Milestone 2
 has inventory and standalone signatures/private snapshots, without archive
 extraction or production staging. Milestone 5 has
@@ -234,9 +239,10 @@ Acceptance:
 
 ## Milestone 3: assess and publish EPUBs
 
-Status: partial. Shared EPUB checks, Defender and ClamAV adapters, and
-single-asset managed import exist. EPUB package identifiers can be recorded as
-evidence. `doctor` names the default scanner. Recording and track identities,
+Status: partial. Shared EPUB checks, Defender and ClamAV adapters with batched
+ClamAV scans, and single-asset managed import and rescan exist. EPUB package
+identifiers can be recorded as evidence. `doctor` names the default scanner,
+its setup command, and signature age. Recording and track identities,
 cross-file work relationships, archive extraction, cleanup, and a full
 checked-library policy remain. Depends on milestone 2.
 
@@ -287,8 +293,9 @@ Acceptance:
 
 ## Milestone 5: collection discovery and selected downloads
 
-Status: partial. Open Library/Archive search, Archive source evaluation, and
-selected-file intake acquisition exist in CLI/JSON/TUI. See the
+Status: partial. Open Library/Archive search with explicit result order, Archive
+source evaluation, and selected-file intake acquisition with a post-download
+scan and quarantine exist in CLI/JSON/TUI. See the
 [acquisition contract](docs/ACQUISITION.md). Resume, complete recording downloads,
 Gutenberg production integration, and broader provider contracts remain
 planned. Transfers and checked publication use milestones 2 and 3. Source cleanup
@@ -343,7 +350,9 @@ Acceptance:
 These are cross-cutting workstreams, not optional product add-ons:
 
 Offline EPUB retrieval is implemented through shared Go services, CLI/JSON, and
-TUI unit selection/repeat/continuation. [Content access](docs/CONTENT-ACCESS.md)
+TUI unit selection/repeat/continuation. The default `epub-text/2` keeps
+illustrated documents readable and locates each omitted element
+([decision 0011](docs/decisions/0011-default-text-with-located-gaps.md)). [Content access](docs/CONTENT-ACCESS.md)
 records exact locators and bounds. [Structured EPUB](docs/STRUCTURED-EPUB.md)
 records implemented parts, language/direction, local notes/backlinks, source XML,
 image-member identity, and per-range gaps from

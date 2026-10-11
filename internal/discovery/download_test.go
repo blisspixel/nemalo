@@ -16,7 +16,8 @@ func (f downloadRoundTrip) RoundTrip(r *http.Request) (*http.Response, error) { 
 
 func TestFileClientBoundaries(t *testing.T) {
 	client := NewFileClient(ArchiveDownloadHost)
-	for _, raw := range []string{"http://archive.org/file", "https://evil.invalid/file", "https://archive.org:443/file", "https://user@archive.org/file", "https://archive.org/file#fragment", "https://127.0.0.1/file", "https://ia800308.us.archive.org.evil.invalid/file"} {
+	for _, raw := range []string{"http://archive.org/file", "https://evil.invalid/file", "https://archive.org:443/file", "https://user@archive.org/file", "https://archive.org/file#fragment", "https://127.0.0.1/file", "https://ia800308.us.archive.org.evil.invalid/file",
+		"https://dn760008.xx.archive.org/file", "https://dn76000.eu.archive.org/file", "https://dn7600088.eu.archive.org/file", "https://ab760008.eu.archive.org/file", "https://eu.archive.org/file", "https://dn760008.eu.archive.org.invalid/file", "https://evil.dn760008.eu.archive.org/file"} {
 		req, _ := http.NewRequest(http.MethodGet, raw, nil)
 		if _, err := client.Transport.RoundTrip(req); err == nil {
 			t.Fatal("unapproved initial request admitted", raw)
@@ -25,7 +26,8 @@ func TestFileClientBoundaries(t *testing.T) {
 			t.Fatal("unapproved redirect admitted", raw)
 		}
 	}
-	for _, host := range []string{"archive.org", "www.archive.org", "ia800308.us.archive.org", "dn800308.ca.archive.org"} {
+	// One delivery node per region Archive is known to redirect to (issue 3).
+	for _, host := range []string{"archive.org", "www.archive.org", "ia800308.us.archive.org", "dn800308.ca.archive.org", "dn760008.eu.archive.org", "ia600100.eu.archive.org"} {
 		u := &url.URL{Scheme: "https", Host: host, Path: "/file"}
 		if err := client.CheckRedirect(&http.Request{URL: u}, []*http.Request{{}}); err != nil {
 			t.Fatal(host, err)

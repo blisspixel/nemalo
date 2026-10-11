@@ -16,6 +16,7 @@ import (
 
 	"github.com/blisspixel/nemalo/internal/assessment"
 	"github.com/blisspixel/nemalo/internal/safeio"
+	"github.com/blisspixel/nemalo/internal/scanner"
 )
 
 // ImportRequest copies one explicit file or completed intake packet into an
@@ -63,9 +64,12 @@ type selected struct {
 }
 
 type packetReceipt struct {
-	Complete bool   `json:"complete"`
-	Status   string `json:"status"`
-	FinalURL string `json:"final_url"`
+	Complete  bool   `json:"complete"`
+	Status    string `json:"status"`
+	FinalURL  string `json:"final_url"`
+	Antivirus string `json:"antivirus"`
+	// Scan is the acquisition-time scan of the intake bytes, when one ran.
+	Scan     *scanner.Result `json:"scan"`
 	Transfer struct {
 		SHA256 string `json:"sha256"`
 		Bytes  int64  `json:"bytes"`
@@ -162,6 +166,9 @@ func importLibrary(ctx context.Context, request ImportRequest, stage importStage
 	if err != nil {
 		return result, err
 	}
+	if events, lines, err = rollForwardRescan(ctx, control, events, lines); err != nil {
+		return result, err
+	}
 	if len(events) > 0 && events[len(events)-1].Event == "import_intent" {
 		pending := events[len(events)-1].Source
 		if !sameImportSource(pending, source) {
@@ -182,12 +189,14 @@ func assessPlan(ctx context.Context, result ImportResult, source selected, reque
 		}
 		return result, err
 	}
-	status, reason, classErr := classify(report, request.Scan)
-	if classErr != nil {
-		return result, classErr
-	}
 	if err = receiptAgrees(source.receipt, result.SHA256, result.Bytes); err != nil {
 		return result, err
+	}
+	report, scanned := withReceiptScan(report, source.receipt, request.Scan)
+	result.Antivirus = report.Antivirus.Status
+	status, reason, classErr := classify(report, scanned)
+	if classErr != nil {
+		return result, classErr
 	}
 	result.Status, result.Reason = status, reason
 	result.Path = assetRel(result.SHA256, result.Format)
@@ -227,7 +236,9 @@ func finish(ctx context.Context, control *control, store *os.Root, libraryID str
 	if err = receiptAgrees(source.receipt, result.SHA256, result.Bytes); err != nil {
 		return result, err
 	}
-	status, reason, err := classify(report, request.Scan && !resume)
+	report, scanned := withReceiptScan(report, source.receipt, request.Scan && !resume)
+	result.Antivirus = report.Antivirus.Status
+	status, reason, err := classify(report, scanned)
 	if err != nil {
 		return result, err
 	}
@@ -240,7 +251,12 @@ func finish(ctx context.Context, control *control, store *os.Root, libraryID str
 	result.Titles, result.Languages = metaList(report), languageList(report)
 	applyIdentities(&result, report)
 	current := latestHoldings(lines)[result.AssetID]
-	if !resume && current.ID == result.AssetID && !request.Scan {
+	// A live scan is new evidence and may change a recorded status. A receipt
+	// scan is older evidence: it may only fill a holding that has no scan
+	// evidence, and never replaces a detection or a later scan outcome. An
+	// import without either never changes a recorded holding's status.
+	live := request.Scan && !resume
+	if !resume && current.ID == result.AssetID && !live && (!scanned || !(current.Status == "review" && rescannable[current.Reason])) {
 		status, reason = current.Status, current.Reason
 	}
 	result.Status, result.Reason = status, reason
@@ -424,10 +440,25 @@ func readReceipt(root *os.Root) (*packetReceipt, error) {
 		return nil, err
 	}
 	var receipt packetReceipt
-	if err := json.Unmarshal(b, &receipt); err != nil || !receipt.Complete || receipt.Status != "untrusted_intake" || receipt.Transfer.Bytes < 1 || !validHash(receipt.Transfer.SHA256) {
+	if err := json.Unmarshal(b, &receipt); err != nil || !receipt.Complete || receipt.Status != "untrusted_intake" || receipt.Antivirus == "findings" || receipt.Transfer.Bytes < 1 || !validHash(receipt.Transfer.SHA256) {
 		return nil, errors.New("intake packet receipt is incomplete or not untrusted intake")
 	}
 	return &receipt, nil
+}
+
+// withReceiptScan uses an intake packet's acquisition-time scan when no live
+// scan was requested. It applies only when the receipt and its scan both report
+// no detections and the receipt's SHA-256 is the assessed SHA-256, which
+// receiptAgrees has already required. A live scan always takes precedence.
+func withReceiptScan(report assessment.Report, receipt *packetReceipt, live bool) (assessment.Report, bool) {
+	if live || receipt == nil || receipt.Scan == nil || receipt.Antivirus != "no_detections_reported" || receipt.Scan.Status != "no_detections_reported" || !strings.EqualFold(receipt.Transfer.SHA256, report.SHA256) {
+		return report, live
+	}
+	scan := *receipt.Scan
+	scan.Output = ""
+	scan.Limitations = append(append([]string{}, scan.Limitations...), "This scan ran when the file was acquired, against the same SHA-256. Signatures may have changed since.")
+	report.Antivirus = scan
+	return report, true
 }
 
 func receiptAgrees(receipt *packetReceipt, hash string, bytes int64) error {
@@ -775,7 +806,7 @@ func reserveNew(control *control, intent operation, holding Holding, writeHoldin
 		return err
 	}
 	completed := intent
-	completed.Event = "import_completed"
+	completed.Event = completedEvent(intent.Event)
 	completed.Sequence = intent.Sequence + 1
 	completedLine, err := recordBytes(completed)
 	if err != nil {
@@ -796,7 +827,7 @@ func reserveNew(control *control, intent operation, holding Holding, writeHoldin
 
 func reserveResume(control *control, intent operation, holding Holding, writeHolding bool) error {
 	completed := intent
-	completed.Event = "import_completed"
+	completed.Event = completedEvent(intent.Event)
 	completed.Sequence = intent.Sequence + 1
 	completed.At = time.Now().UTC().Format(time.RFC3339Nano)
 	line, err := recordBytes(completed)

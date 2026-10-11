@@ -5,6 +5,7 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 	"github.com/blisspixel/nemalo/internal/assessment"
+	"github.com/blisspixel/nemalo/internal/discovery"
 	"github.com/blisspixel/nemalo/internal/inventory"
 	"github.com/blisspixel/nemalo/internal/library"
 )
@@ -112,13 +113,15 @@ func (m *model) start(reset bool) tea.Cmd {
 	ctx, cancel := context.WithCancel(m.ctx)
 	m.cancel = cancel
 	m.id++
-	id, mode, value, source := m.id, m.mode, m.input.Value(), m.source
+	id, mode, value, source, order := m.id, m.mode, m.input.Value(), m.source, m.searchOrder()
 	if mode == "state" && m.initializeAction {
 		mode = "initialize"
 	} else if mode == "state" && m.importAction {
 		mode = "import"
+	} else if mode == "state" && m.rescanAction {
+		mode = "rescan"
 	}
-	m.initializeAction, m.importAction = false, false
+	m.initializeAction, m.importAction, m.rescanAction = false, false, false
 	second, assess, offset, format := m.secondary.Value(), m.assess, m.offset, m.format
 	limits := inventory.Defaults()
 	if m.largeBudget {
@@ -137,6 +140,9 @@ func (m *model) start(reset bool) tea.Cmd {
 		case "import":
 			data, err := m.service.Import(ctx, library.ImportRequest{Library: value, Source: second, Apply: true})
 			return result{id, data, err}
+		case "rescan":
+			data, err := m.service.Rescan(ctx, library.RescanRequest{Library: value, Apply: true})
+			return result{id, data, err}
 		case "state":
 			data, err := m.service.LibraryStatus(ctx, value)
 			return result{id, data, err}
@@ -153,7 +159,7 @@ func (m *model) start(reset bool) tea.Cmd {
 			data, err := m.service.Audit(ctx, value, second, limits)
 			return result{id, data, err}
 		case "search":
-			data, err := m.service.SearchSource(ctx, source, value, 10, offset)
+			data, err := m.service.SearchSourceOrdered(ctx, source, value, order, 10, offset)
 			return result{id, data, err}
 		case "check", "scan":
 			data, err := m.service.Check(ctx, value, assessment.Options{Scan: mode == "scan"})
@@ -163,4 +169,13 @@ func (m *model) start(reset bool) tea.Cmd {
 			return result{id, data, err}
 		}
 	}
+}
+
+// searchOrder is the selected result order; relevance unless the user chose
+// another order Archive supports.
+func (m *model) searchOrder() string {
+	if m.order == "" || m.source != "archive" {
+		return discovery.OrderRelevance
+	}
+	return m.order
 }

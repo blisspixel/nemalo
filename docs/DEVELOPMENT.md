@@ -8,11 +8,16 @@ needed for the application, tests, or first-party tooling.
 ## Current operations
 
 `help`, `version`, `doctor`, `search`, `evaluate`, `acquire`, `inspect`, `check`, `library snapshot`,
-`library list`, `library audit`, `library import`, `library init`, `library status`, `content units`,
+`library list`, `library audit`, `library import`, `library rescan`, `library init`, `library status`, `content units`,
 `content read`, `content source`, `content resource`, `content capabilities`, and
 `tui` are implemented.
 Search defaults to Open Library work metadata; `--source archive` selects Internet
 Archive text/audio item search. Neither search resolves download permissions.
+Results keep the provider's relevance ranking, and the result names its order.
+For Archive, `--sort identifier` pages repeatably and `--sort downloads` ranks by
+the declared download count, a popularity signal rather than quality; both use
+an identifier tie-break. Relevance ties can move between requests, and a repeat
+across the two pages of one unaligned request fails rather than skipping items.
 Only explicit query terms, paging/field parameters, and client identification go to
 the selected fixed HTTPS source. Shared metadata responses are bounded to 2 MiB
 of decompressed JSON, page sizes to 50, and requests to one per second per provider
@@ -44,8 +49,10 @@ at grapheme boundaries without discarding original evidence. Scopes and scanner
 cloud policy remain explicit. See the [terminal guide](TUI.md) for keyboard
 controls, budgets, paging, appearance, and application-view captures.
 Content retrieval uses CLI/JSON and the TUI Read operation over shared services.
-Capability negotiation, structured EPUB parts, note references, original markup,
-and bounded local image bytes are available in CLI/JSON. MCP remains planned.
+The default `epub-text/2` returns readable text with each omitted image, table,
+or other element located as a gap. Capability negotiation, structured EPUB parts,
+note references, original markup, and bounded local image bytes are available in
+CLI/JSON. MCP remains planned.
 See [source-bound access](CONTENT-ACCESS.md) and [structured EPUB](STRUCTURED-EPUB.md)
 for supported representations, exact contracts, bounds, and remaining issue scope.
 
@@ -117,7 +124,13 @@ edition evidence cannot decide whether a poem, novel, or scan is complete.
 
 `--scan` (or TUI scan mode) is recommended for a file you did not produce. It
 invokes installed Defender on Windows, otherwise ClamAV. `doctor` names that
-default. Nothing is installed or updated. On Linux and macOS, install the
+default and, without executing a scanner, reports definition age from the
+ClamAV daily database header or Defender's registry values; definitions older
+than seven days are `stale`. Without usable scan evidence, the human output of
+`check`, `library import`, and `acquire` ends with one `Next:` line: `--scan`
+when a scanner is installed, otherwise the platform install command (pacman,
+apt, dnf, zypper, apk, Homebrew, or Windows Security). Nothing is installed or
+updated. On Linux and macOS, install the
 distributor package that provides `clamscan` and update signatures with
 `freshclam` first. On Arch, including Omarchy, that package is `clamav`. Calls
 use argument arrays and no remediation, with two-minute deadlines and 64 KiB
@@ -185,7 +198,8 @@ filesystem coordination are not guaranteed. See the
 [state decision](decisions/0006-library-control-state.md) for the full boundaries.
 The TUI's State operation reads on Enter; F7 reviews initialization before a
 second Enter writes. Ctrl+N sets one source and F8 reviews import. That review
-does not scan.
+does not scan. Ctrl+R reviews a rescan of the library; a second Enter scans and
+records the results.
 
 ## Managed import
 
@@ -203,7 +217,10 @@ outside that library, or a completed intake directory with exactly one
 Without `--apply`, nothing is written. `--apply` copies the assessed bytes and
 leaves the source in place. `--scan` can invoke installed antivirus. `checked`
 requires an EPUB whose limited checks passed and whose scan reported no
-detections. Other results stay in review. A later import without `--scan` does
+detections. Other results stay in review. For an intake packet, a clean scan
+recorded at acquisition and bound to the same SHA-256 counts without scanning
+again, but only where the holding has no usable scan evidence; it never replaces
+a recorded detection. A packet whose receipt records a detection is refused. A later import without `--scan` does
 not downgrade `checked`. A scan gap with no other finding is recorded as
 `scan_` plus the scanner status. A conflicting stored file, an unexpected extra
 hard link, or a store path whose parent is not a real directory fails before a
@@ -221,10 +238,28 @@ that their bibliographic identifiers were read. See
 [decision 0009](decisions/0009-managed-epub-import.md) and
 [decision 0010](decisions/0010-bibliographic-identity.md).
 
+### Rescan review holdings
+
+```sh
+nemalo library rescan /path/to/library
+nemalo library rescan /path/to/library --apply
+```
+
+Rescan reruns the limited checks and scans each EPUB holding in review only
+because scan evidence is missing or unusable. It writes nothing without
+`--apply`. ClamAV receives up to 32 files per invocation, so signatures load once
+per batch rather than once per file. PDF and MP3 holdings, earlier detections,
+and other findings are listed with a reason and not scanned. Stored bytes are
+never changed; bytes that no longer match their holding receive no status.
+Applied changes are journaled as `rescan_intent`, holding line, and
+`rescan_completed`; the next writer completes an interrupted rescan first. See
+[decision 0012](decisions/0012-scan-on-acquire-quarantine-and-rescan.md).
+
 ## Configuration
 
-Configuration is an optional strict JSON object with `library` and `review` paths.
-Both paths must be absolute and must not overlap. Unknown fields, multiple JSON
+Configuration is an optional strict JSON object with `library` and `review` paths
+and `on_detection` (`quarantine`, the default, or `delete`) for downloads the
+scanner flags. Both paths must be absolute and must not overlap. Unknown fields, multiple JSON
 values, nonregular files, and files over 64 KiB are rejected. These are reserved
 settings for upcoming content operations; current init/status require their own
 explicit directory and do not adopt these settings implicitly.
@@ -269,8 +304,11 @@ and `TERM=dumb` still disable color. A tmux session stays 256-color. Omarchy
 Alt+1 through Alt+0, F2 through F8, or Ctrl+C. Ctrl+C still quits Nemalo.
 Super+C is the desktop copy key. Nemalo does not read the Wayland clipboard.
 ClamAV is the recommended scanner and is not installed by default. `doctor`
-reports whether `clamscan` is available. A missing scanner leaves the file
-unscanned. Update signatures with `freshclam` before relying on a scan.
+reports whether `clamscan` is available and how old its signatures are, and the
+first unscanned result prints `sudo pacman -S clamav && sudo freshclam`. Enable
+`clamav-freshclam.service` to keep signatures current. A missing scanner leaves
+the file unscanned. After installing ClamAV, `library rescan LIBRARY --apply`
+scans the review holdings in one command.
 
 ## Verification
 
@@ -293,9 +331,10 @@ by a `CGO_ENABLED=0` binary smoke. Review actual runs before claiming platform s
 ## Next bounded work
 
 Single-asset import is in place, and EPUB package identifiers are recorded as
-evidence without merging files. Recording and track identities still require a
-stated manifest. Archive extraction, download resume, and recoverable cleanup
-remain separate gates. Reuse shared file checks and scanners. Keep real
+evidence without merging files. Downloads are scanned on acquisition, detections
+are quarantined, and review holdings can be rescanned in one command. Recording
+and track identities still require a stated manifest. Archive extraction,
+download resume, and recoverable cleanup remain separate gates. Reuse shared file checks and scanners. Keep real
 acquisition in the first complete lifecycle. Add those operations to CLI and TUI
 together. MCP remains a scoped adapter over the same services. Generated
 analysis and model/harness integrations remain post-1.0. PDF page identity,

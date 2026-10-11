@@ -220,9 +220,21 @@ func TestRequestBoundariesAndCancellation(t *testing.T) {
 	if _, err := Acquire(ctx, p, r); !errors.Is(err, context.Canceled) || p.evaluations != 0 {
 		t.Fatal(err)
 	}
-	r.Output = filepath.Join(t.TempDir(), "missing", "packet")
-	if _, err := Acquire(context.Background(), p, r); err == nil || p.evaluations != 0 {
-		t.Fatal("missing parent accepted", err)
+	// A missing parent is created only once the source evaluation succeeded
+	// (issue 6); a refused evaluation leaves no new directories behind.
+	refused := fixture()
+	refused.evalErr = errors.New("provider unavailable")
+	base := t.TempDir()
+	r.Output = filepath.Join(base, "missing", "nested", "packet")
+	if _, err := Acquire(context.Background(), refused, r); err == nil {
+		t.Fatal("evaluation error ignored")
+	}
+	if _, err := os.Stat(filepath.Join(base, "missing")); !errors.Is(err, os.ErrNotExist) {
+		t.Fatal("refused acquisition created output parents", err)
+	}
+	created, err := Acquire(context.Background(), fixture(), r)
+	if err != nil || !created.Complete || created.Output != r.Output {
+		t.Fatal("missing parents were not created", created, err)
 	}
 	p, r = fixture(), request(t)
 	ctx, cancel = context.WithCancel(context.Background())

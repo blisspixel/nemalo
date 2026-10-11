@@ -14,7 +14,7 @@ native validation, cross-built artifacts, and remaining limits.
 4. From the clean committed checkout, run:
 
    ```sh
-   go run ./cmd/package --output dist/0.1.0-alpha.2
+   go run ./cmd/package --output dist/0.1.0-alpha.3
    ```
 
 5. Verify `BUILD.txt` against the intended full commit. Verify every `SHA256SUMS`
@@ -23,6 +23,10 @@ native validation, cross-built artifacts, and remaining limits.
    `SHA256SUMS`, and `BUILD.txt` with explicit release notes.
 6. Confirm the published tag targets the tested commit and published assets match
    local checksums. Review tag-triggered CI as well.
+7. Run `scripts/install.sh` and `scripts/install.ps1` against the new release on
+   each native platform, without a pin and with `--version`/`-Version`, then
+   `--uninstall`/`-Uninstall`. The installers resolve the newest release from the
+   GitHub release list, so they reach a prerelease only after it is published.
 
 The Go packaging command refuses a dirty checkout and existing output, validates
 each executable's embedded target and clean VCS revision, and rechecks the source

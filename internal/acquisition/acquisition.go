@@ -15,10 +15,12 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+	"unicode"
 
 	"github.com/blisspixel/nemalo/internal/assessment"
 	"github.com/blisspixel/nemalo/internal/discovery"
 	"github.com/blisspixel/nemalo/internal/safeio"
+	"github.com/blisspixel/nemalo/internal/scanner"
 	"github.com/blisspixel/nemalo/internal/transfer"
 )
 
@@ -27,6 +29,14 @@ type Request struct {
 	File     string `json:"source_file"`
 	Output   string `json:"output"`
 	MaxBytes int64  `json:"max_bytes"`
+	// NoScan skips the post-transfer scan. OnDetection is "quarantine" (the
+	// default) or "delete". Quarantine is the Nemalo-owned directory that
+	// receives detected files; it is required when a scanner is supplied.
+	NoScan      bool   `json:"no_scan,omitempty"`
+	OnDetection string `json:"on_detection,omitempty"`
+	Quarantine  string `json:"quarantine,omitempty"`
+	// Scanner is the installed antivirus adapter. Nil means no scan.
+	Scanner assessment.Scanner `json:"-"`
 }
 
 func (r Request) Validate() error {
@@ -35,6 +45,12 @@ func (r Request) Validate() error {
 	}
 	if format(r.File) == "" {
 		return errors.New("acquisition currently supports selected EPUB, PDF, and MP3 files")
+	}
+	if r.OnDetection != "" && r.OnDetection != "quarantine" && r.OnDetection != "delete" {
+		return errors.New("on-detection must be quarantine or delete")
+	}
+	if r.Quarantine != "" && !filepath.IsAbs(r.Quarantine) {
+		return errors.New("quarantine directory must be absolute")
 	}
 	return nil
 }
@@ -64,19 +80,43 @@ type Result struct {
 	CompletedAt      *time.Time         `json:"completed_at,omitempty"`
 	Checks           *assessment.Checks `json:"checks,omitempty"`
 	Antivirus        string             `json:"antivirus"`
-	Durability       string             `json:"durability"`
+	Scan             *scanner.Result    `json:"scan,omitempty"`
+	// QuarantinedPath is where detected bytes were moved; empty if deleted.
+	QuarantinedPath string `json:"quarantined_path,omitempty"`
+	// Alternatives are other eligible files in the same fresh evaluation, and
+	// SearchSuggestion a query for other sources. Both appear on a detection.
+	Alternatives     []Alternative `json:"alternatives,omitempty"`
+	SearchSuggestion string        `json:"search_suggestion,omitempty"`
+	Durability       string        `json:"durability"`
 }
 
+// Alternative is another acquirable file from the same evaluation. It carries
+// source declarations only; rights, quality, and safety remain unverified.
+type Alternative struct {
+	File   string `json:"file"`
+	Format string `json:"format"`
+	Bytes  int64  `json:"declared_bytes"`
+}
+
+// ErrDetected reports that the installed scanner flagged the downloaded bytes.
+var ErrDetected = errors.New("antivirus reported a detection; the download was not kept as intake")
+
 // Acquire resolves metadata anew, reserves a new directory atomically, syncs
-// intent before requesting bytes, and creates the receipt last. Existing output
-// is never opened for writing. A failed/crashed packet is retained, not resumed,
-// removed, adopted, or mistaken for a completed receipt.
+// intent before requesting bytes, scans the verified bytes when a scanner is
+// supplied, and creates the receipt last. Existing output is never opened for
+// writing. A failed/crashed packet is retained, not resumed, removed, adopted,
+// or mistaken for a completed receipt. A detection moves the bytes to the
+// Nemalo quarantine (or deletes them, if requested) so they never become intake.
 func Acquire(ctx context.Context, provider Provider, request Request) (result Result, err error) {
 	result = Result{SchemaVersion: 1, Status: "not_started", Antivirus: "not_scanned", Durability: "files_synced_directory_entries_filesystem_dependent"}
 	if err := request.Validate(); err != nil {
 		return result, err
 	}
-	ctx, cancel := context.WithTimeout(ctx, 5*time.Minute)
+	if request.Scanner != nil && !request.NoScan && request.Quarantine == "" && request.OnDetection != "delete" {
+		return result, errors.New("scanning requires a quarantine directory for detected files")
+	}
+	outer := ctx
+	ctx, cancel := context.WithTimeout(ctx, transferDeadline)
 	defer cancel()
 	if err := ctx.Err(); err != nil {
 		return result, err
@@ -85,14 +125,14 @@ func Acquire(ctx context.Context, provider Provider, request Request) (result Re
 	if err != nil {
 		return result, err
 	}
-	parent, err := safeio.OpenResolvedRoot(filepath.Dir(abs))
-	if err != nil {
+	parentPath, base := filepath.Dir(abs), filepath.Base(abs)
+	// A missing parent is created only after the source evaluation succeeds,
+	// so a refused request leaves no new directories behind.
+	parentMissing := false
+	if _, statErr := os.Lstat(parentPath); errors.Is(statErr, os.ErrNotExist) {
+		parentMissing = true
+	} else if err := outputAvailable(parentPath, base); err != nil {
 		return result, err
-	}
-	defer parent.Close()
-	base := filepath.Base(abs)
-	if _, err := parent.Lstat(base); !os.IsNotExist(err) {
-		return result, errors.New("output must be a new directory; existing or inaccessible intake is preserved")
 	}
 	evaluation, err := provider.Evaluate(ctx, request.SourceID)
 	if err != nil {
@@ -105,7 +145,20 @@ func Acquire(ctx context.Context, provider Provider, request Request) (result Re
 	if err := ctx.Err(); err != nil {
 		return result, err
 	}
+	if parentMissing {
+		if err := os.MkdirAll(parentPath, 0o755); err != nil {
+			return result, fmt.Errorf("create output parent: %w", err)
+		}
+	}
+	parent, err := safeio.OpenResolvedRoot(parentPath)
+	if err != nil {
+		return result, err
+	}
+	defer parent.Close()
 	if err := parent.Mkdir(base, 0700); err != nil {
+		if errors.Is(err, os.ErrExist) {
+			return result, errors.New("output must be a new directory; existing or inaccessible intake is preserved")
+		}
 		return result, err
 	}
 	result.Output, result.Status = abs, "retained_incomplete"
@@ -114,6 +167,7 @@ func Acquire(ctx context.Context, provider Provider, request Request) (result Re
 		return result, err
 	}
 	defer root.Close()
+	alternatives := alternativesFor(evaluation, file, request.MaxBytes)
 	// Keep selected-asset provenance without copying an entire source inventory.
 	evaluation.Files = []discovery.OfferedFile{file}
 	request.Output = abs
@@ -158,17 +212,36 @@ func Acquire(ctx context.Context, provider Provider, request Request) (result Re
 		result.Status = "retained_for_review"
 		return result, err
 	}
-	if err := sameContent(root, name, f); err != nil {
+	if err := verifyIntake(ctx, root, name, f, result.Transfer, request.MaxBytes); err != nil {
 		return result, err
 	}
-	verified, err := transfer.Copy(ctx, io.Discard, io.NewSectionReader(f, 0, result.Transfer.Bytes+1), request.MaxBytes, transfer.Expectation{Bytes: result.Transfer.Bytes})
-	if err != nil || verified.SHA256 != result.Transfer.SHA256 {
-		return result, errors.Join(err, errors.New("intake bytes changed before receipt publication"))
+	if request.Scanner != nil && !request.NoScan {
+		// The scan has its own scanner deadline and is not cut short by the
+		// transfer deadline; the caller's cancellation still applies.
+		scan := request.Scanner.Scan(outer, result.ContentPath)
+		result.Scan, result.Antivirus = &scan, scan.Status
+		// Bind the scan to the receipt bytes. Host antivirus acting on its own
+		// (removal, quarantine) surfaces here as a changed or missing file.
+		if err := verifyIntake(outer, root, name, f, result.Transfer, request.MaxBytes); err != nil {
+			changed := errors.Join(errors.New("intake bytes changed or were removed during the scan; host antivirus may have acted"), err)
+			if scan.Status != "findings" {
+				result.Antivirus = "incomplete"
+				return result, changed
+			}
+			// A reported detection stays a detection, and is recorded, even
+			// though the bytes can no longer be quarantined by Nemalo.
+			return recordDetection(root, result, "detected_changed_during_scan", alternatives, evaluation, changed)
+		}
+		if scan.Status == "findings" {
+			return detected(outer, root, name, f, result, request, alternatives, evaluation)
+		}
 	}
 	if err := f.Close(); err != nil {
 		return result, err
 	}
-	if err := ctx.Err(); err != nil {
+	// Transfer phases ran under the five-minute deadline; a scan may finish
+	// after it, so only the caller's cancellation gates the receipt.
+	if err := outer.Err(); err != nil {
 		return result, err
 	}
 	now := time.Now().UTC()
@@ -178,6 +251,136 @@ func Acquire(ctx context.Context, provider Provider, request Request) (result Re
 		return result, err
 	}
 	return result, nil
+}
+
+// outputAvailable refuses an existing or inaccessible output before any request.
+func outputAvailable(parentPath, base string) error {
+	parent, err := safeio.OpenResolvedRoot(parentPath)
+	if err != nil {
+		return err
+	}
+	defer parent.Close()
+	if _, err := parent.Lstat(base); !os.IsNotExist(err) {
+		return errors.New("output must be a new directory; existing or inaccessible intake is preserved")
+	}
+	return nil
+}
+
+// verifyIntake proves the named content is still the transferred file and its
+// bytes still hash to the transfer SHA-256.
+func verifyIntake(ctx context.Context, root *os.Root, name string, f *os.File, transferred transfer.Result, limit int64) error {
+	if err := sameContent(root, name, f); err != nil {
+		return err
+	}
+	verified, err := transfer.Copy(ctx, io.Discard, io.NewSectionReader(f, 0, transferred.Bytes+1), limit, transfer.Expectation{Bytes: transferred.Bytes})
+	if err != nil || verified.SHA256 != transferred.SHA256 {
+		return errors.Join(err, errors.New("intake bytes changed before receipt publication"))
+	}
+	return nil
+}
+
+// detected removes flagged bytes from the intake packet: by default it moves
+// them into the Nemalo quarantine, otherwise it deletes them. The receipt
+// records the detection, so the packet can never be imported.
+func detected(ctx context.Context, root *os.Root, name string, f *os.File, result Result, request Request, alternatives []Alternative, evaluation discovery.Evaluation) (Result, error) {
+	destination := ""
+	var removeErr error
+	if request.OnDetection != "delete" {
+		destination, removeErr = quarantine(ctx, f, name, request.Quarantine, result.Transfer)
+	}
+	if err := f.Close(); err != nil && removeErr == nil {
+		removeErr = err
+	}
+	if removeErr == nil {
+		removeErr = root.Remove(name)
+	}
+	switch {
+	case removeErr != nil:
+		// The bytes stay in the packet, but the receipt still records the
+		// detection, and import refuses any packet whose receipt is not intake.
+		return recordDetection(root, result, "detected_retained", alternatives, evaluation, fmt.Errorf("the detected file could not be removed from the packet: %w", removeErr))
+	case request.OnDetection == "delete":
+		result.ContentPath = ""
+		return recordDetection(root, result, "detected_deleted", alternatives, evaluation, nil)
+	}
+	result.ContentPath, result.QuarantinedPath = "", destination
+	return recordDetection(root, result, "detected_quarantined", alternatives, evaluation, nil)
+}
+
+// recordDetection writes the receipt for every detection outcome, with the
+// alternatives and search suggestion, and returns ErrDetected.
+func recordDetection(root *os.Root, result Result, status string, alternatives []Alternative, evaluation discovery.Evaluation, cause error) (Result, error) {
+	result.Status, result.Antivirus = status, "findings"
+	result.Alternatives, result.SearchSuggestion = alternatives, searchSuggestion(evaluation)
+	if err := writeRecord(root, "receipt.json", result); err != nil {
+		return result, errors.Join(ErrDetected, cause, err)
+	}
+	return result, errors.Join(ErrDetected, cause)
+}
+
+// quarantine copies the verified packet content, through its open handle, into
+// a new private directory under the quarantine root, named so no reader or
+// thumbnailer treats it as a book. The copy is synced and verified before the
+// caller removes the packet copy. Both directories are used only through their
+// opened roots; no validated pathname is reopened.
+func quarantine(ctx context.Context, f *os.File, name, directory string, transferred transfer.Result) (string, error) {
+	if err := os.MkdirAll(directory, 0o700); err != nil {
+		return "", err
+	}
+	q, err := safeio.OpenResolvedRoot(directory)
+	if err != nil {
+		return "", err
+	}
+	defer q.Close()
+	entry := time.Now().UTC().Format("20060102T150405Z") + "-" + transferred.SHA256[:16]
+	if err := q.Mkdir(entry, 0o700); err != nil {
+		return "", err
+	}
+	quarantined := name + ".quarantined"
+	out, err := q.OpenFile(filepath.Join(entry, quarantined), os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o600)
+	if err != nil {
+		return "", err
+	}
+	copied, copyErr := transfer.Copy(ctx, out, io.NewSectionReader(f, 0, transferred.Bytes+1), transferred.Bytes, transfer.Expectation{Bytes: transferred.Bytes})
+	syncErr, closeErr := out.Sync(), out.Close()
+	if err := errors.Join(copyErr, syncErr, closeErr); err != nil || copied.SHA256 != transferred.SHA256 {
+		return "", errors.Join(err, errors.New("quarantine copy did not verify; the packet copy was kept"))
+	}
+	return filepath.Join(directory, entry, quarantined), nil
+}
+
+// alternativesFor lists other eligible files from the same evaluation, in
+// source order. It applies the same eligibility as selectFile.
+func alternativesFor(e discovery.Evaluation, selected discovery.OfferedFile, limit int64) []Alternative {
+	out := []Alternative{}
+	for _, f := range e.Files {
+		if f.Name == selected.Name || format(f.Name) == "" || len(out) == 10 {
+			continue
+		}
+		if _, err := selectFile(e, Request{SourceID: e.ID, File: f.Name, MaxBytes: limit}); err != nil {
+			continue
+		}
+		out = append(out, Alternative{File: f.Name, Format: format(f.Name), Bytes: *f.Bytes})
+	}
+	return out
+}
+
+// searchSuggestion builds a plain query from the first declared title and
+// creator. It is a suggestion for the user to run, never an automatic request.
+func searchSuggestion(e discovery.Evaluation) string {
+	words := []string{}
+	for _, values := range [][]string{e.Title, e.Creators} {
+		if len(values) > 0 {
+			words = append(words, strings.Join(strings.FieldsFunc(values[0], func(r rune) bool {
+				return r == '"' || r == ':' || r == '(' || r == ')' || unicode.IsSpace(r) || unicode.IsControl(r)
+			}), " "))
+		}
+	}
+	query := strings.TrimSpace(strings.Join(words, " "))
+	if len(query) > 200 {
+		query = strings.ToValidUTF8(query[:200], "")
+	}
+	return query
 }
 
 func selectFile(e discovery.Evaluation, request Request) (discovery.OfferedFile, error) {
@@ -253,3 +456,7 @@ func sameContent(root *os.Root, name string, file *os.File) error {
 	}
 	return nil
 }
+
+// transferDeadline bounds metadata, transfer, and local checks; a scan runs
+// after it under the scanner's own deadline. Tests shorten it.
+var transferDeadline = 5 * time.Minute

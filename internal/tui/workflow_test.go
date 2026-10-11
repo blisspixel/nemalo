@@ -241,3 +241,43 @@ func TestColorPreferencesAndBusyInput(t *testing.T) {
 		t.Fatal("running operation's input changed")
 	}
 }
+
+type orderedCatalog struct{ orders *[]string }
+
+func (o orderedCatalog) Search(_ context.Context, q string, _, _ int) (discovery.Page, error) {
+	*o.orders = append(*o.orders, "relevance")
+	return discovery.Page{Query: q, Order: "relevance", Results: []discovery.Result{}}, nil
+}
+
+func (o orderedCatalog) SearchOrdered(_ context.Context, q, order string, _, _ int) (discovery.Page, error) {
+	*o.orders = append(*o.orders, order)
+	return discovery.Page{Query: q, Order: order, Results: []discovery.Result{}}, nil
+}
+
+func TestSearchOrderToggleIsArchiveOnly(t *testing.T) {
+	var orders []string
+	m := newModel(context.Background(), app.Service{Providers: map[string]app.Searcher{"archive": orderedCatalog{&orders}, "openlibrary": orderedCatalog{&orders}}})
+	m.switchMode("search")
+	m.Update(key(tea.KeyF3))
+	if m.searchOrder() != "relevance" {
+		t.Fatal("Open Library offered another order")
+	}
+	m.Update(key(tea.KeyF2))
+	m.Update(key(tea.KeyF3))
+	if m.searchOrder() != "downloads" || !strings.Contains(m.status, "downloads") || !strings.Contains(m.View().Content, "F3 order: downloads") {
+		t.Fatal("order toggle", m.status)
+	}
+	m.input.SetValue("librivox frankenstein")
+	_, cmd := m.Update(key(tea.KeyEnter))
+	m.Update(cmd())
+	m.Update(key(tea.KeyF3))
+	m.Update(key(tea.KeyF3))
+	if m.searchOrder() != "relevance" {
+		t.Fatal("order did not cycle back to relevance", m.searchOrder())
+	}
+	m.Update(key(tea.KeyF3))
+	m.Update(key(tea.KeyF2))
+	if m.searchOrder() != "relevance" || len(orders) != 1 || orders[0] != "downloads" {
+		t.Fatal("provider switch kept an Archive order, or a request used the wrong order", orders)
+	}
+}

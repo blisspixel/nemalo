@@ -3,13 +3,18 @@ package app
 import (
 	"context"
 	"errors"
+	"net/http"
+	"path/filepath"
 	"runtime"
 	"strings"
 	"testing"
 
+	"github.com/blisspixel/nemalo/internal/acquisition"
 	"github.com/blisspixel/nemalo/internal/config"
 	"github.com/blisspixel/nemalo/internal/discovery"
 	"github.com/blisspixel/nemalo/internal/inventory"
+	"github.com/blisspixel/nemalo/internal/library"
+	"github.com/blisspixel/nemalo/internal/scanner"
 )
 
 type catalog struct{}
@@ -92,4 +97,126 @@ func TestSharedServices(t *testing.T) {
 		t.Fatal("unexpected tool")
 	}
 	_, _ = Lookup("MpCmdRun.exe")
+}
+
+type orderedCatalog struct{ catalog }
+
+func (orderedCatalog) SearchOrdered(_ context.Context, q, order string, limit, offset int) (discovery.Page, error) {
+	return discovery.Page{Query: q, Order: order, Offset: offset, Total: limit}, nil
+}
+
+func TestSearchOrderRouting(t *testing.T) {
+	s := Service{Providers: map[string]Searcher{"archive": orderedCatalog{}, "openlibrary": catalog{}}}
+	for _, order := range []string{"", discovery.OrderRelevance} {
+		if p, err := s.SearchSourceOrdered(context.Background(), "openlibrary", "books", order, 2, 0); err != nil || p.Query != "books" {
+			t.Fatal(order, p, err)
+		}
+	}
+	if p, err := s.SearchSourceOrdered(context.Background(), "archive", "books", discovery.OrderIdentifier, 2, 0); err != nil || p.Order != discovery.OrderIdentifier {
+		t.Fatal(p, err)
+	}
+	// A provider without another order must fail, not silently use relevance.
+	if _, err := s.SearchSourceOrdered(context.Background(), "openlibrary", "books", discovery.OrderIdentifier, 2, 0); err == nil {
+		t.Fatal("unsupported order silently accepted")
+	}
+	if _, err := s.SearchSourceOrdered(context.Background(), "missing", "books", discovery.OrderRelevance, 2, 0); err == nil {
+		t.Fatal("unavailable provider accepted")
+	}
+}
+
+type kindScanner struct {
+	kind string
+	err  error
+}
+
+func (k kindScanner) Scan(context.Context, string) scanner.Result { return scanner.Result{} }
+func (k kindScanner) Kind() (string, error)                       { return k.kind, k.err }
+
+func TestScanGuidanceNamesOneNextStep(t *testing.T) {
+	installed := Service{Scanner: kindScanner{kind: "clamav"}}
+	missing := Service{Scanner: kindScanner{err: errors.New("missing")}}
+	for _, tc := range []struct {
+		s         Service
+		antivirus string
+		requested bool
+		want      string
+	}{
+		{installed, "not_scanned", false, "Add --scan to scan this file with ClamAV."},
+		{Service{Scanner: kindScanner{kind: "defender"}}, "not_scanned", false, "Microsoft Defender"},
+		{missing, "not_scanned", false, "Install"},
+		{installed, "unavailable", true, "Install"},
+		{installed, "incomplete", true, "did not complete"},
+		{installed, "no_detections_reported", true, ""},
+		{installed, "findings", true, ""},
+		{installed, "not_scanned", true, ""},
+	} {
+		got := tc.s.ScanGuidance(tc.antivirus, tc.requested)
+		if runtime.GOOS == "windows" && strings.HasPrefix(tc.want, "Install") {
+			tc.want = "Microsoft Defender"
+		}
+		if (tc.want == "") != (got == "") || !strings.Contains(got, tc.want) {
+			t.Fatalf("%s/%t: %q", tc.antivirus, tc.requested, got)
+		}
+	}
+}
+
+func TestDoctorReportsSignaturesOrSetup(t *testing.T) {
+	defaultScanner := "clamscan"
+	if runtime.GOOS == "windows" {
+		defaultScanner = "MpCmdRun.exe"
+	}
+	sig := func() scanner.Signatures { return scanner.Signatures{Tool: "test", Status: "stale"} }
+	with := Service{}.doctor(config.Paths{}, config.Config{}, func(name string) (string, error) {
+		if name == defaultScanner {
+			return name, nil
+		}
+		return "", errors.New("missing")
+	}, sig)
+	if with.Signatures == nil || with.Signatures.Status != "stale" || with.ScannerSetup != "" {
+		t.Fatal("installed scanner without signature evidence", with)
+	}
+	without := Service{}.doctor(config.Paths{}, config.Config{}, func(string) (string, error) { return "", errors.New("missing") }, func() scanner.Signatures {
+		t.Fatal("signatures read without a scanner")
+		return scanner.Signatures{}
+	})
+	if without.Signatures != nil || without.ScannerSetup == "" {
+		t.Fatal("missing scanner without setup guidance", without)
+	}
+}
+
+func TestAcquireAndRescanUseServiceScannerAndQuarantine(t *testing.T) {
+	s := Service{Providers: map[string]Searcher{"archive": catalog{}}}
+	if _, err := s.Acquire(context.Background(), acquisition.Request{}); err == nil {
+		t.Fatal("provider without acquisition accepted")
+	}
+	if _, err := (Service{Scanner: kindScanner{kind: "clamav"}}).Rescan(context.Background(), library.RescanRequest{Library: t.TempDir()}); err == nil {
+		t.Fatal("rescan of an uninitialized library accepted")
+	}
+}
+
+type detectingProvider struct{}
+
+func (detectingProvider) Search(context.Context, string, int, int) (discovery.Page, error) {
+	return discovery.Page{}, nil
+}
+func (detectingProvider) Evaluate(context.Context, string) (discovery.Evaluation, error) {
+	return discovery.Evaluation{}, errors.New("stop before any request")
+}
+func (detectingProvider) Download(context.Context, discovery.OfferedFile) (*http.Response, error) {
+	return nil, errors.New("unreachable")
+}
+
+func TestAcquireAppliesServiceDetectionPolicy(t *testing.T) {
+	s := Service{Providers: map[string]Searcher{"archive": detectingProvider{}}, Scanner: kindScanner{kind: "clamav"}, OnDetection: "delete"}
+	// With "delete" no quarantine directory is needed, so validation passes and
+	// the provider is reached; without it the request is refused first.
+	_, err := s.Acquire(context.Background(), acquisition.Request{SourceID: "archive:demo", File: "a.epub", Output: filepath.Join(t.TempDir(), "p"), MaxBytes: 10})
+	if err == nil || !strings.Contains(err.Error(), "stop before any request") {
+		t.Fatal("service detection policy not applied", err)
+	}
+	s.OnDetection = ""
+	_, err = s.Acquire(context.Background(), acquisition.Request{SourceID: "archive:demo", File: "a.epub", Output: filepath.Join(t.TempDir(), "p"), MaxBytes: 10})
+	if err == nil || !strings.Contains(err.Error(), "quarantine directory") {
+		t.Fatal("quarantine requirement not enforced", err)
+	}
 }

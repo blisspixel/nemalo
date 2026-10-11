@@ -17,8 +17,11 @@ nemalo content resource /path/catalog.json --root /path/library --asset sha256:H
 ```
 
 `HASH` and tokens are returned identifiers, not literal values. Unknown versions
-fail with `unsupported_representation`. The unchanged default is `epub-text/1`,
-extractor `nemalo.epub.text/1`. Both new representations use
+fail with `unsupported_representation`. The default is `epub-text/2`, extractor
+`nemalo.epub.text/2`, which returns this extractor's text with gaps instead of
+parts; its gap `part` values are the part IDs described here
+([decision 0011](decisions/0011-default-text-with-located-gaps.md)). The
+original `epub-text/1` remains selectable. Both structured representations use
 `nemalo.epub.structure/1` and schema version 1. References carry the representation;
 using one with another representation fails instead of remapping positions.
 

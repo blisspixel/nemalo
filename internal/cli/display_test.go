@@ -18,6 +18,7 @@ import (
 	"github.com/blisspixel/nemalo/internal/app"
 	"github.com/blisspixel/nemalo/internal/config"
 	"github.com/blisspixel/nemalo/internal/discovery"
+	"github.com/blisspixel/nemalo/internal/scanner"
 )
 
 type displayCatalog struct {
@@ -36,12 +37,22 @@ func (intakeCatalog) Download(context.Context, discovery.OfferedFile) (*http.Res
 	return &http.Response{StatusCode: 200, ContentLength: 14, Body: io.NopCloser(strings.NewReader("%PDF-1.7\n%%EOF")), Header: http.Header{}}, nil
 }
 
+type fakeScanner string
+
+func (f fakeScanner) Scan(context.Context, string) scanner.Result {
+	return scanner.Result{Status: string(f), Tool: "fake"}
+}
+
 func TestAcquireCommandAndSubsequentLocalWorkflow(t *testing.T) {
-	s := app.Service{Providers: map[string]app.Searcher{"archive": intakeCatalog{}}}
+	// The fake reports no installed scanner; tests never run a real one.
+	s := app.Service{Providers: map[string]app.Searcher{"archive": intakeCatalog{}}, Scanner: fakeScanner("unavailable")}
+	state := t.TempDir()
 	run := func(args []string) (int, string) {
 		t.Helper()
 		var out, stderr bytes.Buffer
-		code := Execute(context.Background(), args, &out, &stderr, s, func(string) string { return "" }, func() (config.Paths, error) { return config.Paths{Config: filepath.Join(t.TempDir(), "none")}, nil }, nil)
+		code := Execute(context.Background(), args, &out, &stderr, s, func(string) string { return "" }, func() (config.Paths, error) {
+			return config.Paths{Config: filepath.Join(t.TempDir(), "none"), State: state}, nil
+		}, nil)
 		return code, out.String() + stderr.String()
 	}
 	for _, jsonMode := range []bool{false, true} {
@@ -50,8 +61,13 @@ func TestAcquireCommandAndSubsequentLocalWorkflow(t *testing.T) {
 		if jsonMode {
 			args = append(args, "--json")
 		}
-		if code, out := run(args); code != 0 || !strings.Contains(out, "untrusted_intake") || !strings.Contains(out, "not_scanned") {
+		code, out := run(args)
+		if code != 0 || !strings.Contains(out, "untrusted_intake") || !strings.Contains(out, "unavailable") {
 			t.Fatal(code, out)
+		}
+		// Human output names the install step once; JSON stays a single value.
+		if strings.Contains(out, "Next: ") == jsonMode {
+			t.Fatal("scanner setup guidance", jsonMode, out)
 		}
 		if code, _ := run(args); code != 1 {
 			t.Fatal("repeat overwrote output")
@@ -67,7 +83,15 @@ func TestAcquireCommandAndSubsequentLocalWorkflow(t *testing.T) {
 			}
 		}
 	}
-	for _, args := range [][]string{{"acquire"}, {"acquire", "archive:demo"}, {"acquire", "archive:demo", "--file", "../x.epub", "--output", "x"}, {"acquire", "archive:demo", "--file", "x.epub", "--output", "x", "--scan"}, {"acquire", "archive:demo", "--file", "x.epub", "--output", "x", "--max-file-bytes", "268435457"}} {
+	if code, out := run([]string{"acquire", "archive:demo", "--file", "book.pdf", "--output", filepath.Join(t.TempDir(), "a", "b", "packet"), "--no-scan"}); code != 0 || !strings.Contains(out, "not_scanned") || strings.Contains(out, "Next: ") {
+		t.Fatal("missing parents or --no-scan", code, out)
+	}
+	s.Scanner = fakeScanner("findings")
+	code, out := run([]string{"acquire", "archive:demo", "--file", "book.pdf", "--output", filepath.Join(t.TempDir(), "detected")})
+	if code != 1 || !strings.Contains(out, "detected_quarantined") || !strings.Contains(out, "will not be imported") || !strings.Contains(out, "content.pdf.quarantined") {
+		t.Fatal("detection", code, out)
+	}
+	for _, args := range [][]string{{"acquire"}, {"acquire", "archive:demo"}, {"acquire", "archive:demo", "--file", "../x.epub", "--output", "x"}, {"acquire", "archive:demo", "--file", "x.epub", "--output", "x", "--scan"}, {"acquire", "archive:demo", "--file", "x.epub", "--output", "x", "--max-file-bytes", "268435457"}, {"acquire", "archive:demo", "--file", "x.epub", "--output", "x", "--on-detection", "keep"}, {"check", "x", "--no-scan"}} {
 		if code, _ := run(args); code != 2 {
 			t.Fatal("bad acquire usage", args, code)
 		}
@@ -117,5 +141,27 @@ func TestEnvelopeAndFallbackJSONPreserveDataWithoutRawDisplayControls(t *testing
 	var got map[string]string
 	if err := json.Unmarshal(out.Bytes(), &got); err != nil || got[payload] != payload || !strings.Contains(out.String(), "日本語 café") {
 		t.Fatal(got, err)
+	}
+}
+
+func TestAcquireDetectionPolicyFromConfigurationAndFlag(t *testing.T) {
+	dir := t.TempDir()
+	cfg := filepath.Join(dir, "config.json")
+	if err := os.WriteFile(cfg, []byte(`{"on_detection":"delete"}`), 0600); err != nil {
+		t.Fatal(err)
+	}
+	s := app.Service{Providers: map[string]app.Searcher{"archive": intakeCatalog{}}, Scanner: fakeScanner("findings")}
+	run := func(args ...string) string {
+		var out bytes.Buffer
+		Execute(context.Background(), append(args, "--json", "--config", cfg), &out, io.Discard, s, func(string) string { return "" }, func() (config.Paths, error) {
+			return config.Paths{Config: cfg, State: filepath.Join(dir, "state")}, nil
+		}, nil)
+		return out.String()
+	}
+	if out := run("acquire", "archive:demo", "--file", "book.pdf", "--output", filepath.Join(dir, "a")); !strings.Contains(out, "detected_deleted") {
+		t.Fatal("configured delete policy ignored", out)
+	}
+	if out := run("acquire", "archive:demo", "--file", "book.pdf", "--output", filepath.Join(dir, "b"), "--on-detection", "quarantine"); !strings.Contains(out, "detected_quarantined") {
+		t.Fatal("flag did not override configuration", out)
 	}
 }

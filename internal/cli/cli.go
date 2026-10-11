@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/blisspixel/nemalo/internal/acquisition"
@@ -23,7 +24,7 @@ import (
 	"github.com/blisspixel/nemalo/internal/tui"
 )
 
-const Version = "0.1.0-alpha.2"
+const Version = "0.1.0-alpha.3"
 
 const help = `Nemalo
 Find knowledge. Care for it. Realize its potential.
@@ -45,6 +46,8 @@ Usage: nemalo <command> [options]
                       Browse local file holdings and optional EPUB metadata
   library import LIBRARY SOURCE [--apply] [--scan]
                       Assess one EPUB, PDF, MP3, or intake packet; --apply stores it
+  library rescan LIBRARY [--apply]
+                      Scan review EPUBs that lack scan evidence; --apply records results
   library audit CATALOG --root DIRECTORY
                       Compare a snapshot catalog with files under an explicit root
   library audit LIBRARY
@@ -67,21 +70,29 @@ Usage: nemalo <command> [options]
   help                Show this help
 
 Shared options: --json, --config FILE, --library DIRECTORY, --review DIRECTORY
-Search options: --source openlibrary|archive (default openlibrary), --limit 10, --offset 0
+Search options: --source openlibrary|archive (default openlibrary), --limit 10, --offset 0,
+                --sort relevance|identifier|downloads (the last two are Archive only;
+                identifier pages stably, downloads ranks by declared popularity)
 Acquire options: --file exact-source-filename, --output new-directory,
-                 --max-file-bytes 268435456 (maximum 256 MiB)
-Acquisition retains incomplete output, never overwrites or resumes it, and does
-not scan antivirus or publish to a checked library. Rights remain unresolved.
+                 --max-file-bytes 268435456 (maximum 256 MiB),
+                 --no-scan, --on-detection quarantine|delete
+Acquisition creates missing parent folders, retains incomplete output, and never
+overwrites or resumes it. When a scanner is installed it scans the downloaded
+bytes once. A detection moves them to the Nemalo quarantine (or deletes them)
+and lists other files from the same item. Rights remain unresolved.
 Inspect options: --hashes, --max-entries 10000, --max-depth 32,
                  --max-file-bytes 268435456, --max-total-bytes 1073741824
 Check options: --scan, --expected-bytes N, --expected-sha256 HASH
 Library snapshot options: --output FILE, --assess (local health/EPUB metadata)
 Library list options: --query TEXT, --format all|epub|pdf|mp3, --limit 10, --offset 0
 Library import options: --apply, --scan
+Library rescan options: --apply (without it, scans and reports but writes nothing)
 Library audit options: --root DIRECTORY for a snapshot catalog
 Content read options: --unit 0, --text-offset 0, --max-bytes 4096, --cursor TOKEN
-                     --representation epub-text/1|epub-structure/1, --part ID
-Content extraction is plain text, not rendered layout or acknowledgement of reading.
+                     --representation epub-text/2|epub-text/1|epub-structure/1, --part ID
+The default epub-text/2 omits images, tables, mathematics, and media from the
+text and locates each omission as a gap. A continuation keeps the representation
+it was issued for. Extraction is not rendered layout or acknowledgement of reading.
 Snapshot and snapshot audit also accept inventory max-* limits. Snapshots hash
 all regular files, account for excluded links, refuse incomplete inventories,
 and never overwrite. Snapshot audit requires --root; the catalog cannot
@@ -144,6 +155,7 @@ func Execute(ctx context.Context, args []string, out, errOut io.Writer, service 
 	review := flags.String("review", "", "explicit review directory")
 	limit, offset := flags.Int("limit", 10, "search page size"), flags.Int("offset", 0, "search offset")
 	source := flags.String("source", "openlibrary", "search provider")
+	sortOrder := flags.String("sort", discovery.OrderRelevance, "search result order")
 	limits := inventory.Defaults()
 	checkOptions := assessment.Options{}
 	output := flags.String("output", "", "new snapshot output path")
@@ -153,13 +165,15 @@ func Execute(ctx context.Context, args []string, out, errOut io.Writer, service 
 	auditRoot := flags.String("root", "", "explicit audit root")
 	assess := flags.Bool("assess", false, "include local health facts without antivirus")
 	apply := flags.Bool("apply", false, "store the assessed import")
+	noScan := flags.Bool("no-scan", false, "skip the post-download scan")
+	onDetection := flags.String("on-detection", "quarantine", "quarantine or delete a detected download")
 	contentRequest := content.Request{SchemaVersion: 1}
 	flags.StringVar(&contentRequest.AssetID, "asset", "", "exact catalog asset ID")
 	flags.IntVar(&contentRequest.Unit, "unit", 0, "zero-based reading-order document")
 	flags.IntVar(&contentRequest.Offset, "text-offset", 0, "zero-based UTF-8 text byte offset")
 	flags.IntVar(&contentRequest.MaxBytes, "max-bytes", 4096, "maximum returned text bytes")
 	flags.StringVar(&contentRequest.Cursor, "cursor", "", "source-bound continuation token")
-	flags.StringVar(&contentRequest.Representation, "representation", "epub-text/1", "negotiated content representation")
+	flags.StringVar(&contentRequest.Representation, "representation", "", "negotiated content representation; a continuation selects its own")
 	flags.StringVar(&contentRequest.Part, "part", "", "exact source part ID")
 	flags.BoolVar(&checkOptions.Scan, "scan", false, "invoke installed antivirus")
 	flags.Int64Var(&checkOptions.ExpectedBytes, "expected-bytes", 0, "known expected file size")
@@ -239,12 +253,31 @@ func Execute(ctx context.Context, args []string, out, errOut io.Writer, service 
 	if err != nil {
 		return write(nil, err, 2)
 	}
+	if service.Quarantine == "" && p.State != "" {
+		service.Quarantine = filepath.Join(p.State, "quarantine")
+	}
+	if service.OnDetection == "" {
+		service.OnDetection = c.OnDetection
+	}
+	// guide prints one next step after human output when scan evidence is missing.
+	guide := func(code int, antivirus string, scanRequested bool) int {
+		if hint := service.ScanGuidance(antivirus, scanRequested); hint != "" && !*jsonMode {
+			_, _ = fmt.Fprintln(out, "Next: "+hint)
+		}
+		return code
+	}
 	switch command {
 	case "acquire":
 		if flags.NArg() != 1 {
 			return write(nil, errors.New("use acquire archive:ITEM --file NAME --output NEW_DIRECTORY"), 2)
 		}
-		request := acquisition.Request{SourceID: flags.Arg(0), File: *sourceFile, Output: *output, MaxBytes: limits.FileBytes}
+		detection := c.OnDetection
+		flags.Visit(func(f *flag.Flag) {
+			if f.Name == "on-detection" {
+				detection = *onDetection
+			}
+		})
+		request := acquisition.Request{SourceID: flags.Arg(0), File: *sourceFile, Output: *output, MaxBytes: limits.FileBytes, NoScan: *noScan, OnDetection: detection}
 		if err := request.Validate(); err != nil {
 			return write(nil, err, 2)
 		}
@@ -252,7 +285,7 @@ func Execute(ctx context.Context, args []string, out, errOut io.Writer, service 
 		if err != nil {
 			return write(data, err, 1)
 		}
-		return write(data, nil, 0)
+		return guide(write(data, nil, 0), data.Antivirus, true)
 	case "content":
 		if flags.NArg() != 1 || (action != "units" && action != "read" && action != "source" && action != "resource") {
 			return write(nil, errors.New("use content units/read/source/resource CATALOG --root DIRECTORY --asset sha256:HASH"), 2)
@@ -298,6 +331,16 @@ func Execute(ctx context.Context, args []string, out, errOut io.Writer, service 
 				return write(nil, errors.New("use library import LIBRARY SOURCE"), 2)
 			}
 			data, err := service.Import(ctx, library.ImportRequest{Library: flags.Arg(0), Source: flags.Arg(1), Scan: checkOptions.Scan, Apply: *apply})
+			if err != nil {
+				return write(data, err, 1)
+			}
+			return guide(write(data, nil, 0), data.Antivirus, checkOptions.Scan)
+		}
+		if action == "rescan" {
+			if flags.NArg() != 1 {
+				return write(nil, errors.New("use library rescan LIBRARY [--apply]"), 2)
+			}
+			data, err := service.Rescan(ctx, library.RescanRequest{Library: flags.Arg(0), Apply: *apply})
 			if err != nil {
 				return write(data, err, 1)
 			}
@@ -379,9 +422,9 @@ func Execute(ctx context.Context, args []string, out, errOut io.Writer, service 
 		}
 		data, err := service.Check(ctx, flags.Arg(0), checkOptions)
 		if err != nil {
-			return write(data, err, 1)
+			return guide(write(data, err, 1), data.Antivirus.Status, checkOptions.Scan)
 		}
-		return write(data, nil, 0)
+		return guide(write(data, nil, 0), data.Antivirus.Status, checkOptions.Scan)
 	case "doctor":
 		if flags.NArg() != 0 {
 			return write(nil, errors.New("doctor takes no arguments"), 2)
@@ -392,10 +435,13 @@ func Execute(ctx context.Context, args []string, out, errOut io.Writer, service 
 		if *source != "openlibrary" && *source != "archive" {
 			return write(nil, errors.New("search source must be openlibrary or archive"), 2)
 		}
+		if *sortOrder != discovery.OrderRelevance && ((*sortOrder != discovery.OrderIdentifier && *sortOrder != discovery.OrderDownloads) || *source != "archive") {
+			return write(nil, errors.New("search order must be relevance, or identifier or downloads with --source archive"), 2)
+		}
 		if strings.TrimSpace(query) == "" || len(query) > 1000 || *limit < 1 || *limit > 50 || *offset < 0 || *offset > 10000 {
 			return write(nil, errors.New("search requires QUERY, limit 1-50, and offset 0-10000"), 2)
 		}
-		data, err := service.SearchSource(ctx, *source, query, *limit, *offset)
+		data, err := service.SearchSourceOrdered(ctx, *source, query, *sortOrder, *limit, *offset)
 		if err != nil {
 			return write(data, err, 1)
 		}
@@ -456,15 +502,17 @@ func flagApplies(command, action, name string) bool {
 			return name == "query" || name == "format" || name == "limit" || name == "offset"
 		case "import":
 			return name == "apply" || name == "scan"
+		case "rescan":
+			return name == "apply"
 		case "audit":
 			return name == "root" || strings.HasPrefix(name, "max-")
 		}
 	}
 	switch command {
 	case "acquire":
-		return name == "file" || name == "output" || name == "max-file-bytes"
+		return name == "file" || name == "output" || name == "max-file-bytes" || name == "no-scan" || name == "on-detection"
 	case "search":
-		return name == "limit" || name == "offset" || name == "source"
+		return name == "limit" || name == "offset" || name == "source" || name == "sort"
 	case "check":
 		return name == "scan" || name == "expected-bytes" || name == "expected-sha256"
 	case "inspect":
@@ -530,11 +578,17 @@ func printData(out io.Writer, data any) error {
 	case library.ManagedAudit:
 		_, err := io.WriteString(out, present.ManagedAudit(value))
 		return err
+	case library.RescanResult:
+		_, err := io.WriteString(out, present.Rescan(value))
+		return err
 	case assessment.Report:
 		_, err := io.WriteString(out, present.Health(value))
 		return err
 	case discovery.Page:
 		_, err := io.WriteString(out, present.Search(value))
+		return err
+	case content.Result:
+		_, err := io.WriteString(out, present.ContentCommand(value))
 		return err
 	case inventory.Report:
 		_, err := io.WriteString(out, present.Inventory(value))

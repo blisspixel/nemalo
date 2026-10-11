@@ -18,9 +18,20 @@ type Result struct {
 	Access      string   `json:"access_type"`
 }
 
+// Result orders. Relevance is the provider's own ranking; Nemalo adds no
+// ranking signal of its own. Identifier order is stable for deliberate paging.
+// Downloads is the provider's declared download count, a popularity signal the
+// user selects explicitly; it is not quality, relevance, or a recommendation.
+const (
+	OrderRelevance  = "relevance"
+	OrderIdentifier = "identifier"
+	OrderDownloads  = "downloads"
+)
+
 type Page struct {
 	Source  string   `json:"source"`
 	Query   string   `json:"query"`
+	Order   string   `json:"order"`
 	Offset  int      `json:"offset"`
 	Total   int      `json:"total"`
 	Results []Result `json:"results"`
@@ -35,7 +46,7 @@ func NewOpenLibrary() *OpenLibrary {
 	return &OpenLibrary{metadataClient: newMetadataClient("openlibrary.org"), endpoint: "https://openlibrary.org/search.json"}
 }
 func (p *OpenLibrary) Search(ctx context.Context, query string, limit, offset int) (Page, error) {
-	page := Page{Source: "openlibrary", Query: strings.TrimSpace(query), Offset: offset, Results: []Result{}}
+	page := Page{Source: "openlibrary", Query: strings.TrimSpace(query), Order: OrderRelevance, Offset: offset, Results: []Result{}}
 	if page.Query == "" || len(page.Query) > 1000 || limit < 1 || limit > 50 || offset < 0 || offset > 10000 {
 		return page, errors.New("search requires a query of 1-1000 bytes, limit 1-50, and offset 0-10000")
 	}

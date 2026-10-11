@@ -15,9 +15,11 @@ AI service. Future agent interfaces will use the same application services.
 
 **Early development, not 1.0.** Available today:
 
-- Search Open Library and Internet Archive; evaluate Archive item/file metadata.
+- Search Open Library and Internet Archive by provider relevance, or Archive by
+  download count or identifier; evaluate Archive item/file metadata.
 - Acquire a selected Archive EPUB, PDF, or MP3 into exclusive untrusted intake,
-  with source checksums, local checks, and a provenance receipt.
+  with source checksums, local checks, a scan by the installed antivirus, and a
+  provenance receipt. A detection is quarantined and other files are offered.
 - Inventory explicit folders; check file structure, size, hashes, and EPUB text
   measurements. A scan is recommended for a file you did not produce and stays
   optional: Defender on Windows, ClamAV on Linux and macOS. Pass a publisher
@@ -27,10 +29,13 @@ AI service. Future agent interfaces will use the same application services.
 - Import one EPUB, PDF, or MP3, or a completed intake packet, into an initialized
   library. Preview writes nothing. Checked status requires a passed EPUB check
   and a recorded no-detection scan; other assessed files stay in review.
+  `library rescan` scans review holdings in one batched command.
 - Retrieve bounded EPUB text in CLI/JSON/TUI, with exact continuation, source parts,
-  note references, local image bytes, and explicit extraction gaps.
-- Report environment paths, tool availability, scanner recommendations, and the
-  directory descriptor bridge (/proc/self/fd on Linux, /dev/fd on macOS) with doctor.
+  note references, local image bytes, and explicit extraction gaps. Illustrated
+  chapters stay readable; each omitted image or table is located.
+- Report environment paths, tool availability, scanner setup and signature age,
+  and the directory descriptor bridge (/proc/self/fd on Linux, /dev/fd on macOS)
+  with doctor.
 - Use CLI, versioned JSON, or an interactive terminal interface.
 
 Resumable transfers, archive intake, folder cleanup, reader/player handoff,
@@ -40,20 +45,38 @@ File checks report limited evidence, never a safety or completeness guarantee.
 See [current capabilities and limits](docs/DEVELOPMENT.md) and the [roadmap](ROADMAP.md).
 Native prerelease archives and checksums are on [GitHub Releases](https://github.com/blisspixel/nemalo/releases).
 
-## Quick start
+## Install
 
-With Go 1.27.2 or a compatible supported toolchain:
+Linux and macOS:
 
 ```sh
-go build -trimpath -o bin/ ./cmd/nemalo
-go run ./cmd/nemalo doctor
-go run ./cmd/nemalo tui
-go run ./cmd/nemalo search "Jules Verne" --limit 5
-go run ./cmd/nemalo check /path/to/book.epub --json
+curl -fsSL https://raw.githubusercontent.com/blisspixel/nemalo/main/scripts/install.sh | sh
 ```
 
-The binary is `bin/nemalo` (`bin/nemalo.exe` on Windows). Run `nemalo help` for
-commands. Local inventory and catalog operations are offline; explicit searches
+Windows PowerShell:
+
+```powershell
+irm https://raw.githubusercontent.com/blisspixel/nemalo/main/scripts/install.ps1 | iex
+```
+
+The installers fetch the newest published release archive, verify it against the
+release `SHA256SUMS`, and install one executable to `~/.local/bin` or
+`%LOCALAPPDATA%\Programs\nemalo`. Pass `--version`/`-Version` to pin a release and
+`--uninstall`/`-Uninstall` to remove it. See
+[decision 0013](docs/decisions/0013-release-installer-scripts.md).
+
+## Quick start
+
+```sh
+nemalo doctor
+nemalo tui
+nemalo search "librivox frankenstein" --source archive --sort downloads --limit 5
+nemalo check /path/to/book.epub --scan
+```
+
+To build from source instead, with Go 1.27.2 or a compatible supported toolchain,
+run `go build -trimpath -o bin/ ./cmd/nemalo`; the binary is `bin/nemalo`
+(`bin/nemalo.exe` on Windows). Run `nemalo help` for commands. Local inventory and catalog operations are offline; explicit searches
 send queries to the selected provider. Sources are preserved.
 
 ![Nemalo browsing real multilingual library holdings](docs/images/tui-holdings.png)

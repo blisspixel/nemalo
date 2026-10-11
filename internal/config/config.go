@@ -16,6 +16,9 @@ const maxConfigBytes = 64 << 10
 type Config struct {
 	Library string `json:"library,omitempty"`
 	Review  string `json:"review,omitempty"`
+	// OnDetection is what acquisition does with a download the scanner flags:
+	// "quarantine" (the default when empty) or "delete".
+	OnDetection string `json:"on_detection,omitempty"`
 }
 
 type Paths struct {
@@ -105,6 +108,9 @@ func Load(path string, explicit bool, env func(string) string, overrides Config)
 		if path != "" && !filepath.IsAbs(path) {
 			return c, errors.New("library and review paths must be absolute")
 		}
+	}
+	if c.OnDetection != "" && c.OnDetection != "quarantine" && c.OnDetection != "delete" {
+		return c, errors.New("on_detection must be quarantine or delete")
 	}
 	if c.Library != "" && c.Review != "" && (within(c.Library, c.Review) || within(c.Review, c.Library)) {
 		return c, errors.New("library and review directories must not overlap")

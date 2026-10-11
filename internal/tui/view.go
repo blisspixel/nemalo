@@ -86,9 +86,12 @@ func (m *model) contextLine() string {
 		return fmt.Sprintf("Offline | No progress tracking | Asset %q", m.reader.asset)
 	}
 	if m.mode == "state" {
-		return "Enter status | F7 init | F8 import"
+		return "Enter status | F7 init | F8 import | Ctrl+R rescan"
 	}
 	if m.mode == "search" {
+		if m.source == "archive" {
+			return "archive; F2 provider | F3 order: " + m.searchOrder() + " | Explicit network search"
+		}
 		return m.source + "; F2 changes provider | Explicit network search"
 	}
 	if m.mode == "evaluate" {
@@ -301,7 +304,7 @@ func (m *model) emptyHelp() string {
 	case "evaluate":
 		return "Look before acquiring.\n\nEnter archive:ITEM, or select an Archive search result and press e.\nEnter retrieves metadata only. F6 browses source files.\nEnter a new intake folder with Ctrl+N; select a file and press d to review acquisition.\nDownloads remain untrusted; existing intake is never overwritten."
 	case "state":
-		return "Establish a library identity.\n\nEnter an existing folder, then Enter to read its control status.\nF7 reviews initialization before writing control metadata.\nCtrl+N sets one source. F8 reviews import and does not scan or delete it."
+		return "Establish a library identity.\n\nEnter an existing folder, then Enter to read its control status.\nF7 reviews initialization before writing control metadata.\nCtrl+N sets one source. F8 reviews import and does not scan or delete it.\nCtrl+R reviews a scan of review EPUBs that lack scan evidence."
 	case "read":
 		return "Read from exact source bytes.\n\nSelect an asset in Holdings and press r. Enter its explicit root, then Enter lists units.\nF6 browses units; Enter retrieves text. n continues, r repeats, u lists units.\nDelivery does not record reading progress. Notes and image resources are available through content CLI references."
 	default:

@@ -208,3 +208,45 @@ func writeStateEPUB(t *testing.T, dir string) string {
 	}
 	return path
 }
+
+func TestStateRescanReviewCancelAndApply(t *testing.T) {
+	root := t.TempDir()
+	if _, err := library.Initialize(context.Background(), root); err != nil {
+		t.Fatal(err)
+	}
+	if r, err := library.Import(context.Background(), library.ImportRequest{Library: root, Source: writeStateEPUB(t, t.TempDir()), Apply: true}); err != nil || r.Reason != "unscanned" {
+		t.Fatal(r, err)
+	}
+	m := newModel(context.Background(), app.Service{Scanner: tuiScanner("no_detections_reported")})
+	m.switchMode("state")
+	ctrlR := tea.KeyPressMsg{Code: 'r', Mod: tea.ModCtrl}
+	m.Update(ctrlR)
+	if m.confirmRoot != "" {
+		t.Fatal("empty rescan entered review")
+	}
+	m.input.SetValue(root)
+	m.Update(ctrlR)
+	if m.confirmKind != "rescan" || !strings.Contains(m.report, "Rescan review holdings") {
+		t.Fatal("missing rescan review", m.report)
+	}
+	m.Update(ctrlR)
+	if m.confirmRoot != "" {
+		t.Fatal("second Ctrl+R did not return")
+	}
+	before, err := os.ReadFile(filepath.Join(root, ".nemalo", "holdings.jsonl"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	m.Update(ctrlR)
+	_, cmd := m.Update(key(tea.KeyEnter))
+	if cmd == nil || !m.busy {
+		t.Fatal("confirmed rescan not dispatched")
+	}
+	if after, _ := os.ReadFile(filepath.Join(root, ".nemalo", "holdings.jsonl")); string(after) != string(before) {
+		t.Fatal("rescan wrote outside the service command")
+	}
+	m.Update(cmd())
+	if m.busy || !strings.Contains(m.report, "Promoted to checked: 1") {
+		t.Fatal("rescan evidence missing", m.report)
+	}
+}

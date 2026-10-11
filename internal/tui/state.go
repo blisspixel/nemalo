@@ -55,11 +55,34 @@ func (m *model) requestImport() {
 	m.resize()
 }
 
+// requestRescan reviews scanning the library's review holdings that lack
+// usable scan evidence. Nothing runs until a second Enter.
+func (m *model) requestRescan() {
+	if m.input.Value() == "" {
+		m.status = "Enter an initialized library folder first."
+		m.resize()
+		return
+	}
+	root, err := filepath.Abs(m.input.Value())
+	if err != nil {
+		m.status = fmt.Sprintf("Rescan error: %q", err.Error())
+		m.resize()
+		return
+	}
+	m.confirmKind, m.confirmRoot, m.confirmSource, m.confirmReport, m.confirmStatus = "rescan", root, "", m.report, m.status
+	m.input.Blur()
+	m.secondary.Blur()
+	m.status = "Review rescan. Enter scans and records results; Escape returns without scanning."
+	m.setReport(fmt.Sprintf("Rescan review holdings\n\nLibrary: %q\n\nRuns the limited checks again and scans, with the installed scanner, each EPUB holding that is in review only because no usable scan was recorded. ClamAV scans them in batches so its signatures load once.\n\nA clean result records the holding as checked; a detection or an incomplete scan keeps it in review with that reason. PDF, MP3, earlier detections, and other findings are listed but not scanned.\n\nStored files are never changed, moved, or deleted. A no-detection result is not proof of safety.\n\nEnter scans and records the results. Escape, F7, F8, or Ctrl+R returns without scanning.\n", root))
+	m.viewport.GotoTop()
+	m.resize()
+}
+
 func (m *model) confirmInitialization(msg tea.KeyPressMsg) tea.Cmd {
 	switch msg.String() {
 	case "ctrl+c":
 		return tea.Quit
-	case "esc", "f7", "f8":
+	case "esc", "f7", "f8", "ctrl+r":
 		m.setReport(m.confirmReport)
 		m.status = m.confirmStatus
 		m.confirmKind, m.confirmRoot, m.confirmSource, m.confirmReport, m.confirmStatus = "", "", "", "", ""
@@ -76,9 +99,12 @@ func (m *model) confirmInitialization(msg tea.KeyPressMsg) tea.Cmd {
 			m.secondary.SetValue(m.confirmSource)
 		}
 		m.confirmKind, m.confirmRoot, m.confirmSource, m.confirmReport, m.confirmStatus = "", "", "", "", ""
-		if kind == "import" {
+		switch kind {
+		case "import":
 			m.importAction = true
-		} else {
+		case "rescan":
+			m.rescanAction = true
+		default:
 			m.initializeAction = true
 		}
 		return m.start(true)

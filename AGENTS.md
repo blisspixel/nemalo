@@ -27,6 +27,7 @@ tested, and shipped behavior. Never infer support from a roadmap or a cross-buil
   Linux-first CLI and TUI; native macOS and Windows support. Do not extend the prototype
   or add a Python runtime/build dependency. Go is settled, not an open language choice.
   Any non-Go exception needs a concrete unmet requirement and a recorded decision.
+  The only one is `scripts/install.sh`/`install.ps1` (decision 0013).
 - Implement the bounded task requested. Research/documentation work does not
   authorize a rewrite, data cleanup, release, commit, push, or deployment.
 - Topic watches, Markdown knowledge workspaces, and optional model/provider/harness
@@ -100,12 +101,18 @@ File/container checks are in `internal/assessment`, shared with the collection
 harness; installed antivirus is in `internal/scanner`. Preserve measured facts
 versus semantic completeness, explicit scanner opt-in and cloud-policy disclosure,
 snapshot/hash binding, no remediation, and unsuccessful missing/incomplete scans.
+Acquisition scans intake bytes and quarantines detections; `library rescan` batches
+ClamAV through `assessment.CheckManyInRoot`. A batch result binds to its own
+snapshot, and unattributable output is incomplete. Do not use `clamdscan`: its
+daemon limits can report a partially scanned file as OK. See decision 0012.
 Portable byte-identity snapshots, holdings, and audits belong in `internal/library`;
 see decision 0004. Preserve explicit audit roots, exclusive outside-root outputs,
 all duplicate locations, and historical evidence distinct from checked publication.
 An incomplete traversal cannot establish missing files. A snapshot is not a journal.
 Library identity/init/status and OS locks also belong in `internal/library`; see
-decision 0006. The journal covers initialization only. Preserve explicit roots,
+decision 0006. The initialization journal stays two records. Managed operations
+are separate intent/completed pairs (import, rescan); every writer completes a
+trailing rescan intent before its own work. Preserve explicit roots,
 retained corrupt state, canonical records, OS-held locks, and TUI write review.
 Never remove a lock file to release an active writer or treat initialization as
 content validation or production import/cleanup recovery.
@@ -113,12 +120,14 @@ Source-bound text retrieval belongs in `internal/content`, exposed by `internal/
 see `docs/CONTENT-ACCESS.md` and issue 1. Reuse assessment's container parser.
 Preserve stateless offline reads, exact-byte/extractor-bound references, explicit
 unsupported units, no silent continuation skips, and no inferred consumption.
-Keep the default text representation compatible; structured parts/resources use
-explicit versions and the same container parser. Test located gaps and range
+The default is `epub-text/2` (decision 0011). Keep earlier representations
+selectable and their continuations valid; changed rules need a new extractor ID.
+Derive plain text from the structured extractor rather than adding a parser. Test located gaps and range
 coverage separately from source bytes, rendering, safety, and semantic completeness.
 
 Test behavior and failure recovery, not just execution. Use synthetic fixtures;
-never personal downloads. Give cleanup, parser boundaries, scanner skips, and
+never personal downloads. Tests never run an installed scanner or reach a network:
+inject `app.Service.Scanner` and providers, since a nil scanner selects the real one. Give cleanup, parser boundaries, scanner skips, and
 crash transitions adversarial tests. Fix root causes; do not weaken checks,
 schemas, assertions, or coverage to obtain a pass. Self-review consequential edits.
 

@@ -60,8 +60,10 @@ type model struct {
 	confirmStatus    string
 	initializeAction bool
 	importAction     bool
+	rescanAction     bool
 	mode             string
 	source           string
+	order            string
 	format           string
 	status           string
 	busy             bool
@@ -69,6 +71,8 @@ type model struct {
 	cancel           context.CancelFunc
 	reader           readerState
 	downloadReview   *acquisition.Request
+	// lastEvaluation lets a detected download offer the item's other files.
+	lastEvaluation *discovery.Evaluation
 }
 
 func newModel(ctx context.Context, service app.Service) *model {
@@ -123,12 +127,16 @@ func (m *model) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 		switch value := msg.data.(type) {
 		case acquisition.Result:
 			if msg.err == nil {
-				m.status = "Downloaded to untrusted intake. Antivirus not scanned; checked publication pending."
+				m.status = acquisitionStatus(value.Antivirus, m.service.ScanGuidance(value.Antivirus, true))
 				for _, mode := range []string{"check", "scan"} {
 					d := m.drafts[mode]
 					d.input = value.ContentPath
 					m.drafts[mode] = d
 				}
+			}
+		case discovery.Evaluation:
+			if msg.err == nil {
+				m.lastEvaluation = &value
 			}
 		case discovery.Page:
 			if msg.err == nil {
@@ -164,6 +172,9 @@ func (m *model) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 			m.populate(nil)
 			m.evidence = true
 		}
+		if value, ok := msg.data.(acquisition.Result); ok && strings.HasPrefix(value.Status, "detected_") {
+			m.offerOtherFiles(value)
+		}
 		data, err := textsafe.MarshalJSON(msg.data, true)
 		switch value := msg.data.(type) {
 		case acquisition.Result:
@@ -182,6 +193,8 @@ func (m *model) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 			data = []byte(present.Import(value))
 		case library.ManagedAudit:
 			data = []byte(present.ManagedAudit(value))
+		case library.RescanResult:
+			data = []byte(present.Rescan(value))
 		case assessment.Report:
 			data = []byte(present.Health(value))
 		case discovery.Page:
@@ -220,6 +233,10 @@ func (m *model) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 			m.requestImport()
 			return m, nil
 		}
+		if msg.String() == "ctrl+r" && m.mode == "state" && !m.busy {
+			m.requestRescan()
+			return m, nil
+		}
 		if handled, cmd := m.browserKey(msg.String()); handled {
 			return m, cmd
 		}
@@ -251,6 +268,20 @@ func (m *model) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 			if !m.busy && (m.mode == "inspect" || m.mode == "snapshot" || m.mode == "audit") {
 				m.largeBudget = !m.largeBudget
 			}
+			if !m.busy && m.mode == "search" && m.source == "archive" {
+				orders := []string{discovery.OrderRelevance, discovery.OrderDownloads, discovery.OrderIdentifier}
+				for i, order := range orders {
+					if order == m.searchOrder() {
+						m.order = orders[(i+1)%len(orders)]
+						break
+					}
+				}
+				m.offset, m.total = 0, 0
+				m.setReport("")
+				m.populate(nil)
+				m.status = "Archive result order: " + m.order + ". Press Enter to search."
+				m.resize()
+			}
 			return m, nil
 		case "ctrl+right", "ctrl+left":
 			return m, m.turnPage(msg.String() == "ctrl+right")
@@ -263,6 +294,8 @@ func (m *model) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 				}
 				m.input.Placeholder = "Search " + m.source + " (network on Enter; F2 changes provider)"
 				m.status = "Ready. Search provider: " + m.source
+				// Only Archive offers orders besides relevance.
+				m.order = discovery.OrderRelevance
 				m.offset, m.total = 0, 0
 				m.setReport("")
 				m.populate(nil)

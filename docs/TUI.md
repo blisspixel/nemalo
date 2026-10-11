@@ -22,7 +22,10 @@ ID. This makes no request; Enter explicitly retrieves metadata. Evaluation does
 not download content, determine file-level rights, or establish safety.
 Evaluation also lists source files. Enter a new Intake directory with Ctrl+N,
 focus a file with F6, then `d` reviews the exact acquisition before a confirming
-Enter. Downloads remain untrusted; Check/Scan are staged afterward. See
+Enter. The download is scanned once with the installed scanner, and the status
+line states the result. Downloads remain untrusted; Check/Scan are staged
+afterward. After a detection the file is quarantined and the list shows the
+item's other files for a new, deliberate review. See
 [acquisition](ACQUISITION.md) for incomplete-packet handling and bounds.
 
 ## Commands and shortcuts
@@ -39,10 +42,12 @@ Enter. Downloads remain untrusted; Check/Scan are staged afterward. See
 | PageUp / PageDown | Scroll detail/report |
 | Ctrl+Left / Ctrl+Right | Previous / next search or holdings page |
 | F2 in search | Switch Open Library / Internet Archive |
+| F3 in Archive search | Cycle relevance / downloads / identifier order |
 | F3 in inspect, snapshot, audit | Select bounded 1 GiB / 5 GiB read budget |
 | F4 in holdings | Cycle EPUB / PDF / MP3 / all filename filters |
 | F7 in State | Review initialization of an explicit existing folder |
 | F8 in State | Review import of the folder and one source; no antivirus scan |
+| Ctrl+R in State | Review a rescan of review EPUBs that lack scan evidence |
 | Ctrl+N in two-field forms | Switch between fields, including State source |
 | Ctrl+A in snapshot | Toggle historical health metadata |
 | e in Archive results | Prepare selected-item evaluation, without requesting it |
@@ -60,10 +65,14 @@ holdings/audit forms but does not automatically open or audit anything.
 State (operation 9) reads local control identity/status on Enter. F7 reviews the
 exact folder and control-file writes; a second Enter initializes it. Ctrl+N sets
 one EPUB, PDF, MP3, or completed intake packet. F8 reviews that import; a second
-Enter copies it into the library without scanning. Escape, F7, and F8 leave
-either review without a new write. Review freezes fields/navigation and supports
-PageUp/PageDown. Initialization is not import. Terminal import cannot newly mark
-a file checked; see [decision 0009](decisions/0009-managed-epub-import.md) and
+Enter copies it into the library without scanning; a packet whose acquisition
+scan was clean and bound to the same bytes can still be recorded as checked.
+Ctrl+R reviews a rescan; a second Enter scans the review EPUBs that lack scan
+evidence and records the results. Escape, F7, F8, and Ctrl+R leave any review
+without a new write. Review freezes fields/navigation and supports
+PageUp/PageDown. Initialization is not import; see
+[decision 0009](decisions/0009-managed-epub-import.md),
+[decision 0012](decisions/0012-scan-on-acquire-quarantine-and-rescan.md), and
 [the state contract](decisions/0006-library-control-state.md).
 
 ## Source access

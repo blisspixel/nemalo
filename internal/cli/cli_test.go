@@ -104,6 +104,10 @@ func (s searcher) Search(_ context.Context, q string, limit, offset int) (discov
 	return discovery.Page{Query: q, Total: limit, Offset: offset, Results: []discovery.Result{}}, s.err
 }
 
+func (s searcher) SearchOrdered(_ context.Context, q, order string, limit, offset int) (discovery.Page, error) {
+	return discovery.Page{Query: q, Order: order, Total: limit, Offset: offset, Results: []discovery.Result{}}, s.err
+}
+
 func (s searcher) Evaluate(_ context.Context, id string) (discovery.Evaluation, error) {
 	return discovery.Evaluation{ID: id, Source: "archive", Access: "restricted_or_uncertain", Files: []discovery.OfferedFile{}, Limitations: []string{"File rights and DRM remain unverified"}}, s.err
 }
@@ -119,7 +123,8 @@ func TestProviderSearchAndEvaluationCommands(t *testing.T) {
 	if code != 1 || !strings.Contains(out, "provider unavailable") {
 		t.Fatal(code, out)
 	}
-	for _, args := range [][]string{{"evaluate"}, {"evaluate", "demo"}, {"evaluate", "archive:../x"}, {"evaluate", "openlibrary:OL1W"}, {"evaluate", "archive:demo", "extra"}, {"evaluate", "archive:demo", "--source", "archive"}, {"search", "x", "--source", "missing"}, {"inspect", "x", "--source", "archive"}} {
+	for _, args := range [][]string{{"evaluate"}, {"evaluate", "demo"}, {"evaluate", "archive:../x"}, {"evaluate", "openlibrary:OL1W"}, {"evaluate", "archive:demo", "extra"}, {"evaluate", "archive:demo", "--source", "archive"}, {"search", "x", "--source", "missing"}, {"inspect", "x", "--source", "archive"},
+		{"search", "x", "--sort", "identifier"}, {"search", "x", "--source", "archive", "--sort", "popularity"}, {"search", "x", "--sort", "downloads"}, {"search", "x", "--source", "archive", "--sort", ""}, {"evaluate", "archive:demo", "--sort", "relevance"}} {
 		if code, _, _ := execute(t, args, nil); code != 2 {
 			t.Fatal("invalid provider usage accepted", args, code)
 		}
@@ -236,5 +241,16 @@ func TestOutputFailures(t *testing.T) {
 	f.Int("limit", 1, "")
 	if err := parse(f, []string{"title", "--json", "--limit=2"}); err != nil || f.Arg(0) != "title" {
 		t.Fatal(err)
+	}
+}
+
+func TestSearchOrderSelection(t *testing.T) {
+	code, out, stderr := execute(t, []string{"search", "Verne", "--source", "archive", "--sort", "identifier", "--json"}, nil)
+	if code != 0 || stderr != "" || !strings.Contains(out, `"order":"identifier"`) {
+		t.Fatal(code, out, stderr)
+	}
+	code, out, _ = execute(t, []string{"search", "Verne", "--source", "archive", "--sort", "identifier"}, nil)
+	if code != 0 || !strings.Contains(out, "stable for paging") {
+		t.Fatal(code, out)
 	}
 }

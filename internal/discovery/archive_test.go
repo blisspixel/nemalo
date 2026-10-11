@@ -79,16 +79,58 @@ func TestArchiveUnalignedPagingRejectsChangingEvidence(t *testing.T) {
 }
 
 func TestArchiveSearchAndOffset(t *testing.T) {
-	p := archiveProvider(t, func(w http.ResponseWriter, r *http.Request) {
-		q := r.URL.Query()
-		if r.URL.Path != "/advancedsearch.php" || q.Get("start") != "" || q.Get("page") != "2" || q.Get("rows") != "2" || q.Get("sort[]") != "identifier asc" || !strings.Contains(q.Get("q"), "(mediatype:texts OR mediatype:audio)") || !strings.Contains(q.Get("q"), "Verne & ocean") {
-			t.Error("incorrect search contract", r.URL)
+	for _, tc := range []struct{ order, sort string }{{OrderRelevance, ""}, {OrderIdentifier, "identifier asc"}, {OrderDownloads, "downloads desc"}} {
+		p := archiveProvider(t, func(w http.ResponseWriter, r *http.Request) {
+			q := r.URL.Query()
+			// Relevance must omit sort[] entirely: any explicit sort replaces
+			// Archive's ranking (issue 4).
+			if r.URL.Path != "/advancedsearch.php" || q.Get("start") != "" || q.Get("page") != "2" || q.Get("rows") != "2" || q.Has("sort[]") != (tc.sort != "") || q.Get("sort[]") != tc.sort || (tc.order == OrderDownloads && strings.Join(q["sort[]"], ",") != "downloads desc,identifier asc") || !strings.Contains(q.Get("q"), "(mediatype:texts OR mediatype:audio)") || !strings.Contains(q.Get("q"), "Verne & ocean") {
+				t.Error("incorrect search contract", r.URL)
+			}
+			_, _ = io.WriteString(w, `{"responseHeader":{"status":0},"response":{"numFound":4,"start":2,"docs":[{"identifier":"Demo-1","title":"Voyage","creator":"Verne","language":["fre"],"mediatype":"texts"},{"identifier":"Demo-2","title":"Audio","mediatype":"audio"}]}}`)
+		})
+		page, err := p.SearchOrdered(context.Background(), "Verne & ocean", tc.order, 2, 2)
+		if err != nil || page.Order != tc.order || page.Total != 4 || len(page.Results) != 2 || page.Results[0].ID != "archive:Demo-1" || page.Results[0].Access != "discovery_only" || page.Results[1].Languages == nil {
+			t.Fatal(page, err)
 		}
-		_, _ = io.WriteString(w, `{"responseHeader":{"status":0},"response":{"numFound":4,"start":2,"docs":[{"identifier":"Demo-1","title":"Voyage","creator":"Verne","language":["fre"],"mediatype":"texts"},{"identifier":"Demo-2","title":"Audio","mediatype":"audio"}]}}`)
+	}
+}
+
+func TestArchiveSearchDefaultsToRelevanceAndRejectsUnknownOrder(t *testing.T) {
+	requests := 0
+	p := archiveProvider(t, func(w http.ResponseWriter, r *http.Request) {
+		requests++
+		if r.URL.Query().Has("sort[]") {
+			t.Error("default search replaced provider relevance", r.URL)
+		}
+		_, _ = io.WriteString(w, `{"responseHeader":{"status":0},"response":{"numFound":1,"start":0,"docs":[{"identifier":"thetimemachine_2004_librivox","title":"The Time Machine","mediatype":"audio"}]}}`)
 	})
-	page, err := p.Search(context.Background(), "Verne & ocean", 2, 2)
-	if err != nil || page.Total != 4 || len(page.Results) != 2 || page.Results[0].ID != "archive:Demo-1" || page.Results[0].Access != "discovery_only" || page.Results[1].Languages == nil {
+	page, err := p.Search(context.Background(), "librivox the time machine", 5, 0)
+	if err != nil || page.Order != OrderRelevance || len(page.Results) != 1 {
 		t.Fatal(page, err)
+	}
+	for _, order := range []string{"", "popularity", "score desc", "Identifier", "Downloads"} {
+		if _, err := p.SearchOrdered(context.Background(), "x", order, 5, 0); err == nil {
+			t.Fatal("unsupported order accepted", order)
+		}
+	}
+	if requests != 1 {
+		t.Fatal("unsupported order sent a request", requests)
+	}
+}
+
+func TestArchiveRelevanceReorderBetweenPagesFails(t *testing.T) {
+	p := archiveProvider(t, func(w http.ResponseWriter, r *http.Request) {
+		// The second page repeats item1: the ranking moved between requests.
+		response := `{"numFound":4,"start":0,"docs":[{"identifier":"item0","title":"Zero","mediatype":"texts"},{"identifier":"item1","title":"One","mediatype":"texts"}]}`
+		if r.URL.Query().Get("page") == "2" {
+			response = `{"numFound":4,"start":2,"docs":[{"identifier":"item1","title":"One","mediatype":"texts"},{"identifier":"item3","title":"Three","mediatype":"texts"}]}`
+		}
+		_, _ = fmt.Fprintf(w, `{"responseHeader":{"status":0},"response":%s}`, response)
+	})
+	_, err := p.Search(context.Background(), "query", 2, 1)
+	if err == nil || !strings.Contains(err.Error(), "order changed") {
+		t.Fatal("silently accepted moved ranking", err)
 	}
 }
 

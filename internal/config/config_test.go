@@ -68,6 +68,12 @@ func TestLoadPrecedence(t *testing.T) {
 	if _, err = Load(filepath.Join(dir, "missing"), false, environment(nil), Config{}); err != nil {
 		t.Fatal(err)
 	}
+	if err := os.WriteFile(path, []byte(`{"on_detection":"delete"}`), 0600); err != nil {
+		t.Fatal(err)
+	}
+	if c, err = Load(path, true, environment(nil), Config{}); err != nil || c.OnDetection != "delete" {
+		t.Fatalf("on_detection: %+v %v", c, err)
+	}
 	if _, err = Load(filepath.Join(dir, "missing"), true, environment(nil), Config{}); err == nil {
 		t.Fatal("explicit missing file accepted")
 	}
@@ -78,7 +84,7 @@ func quote(s string) string { return `"` + strings.ReplaceAll(s, `\`, `\\`) + `"
 func TestRejectInvalidConfiguration(t *testing.T) {
 	dir := t.TempDir()
 	file := filepath.Join(dir, "config.json")
-	for _, body := range []string{"null", "[]", "{", "{} {}", `{"unknown":1}`, `{"library":1}`, strings.Repeat(" ", maxConfigBytes+1)} {
+	for _, body := range []string{"null", "[]", "{", "{} {}", `{"unknown":1}`, `{"library":1}`, `{"on_detection":"keep"}`, `{"on_detection":"Quarantine"}`, strings.Repeat(" ", maxConfigBytes+1)} {
 		if err := os.WriteFile(file, []byte(body), 0600); err != nil {
 			t.Fatal(err)
 		}

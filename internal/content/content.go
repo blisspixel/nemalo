@@ -119,6 +119,7 @@ type Result struct {
 	Parts            []Part        `json:"parts,omitempty"`
 	Coverage         *Coverage     `json:"coverage,omitempty"`
 	Resource         *ResourceData `json:"resource,omitempty"`
+	Gaps             []Gap         `json:"gaps,omitempty"`
 }
 
 type cursor struct {
@@ -171,7 +172,7 @@ func Get(ctx context.Context, req Request) (result Result, err error) {
 			err = diagnosticError{err}
 			result.Text, result.Continuation, result.Locator = "", "", nil
 			result.Units = nil
-			result.Parts, result.Coverage, result.Resource = nil, nil, nil
+			result.Parts, result.Coverage, result.Resource, result.Gaps = nil, nil, nil, nil
 			result.EndOfUnit, result.EndOfSource = false, false
 		}
 	}()
@@ -185,13 +186,35 @@ func Get(ctx context.Context, req Request) (result Result, err error) {
 		result.Status = "cancelled"
 		return result, err
 	}
-	if req.Representation != "" && req.Representation != "epub-text/1" {
-		if req.Representation != "epub-structure/1" && req.Representation != "epub-source/1" {
-			result.Status = "unsupported_representation"
-			return result, errors.New("unsupported content representation; inspect content capabilities")
+	if req.Representation == "" {
+		req.Representation = DefaultRepresentation
+		if req.Cursor != "" {
+			// A continuation keeps the representation it was issued for, so an
+			// existing epub-text/1 reference never moves to another extractor.
+			c, parseErr := parseCursor(req.Cursor)
+			if parseErr != nil {
+				return result, parseErr
+			}
+			req.Representation = c.Representation
+			if req.Representation == "" {
+				req.Representation = "epub-text/1"
+			}
 		}
-		return getStructured(ctx, req, result)
 	}
+	switch req.Representation {
+	case "epub-text/1":
+	case "epub-text/2":
+		if req.Part != "" || req.Resource {
+			return result, errors.New("part/resource access requires a structured EPUB representation")
+		}
+		return getTextV2(ctx, req, result)
+	case "epub-structure/1", "epub-source/1":
+		return getStructured(ctx, req, result)
+	default:
+		result.Status = "unsupported_representation"
+		return result, errors.New("unsupported content representation; inspect content capabilities")
+	}
+	result.Representation = "epub-text/1"
 	if req.Part != "" || req.Resource {
 		return result, errors.New("part/resource access requires a structured EPUB representation")
 	}

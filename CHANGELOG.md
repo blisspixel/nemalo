@@ -1,5 +1,45 @@
 # Changelog
 
+## 0.1.0-alpha.3
+
+Third native prerelease. This remains an early library, not 1.0. It resolves
+issues 3 through 8.
+
+- Accept Internet Archive downloads redirected to `eu` data nodes, beside `us`
+  and `ca`. Arbitrary archive.org subdomains stay refused.
+- Keep Archive search in Archive's relevance order instead of identifier order.
+  `--sort identifier` pages repeatably and `--sort downloads` ranks by declared
+  download count, a popularity signal. Each result names its order. TUI F3
+  cycles the Archive order.
+- Make `epub-text/2` the default text representation. Illustrated documents stay
+  readable; each omitted image, table, MathML, SVG, or media element is located
+  as a gap with its source alt text, and human output marks it in place.
+  `epub-text/1` and its continuations are unchanged.
+- Scan each download once during `acquire` with the installed scanner. A
+  detection is quarantined under the Nemalo state directory (or deleted with
+  `on_detection`), never imported, and the item's other files and a search are
+  offered. `--no-scan` opts out. A clean acquisition scan bound to the same
+  SHA-256 lets the packet import as checked without scanning again.
+- Add `library rescan LIBRARY [--apply]` and TUI Ctrl+R in State. It scans review
+  EPUBs that lack scan evidence, with ClamAV batches that load signatures once.
+- Report signature age and the platform install command from `doctor`, and end
+  unscanned `check`, `import`, and `acquire` output with one next step.
+- Create missing parent folders for `acquire --output`, only after evaluation
+  succeeds.
+- Add `scripts/install.sh` and `scripts/install.ps1`, which verify release
+  archives against `SHA256SUMS`.
+- Fix the journal check that reported an interrupted scan-upgrade import of an
+  already held EPUB as corrupt state.
+
+Validation for this release: on the six Project Gutenberg EPUBs from issue 5,
+`epub-text/1` read 28 of 54 units and `epub-text/2` read all 54, locating 84
+omissions. Live acquisitions were scanned by Defender on Windows and by ClamAV
+1.5.4 on Ubuntu; Treasure Island was delivered from an `eu` node. On Ubuntu,
+six sequential `check --scan` runs took 59.5 seconds and one batched rescan of
+seven files took 17.5 seconds, detecting an EICAR test member. Libraries with
+rescan journal events cannot be opened by earlier prereleases. The Defender
+detection pattern is covered by synthetic tests, not a live detection.
+
 ## 0.1.0-alpha.2
 
 Second native prerelease. This remains an early library, not 1.0.

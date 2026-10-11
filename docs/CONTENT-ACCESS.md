@@ -7,11 +7,17 @@ acceptance remains open. CLI/JSON and TUI use `internal/app.Service.Content` and
 `internal/content`. There is no MCP server, PDF extractor, audio-range service,
 or Kilo adapter yet. This work does not bypass production import/publication gates.
 
-The existing default `epub-text/1` contract below remains available. Opt into
+The default representation is `epub-text/2`
+([decision 0011](decisions/0011-default-text-with-located-gaps.md)): plain text
+in which images, tables, mathematics, embedded media, and hidden content are
+omitted and each omission is located as a gap. The original `epub-text/1`
+contract below is unchanged and selectable with `--representation epub-text/1`.
+A continuation always keeps the representation it was issued for. Opt into
 `epub-structure/1` for source parts, note links, figures, and located gaps;
 `epub-source/1` returns bounded original XML. `content capabilities --json` lists
-implemented representations. See [structured EPUB access](STRUCTURED-EPUB.md)
-for commands, offsets, coverage, resources, and the issue acceptance matrix.
+implemented representations and the default. See
+[structured EPUB access](STRUCTURED-EPUB.md) for commands, offsets, coverage,
+resources, and the issue acceptance matrix.
 
 ## Usage
 
@@ -27,8 +33,12 @@ nemalo content read /path/catalog.json --root /path/library --asset sha256:HASH 
 `HASH` and `TOKEN` are placeholders for returned identifiers. Units are zero-based
 EPUB spine documents, not inferred chapters or poems. The manifest includes source
 package/member paths, spine order, `linear` declarations, extracted byte counts,
-and `supported_plain_text` or `unsupported_document`. It does not invent labels
-from text. Nonlinear documents remain explicit, in spine order.
+known gap counts, and `supported_plain_text`, `supported_text_with_gaps`, or
+`unsupported_document`. It does not invent labels from text. Nonlinear documents
+remain explicit, in spine order. Human output shows escaped text with bracketed
+display markers, such as `[image: alt text]` or `[table omitted]`, at each located
+gap, and ends with the `--cursor` value when a continuation exists. Markers are
+presentation only; JSON `text` never contains them.
 
 An initialized library can be both arguments when they are the same absolute
 non-link directory:
@@ -83,14 +93,42 @@ and `end_of_source` separately identify the end of that representation's documen
 and final spine document. They do not prove semantic completeness or that earlier
 units were consumed. A cap is never treated as the end of a book.
 
-Image-only, table, embedded media, SVG/MathML, hidden, and other unsupported
-documents remain manifest gaps in `unsupported_units`. Reading such a unit fails
-explicitly. A continuation stops there instead of skipping ahead; selecting a
-later supported unit requires an explicit caller request. End-of-source still
-reports gaps. Malformed documents/container failures return no excerpt or cursor.
-CSS visibility and typography are not applied, and conformance is not established.
-Active/encrypted or otherwise warned containers require review and are refused.
-Multiple package renditions are unsupported rather than concatenated as one work.
+In `epub-text/1`, image-only, table, embedded media, SVG/MathML, hidden, and other
+unsupported documents remain manifest gaps in `unsupported_units`. Reading such a
+unit fails explicitly. A continuation stops there instead of skipping ahead;
+selecting a later supported unit requires an explicit caller request.
+End-of-source still reports gaps. Malformed documents/container failures return
+no excerpt or cursor. CSS visibility and typography are not applied, and
+conformance is not established. Active/encrypted or otherwise warned containers
+require review and are refused. Multiple package renditions are unsupported
+rather than concatenated as one work.
+
+## Version 2 text: the default
+
+`epub-text/2` uses extractor `nemalo.epub.text/2`. Its text is byte-identical to
+`epub-structure/1` text: the same parser, whitespace, line, and stanza rules.
+Instead of refusing a document that contains an image, table, MathML, SVG, media,
+unsupported namespace, or hidden content, it omits that element and reports a
+gap in `gaps` with the element name, the reason (for example
+`image_pixels_not_text` or `table_relationships_not_extracted`), the zero-width
+UTF-8 `offset` in the unit text, and the `epub-structure/1` part ID of the same
+element. Image gaps keep the source `alt` exactly; `null` means none was
+declared, which is distinct from an empty string, and no description is
+generated. Table cell text is not flattened into prose, because its row and
+column relationships are not established; `epub-source/1` returns the exact
+table markup. Each gap is reported once across consecutive ranges: a zero-width
+gap belongs to the range that starts at its offset, or to the final range of its
+unit. `coverage.text` is `known_extraction_gaps` when a range contains one.
+
+A document the extractor cannot represent, such as an SVG reading-order item,
+is an `unsupported_document` unit in `unsupported_units`; other units stay
+readable and continuations stop there as in version 1. Only container access
+restrictions (encryption declarations, scripted items, active content, repeated
+spine references) refuse the whole source; other assessment warnings do not.
+The representation hash covers units, text, and gap descriptors, so a gap
+change invalidates earlier references. On six illustrated Project Gutenberg
+EPUBs from issue 5, version 1 read 28 of 54 units and version 2 read all 54,
+locating 84 omissions.
 
 ## Bounds and failures
 

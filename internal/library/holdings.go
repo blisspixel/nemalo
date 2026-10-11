@@ -191,19 +191,37 @@ func parseOperations(b []byte, libraryID string) ([]operation, error) {
 			return nil, ErrStateReview
 		}
 		if i%2 == 0 {
-			if event.Event != "import_intent" {
+			if completedEvent(event.Event) == "" {
 				return nil, ErrStateReview
 			}
 		} else {
 			prev := events[i-1]
+			want := completedEvent(prev.Event)
 			prev.Sequence, prev.Event, prev.At = event.Sequence, event.Event, event.At
-			if event.Event != "import_completed" || event != prev {
+			if event.Event != want || event != prev {
 				return nil, ErrStateReview
 			}
 		}
 		events = append(events, event)
 	}
 	return events, nil
+}
+
+// Operations are intent/completed pairs. An import pair stores bytes and a
+// holding; a rescan pair records only a new status and reason for a holding
+// that is already stored. completedEvent returns "" for anything else.
+func completedEvent(intent string) string {
+	switch intent {
+	case "import_intent":
+		return "import_completed"
+	case "rescan_intent":
+		return "rescan_completed"
+	}
+	return ""
+}
+
+func isCompleted(event string) bool {
+	return event == "import_completed" || event == "rescan_completed"
 }
 
 func parseHoldings(b []byte, libraryID string) ([]Holding, error) {
@@ -292,11 +310,11 @@ func consistent(events []operation, lines []Holding) error {
 	var pending *operation
 	for i := range events {
 		event := events[i]
-		if event.Event == "import_intent" && i == len(events)-1 {
+		if completedEvent(event.Event) != "" && i == len(events)-1 {
 			pending = &events[i]
 			continue
 		}
-		if event.Event == "import_completed" {
+		if isCompleted(event.Event) {
 			latest[event.AssetID] = event
 		}
 	}
@@ -306,11 +324,19 @@ func consistent(events []operation, lines []Holding) error {
 	}
 	for id, event := range latest {
 		holding, ok := current[id]
+		// An interrupted operation may already have appended the holding line
+		// its pending intent describes, superseding the last completed fact.
+		if ok && pending != nil && pending.AssetID == id && sameFact(holding, *pending) {
+			continue
+		}
 		if !ok || !sameFact(holding, event) {
 			return ErrStateReview
 		}
 	}
 	if pending != nil {
+		if h, ok := current[pending.AssetID]; pending.Event == "rescan_intent" && (!ok || h.Format != pending.Format || h.Bytes != pending.Bytes || h.Path != pending.Source) {
+			return ErrStateReview
+		}
 		if holding, ok := current[pending.AssetID]; ok && !sameFact(holding, *pending) {
 			if previous, ok := latest[pending.AssetID]; !ok || !sameFact(holding, previous) {
 				return ErrStateReview

@@ -115,3 +115,37 @@ func LibraryState(s library.State) string {
 	b.WriteString("Control metadata only. Content was not imported, checked, opened, or deleted.\n")
 	return b.String()
 }
+
+func Rescan(r library.RescanResult) string {
+	var b strings.Builder
+	fmt.Fprintf(&b, "Library: %q\nLibrary ID: %q\nApplied: %t\nScanned: %d | Promoted to checked: %d | Detections: %d | Incomplete: %d\n", r.Library, r.LibraryID, r.Applied, len(r.Scanned), r.Promoted, r.Detections, r.Incomplete)
+	for _, item := range r.Scanned {
+		after := item.After + " " + item.AfterReason
+		if item.After == "" {
+			after = "no status recorded"
+		}
+		fmt.Fprintf(&b, "\n%q\n  %s %s -> %s | antivirus %s\n", item.Path, item.Before, item.BeforeReason, after, item.Antivirus)
+		if item.Detail != "" {
+			fmt.Fprintf(&b, "  %q\n", item.Detail)
+		}
+	}
+	if len(r.Skipped) > 0 {
+		fmt.Fprintf(&b, "\nNot rescanned: %d\n", len(r.Skipped))
+		for _, item := range r.Skipped {
+			fmt.Fprintf(&b, "  %q %s: %q\n", item.Path, item.BeforeReason, item.Detail)
+		}
+	}
+	for _, note := range r.Limitations {
+		fmt.Fprintf(&b, "Limitation: %q\n", note)
+	}
+	if !r.Applied {
+		changed := 0
+		for _, item := range r.Scanned {
+			if item.Changed {
+				changed++
+			}
+		}
+		fmt.Fprintf(&b, "Preview only. %d status change(s) would be recorded with --apply.\n", changed)
+	}
+	return b.String()
+}

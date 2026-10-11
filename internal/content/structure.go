@@ -69,7 +69,10 @@ type document struct {
 	unit  Unit
 	text  string
 	parts []Part
-	raw   []byte
+	// elements holds each part's source element local name, parallel to parts.
+	// It is deliberately not serialized, so structure/1 hashes are unchanged.
+	elements []string
+	raw      []byte
 }
 type frame struct {
 	part                int
@@ -291,6 +294,7 @@ func extractDocument(ctx context.Context, data []byte, budget int) (document, er
 					}
 					f.part = len(d.parts)
 					d.parts = append(d.parts, p)
+					d.elements = append(d.elements, t.Name.Local)
 				}
 				f.skip = gap != ""
 			}

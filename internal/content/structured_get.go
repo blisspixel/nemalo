@@ -112,76 +112,11 @@ func getStructured(ctx context.Context, req Request, result Result) (Result, err
 		result.Status = "unsupported_extraction"
 		return result, errUnsupported
 	}
-	documents := []document{}
-	totalText, totalParts := 0, 0
-	packagePath := ""
-	visit := func(source assessment.EPUBDocument) error {
-		if len(documents) >= maxUnits || len(source.Path) > 4096 || len(source.Package) > 4096 || len(source.Data) > maxText {
-			return errBudget
-		}
-		if source.Index != len(documents) || (packagePath != "" && source.Package != packagePath) {
-			return errUnsupported
-		}
-		packagePath = source.Package
-		if source.Media != "application/xhtml+xml" {
-			return errUnsupported
-		}
-		if source.Linear != "" && source.Linear != "yes" && source.Linear != "no" {
-			return errUnsupported
-		}
-		d, err := extractDocument(ctx, source.Data, maxText-totalText)
-		if err != nil {
-			return err
-		}
-		totalText += len(d.text)
-		totalParts += len(d.parts)
-		if totalParts > 16384 {
-			return fmt.Errorf("%w: more than 16384 parts in this EPUB", errBudget)
-		}
-		linear := source.Linear
-		if linear == "" {
-			linear = "yes"
-		}
-		d.unit.Index, d.unit.Kind, d.unit.Package, d.unit.Member, d.unit.Linear, d.unit.TextBytes, d.unit.Extraction = source.Index, "epub_reading_order_document", source.Package, source.Path, linear, len(d.text), "structured_text_with_coverage"
-		d.unit.Parts = len(d.parts)
-		for _, p := range d.parts {
-			if p.Gap != "" {
-				d.unit.KnownGaps++
-			}
-		}
-		if req.Representation == "epub-source/1" && source.Index == req.Unit {
-			d.raw = source.Data
-		}
-		resolveImages(&d, source.Members)
-		if req.Resource && source.Index == req.Unit && !matchesResource(d, c) {
-			return errResourceReference
-		}
-		documents = append(documents, d)
-		return nil
-	}
-	var checks assessment.Checks
-	var resource []byte
-	if req.Resource {
-		checks, resource, err = assessment.VisitEPUBResource(ctx, bytes.NewReader(data), int64(len(data)), visit, c.Member, 8<<20)
-	} else {
-		checks, err = assessment.VisitEPUB(ctx, bytes.NewReader(data), int64(len(data)), visit)
-	}
-	if err != nil || len(documents) == 0 || len(checks.AccessRestrictions) > 0 {
-		result.Status = "malformed_content"
-		if errors.Is(err, errUnsupported) || len(checks.AccessRestrictions) > 0 {
-			result.Status = "unsupported_extraction"
-		}
-		if errors.Is(err, errBudget) || errors.Is(err, assessment.ErrLimit) || errors.Is(err, html.ErrBufferExceeded) {
-			result.Status = "budget_exceeded"
-		}
-		if errors.Is(err, errResourceReference) {
-			result.Status = "stale_reference"
-		}
+	documents, resource, err := loadDocuments(ctx, req, c, data, false)
+	if err != nil {
+		result.Status = documentStatus(ctx, err)
 		if ctx.Err() != nil {
-			result.Status, err = "cancelled", ctx.Err()
-		}
-		if err == nil {
-			err = errors.New("container access restrictions require review")
+			err = ctx.Err()
 		}
 		return result, err
 	}
@@ -229,6 +164,97 @@ func getStructured(ctx context.Context, req Request, result Result) (Result, err
 		return readStructuredResource(ctx, req, result, c, d, resource)
 	}
 	return readStructuredRange(ctx, req, result, d)
+}
+
+var errAccessRestricted = errors.New("container access restrictions require review")
+
+// loadDocuments runs the shared structured extractor over every reading-order
+// document. Tolerant loading, used by epub-text/2, records an unsupported
+// document as an explicit empty unit; strict loading fails the whole source.
+// Malformed XML, budgets, and container access restrictions fail either way.
+func loadDocuments(ctx context.Context, req Request, c cursor, data []byte, tolerant bool) ([]document, []byte, error) {
+	documents := []document{}
+	totalText, totalParts := 0, 0
+	packagePath := ""
+	visit := func(source assessment.EPUBDocument) error {
+		if len(documents) >= maxUnits || len(source.Path) > 4096 || len(source.Package) > 4096 || len(source.Data) > maxText {
+			return errBudget
+		}
+		if source.Index != len(documents) || (packagePath != "" && source.Package != packagePath) {
+			return errUnsupported
+		}
+		packagePath = source.Package
+		if source.Linear != "" && source.Linear != "yes" && source.Linear != "no" {
+			return errUnsupported
+		}
+		linear := source.Linear
+		if linear == "" {
+			linear = "yes"
+		}
+		var d document
+		err := errUnsupported
+		if source.Media == "application/xhtml+xml" {
+			d, err = extractDocument(ctx, source.Data, maxText-totalText)
+		}
+		if errors.Is(err, errUnsupported) && tolerant {
+			d = document{unit: Unit{Extraction: "unsupported_document"}}
+		} else if err != nil {
+			return err
+		} else {
+			d.unit.Extraction = "structured_text_with_coverage"
+		}
+		totalText += len(d.text)
+		totalParts += len(d.parts)
+		if totalParts > 16384 {
+			return fmt.Errorf("%w: more than 16384 parts in this EPUB", errBudget)
+		}
+		d.unit.Index, d.unit.Kind, d.unit.Package, d.unit.Member, d.unit.Linear, d.unit.TextBytes = source.Index, "epub_reading_order_document", source.Package, source.Path, linear, len(d.text)
+		d.unit.Parts = len(d.parts)
+		for _, p := range d.parts {
+			if p.Gap != "" {
+				d.unit.KnownGaps++
+			}
+		}
+		if req.Representation == "epub-source/1" && source.Index == req.Unit {
+			d.raw = source.Data
+		}
+		resolveImages(&d, source.Members)
+		if req.Resource && source.Index == req.Unit && !matchesResource(d, c) {
+			return errResourceReference
+		}
+		documents = append(documents, d)
+		return nil
+	}
+	var checks assessment.Checks
+	var resource []byte
+	var err error
+	if req.Resource {
+		checks, resource, err = assessment.VisitEPUBResource(ctx, bytes.NewReader(data), int64(len(data)), visit, c.Member, 8<<20)
+	} else {
+		checks, err = assessment.VisitEPUB(ctx, bytes.NewReader(data), int64(len(data)), visit)
+	}
+	if err == nil && len(checks.AccessRestrictions) > 0 {
+		err = errAccessRestricted
+	}
+	if err == nil && len(documents) == 0 {
+		err = errors.New("EPUB has no reading-order documents")
+	}
+	return documents, resource, err
+}
+
+// documentStatus maps a loader failure to its stable operation status.
+func documentStatus(ctx context.Context, err error) string {
+	switch {
+	case ctx.Err() != nil:
+		return "cancelled"
+	case errors.Is(err, errResourceReference):
+		return "stale_reference"
+	case errors.Is(err, errBudget) || errors.Is(err, assessment.ErrLimit) || errors.Is(err, html.ErrBufferExceeded):
+		return "budget_exceeded"
+	case errors.Is(err, errUnsupported) || errors.Is(err, errAccessRestricted):
+		return "unsupported_extraction"
+	}
+	return "malformed_content"
 }
 
 func readStructuredResource(ctx context.Context, req Request, result Result, c cursor, d document, resource []byte) (Result, error) {
