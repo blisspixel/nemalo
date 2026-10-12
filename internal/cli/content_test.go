@@ -5,14 +5,19 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 
+	"github.com/blisspixel/nemalo/internal/app"
 	"github.com/blisspixel/nemalo/internal/content"
 	"github.com/blisspixel/nemalo/internal/inventory"
 	"github.com/blisspixel/nemalo/internal/library"
+	"github.com/blisspixel/nemalo/internal/reader"
+	"github.com/blisspixel/nemalo/internal/tui"
 )
 
 func TestContentCLIContract(t *testing.T) {
@@ -119,5 +124,53 @@ func TestContentCLIContract(t *testing.T) {
 	code, out, _ = execute(t, []string{"content", "resource", catalog, "--root", root, "--asset", s.Catalog.Assets[0].ID, "--json"}, nil)
 	if code != 1 || !strings.Contains(out, "invalid_request") {
 		t.Fatal(code, out)
+	}
+}
+
+func TestReadCLIOpensTheReaderAndPrintsWhereItClosed(t *testing.T) {
+	asset := "sha256:" + strings.Repeat("a", 64)
+	var got []tui.ReadOptions
+	var stop *reader.Position
+	var fail error
+	saved := readTerminal
+	readTerminal = func(_ context.Context, _ app.Service, _ io.Writer, o tui.ReadOptions) (*reader.Position, error) {
+		got = append(got, o)
+		return stop, fail
+	}
+	t.Cleanup(func() { readTerminal = saved })
+	stop = &reader.Position{Unit: 3, Offset: 120}
+	code, out, stderr := execute(t, []string{"read", "catalog.json", "--root", "books", "--asset", asset, "--speed", "--rate", "300", "--unit", "1", "--text-offset", "5"}, nil)
+	if code != 0 || stderr != "" || !strings.Contains(out, "Closed at unit 3, byte 120. Nothing was recorded.") || !strings.Contains(out, "--unit 3 --text-offset 120") {
+		t.Fatal(code, out, stderr)
+	}
+	if len(got) != 1 || got[0] != (tui.ReadOptions{Catalog: "catalog.json", Root: "books", Asset: asset, Start: reader.Position{Unit: 1, Offset: 5}, Speed: true, Rate: 300}) {
+		t.Fatal(got)
+	}
+	stop = nil
+	if code, out, _ := execute(t, []string{"read", "catalog.json", "--root", "books", "--asset", asset}, nil); code != 0 || out != "" || got[1].Rate != reader.DefaultRate || got[1].Speed {
+		t.Fatal(code, out, got[1])
+	}
+	fail = errors.New("no terminal")
+	if code, _, stderr := execute(t, []string{"read", "catalog.json", "--root", "books", "--asset", asset}, nil); code != 1 || !strings.Contains(stderr, "no terminal") {
+		t.Fatal(code, stderr)
+	}
+	for _, args := range [][]string{
+		{"read"},
+		{"read", "catalog.json", "--asset", asset},
+		{"read", "catalog.json", "--root", "books"},
+		{"read", "catalog.json", "--root", "books", "--asset", asset, "--json"},
+		{"read", "catalog.json", "--root", "books", "--asset", asset, "--rate", "99"},
+		{"read", "catalog.json", "--root", "books", "--asset", asset, "--rate", "1001"},
+		{"read", "catalog.json", "--root", "books", "--asset", "sha256:bad"},
+		{"read", "catalog.json", "--root", "books", "--asset", asset, "--unit", "-1"},
+		{"read", "catalog.json", "--root", "books", "--asset", asset, "--max-bytes", "10"},
+		{"content", "read", "catalog.json", "--root", "books", "--asset", asset, "--speed"},
+	} {
+		if code, _, _ := execute(t, args, nil); code != 2 {
+			t.Fatal(args, code)
+		}
+	}
+	if len(got) != 3 {
+		t.Fatal("invalid usage reached the terminal", got)
 	}
 }

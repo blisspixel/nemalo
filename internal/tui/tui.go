@@ -19,6 +19,7 @@ import (
 	"github.com/blisspixel/nemalo/internal/inventory"
 	"github.com/blisspixel/nemalo/internal/library"
 	"github.com/blisspixel/nemalo/internal/present"
+	"github.com/blisspixel/nemalo/internal/reader"
 	"github.com/blisspixel/nemalo/internal/textsafe"
 )
 
@@ -76,8 +77,14 @@ type model struct {
 	id                         int
 	cancel                     context.CancelFunc
 	reader                     readerState
-	downloadReview             *acquisition.Request
-	recordingReview            *acquisition.RecordingRequest
+	// pager, when open, fills the screen; readerStop is where it was closed.
+	pager      *pager
+	readerStop *reader.Position
+	pagerSeq   int
+	// initial is a command run at start, such as the reader's first fetch.
+	initial         tea.Cmd
+	downloadReview  *acquisition.Request
+	recordingReview *acquisition.RecordingRequest
 	// lastEvaluation lets a detected download offer the item's other files.
 	lastEvaluation *discovery.Evaluation
 }
@@ -105,9 +112,25 @@ func newModel(ctx context.Context, service app.Service) *model {
 	return m
 }
 
-func (m *model) Init() tea.Cmd { return tea.Batch(m.input.Focus(), tea.RequestBackgroundColor) }
+func (m *model) Init() tea.Cmd {
+	return tea.Batch(m.input.Focus(), tea.RequestBackgroundColor, m.initial)
+}
 
 func (m *model) Update(message tea.Msg) (tea.Model, tea.Cmd) {
+	switch msg := message.(type) {
+	case pagerChunk:
+		return m, m.pagerChunk(msg)
+	case pagerTick:
+		return m, m.pagerTick(msg)
+	case tea.KeyPressMsg:
+		if m.pager != nil {
+			if msg.String() == "ctrl+c" {
+				m.closePager()
+				return m, tea.Quit
+			}
+			return m, m.pagerKey(msg.String())
+		}
+	}
 	switch msg := message.(type) {
 	case tea.BackgroundColorMsg:
 		m.dark = msg.IsDark()
@@ -121,6 +144,10 @@ func (m *model) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 		m.secondary.SetWidth(max(1, msg.Width-4))
 		m.viewport.SetWidth(max(1, msg.Width-2))
 		m.resize()
+		if m.pager != nil {
+			m.pagerLayout()
+			return m, m.pagerMore()
+		}
 	case result:
 		if msg.id != m.id {
 			return m, nil

@@ -59,6 +59,7 @@ item's other files for a new, deliberate review. See
 | o in managed Holdings results | Open a verified read-only copy in the default application |
 | Enter in Read results | Retrieve the selected source unit |
 | n / r / u in Read results | Next range / repeat last request / list units |
+| p / s in Read results | Open the selected unit (or the first, without a listing) as pages / one word at a time |
 | Escape | Back; cancel active work |
 | Ctrl+C | Quit |
 
@@ -99,6 +100,34 @@ fresh units request before continuation. Switching operations preserves the
 session's report and references. Nothing records reading or acknowledgement.
 The CLI exposes note/source/resource references; the TUI does not yet navigate
 notes, render images, or play audio. Unsupported units fail explicitly.
+
+## Reader
+
+`p` or `s` in focused Read results, or `nemalo read`, opens a full-screen
+reader on EPUB or PDF text ([decision 0025](decisions/0025-terminal-reading.md)).
+Pages are 66 columns for EPUB and 100 for PDF, narrower on a smaller terminal.
+A wrapped PDF source line continues with a hanging indent. Omitted images and
+tables appear where they were omitted.
+
+| Key | Pages | Speed reading |
+| --- | --- | --- |
+| Space | Next page | Play or pause |
+| PageDown, Right, l, n | Next page | Right, l: next sentence |
+| b, PageUp, Left, h | Previous page | Left, h: previous sentence |
+| j, Down / k, Up | One line down / up | Slower / faster by 25 |
+| - / + | Narrower / wider | Slower / faster by 25 |
+| g / G | Start / end of the loaded text | |
+| [ / ] | Previous / next unit | Previous / next unit |
+| s / p | s: speed reading from this page | p: pages at this word |
+| q, Escape | Close | Close |
+
+Speed reading starts paused at 250 words per minute and holds sentence ends
+twice as long. Above 350 the footer calls it skimming, since comprehension fell
+at those rates in studies. Paused, the surrounding rows show the word marked.
+An unreadable unit stops reading when you reach it, after everything already
+delivered; `]` opens the next unit. A session holds up to 4 MiB of text; at
+that limit `]` continues from the same place in a new session.
+Closing shows the unit and byte; nothing records reading.
 
 ## Appearance and boundaries
 

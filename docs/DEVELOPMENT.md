@@ -12,7 +12,7 @@ needed for the application, tests, or first-party tooling.
 `library rescan`, `library recordings`,
 `library open`, `library export`, `library init`, `library status`, `content units`,
 `content read`, `content locate`, `content source`, `content resource`, `content capabilities`,
-`mcp serve`, and `tui` are implemented.
+`read`, `mcp serve`, and `tui` are implemented.
 Search defaults to Open Library work metadata; `--source archive` selects Internet
 Archive text/audio item search. Neither search resolves download permissions.
 Results keep the provider's relevance ranking, and the result names its order.
@@ -230,7 +230,14 @@ nemalo content read /path/to/library --root /path/to/library --asset sha256:HASH
   --representation pdf-text/1 --unit 3
 nemalo content locate /path/to/library --root /path/to/library --asset sha256:HASH \
   --representation pdf-text/1 --text "exact quotation"
+nemalo read /path/to/library --root /path/to/library --asset sha256:HASH
+nemalo read /path/to/library --root /path/to/library --asset sha256:HASH --speed --rate 300
 ```
+
+`read` opens the terminal reader (decision 0025) on EPUB or PDF text: pages
+sized to the terminal, or one word at a time with `--speed`. `--unit` and
+`--text-offset` choose the start; closing prints the values that return to the
+same place. It requires an interactive terminal and has no `--json`.
 
 A PDF reads as `pdf-text/1`: one unit per physical page, with the printed page
 label separately, text in content-stream order, and located gaps; `check`

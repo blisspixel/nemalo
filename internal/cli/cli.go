@@ -21,6 +21,7 @@ import (
 	"github.com/blisspixel/nemalo/internal/library"
 	"github.com/blisspixel/nemalo/internal/mcpserver"
 	"github.com/blisspixel/nemalo/internal/present"
+	"github.com/blisspixel/nemalo/internal/reader"
 	"github.com/blisspixel/nemalo/internal/textsafe"
 	"github.com/blisspixel/nemalo/internal/tui"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
@@ -93,6 +94,10 @@ Usage: nemalo <command> [options]
                       Read referenced local image bytes as base64; never render
   content capabilities
                       Report supported representation versions and limits
+  read CATALOG|LIBRARY --root DIRECTORY --asset sha256:HASH [--speed]
+                      Read EPUB or PDF text as terminal pages, or one word at a
+                      time with --speed (--rate WPM, default 250). --unit and
+                      --text-offset choose the start. Nothing is recorded.
   mcp serve --scope DIRECTORY
                       Serve read-only MCP tools over stdio for an agent host
   version             Show the development version
@@ -218,6 +223,8 @@ func Execute(ctx context.Context, args []string, out, errOut io.Writer, service 
 	stop := flags.Bool("stop", false, "close a pending cleanup that cannot finish")
 	resume := flags.Bool("resume", false, "continue an existing recording directory")
 	maxRecording := flags.Int64("max-recording-bytes", 4<<30, "declared total byte budget for a recording")
+	speed := flags.Bool("speed", false, "read one word at a time")
+	rate := flags.Int("rate", reader.DefaultRate, "speed reading rate in words per minute")
 	contentRequest := content.Request{SchemaVersion: 1}
 	flags.StringVar(&contentRequest.AssetID, "asset", "", "exact catalog asset ID")
 	flags.IntVar(&contentRequest.Unit, "unit", 0, "zero-based reading-order document")
@@ -290,7 +297,7 @@ func Execute(ctx context.Context, args []string, out, errOut io.Writer, service 
 		}
 		return write(service.ContentCapabilities(), nil, 0)
 	}
-	if command != "doctor" && command != "search" && command != "evaluate" && command != "acquire" && command != "inspect" && command != "check" && command != "tui" && command != "library" && command != "content" && command != "mcp" {
+	if command != "doctor" && command != "search" && command != "evaluate" && command != "acquire" && command != "inspect" && command != "check" && command != "tui" && command != "library" && command != "content" && command != "mcp" && command != "read" {
 		return write(nil, fmt.Errorf("unknown command %q; use nemalo help", command), 2)
 	}
 	p, err := paths()
@@ -396,6 +403,28 @@ func Execute(ctx context.Context, args []string, out, errOut io.Writer, service 
 			return write(r, err, 1)
 		}
 		return write(r, nil, 0)
+	case "read":
+		if *jsonMode || flags.NArg() != 1 || *auditRoot == "" || contentRequest.AssetID == "" {
+			return write(nil, errors.New("use read CATALOG --root DIRECTORY --asset sha256:HASH; read is interactive and has no --json"), 2)
+		}
+		if *rate < reader.MinRate || *rate > reader.MaxRate {
+			return write(nil, fmt.Errorf("--rate must be %d through %d words per minute", reader.MinRate, reader.MaxRate), 2)
+		}
+		contentRequest.Catalog, contentRequest.Root = flags.Arg(0), *auditRoot
+		if err := contentRequest.Validate(); err != nil {
+			return write(nil, err, 2)
+		}
+		stop, err := readTerminal(ctx, service, out, tui.ReadOptions{Catalog: contentRequest.Catalog, Root: contentRequest.Root, Asset: contentRequest.AssetID, Start: reader.Position{Unit: contentRequest.Unit, Offset: contentRequest.Offset}, Speed: *speed, Rate: *rate})
+		if err != nil {
+			return write(nil, err, 1)
+		}
+		if stop != nil {
+			_, err = fmt.Fprintf(out, "Closed at unit %d, byte %d. Nothing was recorded. To return there, repeat this command with --unit %d --text-offset %d.\n", stop.Unit, stop.Offset, stop.Unit, stop.Offset)
+			if err != nil {
+				return 1
+			}
+		}
+		return 0
 	case "evaluate":
 		if flags.NArg() != 1 || !discovery.ValidArchiveID(flags.Arg(0)) {
 			return write(nil, errors.New("evaluate requires exactly one archive:ITEM identifier"), 2)
@@ -669,6 +698,11 @@ func Execute(ctx context.Context, args []string, out, errOut io.Writer, service 
 	return 0
 }
 
+// readTerminal runs the interactive reader; tests replace it.
+var readTerminal = func(ctx context.Context, s app.Service, out io.Writer, o tui.ReadOptions) (*reader.Position, error) {
+	return tui.Read(ctx, s, os.Stdin, out, o)
+}
+
 // mcpInput is the protocol input stream; tests replace it.
 var mcpInput io.Reader = os.Stdin
 
@@ -692,6 +726,9 @@ func flagApplies(command, action, name string) bool {
 	}
 	if command == "content" && action == "capabilities" {
 		return false
+	}
+	if command == "read" {
+		return name == "root" || name == "asset" || name == "unit" || name == "text-offset" || name == "speed" || name == "rate"
 	}
 	if command == "mcp" {
 		return name == "scope" || name == "allow-network" || name == "transport" || name == "config" || name == "library" || name == "review"

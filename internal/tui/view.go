@@ -152,7 +152,7 @@ func (m *model) footer() string {
 			}
 		}
 		if m.mode == "read" {
-			help = "Enter unit  n next range  r repeat  u units  F6 edit  Ctrl+C quit"
+			help = "Enter unit  n next range  r repeat  u units  p pages  s speed  F6 edit  Ctrl+C quit"
 		}
 	}
 	if m.busy {
@@ -173,6 +173,11 @@ func (m *model) View() tea.View {
 	if m.width < 40 || m.height < 20 {
 		lines := strings.Split(lipgloss.Wrap("Nemalo\nTerminal too small. Resize to at least 40 columns and 20 rows.\nCtrl+C quits.", max(1, m.width), " "), "\n")
 		v := tea.NewView(strings.Join(lines[:min(len(lines), max(1, m.height))], "\n"))
+		v.AltScreen = true
+		return v
+	}
+	if m.pager != nil {
+		v := tea.NewView(m.pagerView())
 		v.AltScreen = true
 		return v
 	}
@@ -306,7 +311,7 @@ func (m *model) emptyHelp() string {
 	case "state":
 		return "Establish a library identity.\n\nEnter an existing folder, then Enter to read its control status.\nF7 reviews initialization before writing control metadata.\nCtrl+N sets one source. F8 reviews import and does not scan or delete it.\nCtrl+R reviews a scan of review EPUBs that lack scan evidence.\nF9 previews moving the source folder's held files to the library's recoverable holding area; with a cleanup ID as the source, it previews restoring that cleanup."
 	case "read":
-		return "Read from exact source bytes.\n\nSelect an asset in Holdings and press r. Enter its explicit root, then Enter lists units.\nF6 browses units; Enter retrieves text. n continues, r repeats, u lists units.\nDelivery does not record reading progress. Notes and image resources are available through content CLI references."
+		return "Read from exact source bytes.\n\nSelect an asset in Holdings and press r. Enter its explicit root, then Enter lists units.\nF6 browses units; Enter retrieves text. n continues, r repeats, u lists units.\np opens the selected unit as pages sized to the terminal; s opens it one word at a time.\nDelivery does not record reading progress. Notes and image resources are available through content CLI references."
 	default:
 		return "Enter the fields above, then press Enter.\n\nResults stay with their operation when you switch modes.\nSources are preserved. Escape cancels active work."
 	}

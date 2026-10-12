@@ -8,6 +8,7 @@ import (
 	"strings"
 	"testing"
 	"unicode"
+	"unsafe"
 )
 
 func TestJSONRoundTripAndVisibleControls(t *testing.T) {
@@ -53,5 +54,18 @@ func TestJSONErrors(t *testing.T) {
 	}
 	if got := Visible("a\x1b\u009b\u202eb\n\t"); got != "a\\u001b\\u009b\\u202eb\n\t" {
 		t.Fatal(got)
+	}
+}
+
+func TestVisibleSharesPlainTextAndRepairsInvalidBytes(t *testing.T) {
+	plain := "Plain prose, with\ttabs and\nlines. 日本語"
+	if got := Visible(plain); got != plain || unsafe.StringData(got) != unsafe.StringData(plain) {
+		t.Fatal("plain text was copied or changed", got)
+	}
+	if got := Visible("a\xffb"); got != "a�b" {
+		t.Fatalf("invalid UTF-8 must display as a replacement character: %q", got)
+	}
+	if got := Visible("x\u200by\x1b"); got != `x\u200by\u001b` {
+		t.Fatalf("%q", got)
 	}
 }

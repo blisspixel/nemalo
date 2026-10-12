@@ -55,6 +55,11 @@ delete anything.
   offsets, and a cursor; read the cursor back before quoting.
 - MP3 holdings read as `mpeg-audio/1`: probed timing, declared tags and chapters,
   and decodable byte ranges. Nothing is decoded or transcribed.
+- To show a person a book a page at a time, call `content_read` with
+  `max_bytes` near 2000, show the text verbatim with any gaps, and continue
+  with the returned cursor only when they ask for the next page. For reading
+  in a terminal, suggest `nemalo read LIBRARY --root LIBRARY --asset ID`, or
+  `--speed` for one word at a time.
 - Delivered text is not evidence that anyone read it, and Nemalo records no
   reading progress.
 

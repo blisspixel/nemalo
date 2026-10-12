@@ -45,6 +45,9 @@ AI service. The agent interface (MCP) uses the same application services.
   located as gaps. Exact quotations can be located by page and offset. MP3
   tracks report probed and declared timing and chapters, and return decodable
   ranges; held recordings list their tracks in order with missing positions.
+- Read a held EPUB or PDF in the terminal with `nemalo read`: pages sized to
+  the screen, or one word at a time at a rate you control. Nothing records
+  what you read.
 - Report environment paths, tool availability, scanner setup and signature age,
   and the directory descriptor bridge (/proc/self/fd on Linux, /dev/fd on macOS)
   with doctor.

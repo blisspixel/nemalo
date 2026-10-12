@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased
+
+- `nemalo read` and `p` or `s` in TUI Read open a full-screen reader for EPUB
+  and PDF text: pages sized to the terminal, or one word at a time with
+  sentence pauses, starting paused at 250 words per minute. Omitted images and
+  tables are shown where they were omitted, PDF pages keep their lines, and an
+  unreadable unit stops reading until you choose the next one. Closing prints
+  the position to return to; nothing is recorded
+  ([decision 0025](docs/decisions/0025-terminal-reading.md)).
+
 ## 0.1.0-alpha.7
 
 Seventh native prerelease. This remains an early library, not 1.0.

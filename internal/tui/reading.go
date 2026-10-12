@@ -5,6 +5,7 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 	"github.com/blisspixel/nemalo/internal/content"
+	"github.com/blisspixel/nemalo/internal/reader"
 )
 
 // Session delivery references are navigation aids, never consumption records.
@@ -64,4 +65,37 @@ func (m *model) startRead(units bool, unit int, cursor string, repeat bool) tea.
 		data, err := service.Content(ctx, req)
 		return result{id: id, data: data, err: err}
 	}
+}
+
+// readSelected opens the reader at the selected unit of a units listing for
+// the current inputs, at the unit of the last range read, or at the first. EPUBs read as
+// epub-text/2, which shares the structured representation's unit indexes and
+// also reads books that representation refuses; PDFs read as pdf-text/1.
+func (m *model) readSelected(speed bool) tea.Cmd {
+	if m.busy {
+		return nil
+	}
+	switch {
+	case m.reader.asset == "" || m.input.Value() == "" || m.secondary.Value() == "":
+		m.status = "Select an asset in Holdings with r and enter its explicit root."
+	case m.reader.representation == "mpeg-audio/1":
+		m.status = "Audio has no text to page. Enter retrieves frame ranges."
+	default:
+		representation, unit := "epub-text/2", 0
+		if m.reader.representation == "pdf-text/1" {
+			representation = "pdf-text/1"
+		}
+		bound := m.reader.boundCatalog == m.input.Value() && m.reader.boundRoot == m.secondary.Value()
+		last := m.reader.last
+		switch {
+		case bound && len(m.entries) > 0:
+			unit = m.selected
+		case bound && m.reader.hasLast && !last.UnitsOnly && last.Cursor == "":
+			// After a range was read, the unit it was read from.
+			unit = last.Unit
+		}
+		return m.openPager(m.input.Value(), m.secondary.Value(), m.reader.asset, representation, reader.Position{Unit: unit}, speed, reader.DefaultRate)
+	}
+	m.resize()
+	return nil
 }

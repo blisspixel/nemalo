@@ -241,8 +241,11 @@ are distinct from retained source markup and unknown rendered/semantic coverage.
 Assessment warnings remain review evidence; typed access restrictions prohibit
 active/encrypted/repeated-spine content, while remote static references are disclosed
 without fetching them. No retrieved bytes are rendered or executed. See
-[the structured contract](STRUCTURED-EPUB.md). MCP, PDF/audio ranges, and indexes
-remain planned.
+[the structured contract](STRUCTURED-EPUB.md). The read-only MCP `content_*`
+tools, PDF pages, and MP3 frame ranges use the same service; full-text indexes
+remain planned. `internal/reader` lays out delivered ranges for a person as
+terminal pages or one word at a time, under the TUI and `nemalo read`; it reads
+no files and keeps no state ([decision 0025](decisions/0025-terminal-reading.md)).
 
 Expand bounded text extraction and search per supported format. Derived indexes key
 on asset hash and extractor version; rebuild them without modifying originals.

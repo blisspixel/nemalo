@@ -133,6 +133,8 @@ Readers and players get verified copies (`library open`/`export`), never stored
 files; launch only through `internal/launch` argument arrays (decision 0016).
 Never remove a lock file to release an active writer or treat initialization as
 content validation or production import/cleanup recovery.
+The terminal reader is `internal/reader` (layout and pacing, no I/O) under the
+TUI and `nemalo read` (decision 0025); it stores no position, rate, or history.
 Source-bound text retrieval belongs in `internal/content`, exposed by `internal/app`;
 see `docs/CONTENT-ACCESS.md` and issue 1. Reuse assessment's container parser.
 Preserve stateless offline reads, exact-byte/extractor-bound references, explicit

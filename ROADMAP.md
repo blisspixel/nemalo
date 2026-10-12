@@ -390,6 +390,8 @@ contract. MP3 tracks have probed timing and decodable frame ranges
 ordered manifests ([decision 0020](docs/decisions/0020-recording-manifest.md)), and
 PDFs have page indexes, printed labels, text with located gaps, and exact
 quotation spans ([decision 0021](docs/decisions/0021-pdf-pages-and-text.md)).
+A terminal reader shows EPUB and PDF text as pages or one word at a time over
+the same ranges, recording nothing ([decision 0025](docs/decisions/0025-terminal-reading.md)).
 Claude Code validated the MCP contract as an external caller. Both issues are
 closed; OCR, column reconstruction, narrator identity, and M4B continue in
 milestones 7 and 8.

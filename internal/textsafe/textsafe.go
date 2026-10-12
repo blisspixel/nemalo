@@ -8,6 +8,7 @@ import (
 	"strings"
 	"unicode"
 	"unicode/utf16"
+	"unicode/utf8"
 )
 
 // Visible preserves prose whitespace for the caller's layout policy. Other
@@ -15,9 +16,13 @@ import (
 func Visible(s string) string { return escape(s) }
 
 func escape(s string) string {
+	// Text with nothing to escape is returned as is, sharing its memory.
+	if utf8.ValidString(s) && strings.IndexFunc(s, escaped) < 0 {
+		return s
+	}
 	var b strings.Builder
 	for _, r := range s {
-		if (unicode.IsControl(r) && r != '\n' && r != '\r' && r != '\t') || unicode.Is(unicode.Cf, r) {
+		if escaped(r) {
 			if r > 0xffff {
 				a, c := utf16.EncodeRune(r)
 				fmt.Fprintf(&b, "\\u%04x\\u%04x", a, c)
@@ -29,6 +34,10 @@ func escape(s string) string {
 		}
 	}
 	return b.String()
+}
+
+func escaped(r rune) bool {
+	return (unicode.IsControl(r) && r != '\n' && r != '\r' && r != '\t') || unicode.Is(unicode.Cf, r)
 }
 
 // MarshalJSON emits parse-equivalent JSON, including object keys. Escaping is

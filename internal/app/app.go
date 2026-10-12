@@ -319,6 +319,24 @@ func (s Service) Content(ctx context.Context, req content.Request) (content.Resu
 	return content.Get(ctx, req)
 }
 
+// TextUnits lists an asset's units in the first text representation that
+// reads it, epub-text/2 then pdf-text/1, for a reader that knows only the
+// asset ID. Audio has no text representation; both failures are returned.
+func (s Service) TextUnits(ctx context.Context, catalog, root, asset string) (content.Result, error) {
+	var failures []error
+	for _, representation := range []string{"epub-text/2", "pdf-text/1"} {
+		r, err := s.Content(ctx, content.Request{SchemaVersion: 1, Catalog: catalog, Root: root, AssetID: asset, Representation: representation, UnitsOnly: true, MaxBytes: 4096})
+		if err == nil {
+			return r, nil
+		}
+		failures = append(failures, fmt.Errorf("%s: %w", representation, err))
+		if ctx.Err() != nil || r.Status == "missing_asset" || r.Status == "invalid_request" {
+			break
+		}
+	}
+	return content.Result{}, errors.Join(failures...)
+}
+
 func (s Service) ContentCapabilities() content.Capabilities { return content.Available() }
 
 type Capability struct {

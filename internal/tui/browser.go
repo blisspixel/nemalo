@@ -305,6 +305,10 @@ func (m *model) browserKey(key string) (bool, tea.Cmd) {
 		if m.mode == "read" {
 			return true, m.startRead(true, 0, "", false)
 		}
+	case "p", "s":
+		if m.mode == "read" {
+			return true, m.readSelected(key == "s")
+		}
 	}
 	return false, nil
 }

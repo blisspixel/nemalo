@@ -200,6 +200,10 @@ Nemalo owns offline retrieval and evidence. A caller owns voluntary selection,
 pause/switch/resume/stop, and explicit acknowledgement of what it actually processed.
 Retrieval, retries, peeks, preparation, or delivery never create consumption state.
 Optional bookmarks remain separately enabled, local, and exportable future work.
+The terminal reader ([decision 0025](decisions/0025-terminal-reading.md)) is
+such a caller: it requests ranges and continuations like any other and keeps
+its position only on screen. Closing reports the unit and byte offset; nothing
+is stored.
 
 Implemented validation covers over 300 actual synthetic service calls across
 multiple works, deterministic retries, source-order continuation, Unicode/stanzas,
