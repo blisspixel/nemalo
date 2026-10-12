@@ -1,6 +1,8 @@
 # Changelog
 
-## Unreleased
+## 0.1.0-alpha.7
+
+Seventh native prerelease. This remains an early library, not 1.0.
 
 - `library check LIBRARY` (MCP `library_check`; TUI Audit with a library folder)
   verifies the whole library read-only: stored and held bytes, untracked and
