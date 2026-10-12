@@ -53,4 +53,8 @@ receipt; a server that answers with the whole file, a changed validator, a
 different range, changed size, and changed checksum, each leaving the partial
 content and writing no receipt; a weak validator; a missing packet; a resumed
 recording track continued in place from byte 7; and the transfer primitive
-rejecting a changed or short prefix and an overlong remainder.
+rejecting a changed or short prefix and an overlong remainder. Live: a 14 MB
+LibriVox track (`art_of_war_09-10_sun_tzu.mp3`) was interrupted at byte
+2,596,864; the first resume met one of the node's intermittent 500 replies and
+left the packet untouched, and the next completed, with MD5 and SHA-1 equal to
+Archive's published values.

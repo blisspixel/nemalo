@@ -13,8 +13,11 @@ func Acquisition(r acquisition.Result) string {
 	if r.Scan != nil && r.Scan.Tool != "" {
 		fmt.Fprintf(&b, "Scanner: %q\n", r.Scan.Tool)
 	}
-	if r.ResumedFrom > 0 {
+	switch {
+	case r.ResumedFrom > 0 && r.Complete:
 		fmt.Fprintf(&b, "Resumed from byte %d; the whole file was verified.\n", r.ResumedFrom)
+	case r.ResumedFrom > 0:
+		fmt.Fprintf(&b, "Resume from byte %d did not complete; the partial content was kept for another --resume.\n", r.ResumedFrom)
 	}
 	if r.Intent != nil {
 		e := r.Intent.Selection
