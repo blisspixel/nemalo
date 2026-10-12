@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/url"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -62,6 +63,16 @@ func (t fileTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 // Download opens only the canonical URL constructed by a fresh Archive
 // evaluation. Source-provided server URLs and saved evaluation files are unused.
 func (p *Archive) Download(ctx context.Context, file OfferedFile) (*http.Response, error) {
+	return p.DownloadFrom(ctx, file, 0, "")
+}
+
+// DownloadFrom requests the file from offset onward, only if it still matches
+// validator (a strong ETag): with If-Range, a changed file answers with the
+// whole file and status 200 instead of a range, which the caller refuses.
+func (p *Archive) DownloadFrom(ctx context.Context, file OfferedFile, offset int64, validator string) (*http.Response, error) {
+	if offset < 0 || (offset > 0 && !StrongETag(validator)) {
+		return nil, errors.New("a resumed download needs a positive offset and a strong validator")
+	}
 	u, err := url.Parse(file.DownloadURL)
 	if err != nil || u.Scheme != "https" || u.Host != "archive.org" || u.User != nil || u.RawQuery != "" || u.Fragment != "" || !strings.HasPrefix(u.Path, "/download/") || file.Access != "public_file_candidate" {
 		return nil, errors.New("file is not an Archive public download candidate")
@@ -79,6 +90,10 @@ func (p *Archive) Download(ctx context.Context, file OfferedFile) (*http.Respons
 	}
 	req.Header.Set("User-Agent", "nemalo/0.1 (+https://github.com/blisspixel/nemalo)")
 	req.Header.Set("Accept-Encoding", "identity")
+	if offset > 0 {
+		req.Header.Set("Range", "bytes="+strconv.FormatInt(offset, 10)+"-")
+		req.Header.Set("If-Range", validator)
+	}
 	resp, err := p.fileClient().Do(req)
 	if err == nil && (resp.StatusCode == 429 || resp.StatusCode == 503) {
 		p.deferRetry(resp.Header.Get("Retry-After"), time.Now())
@@ -91,4 +106,19 @@ func (p *Archive) fileClient() *http.Client {
 		return p.downloadClient
 	}
 	return NewFileClient(ArchiveDownloadHost)
+}
+
+// StrongETag reports whether an ETag header value is a strong validator
+// (RFC 9110, 8.8.3): quoted, without the W/ weak prefix, with no quotes or
+// control characters inside.
+func StrongETag(v string) bool {
+	if len(v) < 2 || len(v) > 256 || v[0] != '"' || v[len(v)-1] != '"' {
+		return false
+	}
+	for _, c := range v[1 : len(v)-1] {
+		if c == '"' || c < 0x21 || c == 0x7f {
+			return false
+		}
+	}
+	return true
 }

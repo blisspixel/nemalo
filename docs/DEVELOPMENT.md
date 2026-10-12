@@ -8,7 +8,8 @@ needed for the application, tests, or first-party tooling.
 ## Current operations
 
 `help`, `version`, `doctor`, `search`, `evaluate`, `acquire`, `inspect`, `check`, `library snapshot`,
-`library list`, `library audit`, `library import`, `library ingest`, `library rescan`, `library recordings`,
+`library list`, `library audit`, `library import`, `library ingest`, `library cleanup`, `library restore`,
+`library rescan`, `library recordings`,
 `library open`, `library export`, `library init`, `library status`, `content units`,
 `content read`, `content locate`, `content source`, `content resource`, `content capabilities`,
 `mcp serve`, and `tui` are implemented.
@@ -220,6 +221,9 @@ nemalo library audit /path/to/library
 nemalo library list /path/to/library --query "verne" --status checked
 nemalo library open /path/to/library --asset sha256:HASH
 nemalo library export /path/to/library --asset sha256:HASH --output /path/to/folder
+nemalo library cleanup /path/to/library /path/to/downloads
+nemalo library cleanup /path/to/library /path/to/downloads --apply --plan DIGEST
+nemalo library restore /path/to/library --cleanup cleanup:ID --apply
 nemalo content read /path/to/library --root /path/to/library --asset sha256:HASH
 nemalo content read /path/to/library --root /path/to/library --asset sha256:HASH \
   --representation pdf-text/1 --unit 3
@@ -385,7 +389,9 @@ evidence without merging files. Downloads are scanned on acquisition, detections
 are quarantined, and review holdings can be rescanned in one command. Folders
 and ZIP archives ingest through the single-file import, and whole recordings are
 acquired in declared order with track-level resume and listed as ordered
-manifests. Byte-range resume and recoverable cleanup remain separate gates. Reuse shared file checks and scanners. Keep real
+manifests. `library cleanup` moves held sources to a recoverable holding area
+and `library restore` returns them (decision 0022); interrupted downloads resume
+against a strong validator (decision 0023). Reuse shared file checks and scanners. Keep real
 acquisition in the first complete lifecycle. Add those operations to CLI and TUI
 together. MCP remains a scoped adapter over the same services. Generated
 analysis and model/harness integrations remain post-1.0. Issues 1 and 2 are

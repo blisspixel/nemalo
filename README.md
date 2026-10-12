@@ -21,7 +21,7 @@ AI service. The agent interface (MCP) uses the same application services.
   with source checksums, local checks, a scan by the installed antivirus, and a
   provenance receipt. A detection is quarantined and other files are offered.
   Acquire a whole LibriVox recording in declared track order, and resume an
-  interrupted one without fetching completed tracks again.
+  interrupted download or recording without fetching completed bytes again.
 - Inventory explicit folders; check file structure, size, hashes, and EPUB text
   measurements. A scan is recommended for a file you did not produce and stays
   optional: Defender on Windows, ClamAV on Linux and macOS. Pass a publisher
@@ -34,7 +34,9 @@ AI service. The agent interface (MCP) uses the same application services.
   library. Preview writes nothing. Checked status requires a passed EPUB check
   and a recorded no-detection scan; other assessed files stay in review.
   `library ingest` imports a whole folder, including intake packets and ZIP
-  members, and preserves the folder. `library rescan` scans review holdings in
+  members, and preserves the folder. `library cleanup` then moves sources whose
+  books the library holds into a recoverable holding area, and `library restore`
+  undoes it. `library rescan` scans review holdings in
   one batched command.
 - Retrieve bounded EPUB text in CLI/JSON/TUI, with exact continuation, source parts,
   note references, local image bytes, and explicit extraction gaps. Illustrated
@@ -50,8 +52,8 @@ AI service. The agent interface (MCP) uses the same application services.
   tools for an agent host (`nemalo mcp serve --scope DIRECTORY`), also packaged
   as a Claude Code plugin and an Agent Plugins package.
 
-Byte-range transfer resume, RAR and 7z intake, folder cleanup, recording
-identity across holdings, and MCP write tools are planned. Single-file import is not
+RAR and 7z intake, a purge for held sources,
+recording identity across holdings, and MCP write tools are planned. Single-file import is not
 a full checked-library policy.
 File checks report limited evidence, never a safety or completeness guarantee.
 See [current capabilities and limits](docs/DEVELOPMENT.md) and the [roadmap](ROADMAP.md).

@@ -13,6 +13,9 @@ func Acquisition(r acquisition.Result) string {
 	if r.Scan != nil && r.Scan.Tool != "" {
 		fmt.Fprintf(&b, "Scanner: %q\n", r.Scan.Tool)
 	}
+	if r.ResumedFrom > 0 {
+		fmt.Fprintf(&b, "Resumed from byte %d; the whole file was verified.\n", r.ResumedFrom)
+	}
 	if r.Intent != nil {
 		e := r.Intent.Selection
 		fmt.Fprintf(&b, "Source: %q\nSelected file: %q\nTitles: %q\nDeclared rights: %q\nDeclared licenses: %q\nMetadata SHA-256: %q\n", r.Intent.Request.SourceID, r.Intent.Request.File, e.Title, e.Rights, e.LicenseURLs, e.MetadataSHA256)
@@ -35,7 +38,7 @@ func Acquisition(r acquisition.Result) string {
 		b.WriteString("A detection can be a false positive; a no-detection result is not proof of safety.\n")
 		return b.String()
 	}
-	b.WriteString("Untrusted intake only. File rights, DRM, malware safety, and semantic completeness are not established.\nIncomplete folders are retained; no automatic resume or deletion.\n")
+	b.WriteString("Untrusted intake only. File rights, DRM, malware safety, and semantic completeness are not established.\nIncomplete folders are retained, never deleted; --resume continues an interrupted transfer.\n")
 	return b.String()
 }
 

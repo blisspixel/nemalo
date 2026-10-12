@@ -116,8 +116,9 @@ nemalo list --language fr
 nemalo show ITEM_ID --json
 nemalo open ITEM_ID
 nemalo check
-nemalo cleanup --run RUN_ID --dry-run
-nemalo cleanup --run RUN_ID --apply
+nemalo library cleanup ~/Books ~/Downloads/books
+nemalo library cleanup ~/Books ~/Downloads/books --apply --plan DIGEST
+nemalo library restore ~/Books --cleanup cleanup:ID --apply
 nemalo jobs list --json
 nemalo mcp serve --transport stdio
 ```

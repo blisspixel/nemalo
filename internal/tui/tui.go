@@ -61,17 +61,20 @@ type model struct {
 	initializeAction bool
 	importAction     bool
 	rescanAction     bool
-	mode             string
-	source           string
-	order            string
-	format           string
-	status           string
-	busy             bool
-	id               int
-	cancel           context.CancelFunc
-	reader           readerState
-	downloadReview   *acquisition.Request
-	recordingReview  *acquisition.RecordingRequest
+	// cleanupPlan runs a cleanup preview; cleanupDigest, once reviewed, applies it.
+	cleanupPlan     bool
+	cleanupDigest   string
+	mode            string
+	source          string
+	order           string
+	format          string
+	status          string
+	busy            bool
+	id              int
+	cancel          context.CancelFunc
+	reader          readerState
+	downloadReview  *acquisition.Request
+	recordingReview *acquisition.RecordingRequest
 	// lastEvaluation lets a detected download offer the item's other files.
 	lastEvaluation *discovery.Evaluation
 }
@@ -125,6 +128,17 @@ func (m *model) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 			m.cancel = nil
 		}
 		m.status = "Complete."
+		// A cleanup preview with something to move becomes a review; Enter
+		// applies exactly that plan digest.
+		if value, ok := msg.data.(library.CleanupResult); ok && msg.err == nil && !value.Applied && value.Move > 0 {
+			m.confirmKind, m.confirmRoot, m.confirmSource, m.confirmReport, m.confirmStatus = "cleanup", value.Library, value.Folder, m.report, m.status
+			m.cleanupDigest = value.Digest
+			m.status = "Review cleanup. Enter moves the listed files to the holding area; Escape returns without moving."
+			m.setReport(present.Cleanup(value) + "\nEnter moves exactly these entries. A changed folder refuses the plan. Restore with library restore.\n")
+			m.viewport.GotoTop()
+			m.resize()
+			return m, nil
+		}
 		// A recording manifest is shown beside the holdings list, which stays.
 		if value, ok := msg.data.(library.RecordingsResult); ok {
 			m.status = "Recording manifest. Track order is declared by the source; no listening is recorded."
@@ -225,6 +239,8 @@ func (m *model) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 			data = []byte(present.Export(value))
 		case library.IngestResult:
 			data = []byte(present.Ingest(value))
+		case library.CleanupResult:
+			data = []byte(present.Cleanup(value))
 		case library.Audit:
 			data = []byte(present.Audit(value))
 		case library.ImportResult:
@@ -274,6 +290,9 @@ func (m *model) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 		if msg.String() == "ctrl+r" && m.mode == "state" && !m.busy {
 			m.requestRescan()
 			return m, nil
+		}
+		if msg.String() == "f9" && m.mode == "state" && !m.busy {
+			return m, m.requestCleanup()
 		}
 		if handled, cmd := m.browserKey(msg.String()); handled {
 			return m, cmd

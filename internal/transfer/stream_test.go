@@ -73,3 +73,27 @@ func TestCopyFailureAndCancellation(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+func TestContinueVerifiesTheWholeFile(t *testing.T) {
+	body := []byte("resumable bounded bytes")
+	md, sh, sha := md5.Sum(body), sha1.Sum(body), sha256.Sum256(body)
+	good := Expectation{int64(len(body)), hex.EncodeToString(md[:]), hex.EncodeToString(sh[:])}
+	var out bytes.Buffer
+	r, err := Continue(context.Background(), &out, bytes.NewReader(body[:9]), 9, bytes.NewReader(body[9:]), 100, good)
+	if err != nil || r.Bytes != int64(len(body)) || r.SHA256 != hex.EncodeToString(sha[:]) || out.String() != string(body[9:]) {
+		t.Fatal(r, err, out.String())
+	}
+	for name, tc := range map[string]struct {
+		prefix, rest string
+		n            int64
+	}{
+		"changed prefix": {"RESUMABLE", string(body[9:]), 9},
+		"short prefix":   {"res", string(body[9:]), 9},
+		"long rest":      {string(body[:9]), string(body[9:]) + "x", 9},
+		"zero offset":    {"", string(body), 0},
+	} {
+		if _, err := Continue(context.Background(), io.Discard, strings.NewReader(tc.prefix), tc.n, strings.NewReader(tc.rest), 100, good); err == nil {
+			t.Fatal(name, "accepted")
+		}
+	}
+}

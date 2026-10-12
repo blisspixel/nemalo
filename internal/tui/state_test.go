@@ -271,3 +271,51 @@ func TestStateImportOfAPlainFolderIngestsIt(t *testing.T) {
 		t.Fatal("folder was not ingested", m.report)
 	}
 }
+
+func TestStateCleanupPreviewsThenAppliesTheReviewedPlan(t *testing.T) {
+	ctx := context.Background()
+	root, folder := t.TempDir(), t.TempDir()
+	if _, err := library.Initialize(ctx, root); err != nil {
+		t.Fatal(err)
+	}
+	book := writeStateEPUB(t, folder)
+	if _, err := library.Import(ctx, library.ImportRequest{Library: root, Source: book, Apply: true}); err != nil {
+		t.Fatal(err)
+	}
+	m := newModel(ctx, app.Service{})
+	m.switchMode("state")
+	m.input.SetValue(root)
+	if cmd := m.requestCleanup(); cmd != nil {
+		t.Fatal("cleanup without a source folder")
+	}
+	m.secondary.SetValue(folder)
+	_, cmd := m.Update(tea.KeyPressMsg{Code: tea.KeyF9})
+	if cmd == nil {
+		t.Fatal("F9 did not preview")
+	}
+	m.Update(cmd())
+	if m.confirmKind != "cleanup" || m.cleanupDigest == "" || !strings.Contains(m.report, "Move: 1") || !strings.Contains(m.footer(), "move to holding") {
+		t.Fatal("cleanup review", m.status, m.report)
+	}
+	if _, err := os.Stat(book); err != nil {
+		t.Fatal("preview moved the source", err)
+	}
+	// Escape leaves everything in place.
+	m.Update(tea.KeyPressMsg{Code: tea.KeyEscape})
+	if m.confirmKind != "" || m.cleanupDigest != "" {
+		t.Fatal("escape kept the review")
+	}
+	_, cmd = m.Update(tea.KeyPressMsg{Code: tea.KeyF9})
+	m.Update(cmd())
+	_, cmd = m.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
+	if cmd == nil {
+		t.Fatal("enter did not apply")
+	}
+	m.Update(cmd())
+	if !strings.Contains(m.report, "Applied: moved 1") {
+		t.Fatal("apply", m.status, m.report)
+	}
+	if _, err := os.Stat(book); !os.IsNotExist(err) {
+		t.Fatal("source not moved")
+	}
+}

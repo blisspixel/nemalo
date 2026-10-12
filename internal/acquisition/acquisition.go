@@ -39,6 +39,9 @@ type Request struct {
 	Scanner assessment.Scanner `json:"-"`
 	// Recording is set only for a track of acquire --recording.
 	Recording *RecordingPosition `json:"recording,omitempty"`
+	// Resume continues an interrupted transfer into its existing packet. It is
+	// a property of the call, never of the recorded intent.
+	Resume bool `json:"-"`
 }
 
 func (r Request) Validate() error {
@@ -90,6 +93,8 @@ type Result struct {
 	Alternatives     []Alternative `json:"alternatives,omitempty"`
 	SearchSuggestion string        `json:"search_suggestion,omitempty"`
 	Durability       string        `json:"durability"`
+	// ResumedFrom is the byte offset a resumed transfer continued from.
+	ResumedFrom int64 `json:"resumed_from,omitempty"`
 }
 
 // Alternative is another acquirable file from the same evaluation. It carries
@@ -122,6 +127,9 @@ func Acquire(ctx context.Context, provider Provider, request Request) (result Re
 	defer cancel()
 	if err := ctx.Err(); err != nil {
 		return result, err
+	}
+	if request.Resume {
+		return resumeAcquire(ctx, outer, provider, request, result)
 	}
 	abs, err := filepath.Abs(request.Output)
 	if err != nil {
@@ -239,6 +247,11 @@ func transferPacket(ctx context.Context, provider Provider, parent *os.Root, abs
 	if resp.ContentLength > request.MaxBytes || (resp.ContentLength >= 0 && resp.ContentLength != *file.Bytes) {
 		return nil, result, errors.New("HTTP size differs from source metadata or exceeds budget")
 	}
+	// The response's validator is synced before the body, so an interrupted
+	// transfer can later resume only against the same bytes.
+	if err := writeRecord(root, "transfer.json", responseRecord(resp, file)); err != nil {
+		return nil, result, err
+	}
 	p.name = "content." + format(file.Name)
 	p.f, err = root.OpenFile(p.name, os.O_RDWR|os.O_CREATE|os.O_EXCL, 0600)
 	if err != nil {
@@ -246,9 +259,14 @@ func transferPacket(ctx context.Context, provider Provider, parent *os.Root, abs
 	}
 	result.ContentPath = filepath.Join(abs, p.name)
 	result.Transfer, err = transfer.Copy(ctx, p.f, resp.Body, request.MaxBytes, transfer.Expectation{Bytes: *file.Bytes, MD5: file.MD5, SHA1: file.SHA1})
-	// Retain whatever was transferred on failure, including cancellation.
-	if syncErr := p.f.Sync(); err != nil || syncErr != nil {
-		return nil, result, errors.Join(err, syncErr)
+	return completeTransfer(ctx, p, result, resp, file, err)
+}
+
+// completeTransfer syncs the content after a copy, then inspects and verifies
+// it. Whatever was transferred is retained on failure, including cancellation.
+func completeTransfer(ctx context.Context, p *packetState, result Result, resp *http.Response, file discovery.OfferedFile, copyErr error) (*packetState, Result, error) {
+	if syncErr := p.f.Sync(); copyErr != nil || syncErr != nil {
+		return nil, result, errors.Join(copyErr, syncErr)
 	}
 	if err := resp.Body.Close(); err != nil {
 		return nil, result, err
@@ -264,7 +282,7 @@ func transferPacket(ctx context.Context, provider Provider, parent *os.Root, abs
 		result.Status = "retained_for_review"
 		return nil, result, err
 	}
-	if err := verifyIntake(ctx, root, p.name, p.f, result.Transfer, request.MaxBytes); err != nil {
+	if err := verifyIntake(ctx, p.root, p.name, p.f, result.Transfer, p.request.MaxBytes); err != nil {
 		return nil, result, err
 	}
 	return p, result, nil

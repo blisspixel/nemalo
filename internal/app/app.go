@@ -267,6 +267,17 @@ func (s Service) Recordings(ctx context.Context, directory, source string) (libr
 	return library.Recordings(ctx, directory, source)
 }
 
+// Cleanup plans, or with a plan digest applies, moving held sources of a
+// folder into the library's recoverable holding area.
+func (s Service) Cleanup(ctx context.Context, request library.CleanupRequest) (library.CleanupResult, error) {
+	return library.Cleanup(ctx, request)
+}
+
+// Restore returns a cleanup's held files to their folder without replacing anything.
+func (s Service) Restore(ctx context.Context, request library.RestoreRequest) (library.RestoreResult, error) {
+	return library.Restore(ctx, request)
+}
+
 func (s Service) ManagedHoldings(ctx context.Context, directory, query, format, status string, limit, offset int) (library.ManagedPage, error) {
 	return library.FindManaged(ctx, directory, query, format, status, limit, offset)
 }

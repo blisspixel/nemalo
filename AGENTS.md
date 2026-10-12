@@ -99,7 +99,8 @@ the checked file HTTP adapter with the harness. Preserve fresh evaluation, exact
 selection, exclusive packets, synced intent, retained failures, and untrusted status;
 see decision 0007. Recordings reuse the same packet code per track (decision 0018):
 resume only reuses a receipt-complete, rehashed track; never adopt or remove a
-retained attempt. Byte-range resume and checked publication are not implemented.
+retained attempt. Byte resume (decision 0023) continues only the same strong-ETag
+bytes and verifies the whole file; refusals leave the packet untouched.
 Use `internal/safeio` for capability-bound roots and existing-file opens and
 `internal/textsafe` for JSON/generated prose. Preserve parent aliases, opened
 identity checks, lifetime compressed-reader budgets, and parse-equivalent escaping;
@@ -124,6 +125,9 @@ retained corrupt state, canonical records, OS-held locks, and TUI write review.
 Archive extraction is `internal/staging` (decision 0017): flat indexed staging
 names, never member paths; one archive staged at a time; account for every
 member and every entry beside a packet; ingest reuses Import.
+Source cleanup is `library/cleanup.go` and `restore.go` (decision 0022): move only held,
+verified bytes into the holding area via verified copy, hard-link publish, then source
+removal; resume from the manifest, never a new plan; never replace on restore; no purge.
 Readers and players get verified copies (`library open`/`export`), never stored
 files; launch only through `internal/launch` argument arrays (decision 0016).
 Never remove a lock file to release an active writer or treat initialization as

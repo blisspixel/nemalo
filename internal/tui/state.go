@@ -82,7 +82,8 @@ func (m *model) confirmInitialization(msg tea.KeyPressMsg) tea.Cmd {
 	switch msg.String() {
 	case "ctrl+c":
 		return tea.Quit
-	case "esc", "f7", "f8", "ctrl+r":
+	case "esc", "f7", "f8", "f9", "ctrl+r":
+		m.cleanupDigest = ""
 		m.setReport(m.confirmReport)
 		m.status = m.confirmStatus
 		m.confirmKind, m.confirmRoot, m.confirmSource, m.confirmReport, m.confirmStatus = "", "", "", "", ""
@@ -95,7 +96,7 @@ func (m *model) confirmInitialization(msg tea.KeyPressMsg) tea.Cmd {
 	case "enter":
 		kind := m.confirmKind
 		m.input.SetValue(m.confirmRoot)
-		if kind == "import" {
+		if kind == "import" || kind == "cleanup" {
 			m.secondary.SetValue(m.confirmSource)
 		}
 		m.confirmKind, m.confirmRoot, m.confirmSource, m.confirmReport, m.confirmStatus = "", "", "", "", ""
@@ -104,10 +105,24 @@ func (m *model) confirmInitialization(msg tea.KeyPressMsg) tea.Cmd {
 			m.importAction = true
 		case "rescan":
 			m.rescanAction = true
+		case "cleanup":
+			// cleanupDigest stays set: start applies exactly the reviewed plan.
 		default:
 			m.initializeAction = true
 		}
 		return m.start(true)
 	}
 	return nil
+}
+
+// requestCleanup previews a cleanup of the source folder. The preview reads
+// and hashes but writes nothing; a plan with moves becomes a review.
+func (m *model) requestCleanup() tea.Cmd {
+	if m.input.Value() == "" || m.secondary.Value() == "" {
+		m.status = "Enter the library folder and, with Ctrl+N, the source folder to clean up."
+		m.resize()
+		return nil
+	}
+	m.cleanupPlan, m.cleanupDigest = true, ""
+	return m.start(true)
 }

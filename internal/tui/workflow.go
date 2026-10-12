@@ -122,8 +122,13 @@ func (m *model) start(reset bool) tea.Cmd {
 		mode = "import"
 	} else if mode == "state" && m.rescanAction {
 		mode = "rescan"
+	} else if mode == "state" && m.cleanupPlan {
+		mode = "cleanupplan"
+	} else if mode == "state" && m.cleanupDigest != "" {
+		mode = "cleanup"
 	}
-	m.initializeAction, m.importAction, m.rescanAction = false, false, false
+	digest := m.cleanupDigest
+	m.initializeAction, m.importAction, m.rescanAction, m.cleanupPlan, m.cleanupDigest = false, false, false, false, ""
 	second, assess, offset, format := m.secondary.Value(), m.assess, m.offset, m.format
 	limits := inventory.Defaults()
 	if m.largeBudget {
@@ -151,6 +156,12 @@ func (m *model) start(reset bool) tea.Cmd {
 			return result{id, data, err}
 		case "rescan":
 			data, err := m.service.Rescan(ctx, library.RescanRequest{Library: value, Apply: true})
+			return result{id, data, err}
+		case "cleanupplan":
+			data, err := m.service.Cleanup(ctx, library.CleanupRequest{Library: value, Folder: second})
+			return result{id, data, err}
+		case "cleanup":
+			data, err := m.service.Cleanup(ctx, library.CleanupRequest{Library: value, Folder: second, Apply: digest})
 			return result{id, data, err}
 		case "state":
 			data, err := m.service.LibraryStatus(ctx, value)

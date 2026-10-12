@@ -363,7 +363,7 @@ func validateControl(root *os.Root) error {
 		delete(seen, name)
 	}
 	for name, entry := range seen {
-		if (name != operationsName && name != holdingsName) || !entry.Type().IsRegular() {
+		if (name != operationsName && name != holdingsName && name != cleanupName) || !entry.Type().IsRegular() {
 			return ErrStateReview
 		}
 	}

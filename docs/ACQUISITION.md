@@ -2,8 +2,8 @@
 
 Implemented in CLI, JSON, and TUI through `internal/app` and
 `internal/acquisition`. It acquires one selected file, or every track of one
-declared recording, into untrusted intake. It is not checked library publication
-or a byte-range resumable transfer queue.
+declared recording, into untrusted intake, and resumes an interrupted transfer
+against the same bytes. It is not checked library publication or a queue.
 Scanning, quarantine, and alternatives follow
 [decision 0012](decisions/0012-scan-on-acquire-quarantine-and-rescan.md).
 
@@ -41,6 +41,7 @@ creation are exclusive. A completed packet has:
 | File | Purpose |
 | --- | --- |
 | `intent.json` | Selected asset, fresh declaration evidence, metadata digest, request bounds, time |
+| `transfer.json` | Response status, `ETag` and whether it is strong, `Last-Modified`, length, final URL; synced before the body |
 | `content.epub`, `content.pdf`, or `content.mp3` | Actual bytes, with a controlled local name |
 | `receipt.json` | Measured bytes/SHA-256, source checks, final delivery URL, limited assessment, scan result |
 
@@ -138,9 +139,16 @@ checks of the audio. See
   intent, partial bytes, and any pending record. They never silently resume, restart,
   overwrite, clean up, or publish those bytes into a library.
 
-Keep a failed packet for review and choose a new output for a deliberate retry.
-A recording resumes at track granularity (above). Byte-range resume within a
-file, bound to a remote validator, and packet recovery remain planned. A receipt
+Keep a failed packet for review. `acquire ... --file NAME --output PACKET
+--resume` continues an interrupted transfer in that packet: every transfer syncs
+`transfer.json` with the response's validator before its body, and a resume
+requests only the missing bytes with `If-Range` on that strong `ETag`. A reply
+other than exactly the missing range of the same file, a weak or missing
+validator, or changed declarations leave the packet untouched. The whole file is
+then verified, inspected, scanned, and receipted as one transfer, and the
+receipt records `resumed_from`. A recording resumes an interrupted track in
+place the same way, or fetches it again under a new name when the source refuses
+the range. See [decision 0023](decisions/0023-validator-bound-download-resume.md). A receipt
 is historical evidence; recheck current bytes before relying on it.
 
 The validation harness shares the transfer primitive and checked download client.

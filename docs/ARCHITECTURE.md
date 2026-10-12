@@ -357,8 +357,12 @@ Library identity/init/status and a synced initialization journal now share that
 seam, with native reader/writer locks and resumable valid initialization. See
 [decision 0006](decisions/0006-library-control-state.md). Single-asset import
 stores one assessed file beside `.nemalo` and records it in separate journals.
-See [decision 0009](decisions/0009-managed-epub-import.md). Folder cleanup,
-archive extraction, and download resume remain planned.
+See [decision 0009](decisions/0009-managed-epub-import.md). Folder and ZIP
+ingest ([decision 0017](decisions/0017-folder-and-zip-ingest.md)) and recoverable
+source cleanup into a holding area with its own journal
+([decision 0022](decisions/0022-recoverable-source-cleanup.md)) and
+validator-bound download resume
+([decision 0023](decisions/0023-validator-bound-download-resume.md)) are implemented.
 
 Use a versioned JSON catalog and per-asset provenance initially. Keep catalog
 indexes rebuildable. Use a separate durable journal for in-progress operations;

@@ -90,7 +90,7 @@ func Ingest(ctx context.Context, request IngestRequest) (result IngestResult, er
 		return result, err
 	}
 	result.Library, result.Folder = libraryRoot, folder
-	if within(libraryRoot, folder) || within(folder, libraryRoot) {
+	if overlapping(libraryRoot, folder) {
 		return result, errors.New("the folder and the library must not contain each other")
 	}
 	state, err := LibraryStatus(ctx, libraryRoot)

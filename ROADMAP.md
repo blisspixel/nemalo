@@ -104,7 +104,8 @@ deleted by configuration), never imported, and other files from the item are
 offered. A clean acquisition scan bound to the same bytes lets a packet import
 as checked, and `library rescan` scans review holdings in ClamAV batches. See
 [decision 0012](docs/decisions/0012-scan-on-acquire-quarantine-and-rescan.md).
-Cleanup and byte-range download resume are also outstanding. Native
+Recoverable source cleanup (decision 0022) and validator-bound download resume
+(decision 0023) are implemented. Native
 archive/checksum packaging and checksum-verifying install scripts are
 implemented; releases still require the actual verification and publication gates.
 Milestone 2
@@ -112,8 +113,9 @@ has inventory, standalone signatures/private snapshots, and folder ingest with
 ZIP extraction into private staging. Milestone 5 has
 two discovery adapters, source-declared Archive file/access/rights evaluation,
 and selected EPUB/PDF/MP3 acquisition into exclusive untrusted intake packets.
-Whole recordings are acquired as ordered track packets with track-level resume.
-Validator-bound byte resume, a recording manifest, and checked publication remain planned.
+Whole recordings are acquired as ordered track packets, interrupted transfers
+resume against a strong validator, and held recordings have ordered manifests.
+Checked publication remains planned.
 All remaining production
 capabilities stay planned. A configured CI workflow is not itself a hosted pass.
 The initial foundation passed hosted native CI on Linux, macOS, and Windows.
@@ -221,7 +223,10 @@ Acceptance:
 Status: partial. Inventory, standalone file checks, and folder ingest with ZIP
 extraction into private staging exist
 ([decision 0017](docs/decisions/0017-folder-and-zip-ingest.md)). RAR, 7z,
-multipart sets, nested archives, and PAR2 remain planned. Depends on milestone 1.
+multipart sets, nested archives, and PAR2 remain planned. The pure-Go RAR and 7z
+readers checked on 2026-10-11 lack verifiable checksums or memory bounds; see the
+[research record](docs/RESEARCH.md#version-sensitive-research-record). Depends on
+milestone 1.
 
 Deliver recursive inventory, file-signature checks, ZIP handling, additional archive
 adapters, and private staging. Inventory includes links and unsupported entries as
@@ -276,7 +281,12 @@ Acceptance:
 
 ## Milestone 4: recoverable cleanup and maintenance
 
-Status: planned. Depends on milestone 3. Required for a production cleanup release.
+Status: partial. Plan-based source cleanup into a recoverable holding area,
+journaled crash recovery, and restore are implemented in CLI, JSON, and TUI
+([decision 0022](docs/decisions/0022-recoverable-source-cleanup.md)); held
+sources are retained, with no purge. Fault injection for disk-full and
+scanner-failure cases and a library-wide `check` remain. Depends on milestone 3.
+Required for a production cleanup release.
 
 Deliver plan-based source cleanup, review handling, library checking, and interruption
 recovery. Cleanup defaults to a recoverable holding area; permanent purge is a later,
@@ -301,9 +311,10 @@ source evaluation, and selected-file intake acquisition with a post-download
 scan and quarantine exist in CLI/JSON/TUI. See the
 [acquisition contract](docs/ACQUISITION.md). Whole declared recordings are
 acquired as ordered track packets with track-level resume
-([decision 0018](docs/decisions/0018-whole-recording-acquisition.md)). Byte-range
-resume within a file, Gutenberg production integration, and broader provider
-contracts remain planned. Transfers and checked publication use milestones 2 and 3. Source cleanup
+([decision 0018](docs/decisions/0018-whole-recording-acquisition.md)), and an
+interrupted transfer resumes byte-wise against a strong validator
+([decision 0023](docs/decisions/0023-validator-bound-download-resume.md)).
+Gutenberg production integration and broader provider contracts remain planned. Transfers and checked publication use milestones 2 and 3. Source cleanup
 is independent and requires 4.
 
 Complete Gutenberg and Archive acquisition over the existing Go provider core.
@@ -448,7 +459,7 @@ ingest records each track's declared place
 `recording-manifest/1` reports held tracks in order with exact hashes, missing
 positions, conflicts, and probed timing and offsets
 ([decision 0020](docs/decisions/0020-recording-manifest.md)). Narrator identity,
-byte-range resume, M4B, and decoded timing remain. Depends on shared assessment/publication and recovery milestones.
+M4B and decoded timing remain. Depends on shared assessment/publication and recovery milestones.
 Can follow milestone 5 independently of paper-provider expansion.
 
 Deliver local MP3/M4B intake and LibriVox acquisition, permitted Archive audio
@@ -671,7 +682,8 @@ also builds and smokes the executable with cgo disabled. Race checks require cgo
 1. Settle Linux environments: Ubuntu is the hosted native CI runner; Omarchy 4
    (Arch Linux x86_64) was reviewed for desktop terminal and descriptor bridge
    compatibility.
-2. Confirm holding-area retention before enabling permanent purge.
+2. Holding-area retention: held sources are kept until the user removes them;
+   any purge needs its own preview and decision (decision 0022).
 3. Decide whether EPUBCheck conformance is required or an optional assessment.
 
 The language is settled. These choices can be refined in their milestones with

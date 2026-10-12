@@ -162,6 +162,8 @@ patches, advisories, compatibility, and contracts when implementation begins.
 | Static analysis | [Staticcheck](https://staticcheck.dev/docs/), pinned development tool `honnef.co/go/tools` v0.8.1 |
 | Vulnerability checks | Official [govulncheck guidance](https://go.dev/security/vuln/); `golang.org/x/vuln` v1.8.0 pinned as a development tool |
 | Providers | [Source directory](SOURCES.md) records current API/access caveats and research limits |
+| PDF | `github.com/digitorus/pdf` v0.3.0 selected for object parsing behind Nemalo's own guards; alternatives compared in [decision 0021](decisions/0021-pdf-pages-and-text.md) |
+| RAR and 7z | Checked 2026-10-11; not adopted yet, so RAR and 7z stay listed and preserved by ingest. [rardecode/v2](https://github.com/nwaples/rardecode) (BSD-2-Clause, no dependencies, single-volume `NewReader`, `MaxDictionarySize`) verifies CRC32 only when read to the end and silently skips RAR5 BLAKE2 checksums (`file5ExtraHash` is a TODO), without exposing which members were verified; it had GO-2025-4020 and recent decoder panics, and no fuzz targets. [sevenzip](https://github.com/bodgit/sevenzip) v1.6.5 (BSD-3-Clause, 12 modules) allocates LZMA2, LZMA, and PPMd dictionaries from archive properties without a bound and sizes header arrays from counts up to `MaxUint32`; bounding it needs replacement decoders through a global registry or a fork. Adopting either needs those gaps closed, upstream or in a reviewed wrapper. |
 
 ## Terminal interaction reviewed on 2026-10-08
 

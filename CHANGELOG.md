@@ -1,5 +1,22 @@
 # Changelog
 
+## Unreleased
+
+- Resume an interrupted download: `acquire ... --file NAME --output PACKET
+  --resume` requests only the missing bytes with `If-Range` on the strong ETag
+  recorded before the body, accepts only exactly that range, and verifies the
+  whole file as one transfer. Interrupted recording tracks resume in place.
+- Recoverable source cleanup: `library cleanup LIBRARY FOLDER` previews every
+  entry with a disposition, reason, and plan digest; `--apply --plan DIGEST`
+  moves into `<library>/cleanup/<id>/` loose files whose exact bytes the library
+  holds (stored bytes verified), intake packets whose receipt binds held content,
+  and ZIPs whose every member is held, through verified copies and a journal that
+  resumes after an interruption. `--stop` closes a cleanup that cannot finish.
+  `library restore` returns every held file without replacing anything, and
+  `library restore --stop` closes a restore that cannot finish. TUI: F9
+  in State. Nothing is purged. Libraries with a cleanup journal cannot be opened
+  by earlier prereleases.
+
 ## 0.1.0-alpha.6
 
 Sixth native prerelease. This remains an early library, not 1.0. Closes issues 1 and 2.

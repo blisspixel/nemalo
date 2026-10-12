@@ -216,12 +216,14 @@ func AcquireRecording(ctx context.Context, provider Provider, request RecordingR
 		file     discovery.OfferedFile
 		packet   string
 		position RecordingPosition
+		resume   bool
 	}
+	ranged, canResume := provider.(RangeProvider)
 	plan, trackIndex := []plannedTrack{}, map[int]int{}
 	for i, t := range recording.Tracks {
 		rt := RecordingTrack{Position: t.Position, File: t.File}
 		position := RecordingPosition{Format: recording.Format, Position: t.Position, Tracks: len(recording.Tracks), Title: t.Title, DeclaredSeconds: t.DeclaredSeconds}
-		packet, reused, findErr := trackPacket(ctx, root, request.SourceID, position, files[i])
+		packet, reused, resume, findErr := trackPacket(ctx, root, request.SourceID, position, files[i], canResume)
 		switch {
 		case findErr != nil:
 			rt.Status, rt.Detail = "failed", findErr.Error()
@@ -231,7 +233,7 @@ func AcquireRecording(ctx context.Context, provider Provider, request RecordingR
 			rt.Packet, rt.Status, rt.Bytes, rt.SHA256, rt.Antivirus, rt.Reused = packet, "untrusted_intake", reused.Transfer.Bytes, reused.Transfer.SHA256, reused.Antivirus, true
 		default:
 			rt.Packet, rt.Status = packet, "pending"
-			plan = append(plan, plannedTrack{rt, files[i], packet, position})
+			plan = append(plan, plannedTrack{rt, files[i], packet, position, resume})
 		}
 		trackIndex[t.Position] = len(result.Tracks)
 		result.Tracks = append(result.Tracks, rt)
@@ -265,7 +267,29 @@ func AcquireRecording(ctx context.Context, provider Provider, request RecordingR
 			req := Request{SourceID: request.SourceID, File: p.file.Name, Output: filepath.Join(abs, p.packet), MaxBytes: *p.file.Bytes, NoScan: request.NoScan, OnDetection: request.OnDetection, Quarantine: request.Quarantine, Scanner: request.Scanner,
 				Recording: &p.position}
 			initial := Result{SchemaVersion: 1, Status: "not_started", Antivirus: "not_scanned", Durability: "files_synced_directory_entries_filesystem_dependent"}
-			state, transferred, transferErr := transferPacket(trackCtx, provider, root, req.Output, evaluation, p.file, req, initial)
+			var state *packetState
+			var transferred Result
+			transferErr := ErrResumeRefused
+			if p.resume {
+				// Continue the retained bytes of an interrupted attempt in place.
+				packetRoot, err := safeio.OpenRootIn(root, p.packet)
+				if err != nil {
+					transferErr = err
+				} else if state, transferred, transferErr = resumeTransfer(trackCtx, ranged, packetRoot, req.Output, evaluation, p.file, req, initial); transferErr != nil {
+					_ = packetRoot.Close()
+				}
+			}
+			if errors.Is(transferErr, ErrResumeRefused) {
+				// Refused or not resumable: the attempt stays untouched and the
+				// track is fetched whole under the next free name.
+				name, _, _, err := trackPacket(trackCtx, root, request.SourceID, p.position, p.file, false)
+				if err != nil {
+					transferErr = err
+				} else {
+					result.Tracks[trackIndex[p.track.Position]].Packet, req.Output = name, filepath.Join(abs, name)
+					state, transferred, transferErr = transferPacket(trackCtx, provider, root, req.Output, evaluation, p.file, req, initial)
+				}
+			}
 			cancel()
 			states[i], results[i] = state, transferred
 			if transferErr != nil {
@@ -422,18 +446,20 @@ func sameRecordingIntent(root *os.Root, request RecordingRequest, selection disc
 
 // trackPacket returns the directory name for a track: an existing packet whose
 // receipt completes this exact file at this position, with content that still
-// matches the fresh declared size and checksums, is reused; otherwise the first
-// unused attempt name. A detection receipt for this track stops the recording.
-func trackPacket(ctx context.Context, root *os.Root, sourceID string, position RecordingPosition, file discovery.OfferedFile) (string, *Result, error) {
+// matches the fresh declared size and checksums, is reused; with canResume, an
+// interrupted attempt for this track that can continue its bytes is resumed;
+// otherwise the first unused attempt name. A detection receipt for this track
+// stops the recording.
+func trackPacket(ctx context.Context, root *os.Root, sourceID string, position RecordingPosition, file discovery.OfferedFile, canResume bool) (string, *Result, bool, error) {
 	for attempt := 1; attempt <= maxTrackAttempts; attempt++ {
 		name := fmt.Sprintf("%04d", position.Position)
 		if attempt > 1 {
 			name = fmt.Sprintf("%04d-%d", position.Position, attempt)
 		}
 		if _, err := root.Lstat(name); errors.Is(err, os.ErrNotExist) {
-			return name, nil, nil
+			return name, nil, false, nil
 		} else if err != nil {
-			return "", nil, err
+			return "", nil, false, err
 		}
 		packet, err := safeio.OpenRootIn(root, name)
 		if err != nil {
@@ -444,16 +470,23 @@ func trackPacket(ctx context.Context, root *os.Root, sourceID string, position R
 		sameTrack := readErr == nil && receipt.Intent != nil && receipt.Intent.Request.SourceID == sourceID && receipt.Intent.Request.File == file.Name
 		if sameTrack && receipt.Antivirus == "findings" {
 			_ = packet.Close()
-			return name, nil, fmt.Errorf("track %d was detected by the scanner in %s; review it before resuming", position.Position, name)
+			return name, nil, false, fmt.Errorf("track %d was detected by the scanner in %s; review it before resuming", position.Position, name)
 		}
 		placed := sameTrack && receipt.Intent.Request.Recording != nil && receipt.Intent.Request.Recording.samePlace(position)
 		if placed && receipt.Complete && receipt.Status == "untrusted_intake" && verifyStored(ctx, packet, "content.mp3", file, receipt.Transfer) == nil {
 			_ = packet.Close()
-			return name, &receipt, nil
+			return name, &receipt, false, nil
+		}
+		if canResume && errors.Is(readErr, os.ErrNotExist) && resumable(packet, file) {
+			var intent Intent
+			if readRecord(packet, "intent.json", &intent) == nil && intent.Request.SourceID == sourceID && intent.Request.Recording != nil && intent.Request.Recording.samePlace(position) {
+				_ = packet.Close()
+				return name, nil, true, nil
+			}
 		}
 		_ = packet.Close()
 	}
-	return "", nil, fmt.Errorf("track %d has %d retained attempts; review them before resuming", position.Position, maxTrackAttempts)
+	return "", nil, false, fmt.Errorf("track %d has %d retained attempts; review them before resuming", position.Position, maxTrackAttempts)
 }
 
 // verifyStored rehashes a retained packet's content against the fresh source

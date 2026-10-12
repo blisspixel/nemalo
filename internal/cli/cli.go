@@ -56,6 +56,14 @@ Usage: nemalo <command> [options]
   library recordings LIBRARY [--source archive:ITEM]
                       List held audiobook recordings in declared track order;
                       with --source, verify and index each track's timing
+  library cleanup LIBRARY FOLDER [--apply --plan DIGEST]
+                      Move sources the library holds into a recoverable holding
+                      area; the preview lists every entry and a plan digest
+  library cleanup LIBRARY --stop
+                      Close a pending cleanup that cannot finish, so it can be restored
+  library restore LIBRARY --cleanup ID [--apply | --stop]
+                      Return a cleanup's files to their folder, never replacing;
+                      --stop closes a restore that cannot finish
   library rescan LIBRARY [--apply]
                       Scan review EPUBs that lack scan evidence; --apply records results
   library open LIBRARY --asset sha256:HASH [--app APPLICATION]
@@ -98,7 +106,8 @@ Acquire options: --file exact-source-filename, --output new-directory,
                  evaluate), --max-recording-bytes 4294967296 (maximum 16 GiB),
                  --resume (continue a recording directory; completed tracks stay)
 Acquisition creates missing parent folders, retains incomplete output, and never
-overwrites it. Only a recording resumes, with --resume, keeping completed tracks. When a scanner is installed it scans the downloaded
+overwrites it. --resume continues an interrupted file in its packet when the
+source still has the same bytes, and continues a recording, keeping completed tracks. When a scanner is installed it scans the downloaded
 bytes once. A detection moves them to the Nemalo quarantine (or deletes them)
 and lists other files from the same item. Rights remain unresolved.
 Inspect options: --hashes, --max-entries 10000, --max-depth 32,
@@ -201,6 +210,9 @@ func Execute(ctx context.Context, args []string, out, errOut io.Writer, service 
 	onDetection := flags.String("on-detection", "quarantine", "quarantine or delete a detected download")
 	recordingFormat := flags.String("recording", "", "declared recording format to acquire as a whole")
 	findText := flags.String("text", "", "exact text to locate")
+	planDigest := flags.String("plan", "", "cleanup plan digest from the preview")
+	cleanupID := flags.String("cleanup", "", "cleanup ID to restore")
+	stop := flags.Bool("stop", false, "close a pending cleanup that cannot finish")
 	resume := flags.Bool("resume", false, "continue an existing recording directory")
 	maxRecording := flags.Int64("max-recording-bytes", 4<<30, "declared total byte budget for a recording")
 	contentRequest := content.Request{SchemaVersion: 1}
@@ -322,7 +334,7 @@ func Execute(ctx context.Context, args []string, out, errOut io.Writer, service 
 			fileLimit = fileLimit || f.Name == "max-file-bytes"
 			recordingLimit = recordingLimit || f.Name == "max-recording-bytes"
 		})
-		if *recordingFormat != "" || *resume || recordingLimit {
+		if *recordingFormat != "" || recordingLimit || (*resume && *sourceFile == "") {
 			if *recordingFormat == "" || *sourceFile != "" || fileLimit {
 				return write(nil, errors.New("use acquire archive:ITEM --recording FORMAT --output DIRECTORY [--resume] [--max-recording-bytes N], without --file or --max-file-bytes"), 2)
 			}
@@ -336,7 +348,7 @@ func Execute(ctx context.Context, args []string, out, errOut io.Writer, service 
 			}
 			return guide(write(data, nil, 0), recordingAntivirus(data), true)
 		}
-		request := acquisition.Request{SourceID: flags.Arg(0), File: *sourceFile, Output: *output, MaxBytes: limits.FileBytes, NoScan: *noScan, OnDetection: detection}
+		request := acquisition.Request{SourceID: flags.Arg(0), File: *sourceFile, Output: *output, MaxBytes: limits.FileBytes, NoScan: *noScan, OnDetection: detection, Resume: *resume}
 		if err := request.Validate(); err != nil {
 			return write(nil, err, 2)
 		}
@@ -406,6 +418,36 @@ func Execute(ctx context.Context, args []string, out, errOut io.Writer, service 
 				return write(nil, errors.New("use library ingest LIBRARY FOLDER [--apply] [--scan]"), 2)
 			}
 			data, err := service.Ingest(ctx, library.IngestRequest{Library: flags.Arg(0), Folder: flags.Arg(1), Apply: *apply, Scan: checkOptions.Scan})
+			if err != nil {
+				return write(data, err, 1)
+			}
+			return write(data, nil, 0)
+		}
+		if action == "cleanup" && *stop {
+			if flags.NArg() != 1 || *apply || *planDigest != "" {
+				return write(nil, errors.New("use library cleanup LIBRARY --stop"), 2)
+			}
+			data, err := service.Cleanup(ctx, library.CleanupRequest{Library: flags.Arg(0), Folder: flags.Arg(0), Stop: true})
+			if err != nil {
+				return write(data, err, 1)
+			}
+			return write(data, nil, 0)
+		}
+		if action == "cleanup" {
+			if flags.NArg() != 2 || *apply != (*planDigest != "") {
+				return write(nil, errors.New("use library cleanup LIBRARY FOLDER to preview, then add --apply --plan DIGEST"), 2)
+			}
+			data, err := service.Cleanup(ctx, library.CleanupRequest{Library: flags.Arg(0), Folder: flags.Arg(1), Apply: *planDigest})
+			if err != nil {
+				return write(data, err, 1)
+			}
+			return write(data, nil, 0)
+		}
+		if action == "restore" {
+			if flags.NArg() != 1 || *cleanupID == "" {
+				return write(nil, errors.New("use library restore LIBRARY --cleanup ID [--apply]"), 2)
+			}
+			data, err := service.Restore(ctx, library.RestoreRequest{Library: flags.Arg(0), CleanupID: *cleanupID, Apply: *apply, Stop: *stop})
 			if err != nil {
 				return write(data, err, 1)
 			}
@@ -682,6 +724,10 @@ func flagApplies(command, action, name string) bool {
 			return name == "apply" || name == "scan"
 		case "recordings":
 			return name == "source"
+		case "cleanup":
+			return name == "apply" || name == "plan" || name == "stop"
+		case "restore":
+			return name == "apply" || name == "cleanup" || name == "stop"
 		case "open":
 			return name == "asset" || name == "app"
 		case "export":
@@ -744,6 +790,12 @@ func printData(out io.Writer, data any) error {
 		return err
 	case library.RecordingsResult:
 		_, err := io.WriteString(out, present.Recordings(value))
+		return err
+	case library.CleanupResult:
+		_, err := io.WriteString(out, present.Cleanup(value))
+		return err
+	case library.RestoreResult:
+		_, err := io.WriteString(out, present.Restore(value))
 		return err
 	case library.State:
 		_, err := io.WriteString(out, present.LibraryState(value))

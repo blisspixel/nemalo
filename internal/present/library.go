@@ -267,3 +267,67 @@ func firstNonEmpty(values ...string) string {
 	}
 	return ""
 }
+
+// Cleanup shows every folder entry with its disposition, and the plan digest
+// that --apply --plan must repeat.
+func Cleanup(r library.CleanupResult) string {
+	var b strings.Builder
+	fmt.Fprintf(&b, "Library: %q\nFolder: %q\nMove: %d (%s) | Keep: %d\nPlan digest: %s\n", r.Library, r.Folder, r.Move, byteCount(r.MoveBytes), r.Keep, r.Digest)
+	if r.Applied {
+		fmt.Fprintf(&b, "Applied: moved %d, not moved %d | Cleanup ID: %s\nHolding area: %q\n", r.Moved, r.NotMoved, r.CleanupID, r.HoldingArea)
+		if r.Resumed {
+			b.WriteString("Resumed an interrupted cleanup.\n")
+		}
+	}
+	for _, e := range r.Entries {
+		line := fmt.Sprintf("\n%s %q [%s]", e.Disposition, e.Path, e.Kind)
+		if e.Outcome != "" {
+			line += " -> " + e.Outcome
+		}
+		fmt.Fprintf(&b, "%s\n  %q\n", line, e.Reason)
+	}
+	for _, note := range r.Limitations {
+		fmt.Fprintf(&b, "Limitation: %q\n", note)
+	}
+	switch {
+	case !r.Applied && r.Move > 0:
+		fmt.Fprintf(&b, "Preview only. Nothing was moved. Apply with: --apply --plan %s\n", r.Digest)
+	case !r.Applied:
+		b.WriteString("Preview only. Nothing here is held by the library, so nothing would move.\n")
+	case r.Moved > 0:
+		fmt.Fprintf(&b, "Undo with: nemalo library restore %q --cleanup %s --apply\n", r.Library, r.CleanupID)
+	}
+	return b.String()
+}
+
+// Restore shows each held file and what restoring it does or did.
+func Restore(r library.RestoreResult) string {
+	var b strings.Builder
+	fmt.Fprintf(&b, "Library: %q\nCleanup: %s\nFolder: %q\nRestore: %d | Already present: %d | Conflicts: %d | Not held: %d | Held copy changed: %d\n", r.Library, r.CleanupID, r.Folder, r.Restore, r.Present, r.Conflicts, r.NotHeld, r.Changed)
+	for _, f := range r.Files {
+		line := fmt.Sprintf("%s %q", f.Disposition, f.Path)
+		if f.Outcome != "" {
+			line += " -> " + f.Outcome
+		}
+		b.WriteString(line + "\n")
+	}
+	for _, note := range r.Limitations {
+		fmt.Fprintf(&b, "Limitation: %q\n", note)
+	}
+	if !r.Applied {
+		b.WriteString("Preview only. Nothing was written. Apply with --apply.\n")
+	}
+	return b.String()
+}
+
+func byteCount(n int64) string {
+	switch {
+	case n >= 1<<30:
+		return fmt.Sprintf("%.1f GiB", float64(n)/(1<<30))
+	case n >= 1<<20:
+		return fmt.Sprintf("%.1f MiB", float64(n)/(1<<20))
+	case n >= 1<<10:
+		return fmt.Sprintf("%.1f KiB", float64(n)/(1<<10))
+	}
+	return fmt.Sprintf("%d bytes", n)
+}
