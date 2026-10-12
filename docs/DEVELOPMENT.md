@@ -8,7 +8,7 @@ needed for the application, tests, or first-party tooling.
 ## Current operations
 
 `help`, `version`, `doctor`, `search`, `evaluate`, `acquire`, `inspect`, `check`, `library snapshot`,
-`library list`, `library audit`, `library import`, `library ingest`, `library cleanup`, `library restore`,
+`library list`, `library audit`, `library check`, `library import`, `library ingest`, `library cleanup`, `library restore`,
 `library rescan`, `library recordings`,
 `library open`, `library export`, `library init`, `library status`, `content units`,
 `content read`, `content locate`, `content source`, `content resource`, `content capabilities`,
@@ -218,6 +218,7 @@ nemalo library import /path/to/library /path/to/book.epub --apply
 nemalo library import /path/to/library /path/to/intake --apply --scan
 nemalo library ingest /path/to/library /path/to/downloads --apply --scan
 nemalo library audit /path/to/library
+nemalo library check /path/to/library
 nemalo library list /path/to/library --query "verne" --status checked
 nemalo library open /path/to/library --asset sha256:HASH
 nemalo library export /path/to/library --asset sha256:HASH --output /path/to/folder

@@ -3,6 +3,7 @@ package tui
 import (
 	"fmt"
 	"path/filepath"
+	"strings"
 
 	tea "charm.land/bubbletea/v2"
 )
@@ -107,6 +108,8 @@ func (m *model) confirmInitialization(msg tea.KeyPressMsg) tea.Cmd {
 			m.rescanAction = true
 		case "cleanup":
 			// cleanupDigest stays set: start applies exactly the reviewed plan.
+		case "restore":
+			m.restoreAction = true
 		default:
 			m.initializeAction = true
 		}
@@ -124,5 +127,8 @@ func (m *model) requestCleanup() tea.Cmd {
 		return nil
 	}
 	m.cleanupPlan, m.cleanupDigest = true, ""
+	if strings.HasPrefix(strings.TrimSpace(m.secondary.Value()), "cleanup:") {
+		m.cleanupPlan, m.restorePlan = false, true
+	}
 	return m.start(true)
 }

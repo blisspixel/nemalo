@@ -52,7 +52,7 @@ item's other files for a new, deliberate review. See
 | Ctrl+A in snapshot | Toggle historical health metadata |
 | e in Archive results | Prepare selected-item evaluation, without requesting it |
 | d in Evaluate results | Review selected-file acquisition into a new intake directory |
-| F9 in State | Preview moving the source folder's held files to the holding area; Enter applies that exact plan |
+| F9 in State | Preview moving the source folder's held files to the holding area; Enter applies that exact plan. With a cleanup ID in the source field (set after a cleanup), preview restoring it |
 | t in Holdings results | Show the recording that holds the selected track: order, missing tracks, timing |
 | a in Evaluate results | Review acquiring every track of the recording that holds the selected MP3 |
 | r in Holdings results | Stage source access; explicit root still required |

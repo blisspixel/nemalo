@@ -125,6 +125,7 @@ retained corrupt state, canonical records, OS-held locks, and TUI write review.
 Archive extraction is `internal/staging` (decision 0017): flat indexed staging
 names, never member paths; one archive staged at a time; account for every
 member and every entry beside a packet; ingest reuses Import.
+`library check` (decision 0024) is the read-only whole-library report; it never repairs.
 Source cleanup is `library/cleanup.go` and `restore.go` (decision 0022): move only held,
 verified bytes into the holding area via verified copy, hard-link publish, then source
 removal; resume from the manifest, never a new plan; never replace on restore; no purge.

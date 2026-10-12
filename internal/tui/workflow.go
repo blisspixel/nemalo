@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"strings"
 
 	tea "charm.land/bubbletea/v2"
 	"github.com/blisspixel/nemalo/internal/assessment"
@@ -104,7 +105,9 @@ func (m *model) start(reset bool) tea.Cmd {
 	if m.busy || m.input.Value() == "" {
 		return nil
 	}
-	if (m.mode == "snapshot" || m.mode == "audit") && m.secondary.Value() == "" {
+	// Audit of an initialized library directory needs no root: it is a check.
+	libraryCheck := m.mode == "audit" && m.secondary.Value() == "" && isDir(m.input.Value())
+	if (m.mode == "snapshot" || m.mode == "audit") && m.secondary.Value() == "" && !libraryCheck {
 		m.status = "Enter the required second field with Ctrl+N."
 		return nil
 	}
@@ -124,11 +127,16 @@ func (m *model) start(reset bool) tea.Cmd {
 		mode = "rescan"
 	} else if mode == "state" && m.cleanupPlan {
 		mode = "cleanupplan"
+	} else if mode == "state" && m.restorePlan {
+		mode = "restoreplan"
+	} else if mode == "state" && m.restoreAction {
+		mode = "restore"
 	} else if mode == "state" && m.cleanupDigest != "" {
 		mode = "cleanup"
 	}
 	digest := m.cleanupDigest
 	m.initializeAction, m.importAction, m.rescanAction, m.cleanupPlan, m.cleanupDigest = false, false, false, false, ""
+	m.restorePlan, m.restoreAction = false, false
 	second, assess, offset, format := m.secondary.Value(), m.assess, m.offset, m.format
 	limits := inventory.Defaults()
 	if m.largeBudget {
@@ -157,6 +165,9 @@ func (m *model) start(reset bool) tea.Cmd {
 		case "rescan":
 			data, err := m.service.Rescan(ctx, library.RescanRequest{Library: value, Apply: true})
 			return result{id, data, err}
+		case "restoreplan", "restore":
+			data, err := m.service.Restore(ctx, library.RestoreRequest{Library: value, CleanupID: strings.TrimSpace(second), Apply: mode == "restore"})
+			return result{id, data, err}
 		case "cleanupplan":
 			data, err := m.service.Cleanup(ctx, library.CleanupRequest{Library: value, Folder: second})
 			return result{id, data, err}
@@ -181,6 +192,10 @@ func (m *model) start(reset bool) tea.Cmd {
 			data, err := m.service.HoldingsFormat(value, second, format, 50, offset)
 			return result{id, data, err}
 		case "audit":
+			if second == "" && isDir(value) {
+				data, err := m.service.CheckLibrary(ctx, value)
+				return result{id, data, err}
+			}
 			data, err := m.service.Audit(ctx, value, second, limits)
 			return result{id, data, err}
 		case "search":
@@ -203,4 +218,9 @@ func (m *model) searchOrder() string {
 		return discovery.OrderRelevance
 	}
 	return m.order
+}
+
+func isDir(p string) bool {
+	info, err := os.Stat(p)
+	return err == nil && info.IsDir()
 }

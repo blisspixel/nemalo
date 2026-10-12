@@ -2,6 +2,7 @@ package present
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 
 	"github.com/blisspixel/nemalo/internal/library"
@@ -330,4 +331,40 @@ func byteCount(n int64) string {
 		return fmt.Sprintf("%.1f KiB", float64(n)/(1<<10))
 	}
 	return fmt.Sprintf("%d bytes", n)
+}
+
+// LibraryCheck summarizes a read-only library check.
+func LibraryCheck(r library.LibraryCheck) string {
+	var b strings.Builder
+	state := "healthy"
+	if !r.Healthy {
+		state = "needs attention"
+	}
+	fmt.Fprintf(&b, "Library: %q\nCheck: %s\nHoldings: %d | verified: %d | checked: %d | unverified: %d\n", r.LibraryID, state, r.Holdings, r.Verified, r.Checked, r.Unverified)
+	reasons := make([]string, 0, len(r.Review))
+	for reason := range r.Review {
+		reasons = append(reasons, reason)
+	}
+	sort.Strings(reasons)
+	for _, reason := range reasons {
+		fmt.Fprintf(&b, "Review: %d %q\n", r.Review[reason], reason)
+	}
+	if r.Cleanups > 0 {
+		fmt.Fprintf(&b, "Cleanups: %d | held files: %d (%s)\n", r.Cleanups, r.HeldFiles, byteCount(r.HeldBytes))
+	}
+	for _, i := range r.Issues {
+		if i.Path != "" {
+			fmt.Fprintf(&b, "Issue %s %q: %q\n", i.Kind, i.Path, i.Detail)
+		} else {
+			fmt.Fprintf(&b, "Issue %s: %q\n", i.Kind, i.Detail)
+		}
+	}
+	for _, n := range r.Next {
+		fmt.Fprintf(&b, "Next: %s\n", n)
+	}
+	for _, note := range r.Limitations {
+		fmt.Fprintf(&b, "Limitation: %q\n", note)
+	}
+	b.WriteString("Nothing was changed.\n")
+	return b.String()
 }

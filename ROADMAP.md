@@ -284,8 +284,11 @@ Acceptance:
 Status: partial. Plan-based source cleanup into a recoverable holding area,
 journaled crash recovery, and restore are implemented in CLI, JSON, and TUI
 ([decision 0022](docs/decisions/0022-recoverable-source-cleanup.md)); held
-sources are retained, with no purge. Fault injection for disk-full and
-scanner-failure cases and a library-wide `check` remain. Depends on milestone 3.
+sources are retained, with no purge. `library check` reports missing, changed,
+untracked, and unscanned entries, unfinished operations, and held copies without
+changing anything ([decision 0024](docs/decisions/0024-library-check.md)).
+Fault injection for disk-full and scanner-failure cases remains. Depends on
+milestone 3.
 Required for a production cleanup release.
 
 Deliver plan-based source cleanup, review handling, library checking, and interruption

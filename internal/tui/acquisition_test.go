@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/md5"
 	"encoding/hex"
+	"fmt"
 	"io"
 	"net/http"
 	"os"
@@ -235,5 +236,86 @@ func TestTerminalRecordingIsNotOfferedForUnusableRecordings(t *testing.T) {
 	m.lastEvaluation = &e
 	if m.recordingFor("one_64kb.mp3") != nil {
 		t.Fatal("stale evaluation offered a recording")
+	}
+}
+
+// resumeTUIProvider cuts the first transfer short and then serves ranges.
+type resumeTUIProvider struct{ cut bool }
+
+func (resumeTUIProvider) Search(context.Context, string, int, int) (discovery.Page, error) {
+	return discovery.Page{}, nil
+}
+
+const resumeBody = "%PDF-1.7\n% a longer body that will be interrupted part of the way\n%%EOF"
+
+func (resumeTUIProvider) Evaluate(context.Context, string) (discovery.Evaluation, error) {
+	n := int64(len(resumeBody))
+	md := md5.Sum([]byte(resumeBody))
+	return discovery.Evaluation{ID: "archive:demo", Source: "archive", Complete: true, Access: "no_item_restriction_declared", Files: []discovery.OfferedFile{{Name: "book.pdf", Access: "public_file_candidate", Bytes: &n, MD5: hex.EncodeToString(md[:]), DownloadURL: "https://archive.org/download/demo/book.pdf"}}}, nil
+}
+
+type failAfter struct {
+	r io.Reader
+	n int
+}
+
+func (f *failAfter) Read(b []byte) (int, error) {
+	if f.n <= 0 {
+		return 0, io.ErrUnexpectedEOF
+	}
+	if len(b) > f.n {
+		b = b[:f.n]
+	}
+	n, err := f.r.Read(b)
+	f.n -= n
+	return n, err
+}
+
+func (p *resumeTUIProvider) Download(ctx context.Context, f discovery.OfferedFile) (*http.Response, error) {
+	return p.DownloadFrom(ctx, f, 0, "")
+}
+
+func (p *resumeTUIProvider) DownloadFrom(_ context.Context, _ discovery.OfferedFile, offset int64, validator string) (*http.Response, error) {
+	h := http.Header{"Etag": []string{`"v1"`}}
+	if offset == 0 {
+		var r io.Reader = strings.NewReader(resumeBody)
+		if p.cut {
+			r = &failAfter{r: r, n: 20}
+		}
+		return &http.Response{StatusCode: 200, ContentLength: int64(len(resumeBody)), Header: h, Body: io.NopCloser(r)}, nil
+	}
+	h.Set("Content-Range", fmt.Sprintf("bytes %d-%d/%d", offset, len(resumeBody)-1, len(resumeBody)))
+	return &http.Response{StatusCode: 206, ContentLength: int64(len(resumeBody)) - offset, Header: h, Body: io.NopCloser(strings.NewReader(resumeBody[offset:]))}, nil
+}
+
+func TestTerminalDownloadOfAnInterruptedPacketReviewsResuming(t *testing.T) {
+	p := &resumeTUIProvider{cut: true}
+	m := newModel(context.Background(), app.Service{Providers: map[string]app.Searcher{"archive": p}, Scanner: tuiScanner("no_detections_reported"), Quarantine: filepath.Join(t.TempDir(), "q")})
+	m.switchMode("evaluate")
+	m.input.SetValue("archive:demo")
+	m.submittedInput = "archive:demo"
+	e, _ := p.Evaluate(context.Background(), "archive:demo")
+	m.id++
+	m.Update(result{m.id, e, nil})
+	packet := filepath.Join(t.TempDir(), "packet")
+	m.secondary.SetValue(packet)
+	m.resultsFocused = true
+	m.browserKey("d")
+	_, cmd := m.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
+	m.Update(cmd())
+	if _, err := os.Stat(filepath.Join(packet, "receipt.json")); !os.IsNotExist(err) {
+		t.Fatal("cut transfer completed")
+	}
+	p.cut = false
+	m.resultsFocused = true
+	m.browserKey("d")
+	if m.downloadReview == nil || !m.downloadReview.Resume || !strings.Contains(m.report, "Resume an interrupted transfer") {
+		t.Fatal("resume not reviewed", m.report)
+	}
+	_, cmd = m.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
+	m.Update(cmd())
+	got, err := os.ReadFile(filepath.Join(packet, "content.pdf"))
+	if err != nil || string(got) != resumeBody || !strings.Contains(m.report, "Resumed from byte 20") {
+		t.Fatal("resume", err, m.report)
 	}
 }

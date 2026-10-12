@@ -54,7 +54,7 @@ func (m *model) fields() string {
 	case "holdings":
 		label, hint, second = "Catalog", "Existing catalog file", "Filter"
 	case "audit":
-		label, hint, second = "Catalog", "Existing catalog file", "Root"
+		label, hint, second = "Catalog", "Catalog file, or a library folder to check", "Root"
 	case "evaluate":
 		label, hint, second = "Item ID", "archive:ITEM (Enter retrieves metadata only)", "Intake"
 	case "state":
@@ -130,7 +130,7 @@ func (m *model) footer() string {
 		return lipgloss.Wrap(m.paint("Enter acquire  Esc back  PgUp/PgDown review  Ctrl+C quit", warning, false), max(1, m.width-2), " ")
 	}
 	if m.confirmRoot != "" {
-		verb := map[string]string{"init": "initialize", "import": "import", "rescan": "rescan", "cleanup": "move to holding"}[m.confirmKind]
+		verb := map[string]string{"init": "initialize", "import": "import", "rescan": "rescan", "cleanup": "move to holding", "restore": "restore"}[m.confirmKind]
 		return lipgloss.Wrap(m.paint("Enter "+verb+"  Esc back  PgUp/PgDown review  Ctrl+C quit", warning, false), max(1, m.width-2), " ")
 	}
 	help := "Enter run  F6 browse  Tab/Shift+Tab modes  Ctrl+C quit"
@@ -201,7 +201,7 @@ func (m *model) resize() {
 	m.input.SetCursor(m.input.Position())
 	m.secondary.SetWidth(max(1, m.width-16))
 	m.secondary.SetCursor(m.secondary.Position())
-	m.secondary.Placeholder = map[string]string{"snapshot": "New catalog path outside the source folder", "holdings": "Optional title, language, filename, or hash", "audit": "Explicit source directory (required)", "read": "Explicit source directory (required)", "evaluate": "New untrusted intake directory, for d acquire", "state": "EPUB, PDF, MP3, or completed intake packet"}[m.mode]
+	m.secondary.Placeholder = map[string]string{"snapshot": "New catalog path outside the source folder", "holdings": "Optional title, language, filename, or hash", "audit": "Source directory for a catalog; leave empty to check a library", "read": "Explicit source directory (required)", "evaluate": "New untrusted intake directory, for d acquire", "state": "EPUB, PDF, MP3, or completed intake packet"}[m.mode]
 	// Layout height follows the actual wrapped navigation, context, and help.
 	reserved := lipgloss.Height(m.top()) + lipgloss.Height(m.footer()) + lipgloss.Height(m.statusText()) + lipgloss.Height(m.position()) + 2
 	m.viewport.SetHeight(max(1, m.height-reserved))
@@ -266,7 +266,7 @@ func (m *model) position() string {
 		return fmt.Sprintf("Review acquisition | Scroll %.0f%%", m.viewport.ScrollPercent()*100)
 	}
 	if m.confirmRoot != "" {
-		label := map[string]string{"init": "initialization", "import": "import", "rescan": "rescan", "cleanup": "cleanup"}[m.confirmKind]
+		label := map[string]string{"init": "initialization", "import": "import", "rescan": "rescan", "cleanup": "cleanup", "restore": "restore"}[m.confirmKind]
 		return fmt.Sprintf("Review %s | Scroll %.0f%%", label, m.viewport.ScrollPercent()*100)
 	}
 	position := fmt.Sprintf("Results | Scroll %.0f%%", m.viewport.ScrollPercent()*100)
@@ -304,7 +304,7 @@ func (m *model) emptyHelp() string {
 	case "evaluate":
 		return "Look before acquiring.\n\nEnter archive:ITEM, or select an Archive search result and press e.\nEnter retrieves metadata only. F6 browses source files.\nEnter a new intake folder with Ctrl+N; select a file and press d to review acquisition.\nDownloads remain untrusted; existing intake is never overwritten."
 	case "state":
-		return "Establish a library identity.\n\nEnter an existing folder, then Enter to read its control status.\nF7 reviews initialization before writing control metadata.\nCtrl+N sets one source. F8 reviews import and does not scan or delete it.\nCtrl+R reviews a scan of review EPUBs that lack scan evidence.\nF9 previews moving the source folder's held files to the library's recoverable holding area."
+		return "Establish a library identity.\n\nEnter an existing folder, then Enter to read its control status.\nF7 reviews initialization before writing control metadata.\nCtrl+N sets one source. F8 reviews import and does not scan or delete it.\nCtrl+R reviews a scan of review EPUBs that lack scan evidence.\nF9 previews moving the source folder's held files to the library's recoverable holding area; with a cleanup ID as the source, it previews restoring that cleanup."
 	case "read":
 		return "Read from exact source bytes.\n\nSelect an asset in Holdings and press r. Enter its explicit root, then Enter lists units.\nF6 browses units; Enter retrieves text. n continues, r repeats, u lists units.\nDelivery does not record reading progress. Notes and image resources are available through content CLI references."
 	default:

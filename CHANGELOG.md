@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- `library check LIBRARY` (MCP `library_check`; TUI Audit with a library folder)
+  verifies the whole library read-only: stored and held bytes, untracked and
+  partial store files, unfinished operations, and review counts with next steps.
+- TUI: `d` on an interrupted packet reviews resuming it, and after a cleanup F9
+  previews restoring it.
 - Resume an interrupted download: `acquire ... --file NAME --output PACKET
   --resume` requests only the missing bytes with `If-Range` on the strong ETag
   recorded before the body, accepts only exactly that range, and verifies the

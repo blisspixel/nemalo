@@ -99,6 +99,14 @@ func New(service app.Service, opts Options) (*mcp.Server, error) {
 			}
 			return service.HoldingsFormat(catalog, in.Query, defaultString(in.Format, "all"), defaultInt(in.Limit, 10), in.Offset)
 		})
+	add(&r, "library_check", "Verify an initialized library read-only: every holding's stored bytes, files in the store no holding records, unfinished operations, held cleanup copies, and review counts by reason. Repairs nothing.", false,
+		func(ctx context.Context, in libraryInput) (any, error) {
+			dir, err := scopes.path(in.Library)
+			if err != nil {
+				return nil, err
+			}
+			return service.CheckLibrary(ctx, dir)
+		})
 	add(&r, "library_recordings", "List audiobook recordings held in an initialized library, with tracks in declared order, missing positions, and conflicts. With source (archive:ITEM), each held track's stored bytes are verified and indexed for timing and chapters, without decoding.", false,
 		func(ctx context.Context, in recordingsInput) (any, error) {
 			dir, err := scopes.path(in.Library)

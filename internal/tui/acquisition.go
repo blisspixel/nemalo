@@ -3,6 +3,7 @@ package tui
 import (
 	"context"
 	"fmt"
+	"os"
 	"path/filepath"
 	"strings"
 
@@ -29,12 +30,21 @@ func (m *model) requestDownload() {
 		return
 	}
 	request.Output = abs
+	// An existing packet for this file with intent and no receipt is an
+	// interrupted transfer: d reviews resuming it instead of a new download.
+	request.Resume = interruptedPacket(abs)
 	m.downloadReview, m.confirmReport, m.confirmStatus = &request, m.report, m.status
 	m.input.Blur()
 	m.secondary.Blur()
 	m.evidence = true
 	m.status = "Review acquisition. Enter confirms; Escape returns without downloading."
-	m.setReport(fmt.Sprintf("Acquire one source file\n\nSource: %q\nSelected file: %q\nNew intake directory: %q\nMaximum transfer: %d bytes\n\nRequests fresh Archive metadata and one permitted file, with checked HTTPS delivery destinations. Requires declared size and checksum. The selected source statements remain unverified rights evidence.\n\nCreates intent.json, content with its format suffix, and receipt.json on success. Existing output is refused. Incomplete packets remain for review; resume and automatic cleanup are unavailable.\n\nRuns local structure checks without rendering or execution, then scans the downloaded bytes once with the installed scanner, if one is installed. A detection moves the file to the Nemalo quarantine instead of intake and offers the item's other files. This is untrusted intake, not checked publication.\n\nEnter acquires this exact selection. Escape returns without writing.\n", request.SourceID, request.File, request.Output, request.MaxBytes))
+	if request.Resume {
+		m.setReport(fmt.Sprintf("Resume an interrupted transfer\n\nSource: %q\nSelected file: %q\nIntake packet: %q\n\nRequests fresh Archive metadata, then only the missing bytes, on condition that the source still serves the same file (If-Range with the strong validator recorded before the first transfer). A different reply, a weak validator, or changed declarations leave the packet untouched.\n\nThe whole file is then verified against the declared size and checksums, inspected, scanned, and receipted as one transfer.\n\nEnter resumes. Escape returns without downloading.\n", request.SourceID, request.File, request.Output))
+		m.viewport.GotoTop()
+		m.resize()
+		return
+	}
+	m.setReport(fmt.Sprintf("Acquire one source file\n\nSource: %q\nSelected file: %q\nNew intake directory: %q\nMaximum transfer: %d bytes\n\nRequests fresh Archive metadata and one permitted file, with checked HTTPS delivery destinations. Requires declared size and checksum. The selected source statements remain unverified rights evidence.\n\nCreates intent.json, transfer.json, content with its format suffix, and receipt.json on success. Existing output is refused. An interrupted packet is kept; choosing it again with d reviews resuming it.\n\nRuns local structure checks without rendering or execution, then scans the downloaded bytes once with the installed scanner, if one is installed. A detection moves the file to the Nemalo quarantine instead of intake and offers the item's other files. This is untrusted intake, not checked publication.\n\nEnter acquires this exact selection. Escape returns without writing.\n", request.SourceID, request.File, request.Output, request.MaxBytes))
 	m.viewport.GotoTop()
 	m.resize()
 }
@@ -163,4 +173,14 @@ func (m *model) offerOtherFiles(r acquisition.Result) {
 	}
 	m.populate(others)
 	m.evidence = true
+}
+
+// interruptedPacket reports whether dir holds an acquisition's intent and
+// transfer records without a receipt. The service decides whether its bytes
+// can actually be resumed.
+func interruptedPacket(dir string) bool {
+	_, intent := os.Stat(filepath.Join(dir, "intent.json"))
+	_, transfer := os.Stat(filepath.Join(dir, "transfer.json"))
+	_, receipt := os.Stat(filepath.Join(dir, "receipt.json"))
+	return intent == nil && transfer == nil && os.IsNotExist(receipt)
 }

@@ -33,8 +33,10 @@ delete anything.
   held track and get its probed duration, chapters, and `start_ms` offset in the
   recording. `complete` means every declared position is held, not that the
   audio was checked.
-- `library_status` and `library_audit` report control state and whether stored
-  bytes still match. Report findings as they are; do not offer to fix them.
+- `library_check` verifies the whole library and lists issues (missing, changed,
+  untracked, unfinished work) and review counts with next steps. `library_status`
+  and `library_audit` are narrower. Report findings as they are; do not offer to
+  fix them.
 
 ## Read content
 

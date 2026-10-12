@@ -36,7 +36,7 @@ nemalo mcp serve --scope /path/to/library --allow-network
 ```
 
 Implemented tools are all read-only: `nemalo_capabilities`, `library_status`,
-`library_list`, `library_recordings`, `library_audit`, `file_check` (no antivirus), and
+`library_list`, `library_recordings`, `library_audit`, `library_check`, `file_check` (no antivirus), and
 `content_capabilities`, `content_units`, `content_read`, `content_locate`, `content_source`,
 `content_resource`. `catalog_search` and `catalog_evaluate` exist only with
 `--allow-network`. Each returns the CLI's data in a

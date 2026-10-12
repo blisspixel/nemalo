@@ -74,6 +74,9 @@ Usage: nemalo <command> [options]
                       Compare a snapshot catalog with files under an explicit root
   library audit LIBRARY
                       Compare managed holdings with their stored bytes
+  library check LIBRARY
+                      Verify the whole library read-only: stored and held bytes,
+                      untracked files, unfinished operations, review counts
   library init DIRECTORY
                       Initialize local control state in an existing explicit folder
   library status DIRECTORY
@@ -453,6 +456,16 @@ func Execute(ctx context.Context, args []string, out, errOut io.Writer, service 
 			}
 			return write(data, nil, 0)
 		}
+		if action == "check" {
+			if flags.NArg() != 1 {
+				return write(nil, errors.New("use library check LIBRARY"), 2)
+			}
+			data, err := service.CheckLibrary(ctx, flags.Arg(0))
+			if err != nil {
+				return write(data, err, 1)
+			}
+			return write(data, nil, 0)
+		}
 		if action == "recordings" {
 			if flags.NArg() != 1 {
 				return write(nil, errors.New("use library recordings LIBRARY [--source archive:ITEM]"), 2)
@@ -724,6 +737,8 @@ func flagApplies(command, action, name string) bool {
 			return name == "apply" || name == "scan"
 		case "recordings":
 			return name == "source"
+		case "check":
+			return false
 		case "cleanup":
 			return name == "apply" || name == "plan" || name == "stop"
 		case "restore":
@@ -793,6 +808,9 @@ func printData(out io.Writer, data any) error {
 		return err
 	case library.CleanupResult:
 		_, err := io.WriteString(out, present.Cleanup(value))
+		return err
+	case library.LibraryCheck:
+		_, err := io.WriteString(out, present.LibraryCheck(value))
 		return err
 	case library.RestoreResult:
 		_, err := io.WriteString(out, present.Restore(value))

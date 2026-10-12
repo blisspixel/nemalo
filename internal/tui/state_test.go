@@ -318,4 +318,40 @@ func TestStateCleanupPreviewsThenAppliesTheReviewedPlan(t *testing.T) {
 	if _, err := os.Stat(book); !os.IsNotExist(err) {
 		t.Fatal("source not moved")
 	}
+	// The source field now holds the cleanup ID, so F9 previews undoing it.
+	if !strings.HasPrefix(m.secondary.Value(), "cleanup:") {
+		t.Fatal("cleanup ID not offered", m.secondary.Value())
+	}
+	_, cmd = m.Update(tea.KeyPressMsg{Code: tea.KeyF9})
+	m.Update(cmd())
+	if m.confirmKind != "restore" || !strings.Contains(m.report, "Restore: 1") {
+		t.Fatal("restore review", m.status, m.report)
+	}
+	_, cmd = m.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
+	m.Update(cmd())
+	if _, err := os.Stat(book); err != nil || !strings.Contains(m.report, "-> restored") {
+		t.Fatal("restore", err, m.report)
+	}
+}
+
+func TestAuditOfALibraryDirectoryRunsTheLibraryCheck(t *testing.T) {
+	ctx := context.Background()
+	root := t.TempDir()
+	if _, err := library.Initialize(ctx, root); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := library.Import(ctx, library.ImportRequest{Library: root, Source: writeStateEPUB(t, t.TempDir()), Apply: true}); err != nil {
+		t.Fatal(err)
+	}
+	m := newModel(ctx, app.Service{})
+	m.switchMode("audit")
+	m.input.SetValue(root)
+	cmd := m.start(true)
+	if cmd == nil {
+		t.Fatal("library check not started without a root")
+	}
+	m.Update(cmd())
+	if !strings.Contains(m.report, "Check: healthy") || !strings.Contains(m.report, "Nothing was changed.") {
+		t.Fatal(m.status, m.report)
+	}
 }

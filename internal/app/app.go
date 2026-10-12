@@ -267,6 +267,12 @@ func (s Service) Recordings(ctx context.Context, directory, source string) (libr
 	return library.Recordings(ctx, directory, source)
 }
 
+// CheckLibrary verifies a managed library read-only: stored and held bytes,
+// untracked store files, and unfinished operations.
+func (s Service) CheckLibrary(ctx context.Context, directory string) (library.LibraryCheck, error) {
+	return library.CheckLibrary(ctx, directory)
+}
+
 // Cleanup plans, or with a plan digest applies, moving held sources of a
 // folder into the library's recoverable holding area.
 func (s Service) Cleanup(ctx context.Context, request library.CleanupRequest) (library.CleanupResult, error) {

@@ -75,3 +75,33 @@ func TestLibraryCleanupAndRestoreCommands(t *testing.T) {
 		t.Fatal("restored file missing", err)
 	}
 }
+
+func TestLibraryCheckCommand(t *testing.T) {
+	root, state := t.TempDir(), t.TempDir()
+	s := app.Service{Scanner: fakeScanner("unavailable")}
+	run := func(args ...string) (int, string) {
+		var out, errOut bytes.Buffer
+		code := Execute(context.Background(), args, &out, &errOut, s, func(string) string { return "" }, func() (config.Paths, error) {
+			return config.Paths{Config: filepath.Join(state, "none"), State: state}, nil
+		}, nil)
+		return code, out.String() + errOut.String()
+	}
+	if code, out := run("library", "init", root); code != 0 {
+		t.Fatal(code, out)
+	}
+	if code, out := run("library", "import", root, epubFile(t, t.TempDir()), "--apply"); code != 0 {
+		t.Fatal(code, out)
+	}
+	if code, out := run("library", "check", root); code != 0 || !strings.Contains(out, "Check: healthy") || !strings.Contains(out, "library rescan") {
+		t.Fatal(code, out)
+	}
+	if err := os.WriteFile(filepath.Join(root, "assets", "stray.epub"), []byte("x"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if code, out := run("library", "check", root, "--json"); code != 1 || !strings.Contains(out, `"kind":"untracked"`) {
+		t.Fatal(code, out)
+	}
+	if code, _ := run("library", "check", root, "--apply"); code != 2 {
+		t.Fatal("unrelated flag accepted")
+	}
+}

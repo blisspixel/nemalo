@@ -62,19 +62,22 @@ type model struct {
 	importAction     bool
 	rescanAction     bool
 	// cleanupPlan runs a cleanup preview; cleanupDigest, once reviewed, applies it.
-	cleanupPlan     bool
-	cleanupDigest   string
-	mode            string
-	source          string
-	order           string
-	format          string
-	status          string
-	busy            bool
-	id              int
-	cancel          context.CancelFunc
-	reader          readerState
-	downloadReview  *acquisition.Request
-	recordingReview *acquisition.RecordingRequest
+	cleanupPlan   bool
+	cleanupDigest string
+	// restorePlan previews a restore of the cleanup ID in the source field;
+	// restoreAction applies it after review.
+	restorePlan, restoreAction bool
+	mode                       string
+	source                     string
+	order                      string
+	format                     string
+	status                     string
+	busy                       bool
+	id                         int
+	cancel                     context.CancelFunc
+	reader                     readerState
+	downloadReview             *acquisition.Request
+	recordingReview            *acquisition.RecordingRequest
 	// lastEvaluation lets a detected download offer the item's other files.
 	lastEvaluation *discovery.Evaluation
 }
@@ -138,6 +141,21 @@ func (m *model) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 			m.viewport.GotoTop()
 			m.resize()
 			return m, nil
+		}
+		// A restore preview with files to return becomes a review.
+		if value, ok := msg.data.(library.RestoreResult); ok && msg.err == nil && !value.Applied && value.Restore > 0 {
+			m.confirmKind, m.confirmRoot, m.confirmSource, m.confirmReport, m.confirmStatus = "restore", value.Library, value.CleanupID, m.report, m.status
+			m.status = "Review restore. Enter returns the listed files; Escape returns without writing."
+			m.setReport(present.Restore(value) + "\nEnter restores exactly these files. Nothing in the folder is replaced.\n")
+			m.viewport.GotoTop()
+			m.resize()
+			return m, nil
+		}
+		// After moving files, the source field holds the cleanup ID, so F9
+		// previews undoing it.
+		if value, ok := msg.data.(library.CleanupResult); ok && msg.err == nil && value.Applied && value.Moved > 0 {
+			m.secondary.SetValue(value.CleanupID)
+			m.submittedSecond = value.CleanupID
 		}
 		// A recording manifest is shown beside the holdings list, which stays.
 		if value, ok := msg.data.(library.RecordingsResult); ok {
@@ -218,6 +236,12 @@ func (m *model) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		if value, ok := msg.data.(acquisition.Result); ok && strings.HasPrefix(value.Status, "detected_") {
 			m.offerOtherFiles(value)
+		} else if ok && msg.err != nil && value.Output != "" && !value.Complete && m.lastEvaluation != nil && m.lastEvaluation.ID == m.submittedInput {
+			// The packet is kept; the item's files return so d on the same file
+			// and output reviews resuming it.
+			m.populate(*m.lastEvaluation)
+			m.evidence = true
+			m.status = fmt.Sprintf("Transfer stopped: %q. The packet was kept; select the same file and press d to review resuming it.", msg.err.Error())
 		}
 		data, err := textsafe.MarshalJSON(msg.data, true)
 		switch value := msg.data.(type) {
@@ -241,6 +265,10 @@ func (m *model) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 			data = []byte(present.Ingest(value))
 		case library.CleanupResult:
 			data = []byte(present.Cleanup(value))
+		case library.LibraryCheck:
+			data = []byte(present.LibraryCheck(value))
+		case library.RestoreResult:
+			data = []byte(present.Restore(value))
 		case library.Audit:
 			data = []byte(present.Audit(value))
 		case library.ImportResult:
