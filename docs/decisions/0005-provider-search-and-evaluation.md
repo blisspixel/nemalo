@@ -6,7 +6,7 @@ Status: accepted and implemented, 2026-10-08.
 
 Discovery and evaluation are core library operations. `search --source archive`
 adds Internet Archive alongside the default Open Library search;
-`evaluate archive:ITEM` inspects a specific source item before acquisition. CLI, JSON, and
+`evaluate archive:ITEM` inspects a specific source item before acquisition. Selecting an Open Library edition before that Archive item is [decision 0030](0030-openlibrary-selected-edition.md). Work search remains discovery only. CLI, JSON, and
 TUI use the provider registry in `internal/app`, adapters in `internal/discovery`,
 and shared presentation. There is no new runtime dependency.
 

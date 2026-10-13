@@ -400,7 +400,9 @@ and concurrent changes must preserve recoverable content.
 ## Providers and networking
 
 The implemented metadata boundary supports explicit Open Library/Internet Archive
-search and Archive item/file evaluation through the shared provider registry.
+search, Open Library edition pages, and Archive item/file evaluation through the shared provider registry.
+An edition's `ocaid` is the only Open Library path to an Archive item
+([decision 0030](decisions/0030-openlibrary-selected-edition.md)).
 [Decision 0005](decisions/0005-provider-search-and-evaluation.md) records current
 contracts, checked direct connections, limits, and unverified access/rights states.
 Project Gutenberg search and catalog evaluation read a local `pg_catalog.csv`.

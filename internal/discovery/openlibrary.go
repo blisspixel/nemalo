@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
 	"net/url"
 	"strings"
 )
@@ -45,6 +46,13 @@ type OpenLibrary struct {
 
 func NewOpenLibrary() *OpenLibrary {
 	return &OpenLibrary{metadataClient: newMetadataClient("openlibrary.org"), endpoint: "https://openlibrary.org/search.json"}
+}
+
+// SetHTTPClient installs a metadata client. Tests use it so a call does not dial.
+func (p *OpenLibrary) SetHTTPClient(client *http.Client) {
+	if client != nil {
+		p.client = client
+	}
 }
 func (p *OpenLibrary) Search(ctx context.Context, query string, limit, offset int) (Page, error) {
 	page := Page{Source: "openlibrary", Query: strings.TrimSpace(query), Order: OrderRelevance, Offset: offset, Results: []Result{}}

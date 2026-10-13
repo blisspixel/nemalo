@@ -36,6 +36,30 @@ func (m *model) populate(data any) {
 	m.entries, m.selected, m.details, m.evidence = nil, 0, false, false
 	switch p := data.(type) {
 	case discovery.Evaluation:
+		if p.Access == discovery.OpenLibraryEditionList {
+			for _, edition := range p.Editions {
+				archive := "no Archive item named"
+				if edition.ArchiveID != "" {
+					archive = edition.ArchiveID
+				}
+				m.entries = append(m.entries, entry{
+					title:    fmt.Sprintf("%q", edition.Title),
+					summary:  fmt.Sprintf("%q | %s", edition.Languages, archive),
+					detail:   fmt.Sprintf("%q\n\nID: %q\nLanguages: %q\nPublishers: %q\nDates: %q\nISBNs: %q\nArchive item: %s\nPage: %q\n\nFindings: %q\n\nPress e, then Enter, to read this edition. An ocaid then requests that Archive item. A different identifier in the edition's source records is not selected.\n", edition.Title, edition.ID, edition.Languages, edition.Publishers, edition.Dates, edition.ISBNs, archive, edition.LandingPage, edition.Findings),
+					sourceID: edition.ID,
+				})
+			}
+			if len(p.Editions) == 0 {
+				m.entries = append(m.entries, entry{
+					title:    `"No editions on this page"`,
+					summary:  "This page did not list an edition",
+					detail:   "This page has no edition rows.\n\nAnother offset may. A work-level Archive identifier is not used.\n",
+					sourceID: p.ID,
+				})
+			}
+			m.selectEntry(0)
+			return
+		}
 		for _, f := range p.Files {
 			size := "size not declared"
 			if f.Bytes != nil {
@@ -294,7 +318,20 @@ func (m *model) browserKey(key string) (bool, tea.Cmd) {
 				m.status = "Selected item. Enter reads the local catalog. The website is not queried."
 				m.resize()
 				return true, cmd
+			case discovery.ValidOpenLibraryWork(id):
+				cmd := m.switchMode("evaluate")
+				m.input.SetValue(id)
+				m.status = "Selected work. Enter lists editions. No Archive item is chosen."
+				m.resize()
+				return true, cmd
 			}
+		}
+		if len(m.entries) > 0 && m.mode == "evaluate" && discovery.ValidOpenLibraryEdition(m.entries[m.selected].sourceID) {
+			m.input.SetValue(m.entries[m.selected].sourceID)
+			m.offset, m.total = 0, 0
+			m.status = "Selected edition. Enter reads its record. An ocaid then requests that Archive item."
+			m.resize()
+			return true, nil
 		}
 	case "r":
 		if m.mode == "holdings" && len(m.entries) > 0 {

@@ -20,7 +20,17 @@ nemalo library import /path/to/library /path/to/new-intake-packet --apply
 nemalo evaluate gutenberg:1342 --files
 nemalo acquire gutenberg:1342 --file 1342.epub.noimages \
   --output /path/to/new-gutenberg-packet
+
+nemalo evaluate openlibrary:OL45804W --editions --limit 10
+nemalo evaluate openlibrary:OL7353617M
+nemalo acquire archive:fantasticmrfoxpu00roal --file NAME \
+  --output /path/to/new-intake-packet
 ```
+
+The Open Library commands choose an edition. `fantasticmrfoxpu00roal` is the
+`ocaid` on edition OL7353617M at the time of the decision, not a filename.
+`NAME` is the exact Archive filename from that evaluation. A work id is not
+an acquire id.
 
 Choose the exact source filename after reviewing availability, language, format,
 and rights evidence. The example is one track, not a complete audiobook. Downloads

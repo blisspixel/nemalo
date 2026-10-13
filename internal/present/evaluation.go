@@ -12,6 +12,22 @@ func Evaluation(e discovery.Evaluation) string {
 	var b strings.Builder
 	fmt.Fprintf(&b, "Metadata evaluation complete: %t\n", e.Complete)
 	fmt.Fprintf(&b, "Item: %q\nTitles: %q\nCreators: %q\nLanguages: %q\nMedia types: %q\nDates: %q\nPublishers: %q\nRights statements: %q\nDeclared license URLs: %q\nAccess: %q\nPage: %q\nMetadata SHA-256: %q\nFiles listed: %d\n", e.ID, e.Title, e.Creators, e.Languages, e.MediaType, e.Dates, e.Publishers, e.Rights, e.LicenseURLs, e.Access, e.LandingPage, e.MetadataSHA256, len(e.Files))
+	if e.OpenLibraryEdition != "" {
+		fmt.Fprintf(&b, "Open Library edition: %q\n", e.OpenLibraryEdition)
+	}
+	if e.EditionCount > 0 || len(e.Editions) > 0 {
+		fmt.Fprintf(&b, "Editions: %d listed, %d declared, offset %d\n", len(e.Editions), e.EditionCount, e.EditionOffset)
+	}
+	for i, edition := range e.Editions {
+		archive := "none named"
+		if edition.ArchiveID != "" {
+			archive = edition.ArchiveID
+		}
+		fmt.Fprintf(&b, "\nEdition %d. %q\n   ID: %q\n   Languages: %q\n   Publishers: %q\n   Dates: %q\n   ISBNs: %q\n   Archive item: %q\n   Page: %q\n", i+1, edition.Title, edition.ID, edition.Languages, edition.Publishers, edition.Dates, edition.ISBNs, archive, edition.LandingPage)
+		for _, finding := range edition.Findings {
+			fmt.Fprintf(&b, "   Finding: %q\n", finding)
+		}
+	}
 	if len(e.Subjects) > 0 {
 		fmt.Fprintf(&b, "Subjects: %q\n", e.Subjects)
 	}

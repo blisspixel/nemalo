@@ -2,7 +2,9 @@ package app
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
+	"io"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -236,6 +238,51 @@ func TestAcquireGutenbergUsesThePinnedMirror(t *testing.T) {
 type transportFunc func(*http.Request) (*http.Response, error)
 
 func (f transportFunc) RoundTrip(r *http.Request) (*http.Response, error) { return f(r) }
+
+func TestOpenLibraryEditionResolvesOnlyItsOCAID(t *testing.T) {
+	var archivePaths []string
+	library := discovery.NewOpenLibrary()
+	library.SetHTTPClient(&http.Client{Transport: transportFunc(func(r *http.Request) (*http.Response, error) {
+		if r.URL.Host != "openlibrary.org" || r.URL.Path != "/books/OL7353617M.json" {
+			t.Errorf("open library request %s", r.URL)
+		}
+		body := `{"key":"/books/OL7353617M","title":"Fantastic Mr. Fox","type":{"key":"/type/edition"},"languages":[{"key":"/languages/eng"}],"works":[{"key":"/works/OL45804W"}],"ocaid":"demoitem","source_records":["ia:otheritem","ia:demoitem"]}`
+		return &http.Response{StatusCode: 200, Header: http.Header{"Content-Type": []string{"application/json"}}, Body: io.NopCloser(strings.NewReader(body)), Request: r}, nil
+	})})
+	archive := discovery.NewArchive()
+	archive.SetHTTPClient(&http.Client{Transport: transportFunc(func(r *http.Request) (*http.Response, error) {
+		archivePaths = append(archivePaths, r.URL.Path)
+		if r.URL.Host != "archive.org" || r.URL.Path != "/metadata/demoitem" {
+			t.Errorf("archive request %s", r.URL)
+		}
+		payload := map[string]any{"metadata": map[string]any{"identifier": "demoitem", "title": "Fantastic Mr. Fox", "creator": "Roald Dahl", "language": "eng"}, "files": []any{
+			map[string]any{"name": "fox.epub", "format": "EPUB", "size": "100", "md5": strings.Repeat("a", 32)},
+		}}
+		raw, err := json.Marshal(payload)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return &http.Response{StatusCode: 200, Header: http.Header{"Content-Type": []string{"application/json"}}, Body: io.NopCloser(strings.NewReader(string(raw))), Request: r}, nil
+	})})
+	s := Service{Providers: map[string]Searcher{"openlibrary": library, "archive": archive}}
+	if _, err := s.Evaluate(context.Background(), "openlibrary:OL45804W"); err == nil || !strings.Contains(err.Error(), "no selected edition") {
+		t.Fatal(err)
+	}
+	if len(archivePaths) != 0 {
+		t.Fatal("a work evaluation contacted Archive", archivePaths)
+	}
+	got, err := s.Evaluate(context.Background(), "openlibrary:OL7353617M")
+	if err != nil || got.ID != "archive:demoitem" || got.OpenLibraryEdition != "openlibrary:OL7353617M" || got.Source != "archive" || len(got.Files) != 1 || got.Files[0].Name != "fox.epub" {
+		t.Fatal(got, err)
+	}
+	joined := strings.Join(got.Limitations, " ")
+	if !strings.Contains(joined, "archive:otheritem") || !strings.Contains(joined, "were not selected") || strings.Contains(joined, "work-level ia") && strings.Contains(joined, "selected the first") {
+		t.Fatal(joined)
+	}
+	if len(archivePaths) != 1 || archivePaths[0] != "/metadata/demoitem" {
+		t.Fatal(archivePaths)
+	}
+}
 
 func TestAcquireAppliesServiceDetectionPolicy(t *testing.T) {
 	s := Service{Providers: map[string]Searcher{"archive": detectingProvider{}}, Scanner: kindScanner{kind: "clamav"}, OnDetection: "delete"}

@@ -51,8 +51,8 @@ item's other files for a new, deliberate review. See
 | Ctrl+R in State | Review a rescan of review EPUBs that lack scan evidence |
 | Ctrl+N in two-field forms | Switch between fields, including the Gutenberg catalog and the State source |
 | Ctrl+A in snapshot | Toggle historical health metadata |
-| e in Archive or Gutenberg results | Prepare selected-item evaluation, without requesting it. A Gutenberg catalog row lists no files |
-| d in Evaluate results | Review selected-file acquisition into a new intake directory. An empty Intake field asks for a folder (Ctrl+N) and does not fetch. On a Gutenberg catalog row, d then requests that one bibliographic record and lists EPUB offers |
+| e in Archive, Gutenberg, or Open Library results | Prepare selected-item evaluation, without requesting it. A Gutenberg catalog row lists no files. An Open Library work lists editions on Enter. e on an edition row selects that edition |
+| d in Evaluate results | Review selected-file acquisition into a new intake directory. An empty Intake field asks for a folder (Ctrl+N) and does not fetch. On a Gutenberg catalog row, d then requests that one bibliographic record and lists EPUB offers. After an Open Library edition names an Archive item, d reviews that Archive file |
 | F9 in State | Preview moving the source folder's held files to the holding area; Enter applies that exact plan. With a cleanup ID in the source field (set after a cleanup), preview restoring it |
 | t in Holdings results | Show the recording that holds the selected track: order, missing tracks, timing |
 | a in Evaluate results | Review acquiring every track of the recording that holds the selected MP3. An empty Intake field asks for a folder (Ctrl+N) and does not open that review |

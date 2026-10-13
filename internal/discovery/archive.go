@@ -26,6 +26,13 @@ func NewArchive() *Archive {
 	return &Archive{metadataClient: newMetadataClient("archive.org"), endpoint: "https://archive.org", downloadClient: NewFileClient(ArchiveDownloadHost)}
 }
 
+// SetHTTPClient installs a metadata client. Tests use it so a call does not dial.
+func (p *Archive) SetHTTPClient(client *http.Client) {
+	if client != nil {
+		p.client = client
+	}
+}
+
 // Strings preserves source metadata without inventing language or rights mappings.
 // Archive fields commonly alternate between a string and a list of strings.
 type Strings []string
@@ -202,8 +209,16 @@ type Evaluation struct {
 	Files          []OfferedFile     `json:"files"`
 	// Recordings groups MP3 files into declared track sets. It is empty for
 	// items without MP3 files and is not part of single-file selection.
-	Recordings  []Recording `json:"recordings,omitempty"`
-	Limitations []string    `json:"limitations"`
+	Recordings []Recording `json:"recordings,omitempty"`
+	// Editions is one page of Open Library editions for a selected work.
+	Editions []Edition `json:"editions,omitempty"`
+	// EditionCount is the provider's declared number of editions for that work.
+	EditionCount int `json:"edition_count,omitempty"`
+	// EditionOffset is the page start requested for that list.
+	EditionOffset int `json:"edition_offset,omitempty"`
+	// OpenLibraryEdition is the edition whose ocaid selected this Archive item.
+	OpenLibraryEdition string   `json:"openlibrary_edition,omitempty"`
+	Limitations        []string `json:"limitations"`
 }
 
 type archiveFile struct {

@@ -328,8 +328,11 @@ Website search, formats other than those three EPUBs, and broader provider
 contracts remain planned. Transfers and checked publication use milestones 2
 and 3. Source cleanup is independent and requires 4.
 
-Open Library still needs a selected edition before an Archive download. Keep
-using Gutenberg's permitted catalog and the pinned mirror. Do not automate
+An Open Library work lists editions, and one chosen edition can name an
+Archive item through its `ocaid`
+([decision 0030](docs/decisions/0030-openlibrary-selected-edition.md)).
+The first work-level Archive identifier is not a selection. Keep using
+Gutenberg's permitted catalog and the pinned mirror. Do not automate
 website search. See [source research](docs/SOURCES.md).
 
 Acceptance:

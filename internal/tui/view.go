@@ -7,6 +7,7 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
+	"github.com/blisspixel/nemalo/internal/discovery"
 )
 
 const (
@@ -56,7 +57,7 @@ func (m *model) fields() string {
 	case "audit":
 		label, hint, second = "Catalog", "Catalog file, or a library folder to check", "Root"
 	case "evaluate":
-		label, hint, second = "Item ID", "archive:ITEM or gutenberg:NUMBER (metadata only)", "Intake"
+		label, hint, second = "Item ID", "archive:ITEM, gutenberg:NUMBER, or openlibrary:WORK/EDITION", "Intake"
 	case "state":
 		label, hint, second = "Folder", "Existing library folder; Enter reads status", "Source"
 	case "read":
@@ -101,7 +102,7 @@ func (m *model) contextLine() string {
 		return m.source + "; F2 changes provider | Explicit network search"
 	}
 	if m.mode == "evaluate" {
-		return "Source declarations | Enter evaluates | d reviews a download; a catalog row requests its record first"
+		return "Source declarations | Enter evaluates | d reviews a download; a catalog row requests its record; an Open Library work lists editions"
 	}
 	if m.mode == "scan" {
 		return "Explicit antivirus | Host cloud/sample policy applies; no remediation"
@@ -142,7 +143,7 @@ func (m *model) footer() string {
 	help := "Enter run  F6 browse  Tab/Shift+Tab modes  Ctrl+C quit"
 	if m.resultsFocused {
 		help = "Up/Down select  Enter details  F6 edit  Esc back  Ctrl+C quit"
-		if m.mode == "search" && len(m.entries) > 0 && (strings.HasPrefix(m.entries[m.selected].sourceID, "archive:") || strings.HasPrefix(m.entries[m.selected].sourceID, "gutenberg:")) {
+		if m.mode == "search" && len(m.entries) > 0 && (strings.HasPrefix(m.entries[m.selected].sourceID, "archive:") || strings.HasPrefix(m.entries[m.selected].sourceID, "gutenberg:") || strings.HasPrefix(m.entries[m.selected].sourceID, "openlibrary:")) {
 			help += "  e evaluate"
 		}
 		if m.mode == "holdings" && len(m.entries) > 0 {
@@ -152,6 +153,9 @@ func (m *model) footer() string {
 			}
 		}
 		if m.mode == "evaluate" && len(m.entries) > 0 {
+			if discovery.ValidOpenLibraryEdition(m.entries[m.selected].sourceID) {
+				help += "  e select edition"
+			}
 			help += "  d acquire"
 			if m.recordingFor(m.entries[m.selected].sourceID) != nil {
 				help += "  a all tracks"

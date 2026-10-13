@@ -267,6 +267,12 @@ func (s Service) SearchSourceOrdered(ctx context.Context, source, query, order s
 }
 
 func (s Service) Evaluate(ctx context.Context, id string) (discovery.Evaluation, error) {
+	if discovery.ValidOpenLibraryEdition(id) {
+		return s.evaluateOpenLibraryEdition(ctx, id)
+	}
+	if discovery.ValidOpenLibraryWork(id) {
+		return discovery.Evaluation{}, errors.New("an Open Library work has no selected edition; list editions before choosing an Archive item")
+	}
 	source, _, ok := strings.Cut(id, ":")
 	if !ok {
 		return discovery.Evaluation{}, errors.New("evaluation requires a namespaced item identifier")
@@ -278,6 +284,72 @@ func (s Service) Evaluate(ctx context.Context, id string) (discovery.Evaluation,
 		return discovery.Evaluation{}, errors.New("provider does not support item evaluation")
 	}
 	return p.Evaluate(ctx, id)
+}
+
+// EvaluateOpenLibraryEditions lists one page of editions for a work.
+// It does not contact Internet Archive.
+func (s Service) EvaluateOpenLibraryEditions(ctx context.Context, id string, limit, offset int) (discovery.Evaluation, error) {
+	library, ok := s.Providers["openlibrary"].(*discovery.OpenLibrary)
+	if !ok || library == nil {
+		return discovery.Evaluation{}, errors.New("open library evaluation is unavailable")
+	}
+	return library.ListEditions(ctx, id, limit, offset)
+}
+
+func (s Service) evaluateOpenLibraryEdition(ctx context.Context, id string) (discovery.Evaluation, error) {
+	library, ok := s.Providers["openlibrary"].(*discovery.OpenLibrary)
+	if !ok || library == nil {
+		return discovery.Evaluation{}, errors.New("open library evaluation is unavailable")
+	}
+	record, err := library.ReadEdition(ctx, id)
+	if err != nil {
+		return discovery.Evaluation{}, err
+	}
+	if record.ArchiveID == "" {
+		return editionWithoutArchive(record), nil
+	}
+	archive, ok := s.Providers["archive"].(*discovery.Archive)
+	if !ok || archive == nil {
+		return discovery.Evaluation{}, errors.New("archive evaluation is unavailable")
+	}
+	evaluation, err := archive.Evaluate(ctx, record.ArchiveID)
+	if err != nil {
+		return discovery.Evaluation{}, err
+	}
+	evaluation.OpenLibraryEdition = record.ID
+	note := fmt.Sprintf("Open Library edition %s names Archive item %s through ocaid. Work-level identifiers were not used.", record.ID, record.ArchiveID)
+	if len(record.Languages) > 0 {
+		note += " Edition languages: " + strings.Join(record.Languages, ", ") + "."
+	}
+	notes := []string{note, "The Open Library edition record SHA-256 is " + record.MetadataSHA256 + "."}
+	if record.Title != "" && (len(evaluation.Title) == 0 || evaluation.Title[0] != record.Title) {
+		notes = append(notes, "Open Library edition title: "+record.Title+".")
+	}
+	if len(record.OtherArchiveIDs) > 0 {
+		notes = append(notes, "Other Archive identifiers in this edition's source records were not selected: "+strings.Join(record.OtherArchiveIDs, ", ")+".")
+	}
+	notes = append(notes, record.Findings...)
+	evaluation.Limitations = append(notes, evaluation.Limitations...)
+	return evaluation, nil
+}
+
+func editionWithoutArchive(record discovery.EditionRecord) discovery.Evaluation {
+	titles := []string{}
+	if record.Title != "" {
+		titles = []string{record.Title}
+	}
+	limitations := []string{"This Open Library edition does not name an Archive item in ocaid. No Archive identifier was selected from the work or from source records."}
+	if len(record.OtherArchiveIDs) > 0 {
+		limitations = append(limitations, "Other Archive identifiers in this edition's source records were not selected: "+strings.Join(record.OtherArchiveIDs, ", ")+".")
+	}
+	limitations = append(limitations, record.Findings...)
+	return discovery.Evaluation{
+		Complete: true, ID: record.ID, Source: "openlibrary", Title: titles, Languages: record.Languages,
+		Dates: record.Dates, Publishers: record.Publishers, LandingPage: record.LandingPage,
+		MetadataURL: record.MetadataURL, MetadataSHA256: record.MetadataSHA256, CheckedAt: time.Now().UTC(),
+		Access: discovery.OpenLibraryEditionRecord, Restrictions: map[string]string{}, Files: []discovery.OfferedFile{},
+		Limitations: limitations,
+	}
 }
 
 func (s Service) Inspect(ctx context.Context, root string, limits inventory.Limits) (inventory.Report, error) {

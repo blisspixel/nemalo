@@ -124,9 +124,27 @@ func TestBrowserStagesEvaluationWithoutNetworkAndRestoresSelection(t *testing.T)
 	}
 	m.entries[1].sourceID = "openlibrary:OL1W"
 	m.Update(key(tea.KeyF6))
+	_, cmd = m.Update(tea.KeyPressMsg{Code: 'e', Text: "e"})
+	if m.mode != "evaluate" || m.input.Value() != "openlibrary:OL1W" || m.busy {
+		t.Fatal("Open Library work did not stage an edition list")
+	}
+	if cmd != nil {
+		if _, request := cmd().(result); request {
+			t.Fatal("staging an edition list requested metadata")
+		}
+	}
+	if !strings.Contains(m.status, "No Archive item is chosen") {
+		t.Fatal("work selection implied an Archive item")
+	}
+	m.switchMode("search")
+	if len(m.entries) < 2 {
+		t.Fatal("search results were not restored")
+	}
+	m.entries[1].sourceID = "openlibrary:notes"
+	m.resultsFocused = true
 	m.Update(tea.KeyPressMsg{Code: 'e', Text: "e"})
-	if m.mode != "search" {
-		t.Fatal("non-Archive result prepared Archive lookup")
+	if m.mode != "search" || m.input.Value() == "openlibrary:notes" {
+		t.Fatal("non-work result prepared a lookup")
 	}
 	m.busy = true
 	m.Update(key(tea.KeyF5))

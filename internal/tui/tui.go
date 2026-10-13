@@ -261,6 +261,11 @@ func (m *model) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 		case discovery.Evaluation:
 			if msg.err == nil {
 				m.lastEvaluation = &value
+				if value.Access == discovery.OpenLibraryEditionList {
+					m.offset, m.total = value.EditionOffset, value.EditionCount
+				} else {
+					m.total = 0
+				}
 			}
 		case discovery.Page:
 			if msg.err == nil {

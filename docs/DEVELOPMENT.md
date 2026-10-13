@@ -421,9 +421,10 @@ Import, ingest, scanned acquisition, recording manifests, cleanup, and restore
 are in place. Interrupted downloads resume against a strong validator
 (decision 0023). Gutenberg catalog search stays local (decision 0028). One
 selected Gutenberg EPUB can be acquired from gutenberg.pglaf.org
-(decision 0029). The next acquisition slice is Open Library edition resolution:
-a work search must name one edition's Archive identifier before the existing
-Archive acquire runs. Checked publication is still the milestone 3 gap. Website
+(decision 0029). An Open Library work lists editions, and one chosen edition
+can name an Archive item through its ocaid before the existing Archive
+acquire runs (decision 0030). Checked publication is still the milestone 3
+gap. Website
 search, other Gutenberg formats, recording identity, narrator, M4B, OCR, and
 column reconstruction stay later. MCP remains a scoped read-only adapter over
 the same services. Generated analysis and model/harness integrations remain

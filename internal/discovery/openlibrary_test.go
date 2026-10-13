@@ -28,6 +28,9 @@ func TestSearchContract(t *testing.T) {
 		if r.URL.Query().Get("q") != "Verne & ocean" || r.URL.Query().Get("limit") != "3" || r.URL.Query().Get("offset") != "2" {
 			t.Errorf("query not encoded: %s", r.URL)
 		}
+		if r.URL.Query().Get("fields") != "key,title,author_name,language" || r.URL.Query().Has("ia") || r.URL.Query().Has("availability") || r.URL.Query().Has("editions") {
+			t.Errorf("search requested an edition or Archive field: %s", r.URL)
+		}
 		if !strings.Contains(r.UserAgent(), "nemalo/") {
 			t.Error("unidentified client")
 		}

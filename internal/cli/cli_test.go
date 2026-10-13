@@ -133,7 +133,7 @@ func TestProviderSearchAndEvaluationCommands(t *testing.T) {
 	if code != 1 || stderr != "" || strings.Contains(out, "No results") || !strings.Contains(out, `"error"`) || !strings.Contains(out, "nonpublic destination") {
 		t.Fatal(code, out, stderr)
 	}
-	for _, args := range [][]string{{"evaluate"}, {"evaluate", "demo"}, {"evaluate", "archive:../x"}, {"evaluate", "openlibrary:OL1W"}, {"evaluate", "archive:demo", "extra"}, {"evaluate", "archive:demo", "--source", "archive"}, {"search", "x", "--source", "missing"}, {"inspect", "x", "--source", "archive"},
+	for _, args := range [][]string{{"evaluate"}, {"evaluate", "demo"}, {"evaluate", "archive:../x"}, {"evaluate", "openlibrary:OL1W"}, {"evaluate", "archive:demo", "--editions"}, {"evaluate", "openlibrary:OL1M", "--editions"}, {"evaluate", "gutenberg:11", "--editions"}, {"evaluate", "archive:demo", "--limit", "1"}, {"evaluate", "openlibrary:OL1W", "--files"}, {"evaluate", "archive:demo", "extra"}, {"evaluate", "archive:demo", "--source", "archive"}, {"search", "x", "--source", "missing"}, {"inspect", "x", "--source", "archive"},
 		{"search", "x", "--sort", "identifier"}, {"search", "x", "--source", "archive", "--sort", "popularity"}, {"search", "x", "--sort", "downloads"}, {"search", "x", "--source", "archive", "--sort", ""}, {"evaluate", "archive:demo", "--sort", "relevance"}} {
 		if code, _, _ := execute(t, args, nil); code != 2 {
 			t.Fatal("invalid provider usage accepted", args, code)

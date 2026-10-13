@@ -39,11 +39,15 @@ Usage: nemalo <command> [options]
   doctor              Report configuration and optional tool availability
   search QUERY        Search a selected catalog. Open Library and Internet Archive
                       use the network. Gutenberg reads a local catalog file.
-  evaluate archive:ITEM|gutenberg:NUMBER [--files]
+  evaluate archive:ITEM|gutenberg:NUMBER|openlibrary:ID [--files|--editions]
                       Inspect source-declared files, rights, and access restrictions.
                       gutenberg:NUMBER without --files is one local catalog row and lists no files.
                       --files fetches one Gutenberg bibliographic record and lists EPUB offers.
                       It does not download an ebook.
+                      openlibrary:WORK --editions lists one page of editions (--limit, --offset).
+                      openlibrary:EDITION reads that edition. When its ocaid names one Archive
+                      item, the result is that item's metadata. Acquire the printed archive:ITEM.
+                      A work-level Archive identifier is not selected.
   catalog fetch gutenberg --output FILE
                       Download the official Gutenberg catalog to a new file.
                       Search does not do this, and it does not download ebooks.
@@ -252,6 +256,7 @@ func Execute(ctx context.Context, args []string, out, errOut io.Writer, service 
 	sortOrder := flags.String("sort", discovery.OrderRelevance, "search result order")
 	catalogPath := flags.String("catalog", "", "absolute path of a local Project Gutenberg catalog")
 	listFiles := flags.Bool("files", false, "fetch one Gutenberg bibliographic record and list its files")
+	listEditions := flags.Bool("editions", false, "list one page of editions for an Open Library work")
 	limits := inventory.Defaults()
 	checkOptions := assessment.Options{}
 	output := flags.String("output", "", "new snapshot output path")
@@ -499,20 +504,49 @@ func Execute(ctx context.Context, args []string, out, errOut io.Writer, service 
 		}
 		return 0
 	case "evaluate":
-		if flags.NArg() != 1 || (!discovery.ValidArchiveID(flags.Arg(0)) && !discovery.ValidGutenbergID(flags.Arg(0))) {
-			return write(nil, errors.New("evaluate requires exactly one archive:ITEM or gutenberg:NUMBER identifier"), 2)
+		id := ""
+		if flags.NArg() == 1 {
+			id = flags.Arg(0)
 		}
-		if *listFiles {
-			if !discovery.ValidGutenbergID(flags.Arg(0)) {
-				return write(nil, errors.New("evaluate --files fetches one gutenberg:NUMBER bibliographic record"), 2)
+		archiveID := discovery.ValidArchiveID(id)
+		gutenbergID := discovery.ValidGutenbergID(id)
+		workID := discovery.ValidOpenLibraryWork(id)
+		editionID := discovery.ValidOpenLibraryEdition(id)
+		if flags.NArg() != 1 || (!archiveID && !gutenbergID && !workID && !editionID) {
+			return write(nil, errors.New("evaluate requires exactly one archive:ITEM, gutenberg:NUMBER, or openlibrary:WORK or openlibrary:EDITION identifier"), 2)
+		}
+		if *listFiles && *listEditions {
+			return write(nil, errors.New("evaluate accepts either --files or --editions"), 2)
+		}
+		if visited(flags, "limit") || visited(flags, "offset") {
+			if !*listEditions {
+				return write(nil, errors.New("evaluate --limit and --offset apply to --editions"), 2)
 			}
-			data, err := service.EvaluateGutenbergFiles(ctx, flags.Arg(0))
+		}
+		if *listEditions {
+			if !workID {
+				return write(nil, errors.New("evaluate --editions requires one openlibrary:WORK identifier"), 2)
+			}
+			data, err := service.EvaluateOpenLibraryEditions(ctx, id, *limit, *offset)
 			if err != nil {
 				return write(data, err, 1)
 			}
 			return write(data, nil, 0)
 		}
-		data, err := service.Evaluate(ctx, flags.Arg(0))
+		if workID {
+			return write(nil, errors.New("an Open Library work has no selected edition; use evaluate openlibrary:WORK --editions"), 2)
+		}
+		if *listFiles {
+			if !gutenbergID {
+				return write(nil, errors.New("evaluate --files fetches one gutenberg:NUMBER bibliographic record"), 2)
+			}
+			data, err := service.EvaluateGutenbergFiles(ctx, id)
+			if err != nil {
+				return write(data, err, 1)
+			}
+			return write(data, nil, 0)
+		}
+		data, err := service.Evaluate(ctx, id)
 		if err != nil {
 			return write(data, err, 1)
 		}
@@ -1003,7 +1037,7 @@ func flagApplies(command, action, name string) bool {
 	case "search":
 		return name == "limit" || name == "offset" || name == "source" || name == "sort" || name == "catalog"
 	case "evaluate":
-		return name == "catalog" || name == "files"
+		return name == "catalog" || name == "files" || name == "editions" || name == "limit" || name == "offset"
 	case "tui":
 		return name == "catalog"
 	case "catalog":
@@ -1014,6 +1048,16 @@ func flagApplies(command, action, name string) bool {
 		return name == "hashes" || strings.HasPrefix(name, "max-")
 	}
 	return false
+}
+
+func visited(flags *flag.FlagSet, name string) bool {
+	seen := false
+	flags.Visit(func(f *flag.Flag) {
+		if f.Name == name {
+			seen = true
+		}
+	})
+	return seen
 }
 
 // parse accepts flags before or after positional arguments, preserving an explicit --.

@@ -76,7 +76,8 @@ func (m *model) seedLibraryForms(catalog, root string) {
 }
 
 func (m *model) turnPage(forward bool) tea.Cmd {
-	if m.busy || (m.mode != "search" && m.mode != "holdings") {
+	workPage := m.mode == "evaluate" && discovery.ValidOpenLibraryWork(m.submittedInput)
+	if m.busy || (m.mode != "search" && m.mode != "holdings" && !workPage) {
 		return nil
 	}
 	if m.input.Value() != m.submittedInput || m.secondary.Value() != m.submittedSecond {
@@ -178,6 +179,10 @@ func (m *model) start(reset bool) tea.Cmd {
 			data, err := m.service.LibraryStatus(ctx, value)
 			return result{id, data, err}
 		case "evaluate":
+			if discovery.ValidOpenLibraryWork(value) {
+				data, err := m.service.EvaluateOpenLibraryEditions(ctx, value, 10, offset)
+				return result{id, data, err}
+			}
 			data, err := m.service.Evaluate(ctx, value)
 			return result{id, data, err}
 		case "snapshot":

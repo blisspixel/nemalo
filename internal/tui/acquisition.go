@@ -37,7 +37,11 @@ func (m *model) requestDownload() tea.Cmd {
 			return result{id, data, err}
 		}
 	}
-	request := acquisition.Request{SourceID: m.submittedInput, File: m.entries[m.selected].sourceID, Output: m.secondary.Value(), MaxBytes: 256 << 20}
+	sourceID := m.submittedInput
+	if m.lastEvaluation != nil && m.lastEvaluation.OpenLibraryEdition == m.submittedInput && discovery.ValidArchiveID(m.lastEvaluation.ID) {
+		sourceID = m.lastEvaluation.ID
+	}
+	request := acquisition.Request{SourceID: sourceID, File: m.entries[m.selected].sourceID, Output: m.secondary.Value(), MaxBytes: 256 << 20}
 	if err := request.Validate(); err != nil {
 		m.status = fmt.Sprintf("Acquisition error: %q", err.Error())
 		m.resize()
