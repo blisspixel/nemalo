@@ -87,9 +87,12 @@ Plugin packages are `plugins/nemalo/` (decision 0019): they run `nemalo` from PA
 bundle nothing, and share one portable skill; versions equal `internal/cli.Version`.
 Provider adapters use the shared metadata HTTP client in `internal/discovery`;
 preserve fixed hosts, checked direct destinations, bounded JSON, and quota handling.
-Gutenberg search and evaluation read a local `pg_catalog.csv` (decision 0028).
-Do not query the Gutenberg website. `catalog fetch gutenberg` is the explicit
-download of that one CSV. Do not add a Gutenberg MCP tool in that slice.
+Gutenberg search and catalog evaluation read a local `pg_catalog.csv` (decision 0028).
+Do not query the Gutenberg website, and do not download ebook bodies from www.gutenberg.org.
+`catalog fetch gutenberg` downloads that one CSV. `evaluate --files` and
+`acquire gutenberg:NUMBER --file NAME` fetch one bibliographic record and one
+pinned EPUB from gutenberg.pglaf.org only (decision 0029). Do not add a Gutenberg
+MCP tool. Do not fall back to another host.
 Source evaluation is declaration evidence, never file rights, safety, or write
 authorization. See decision 0005 before changing access classification or networking.
 The bounded collection harness is in `internal/collection` and `cmd/collection`;

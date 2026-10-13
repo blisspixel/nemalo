@@ -18,7 +18,15 @@ Search defaults to Open Library work metadata; `--source archive` selects Intern
 Archive text/audio item search. `--source gutenberg` reads a local
 `pg_catalog.csv` (`--catalog`, `gutenberg_catalog`, or `NEMALO_GUTENBERG_CATALOG`)
 and does not contact gutenberg.org. `catalog fetch gutenberg --output FILE`
-downloads that one official CSV. Neither search resolves download permissions.
+downloads that one official CSV. `evaluate gutenberg:NUMBER` without `--files`
+reads that row and lists no files. `evaluate gutenberg:NUMBER --files` fetches
+one bibliographic record from gutenberg.pglaf.org and lists its files. It does
+not download an ebook. `acquire gutenberg:NUMBER --file NAME --output DIRECTORY`
+downloads one EPUB that record names (`N.epub.noimages`, `N.epub.images`, or
+`N.epub3.images`) from the same host. The record has no checksum. The transfer
+checks the response length. Other formats are listed and refused. Neither
+search nor a catalog row resolves a download.
+
 Results keep the provider's relevance ranking, and the result names its order.
 For Archive, `--sort identifier` pages repeatably and `--sort downloads` ranks by
 the declared download count, a popularity signal rather than quality; both use
@@ -37,8 +45,9 @@ are currently unsupported. Private/reserved/mixed DNS destinations are rejected,
 and connections use the validated numeric address with normal TLS validation.
 Metadata/rights URLs returned by a provider are not fetched. See
 [decision 0005](decisions/0005-provider-search-and-evaluation.md).
-Gutenberg ranking, the catalog failure rules, and the absence of ebook files
-are in [decision 0028](decisions/0028-gutenberg-local-catalog.md).
+Gutenberg ranking and the catalog failure rules are in
+[decision 0028](decisions/0028-gutenberg-local-catalog.md). Selected EPUB
+intake is in [decision 0029](decisions/0029-gutenberg-selected-epub.md).
 Explicit selected-file acquisition has its own
 [intake and transfer contract](ACQUISITION.md). It does not publish checked holdings.
 
@@ -408,15 +417,15 @@ by a `CGO_ENABLED=0` binary smoke. Review actual runs before claiming platform s
 
 ## Next bounded work
 
-Single-asset import is in place, and EPUB package identifiers are recorded as
-evidence without merging files. Downloads are scanned on acquisition, detections
-are quarantined, and review holdings can be rescanned in one command. Folders
-and ZIP archives ingest through the single-file import, and whole recordings are
-acquired in declared order with track-level resume and listed as ordered
-manifests. `library cleanup` moves held sources to a recoverable holding area
-and `library restore` returns them (decision 0022); interrupted downloads resume
-against a strong validator (decision 0023). Reuse shared file checks and scanners. Keep real
-acquisition in the first complete lifecycle. Add those operations to CLI and TUI
-together. MCP remains a scoped adapter over the same services. Generated
-analysis and model/harness integrations remain post-1.0. Issues 1 and 2 are
-closed; their remaining OCR, column, narrator, and M4B work is milestone 7 and 8.
+Import, ingest, scanned acquisition, recording manifests, cleanup, and restore
+are in place. Interrupted downloads resume against a strong validator
+(decision 0023). Gutenberg catalog search stays local (decision 0028). One
+selected Gutenberg EPUB can be acquired from gutenberg.pglaf.org
+(decision 0029). The next acquisition slice is Open Library edition resolution:
+a work search must name one edition's Archive identifier before the existing
+Archive acquire runs. Checked publication is still the milestone 3 gap. Website
+search, other Gutenberg formats, recording identity, narrator, M4B, OCR, and
+column reconstruction stay later. MCP remains a scoped read-only adapter over
+the same services. Generated analysis and model/harness integrations remain
+post-1.0. Issues 1 and 2 are closed; their remaining OCR, column, narrator, and
+M4B work is milestone 7 and 8.

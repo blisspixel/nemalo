@@ -28,7 +28,7 @@ import (
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
-const Version = "0.1.0-alpha.9"
+const Version = "0.1.0-alpha.10"
 
 const help = `Nemalo
 Find knowledge. Care for it. Realize its potential.
@@ -39,14 +39,19 @@ Usage: nemalo <command> [options]
   doctor              Report configuration and optional tool availability
   search QUERY        Search a selected catalog. Open Library and Internet Archive
                       use the network. Gutenberg reads a local catalog file.
-  evaluate archive:ITEM|gutenberg:NUMBER
+  evaluate archive:ITEM|gutenberg:NUMBER [--files]
                       Inspect source-declared files, rights, and access restrictions.
-                      gutenberg:NUMBER is one local catalog row and lists no files.
+                      gutenberg:NUMBER without --files is one local catalog row and lists no files.
+                      --files fetches one Gutenberg bibliographic record and lists EPUB offers.
+                      It does not download an ebook.
   catalog fetch gutenberg --output FILE
                       Download the official Gutenberg catalog to a new file.
                       Search does not do this, and it does not download ebooks.
   acquire archive:ITEM --file NAME --output NEW_DIRECTORY
                       Download a selected EPUB/PDF/MP3 into untrusted intake
+  acquire gutenberg:NUMBER --file NAME --output NEW_DIRECTORY
+                      Download one EPUB named by the bibliographic record, such as
+                      1342.epub.noimages, into untrusted intake
   acquire archive:ITEM --recording FORMAT --output NEW_DIRECTORY [--resume]
                       Download every track of a declared recording, in order
   inspect DIRECTORY   Read-only inventory of an explicitly selected folder
@@ -246,6 +251,7 @@ func Execute(ctx context.Context, args []string, out, errOut io.Writer, service 
 	source := flags.String("source", "openlibrary", "search provider")
 	sortOrder := flags.String("sort", discovery.OrderRelevance, "search result order")
 	catalogPath := flags.String("catalog", "", "absolute path of a local Project Gutenberg catalog")
+	listFiles := flags.Bool("files", false, "fetch one Gutenberg bibliographic record and list its files")
 	limits := inventory.Defaults()
 	checkOptions := assessment.Options{}
 	output := flags.String("output", "", "new snapshot output path")
@@ -383,7 +389,7 @@ func Execute(ctx context.Context, args []string, out, errOut io.Writer, service 
 	switch command {
 	case "acquire":
 		if flags.NArg() != 1 {
-			return write(nil, errors.New("use acquire archive:ITEM --file NAME --output NEW_DIRECTORY"), 2)
+			return write(nil, errors.New("use acquire archive:ITEM or gutenberg:NUMBER --file NAME --output NEW_DIRECTORY"), 2)
 		}
 		detection := c.OnDetection
 		flags.Visit(func(f *flag.Flag) {
@@ -495,6 +501,16 @@ func Execute(ctx context.Context, args []string, out, errOut io.Writer, service 
 	case "evaluate":
 		if flags.NArg() != 1 || (!discovery.ValidArchiveID(flags.Arg(0)) && !discovery.ValidGutenbergID(flags.Arg(0))) {
 			return write(nil, errors.New("evaluate requires exactly one archive:ITEM or gutenberg:NUMBER identifier"), 2)
+		}
+		if *listFiles {
+			if !discovery.ValidGutenbergID(flags.Arg(0)) {
+				return write(nil, errors.New("evaluate --files fetches one gutenberg:NUMBER bibliographic record"), 2)
+			}
+			data, err := service.EvaluateGutenbergFiles(ctx, flags.Arg(0))
+			if err != nil {
+				return write(data, err, 1)
+			}
+			return write(data, nil, 0)
 		}
 		data, err := service.Evaluate(ctx, flags.Arg(0))
 		if err != nil {
@@ -986,7 +1002,9 @@ func flagApplies(command, action, name string) bool {
 		return name == "file" || name == "output" || name == "max-file-bytes" || name == "no-scan" || name == "on-detection" || name == "recording" || name == "resume" || name == "max-recording-bytes"
 	case "search":
 		return name == "limit" || name == "offset" || name == "source" || name == "sort" || name == "catalog"
-	case "evaluate", "tui":
+	case "evaluate":
+		return name == "catalog" || name == "files"
+	case "tui":
 		return name == "catalog"
 	case "catalog":
 		return action == "fetch" && name == "output"

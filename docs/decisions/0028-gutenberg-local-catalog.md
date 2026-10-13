@@ -1,7 +1,7 @@
 # 0028: Project Gutenberg local catalog
 
 Status: accepted and implemented, 2026-10-12. Search and evaluation for one
-P0 source. Ebook download remains later work. This does not change Archive
+P0 source. Selected EPUB intake is decision 0029. This does not change Archive
 or Open Library behavior in
 [decision 0005](0005-provider-search-and-evaluation.md).
 
@@ -105,16 +105,18 @@ into one line and split languages `de` and `en`. A second fetch to the same
 path was refused and the bytes stayed put. A truncated copy, a directory,
 and a symlink were refused. A path containing spaces worked.
 
-The CSV does not contain download URLs. Ebook acquisition, by the harvest
-robot or a mirror, is a separate later slice. OPDS is not this catalog.
-Website search stays out of the product.
+The CSV does not contain download URLs. This catalog record still lists no
+files. Selected EPUB intake is
+[decision 0029](0029-gutenberg-selected-epub.md). Harvest, OPDS, and website
+search stay out of this catalog.
 
 ## Consequences
 
 `nemalo search --source gutenberg` and `nemalo evaluate gutenberg:NUMBER`
 work offline once a catalog file is configured. `catalog fetch gutenberg`
-is the only new network command, and it writes one checked CSV. Archive
+is the catalog network command, and it writes one checked CSV. Archive
 acquisition is unchanged. A Gutenberg hit cannot be acquired from this
-record. A configuration file that contains `gutenberg_catalog` cannot be
+catalog record. Selected EPUB intake uses the bibliographic record in
+[decision 0029](0029-gutenberg-selected-epub.md). A configuration file that contains `gutenberg_catalog` cannot be
 read by 0.1.0-alpha.8, which rejects unknown keys. A file without the key
 is unchanged. 0.1.0-alpha.9 is the first release that includes this catalog.

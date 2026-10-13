@@ -45,11 +45,16 @@ type Request struct {
 }
 
 func (r Request) Validate() error {
-	if !discovery.ValidArchiveID(r.SourceID) || r.File == "." || !fs.ValidPath(r.File) || len(r.File) > 1000 || strings.ContainsAny(r.File, "\\:\x00\r\n") || r.Output == "" || r.MaxBytes < 1 || r.MaxBytes > 256<<20 {
-		return errors.New("acquire requires archive:ITEM, an exact source filename, a new output directory, and a 1-268435456 byte budget")
+	archiveID := discovery.ValidArchiveID(r.SourceID)
+	gutenbergID := discovery.ValidGutenbergID(r.SourceID)
+	if (!archiveID && !gutenbergID) || r.File == "." || !fs.ValidPath(r.File) || len(r.File) > 1000 || strings.ContainsAny(r.File, "\\:\x00\r\n") || r.Output == "" || r.MaxBytes < 1 || r.MaxBytes > 256<<20 {
+		return errors.New("acquire requires archive:ITEM or gutenberg:NUMBER, an exact source filename, a new output directory, and a 1-268435456 byte budget")
 	}
-	if format(r.File) == "" {
+	if archiveID && format(r.File) == "" {
 		return errors.New("acquisition currently supports selected EPUB, PDF, and MP3 files")
+	}
+	if gutenbergID && !discovery.GutenbergEPUBName(r.SourceID, r.File) {
+		return errors.New("gutenberg acquisition supports one EPUB named by the bibliographic record, such as 1342.epub.noimages")
 	}
 	if r.OnDetection != "" && r.OnDetection != "quarantine" && r.OnDetection != "delete" {
 		return errors.New("on-detection must be quarantine or delete")
@@ -73,19 +78,22 @@ type Intent struct {
 }
 
 type Result struct {
-	SchemaVersion    int                `json:"schema_version"`
-	Complete         bool               `json:"complete"`
-	TransferComplete bool               `json:"transfer_complete"`
-	Status           string             `json:"status"`
-	Output           string             `json:"output,omitempty"`
-	ContentPath      string             `json:"content_path,omitempty"`
-	Intent           *Intent            `json:"intent,omitempty"`
-	Transfer         transfer.Result    `json:"transfer"`
-	FinalURL         string             `json:"final_url,omitempty"`
-	CompletedAt      *time.Time         `json:"completed_at,omitempty"`
-	Checks           *assessment.Checks `json:"checks,omitempty"`
-	Antivirus        string             `json:"antivirus"`
-	Scan             *scanner.Result    `json:"scan,omitempty"`
+	SchemaVersion    int    `json:"schema_version"`
+	Complete         bool   `json:"complete"`
+	TransferComplete bool   `json:"transfer_complete"`
+	Status           string `json:"status"`
+	Output           string `json:"output,omitempty"`
+	ContentPath      string `json:"content_path,omitempty"`
+	// SizeNote records a Gutenberg declared extent that differed from the
+	// response length. The transfer checked the response length.
+	SizeNote    string             `json:"size_note,omitempty"`
+	Intent      *Intent            `json:"intent,omitempty"`
+	Transfer    transfer.Result    `json:"transfer"`
+	FinalURL    string             `json:"final_url,omitempty"`
+	CompletedAt *time.Time         `json:"completed_at,omitempty"`
+	Checks      *assessment.Checks `json:"checks,omitempty"`
+	Antivirus   string             `json:"antivirus"`
+	Scan        *scanner.Result    `json:"scan,omitempty"`
 	// QuarantinedPath is where detected bytes were moved; empty if deleted.
 	QuarantinedPath string `json:"quarantined_path,omitempty"`
 	// Alternatives are other eligible files in the same fresh evaluation, and
@@ -98,6 +106,9 @@ type Result struct {
 	// TransferRecorded is set once transfer.json is synced, before the body.
 	// It is presentation state for this call. A receipt does not store it.
 	TransferRecorded bool `json:"-"`
+	// StrongValidator is presentation state for this call. Resume is offered
+	// only when the response carried a strong ETag. A receipt does not store it.
+	StrongValidator bool `json:"-"`
 }
 
 // Alternative is another acquirable file from the same evaluation. It carries
@@ -247,22 +258,35 @@ func transferPacket(ctx context.Context, provider Provider, parent *os.Root, abs
 	if resp.StatusCode != http.StatusOK || resp.Uncompressed || (resp.Header.Get("Content-Encoding") != "" && resp.Header.Get("Content-Encoding") != "identity") {
 		return nil, result, fmt.Errorf("download requires an unencoded HTTP 200 response; received %d", resp.StatusCode)
 	}
-	if resp.ContentLength > request.MaxBytes || (resp.ContentLength >= 0 && resp.ContentLength != *file.Bytes) {
+	expect := transfer.Expectation{Bytes: *file.Bytes, MD5: file.MD5, SHA1: file.SHA1}
+	if file.Access == discovery.GutenbergEPUBAccess {
+		// The bibliographic extent is not a checksum. Require a response length
+		// inside the budget and check the body against that length.
+		if resp.ContentLength < 1 || resp.ContentLength > request.MaxBytes {
+			return nil, result, errors.New("gutenberg download needs a Content-Length within the byte budget")
+		}
+		expect = transfer.Expectation{Bytes: resp.ContentLength}
+		if resp.ContentLength != *file.Bytes {
+			result.SizeNote = fmt.Sprintf("The bibliographic record declared %d bytes. The response length was %d. The transfer checked the response length. The record has no checksum.", *file.Bytes, resp.ContentLength)
+		}
+	} else if resp.ContentLength > request.MaxBytes || (resp.ContentLength >= 0 && resp.ContentLength != *file.Bytes) {
 		return nil, result, errors.New("HTTP size differs from source metadata or exceeds budget")
 	}
 	// The response's validator is synced before the body, so an interrupted
 	// transfer can later resume only against the same bytes.
-	if err := writeRecord(root, "transfer.json", responseRecord(resp, file)); err != nil {
+	record := responseRecord(resp, file)
+	if err := writeRecord(root, "transfer.json", record); err != nil {
 		return nil, result, err
 	}
 	result.TransferRecorded = true
-	p.name = "content." + format(file.Name)
+	result.StrongValidator = record.StrongETag
+	p.name = "content." + contentFormat(file)
 	p.f, err = root.OpenFile(p.name, os.O_RDWR|os.O_CREATE|os.O_EXCL, 0600)
 	if err != nil {
 		return nil, result, err
 	}
 	result.ContentPath = filepath.Join(abs, p.name)
-	result.Transfer, err = transfer.Copy(ctx, p.f, resp.Body, request.MaxBytes, transfer.Expectation{Bytes: *file.Bytes, MD5: file.MD5, SHA1: file.SHA1})
+	result.Transfer, err = transfer.Copy(ctx, p.f, resp.Body, request.MaxBytes, expect)
 	return completeTransfer(ctx, p, result, resp, file, err)
 }
 
@@ -280,7 +304,7 @@ func completeTransfer(ctx context.Context, p *packetState, result Result, resp *
 	if resp.Request != nil && resp.Request.URL != nil {
 		result.FinalURL = resp.Request.URL.String()
 	}
-	checks, err := assessment.InspectContext(ctx, p.f, result.Transfer.Bytes, format(file.Name))
+	checks, err := assessment.InspectContext(ctx, p.f, result.Transfer.Bytes, contentFormat(file))
 	result.Checks = &checks
 	if err != nil {
 		result.Status = "retained_for_review"
@@ -432,13 +456,13 @@ func quarantine(ctx context.Context, f *os.File, name, directory string, transfe
 func alternativesFor(e discovery.Evaluation, selected discovery.OfferedFile, limit int64) []Alternative {
 	out := []Alternative{}
 	for _, f := range e.Files {
-		if f.Name == selected.Name || format(f.Name) == "" || len(out) == 10 {
+		if f.Name == selected.Name || contentFormat(f) == "" || len(out) == 10 {
 			continue
 		}
 		if _, err := selectFile(e, Request{SourceID: e.ID, File: f.Name, MaxBytes: limit}); err != nil {
 			continue
 		}
-		out = append(out, Alternative{File: f.Name, Format: format(f.Name), Bytes: *f.Bytes})
+		out = append(out, Alternative{File: f.Name, Format: contentFormat(f), Bytes: *f.Bytes})
 	}
 	return out
 }
@@ -462,7 +486,7 @@ func searchSuggestion(e discovery.Evaluation) string {
 }
 
 func selectFile(e discovery.Evaluation, request Request) (discovery.OfferedFile, error) {
-	if !e.Complete || e.ID != request.SourceID || e.Source != "archive" || e.Access != "no_item_restriction_declared" {
+	if !e.Complete || e.ID != request.SourceID {
 		return discovery.OfferedFile{}, errors.New("source evaluation is incomplete, restricted, uncertain, or mismatched")
 	}
 	var selected *discovery.OfferedFile
@@ -479,13 +503,31 @@ func selectFile(e discovery.Evaluation, request Request) (discovery.OfferedFile,
 		return discovery.OfferedFile{}, errors.New("selected file is not in fresh source metadata")
 	}
 	f := *selected
-	if f.Access != "public_file_candidate" || f.DownloadURL == "" || f.Bytes == nil || *f.Bytes < 1 || *f.Bytes > request.MaxBytes || (f.MD5 == "" && f.SHA1 == "") {
-		return f, errors.New("selected file needs public availability, a positive size within budget, and a source checksum")
+	switch {
+	case e.Source == "archive" && e.Access == "no_item_restriction_declared":
+		if f.Access != "public_file_candidate" || f.DownloadURL == "" || f.Bytes == nil || *f.Bytes < 1 || *f.Bytes > request.MaxBytes || (f.MD5 == "" && f.SHA1 == "") {
+			return f, errors.New("selected file needs public availability, a positive size within budget, and a source checksum")
+		}
+	case e.Source == "gutenberg" && e.Access == discovery.GutenbergMirrorAccess:
+		if f.Access != discovery.GutenbergEPUBAccess || f.DownloadURL == "" || f.Bytes == nil || *f.Bytes < 1 || *f.Bytes > request.MaxBytes || contentFormat(f) != "epub" {
+			return f, errors.New("selected file is not an offered Gutenberg EPUB with a positive declared extent within budget")
+		}
+	default:
+		return f, errors.New("source evaluation is incomplete, restricted, uncertain, or mismatched")
 	}
 	if err := (transfer.Expectation{Bytes: *f.Bytes, MD5: f.MD5, SHA1: f.SHA1}).Validate(request.MaxBytes); err != nil {
 		return f, err
 	}
 	return f, nil
+}
+
+// contentFormat is the packet suffix. A Gutenberg EPUB keeps its bibliographic
+// name, which does not end in .epub, and is stored as content.epub.
+func contentFormat(file discovery.OfferedFile) string {
+	if file.Format == "application/epub+zip" {
+		return "epub"
+	}
+	return format(file.Name)
 }
 
 func format(name string) string {

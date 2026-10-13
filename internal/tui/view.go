@@ -101,7 +101,7 @@ func (m *model) contextLine() string {
 		return m.source + "; F2 changes provider | Explicit network search"
 	}
 	if m.mode == "evaluate" {
-		return "Source declarations | Enter evaluates | d reviews an intake download"
+		return "Source declarations | Enter evaluates | d reviews a download; a catalog row requests its record first"
 	}
 	if m.mode == "scan" {
 		return "Explicit antivirus | Host cloud/sample policy applies; no remediation"
@@ -320,7 +320,7 @@ func (m *model) emptyHelp() string {
 	case "holdings":
 		return "Browse your collection.\n\nChoose a saved catalog and optionally filter by title or language.\nEPUB filenames are selected by default; F4 changes the format."
 	case "evaluate":
-		return "Look before acquiring.\n\nEnter archive:ITEM, or gutenberg:NUMBER. Select a search result and press e.\nEnter retrieves metadata only. A Gutenberg row lists no files.\nF6 browses source files when the evaluation lists any.\nEnter a new intake folder with Ctrl+N; select a file and press d to review acquisition.\nDownloads remain untrusted; existing intake is never overwritten."
+		return "Look before acquiring.\n\nEnter archive:ITEM, or gutenberg:NUMBER. Select a search result and press e.\nEnter retrieves metadata only. A Gutenberg catalog row lists no files.\nWith an intake folder, d on that row requests one bibliographic record and then lists EPUB offers.\nF6 browses source files when the evaluation lists any.\nEnter a new intake folder with Ctrl+N; select a file and press d to review acquisition.\nDownloads remain untrusted; existing intake is never overwritten."
 	case "state":
 		return "Establish a library identity.\n\nEnter an existing folder, then Enter to read its control status.\nF7 reviews initialization before writing control metadata.\nCtrl+N sets one source. F8 reviews import and does not scan or delete it.\nCtrl+R reviews a scan of review EPUBs that lack scan evidence.\nF9 previews moving the source folder's held files to the library's recoverable holding area; with a cleanup ID as the source, it previews restoring that cleanup."
 	case "read":

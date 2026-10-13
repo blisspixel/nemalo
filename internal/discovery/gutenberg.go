@@ -30,9 +30,13 @@ const catalogHeader = "Text#,Type,Issued,Title,Language,Authors,Subjects,LoCC,Bo
 var maxCatalogBytes int64 = 64 << 20
 
 // Gutenberg searches and evaluates a local copy of the official catalog.
-// It has no network client. Search and evaluation do not contact gutenberg.org.
+// Search and catalog evaluation do not contact a network. FileClient is used
+// only by a bibliographic-record fetch and an EPUB download. Nil selects the
+// pinned mirror client.
 type Gutenberg struct {
 	Catalog string
+	// FileClient replaces the pinned mirror client. Tests set it.
+	FileClient *http.Client
 }
 
 func NewGutenberg() *Gutenberg { return &Gutenberg{} }

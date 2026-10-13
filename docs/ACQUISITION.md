@@ -16,6 +16,10 @@ nemalo acquire archive:art_of_war_chinese_1506_librivox \
   --file artofwar_01_sun.mp3 --output /path/to/new-intake-packet \
   --max-file-bytes 16777216 --json
 nemalo library import /path/to/library /path/to/new-intake-packet --apply
+
+nemalo evaluate gutenberg:1342 --files
+nemalo acquire gutenberg:1342 --file 1342.epub.noimages \
+  --output /path/to/new-gutenberg-packet
 ```
 
 Choose the exact source filename after reviewing availability, language, format,
@@ -30,6 +34,24 @@ eligible. Supported suffixes are EPUB, PDF, and MP3. The provider constructs the
 canonical URL from validated item/file identities. See the official
 [metadata interface](https://archive.org/developers/md-read.html) and
 [source evaluation contract](decisions/0005-provider-search-and-evaluation.md).
+
+## Gutenberg EPUB
+
+`evaluate gutenberg:NUMBER` without `--files` reads the local catalog and lists
+no files. `--files` fetches one bibliographic record,
+`https://gutenberg.pglaf.org/cache/epub/NUMBER/pgNUMBER.rdf`, and lists the
+files it names. Search does not fetch that record.
+
+`acquire gutenberg:NUMBER --file NAME` downloads one of `N.epub.noimages`,
+`N.epub.images`, or `N.epub3.images`. The packet stores the bytes as
+`content.epub`. The record has no checksum, so Archive's checksum rule is
+unchanged. The declared extent is stored and is not required to equal the
+response length. The transfer requires a `Content-Length` inside the byte
+budget and checks the body against that length. A missing or over-budget
+length fails before `transfer.json`. When the sizes differ, the receipt carries
+a size note. Other formats are listed and refused. The client allows only
+`gutenberg.pglaf.org` and does not fall back to www.gutenberg.org. See
+[decision 0029](decisions/0029-gutenberg-selected-epub.md).
 
 ## Intake packet and evidence
 
@@ -134,6 +156,8 @@ checks of the audio. See
   dialing. Initial requests and up to four redirects have approved delivery hosts:
   `archive.org`, `www.archive.org`, and numbered `ia`/`dn` data nodes in the
   `us`, `ca`, and `eu` regions, which Archive assigns per item.
+  A Gutenberg record or EPUB uses the same file client limited to
+  `gutenberg.pglaf.org`. A redirect to any other host is refused.
   Environment proxies, cookie storage, and automatic decompression are disabled.
 - Existing output is refused before provider access. Failures/cancellation retain
   intent, partial bytes, and any pending record. They never silently resume, restart,
@@ -144,7 +168,9 @@ Keep a failed packet for review. `acquire ... --file NAME --output PACKET
 was synced before the body and partial bytes remain. A refusal before any
 bytes, such as an HTTP 500 with only `intent.json` in the folder, has no
 transfer record: the summary says to start a new output, and `--resume` is not
-offered. Every transfer that does start syncs
+offered. A transfer that started without a strong validator is also not offered
+for `--resume`; the summary says to start a new output. Gutenberg resume uses
+the recorded response length when it differs from the declared extent. Every transfer that does start syncs
 `transfer.json` with the response's validator before its body, and a resume
 requests only the missing bytes with `If-Range` on that strong `ETag`. A reply
 other than exactly the missing range of the same file, a weak or missing
@@ -161,7 +187,10 @@ separate validation interface, not a second production acquisition policy.
 
 ## TUI workflow
 
-Select an Archive search result and press `e`, then Enter to evaluate. In Evaluate,
+Select an Archive or Gutenberg search result and press `e`, then Enter to
+evaluate. A Gutenberg catalog row lists no files. With an intake folder, `d`
+on that row requests one bibliographic record and then lists EPUB offers.
+That record fetch is only for a Gutenberg catalog row. In Evaluate,
 Ctrl+N edits the new Intake directory. F6 focuses the source-file list; `d` reviews
 the exact file, output, transfer ceiling, scan, and limitations. Enter confirms the
 frozen request; Escape returns without downloading. Successful intake stages the

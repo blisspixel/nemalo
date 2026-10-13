@@ -43,6 +43,14 @@ func (m *model) populate(data any) {
 			}
 			m.entries = append(m.entries, entry{title: fmt.Sprintf("%q", f.Name), summary: fmt.Sprintf("%s | %q", size, f.Access), detail: fmt.Sprintf("File: %q\nSource format: %q\nSize: %s\nAccess: %q\nRights: %q\nDRM: %q\n\nFindings: %q\n\nItem rights: %q\nLicense declarations: %q\n\nUse d to review an explicit intake download. Availability is resolved again before transfer; restricted, uncertain, unsupported, or unbounded files are refused.\n", f.Name, f.Format, size, f.Access, f.RightsStatus, f.DRMStatus, f.Findings, p.Rights, p.LicenseURLs), sourceID: f.Name})
 		}
+		if len(p.Files) == 0 && p.Source == "gutenberg" && p.Access == "local_catalog" {
+			m.entries = append(m.entries, entry{
+				title:    `"No files in the catalog row"`,
+				summary:  "d requests the bibliographic record",
+				detail:   "No files are listed in this catalog row.\n\nSet an intake folder (Ctrl+N), then press d. That requests one bibliographic record from the pinned mirror and lists EPUB offers. It does not download an ebook.\n\nSelect one EPUB and press d again to review the download.\n",
+				sourceID: p.ID,
+			})
+		}
 	case discovery.Page:
 		for _, r := range p.Results {
 			note := "Discovery metadata only.\nDownload availability not resolved.\n"
@@ -231,8 +239,7 @@ func (m *model) browserKey(key string) (bool, tea.Cmd) {
 	switch key {
 	case "d":
 		if m.mode == "evaluate" && len(m.entries) > 0 {
-			m.requestDownload()
-			return true, nil
+			return true, m.requestDownload()
 		}
 	case "a":
 		if m.mode == "evaluate" && len(m.entries) > 0 && m.recordingFor(m.entries[m.selected].sourceID) != nil {

@@ -320,13 +320,17 @@ interrupted transfer resumes byte-wise against a strong validator
 Gutenberg search and evaluation read a local copy of the official CSV, and
 `catalog fetch gutenberg` downloads that file
 ([decision 0028](docs/decisions/0028-gutenberg-local-catalog.md)).
-Ebook download, website search, and broader provider contracts remain planned.
-Transfers and checked publication use milestones 2 and 3. Source cleanup
-is independent and requires 4.
+`evaluate gutenberg:NUMBER --files` and
+`acquire gutenberg:NUMBER --file NAME` fetch one bibliographic record from
+gutenberg.pglaf.org and can download one named EPUB into the existing intake
+packet ([decision 0029](docs/decisions/0029-gutenberg-selected-epub.md)).
+Website search, formats other than those three EPUBs, and broader provider
+contracts remain planned. Transfers and checked publication use milestones 2
+and 3. Source cleanup is independent and requires 4.
 
-Complete Gutenberg and Archive acquisition over the existing Go provider core.
-Use Gutenberg's permitted machine catalogs and acquisition routes rather than
-porting automated website search unchanged. See [source research](docs/SOURCES.md).
+Open Library still needs a selected edition before an Archive download. Keep
+using Gutenberg's permitted catalog and the pinned mirror. Do not automate
+website search. See [source research](docs/SOURCES.md).
 
 Acceptance:
 

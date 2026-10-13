@@ -12,27 +12,41 @@ import (
 	"github.com/blisspixel/nemalo/internal/discovery"
 )
 
-func (m *model) requestDownload() {
+func (m *model) requestDownload() tea.Cmd {
 	if m.input.Value() != m.submittedInput {
 		m.status = "Item changed. Evaluate again before selecting a download."
 		m.resize()
-		return
+		return nil
 	}
 	if strings.TrimSpace(m.secondary.Value()) == "" {
 		m.status = "Enter a new intake folder first (Ctrl+N)."
 		m.resize()
-		return
+		return nil
+	}
+	if m.lastEvaluation != nil && m.lastEvaluation.Source == "gutenberg" && m.lastEvaluation.ID == m.submittedInput && len(m.lastEvaluation.Files) == 0 {
+		ctx, cancel := context.WithCancel(m.ctx)
+		m.cancel = cancel
+		m.id++
+		id := m.id
+		m.busy = true
+		m.status = "Requesting one Gutenberg bibliographic record. Escape cancels. This does not download an ebook."
+		m.resize()
+		item := m.submittedInput
+		return func() tea.Msg {
+			data, err := m.service.EvaluateGutenbergFiles(ctx, item)
+			return result{id, data, err}
+		}
 	}
 	request := acquisition.Request{SourceID: m.submittedInput, File: m.entries[m.selected].sourceID, Output: m.secondary.Value(), MaxBytes: 256 << 20}
 	if err := request.Validate(); err != nil {
 		m.status = fmt.Sprintf("Acquisition error: %q", err.Error())
 		m.resize()
-		return
+		return nil
 	}
 	abs, err := filepath.Abs(request.Output)
 	if err != nil {
 		m.status = fmt.Sprintf("Acquisition error: %q", err.Error())
-		return
+		return nil
 	}
 	request.Output = abs
 	// An existing packet for this file with intent and no receipt is an
@@ -44,14 +58,23 @@ func (m *model) requestDownload() {
 	m.evidence = true
 	m.status = "Review acquisition. Enter confirms; Escape returns without downloading."
 	if request.Resume {
-		m.setReport(fmt.Sprintf("Resume an interrupted transfer\n\nSource: %q\nSelected file: %q\nIntake packet: %q\n\nRequests fresh Archive metadata, then only the missing bytes, on condition that the source still serves the same file (If-Range with the strong validator recorded before the first transfer). A different reply, a weak validator, or changed declarations leave the packet untouched.\n\nThe whole file is then verified against the declared size and checksums, inspected, scanned, and receipted as one transfer.\n\nEnter resumes. Escape returns without downloading.\n", request.SourceID, request.File, request.Output))
+		if discovery.ValidGutenbergID(request.SourceID) {
+			m.setReport(fmt.Sprintf("Resume an interrupted Gutenberg transfer\n\nSource: %q\nSelected file: %q\nIntake packet: %q\n\nRequests the bibliographic record again, then only the missing bytes, on condition that the source still serves the same file (If-Range with the strong validator recorded before the first transfer). A different reply, a missing validator, or changed declarations leave the packet untouched.\n\nThe whole file is then verified against the recorded response length, inspected, scanned, and receipted as one transfer. The record has no checksum.\n\nEnter resumes. Escape returns without downloading.\n", request.SourceID, request.File, request.Output))
+		} else {
+			m.setReport(fmt.Sprintf("Resume an interrupted transfer\n\nSource: %q\nSelected file: %q\nIntake packet: %q\n\nRequests fresh Archive metadata, then only the missing bytes, on condition that the source still serves the same file (If-Range with the strong validator recorded before the first transfer). A different reply, a weak validator, or changed declarations leave the packet untouched.\n\nThe whole file is then verified against the declared size and checksums, inspected, scanned, and receipted as one transfer.\n\nEnter resumes. Escape returns without downloading.\n", request.SourceID, request.File, request.Output))
+		}
 		m.viewport.GotoTop()
 		m.resize()
-		return
+		return nil
 	}
-	m.setReport(fmt.Sprintf("Acquire one source file\n\nSource: %q\nSelected file: %q\nNew intake directory: %q\nMaximum transfer: %d bytes\n\nRequests fresh Archive metadata and one permitted file, with checked HTTPS delivery destinations. Requires declared size and checksum. The selected source statements remain unverified rights evidence.\n\nCreates intent.json, transfer.json, content with its format suffix, and receipt.json on success. Existing output is refused. An interrupted packet is kept; choosing it again with d reviews resuming it.\n\nRuns local structure checks without rendering or execution, then scans the downloaded bytes once with the installed scanner, if one is installed. A detection moves the file to the Nemalo quarantine instead of intake and offers the item's other files. This is untrusted intake, not checked publication.\n\nEnter acquires this exact selection. Escape returns without writing.\n", request.SourceID, request.File, request.Output, request.MaxBytes))
+	if discovery.ValidGutenbergID(request.SourceID) {
+		m.setReport(fmt.Sprintf("Acquire one Gutenberg EPUB\n\nSource: %q\nSelected file: %q\nNew intake directory: %q\nMaximum transfer: %d bytes\n\nRequests the bibliographic record again from gutenberg.pglaf.org, then one EPUB that record names. The record has no checksum. The declared extent may differ from the response length; the transfer checks the response length and stays inside the byte budget. A response without a strong validator cannot be resumed.\n\nCreates intent.json, transfer.json, content.epub, and receipt.json on success. Existing output is refused. An interrupted packet is kept.\n\nRuns local structure checks without rendering or execution, then scans the downloaded bytes once with the installed scanner, if one is installed. A detection moves the file to the Nemalo quarantine instead of intake. This is untrusted intake, not checked publication. The rights sentence is the record's statement.\n\nEnter acquires this exact selection. Escape returns without writing.\n", request.SourceID, request.File, request.Output, request.MaxBytes))
+	} else {
+		m.setReport(fmt.Sprintf("Acquire one source file\n\nSource: %q\nSelected file: %q\nNew intake directory: %q\nMaximum transfer: %d bytes\n\nRequests fresh Archive metadata and one permitted file, with checked HTTPS delivery destinations. Requires declared size and checksum. The selected source statements remain unverified rights evidence.\n\nCreates intent.json, transfer.json, content with its format suffix, and receipt.json on success. Existing output is refused. An interrupted packet is kept; choosing it again with d reviews resuming it.\n\nRuns local structure checks without rendering or execution, then scans the downloaded bytes once with the installed scanner, if one is installed. A detection moves the file to the Nemalo quarantine instead of intake and offers the item's other files. This is untrusted intake, not checked publication.\n\nEnter acquires this exact selection. Escape returns without writing.\n", request.SourceID, request.File, request.Output, request.MaxBytes))
+	}
 	m.viewport.GotoTop()
 	m.resize()
+	return nil
 }
 
 func (m *model) confirmDownload(msg tea.KeyPressMsg) tea.Cmd {

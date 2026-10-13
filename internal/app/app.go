@@ -30,9 +30,9 @@ type Searcher interface {
 // Acquire scans verified intake bytes with the installed scanner unless the
 // request opts out. Detected files go to the service quarantine directory.
 func (s Service) Acquire(ctx context.Context, request acquisition.Request) (acquisition.Result, error) {
-	provider, ok := s.Providers["archive"].(acquisition.Provider)
-	if !ok {
-		return acquisition.Result{}, errors.New("archive acquisition is unavailable")
+	provider, err := s.acquireProvider(request.SourceID)
+	if err != nil {
+		return acquisition.Result{}, err
 	}
 	if !request.NoScan && request.Scanner == nil {
 		request.Scanner = s.scanner()
@@ -44,6 +44,23 @@ func (s Service) Acquire(ctx context.Context, request acquisition.Request) (acqu
 		request.OnDetection = s.OnDetection
 	}
 	return acquisition.Acquire(ctx, provider, request)
+}
+
+// acquireProvider selects Archive for archive:ITEM and the bibliographic
+// record for gutenberg:NUMBER. Recordings stay on Archive.
+func (s Service) acquireProvider(id string) (acquisition.Provider, error) {
+	if discovery.ValidGutenbergID(id) {
+		g, ok := s.Providers["gutenberg"].(*discovery.Gutenberg)
+		if !ok || g == nil {
+			return nil, errors.New("gutenberg acquisition is unavailable")
+		}
+		return discovery.Files{Gutenberg: g}, nil
+	}
+	provider, ok := s.Providers["archive"].(acquisition.Provider)
+	if !ok {
+		return nil, errors.New("archive acquisition is unavailable")
+	}
+	return provider, nil
 }
 
 // AcquireRecording acquires every track of one declared recording with the
@@ -207,6 +224,16 @@ func (s Service) SearchGutenberg(ctx context.Context, catalog, query, order stri
 // FetchGutenbergCatalog downloads the official catalog to a new file.
 func (s Service) FetchGutenbergCatalog(ctx context.Context, output string) (discovery.CatalogFile, error) {
 	return discovery.FetchCatalog(ctx, output)
+}
+
+// EvaluateGutenbergFiles fetches one bibliographic record and lists file offers.
+// It does not download an ebook. Catalog evaluation does not call it.
+func (s Service) EvaluateGutenbergFiles(ctx context.Context, id string) (discovery.Evaluation, error) {
+	g, ok := s.Providers["gutenberg"].(*discovery.Gutenberg)
+	if !ok || g == nil {
+		return discovery.Evaluation{}, errors.New("gutenberg evaluation is unavailable")
+	}
+	return g.EvaluateFiles(ctx, id)
 }
 
 func (s Service) Search(ctx context.Context, query string, limit, offset int) (discovery.Page, error) {

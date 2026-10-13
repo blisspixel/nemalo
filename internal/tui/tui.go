@@ -311,9 +311,12 @@ func (m *model) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 			// and partial bytes exist; an early failure needs a new folder.
 			m.populate(*m.lastEvaluation)
 			m.evidence = true
-			if value.TransferRecorded && value.Transfer.Bytes > 0 {
+			switch {
+			case value.TransferRecorded && value.Transfer.Bytes > 0 && value.StrongValidator:
 				m.status = fmt.Sprintf("Transfer stopped: %q. The packet was kept; select the same file and press d to review resuming it.", msg.err.Error())
-			} else {
+			case value.TransferRecorded && value.Transfer.Bytes > 0:
+				m.status = fmt.Sprintf("Transfer stopped: %q. The packet was kept. The source sent no strong validator, so it cannot be resumed. Start a new output.", msg.err.Error())
+			default:
 				m.status = fmt.Sprintf("Transfer stopped: %q. The packet was kept and has no transfer record. Start a new output.", msg.err.Error())
 			}
 		}

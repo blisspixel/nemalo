@@ -23,6 +23,9 @@ func Acquisition(r acquisition.Result) string {
 		e := r.Intent.Selection
 		fmt.Fprintf(&b, "Source: %q\nSelected file: %q\nTitles: %q\nDeclared rights: %q\nDeclared licenses: %q\nMetadata SHA-256: %q\n", r.Intent.Request.SourceID, r.Intent.Request.File, e.Title, e.Rights, e.LicenseURLs, e.MetadataSHA256)
 	}
+	if r.SizeNote != "" {
+		fmt.Fprintf(&b, "Size note: %s\n", r.SizeNote)
+	}
 	if r.Checks != nil {
 		fmt.Fprintf(&b, "Signature: %q | EPUB package: %q\nWarnings: %q\n", r.Checks.Signature, r.Checks.EPUBPackage, r.Checks.Warnings)
 	}
@@ -47,8 +50,10 @@ func Acquisition(r acquisition.Result) string {
 		b.WriteString("Incomplete folders are retained, never deleted. --resume continues a packet that has a transfer record and partial bytes.\n")
 	case r.ResumedFrom > 0:
 		b.WriteString("Incomplete folders are retained, never deleted.\n")
-	case r.TransferRecorded && r.Transfer.Bytes > 0 && !r.TransferComplete:
+	case r.TransferRecorded && r.Transfer.Bytes > 0 && !r.TransferComplete && r.StrongValidator:
 		b.WriteString("Incomplete folders are retained, never deleted. This packet has a transfer record; --resume continues the interrupted transfer.\n")
+	case r.TransferRecorded && r.Transfer.Bytes > 0 && !r.TransferComplete:
+		b.WriteString("Incomplete folders are retained, never deleted. This packet has a transfer record, but the source sent no strong validator, so it cannot be resumed; start a new output.\n")
 	case r.Output != "" && !r.TransferRecorded:
 		b.WriteString("Incomplete folders are retained, never deleted. This packet has no transfer record, so its bytes cannot be resumed; start a new output.\n")
 	default:

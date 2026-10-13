@@ -3,6 +3,8 @@ package tui
 import (
 	"context"
 	"errors"
+	"io"
+	"net/http"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -76,10 +78,74 @@ func TestGutenbergSearchReadsTheLocalCatalog(t *testing.T) {
 	}
 	_, cmd = m.Update(key(tea.KeyEnter))
 	m.Update(cmd())
-	if len(m.entries) != 0 || !strings.Contains(m.viewport.GetContent(), "local_catalog") || !strings.Contains(m.viewport.GetContent(), "Files listed: 0") {
+	if len(m.entries) != 1 || m.entries[0].sourceID != "gutenberg:11" || !strings.Contains(m.viewport.GetContent(), "local_catalog") || !strings.Contains(m.viewport.GetContent(), "Files listed: 0") || !strings.Contains(m.entries[0].detail, "bibliographic record") {
 		t.Fatal(len(m.entries), m.viewport.GetContent())
 	}
 }
+
+func TestGutenbergDownloadAsksForTheRecordBeforeAnEPUB(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "pg_catalog.csv")
+	body := "Text#,Type,Issued,Title,Language,Authors,Subjects,LoCC,Bookshelves\n1342,Text,1998-06-01,Pride and Prejudice,en,Austen,Fiction,PR,Novels\n"
+	if err := os.WriteFile(path, []byte(body), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	rdf := `<?xml version="1.0" encoding="utf-8"?>
+<rdf:RDF xml:base="http://www.gutenberg.org/" xmlns:dcterms="http://purl.org/dc/terms/" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#" xmlns:pgterms="http://www.gutenberg.org/2009/pgterms/">
+  <pgterms:ebook rdf:about="ebooks/1342">
+    <dcterms:rights>Public domain in the USA.</dcterms:rights>
+    <dcterms:title>Pride and Prejudice</dcterms:title>
+    <dcterms:hasFormat><pgterms:file rdf:about="https://www.gutenberg.org/ebooks/1342.epub.noimages"><dcterms:extent>561111</dcterms:extent><dcterms:format><rdf:Description><rdf:value>application/epub+zip</rdf:value></rdf:Description></dcterms:format></pgterms:file></dcterms:hasFormat>
+  </pgterms:ebook>
+</rdf:RDF>`
+	calls := 0
+	g := discovery.NewGutenberg()
+	g.Catalog = path
+	g.FileClient = &http.Client{Transport: roundTrip(func(r *http.Request) (*http.Response, error) {
+		calls++
+		if !strings.HasSuffix(r.URL.Path, "/pg1342.rdf") {
+			t.Fatalf("ebook requested: %s", r.URL)
+		}
+		return &http.Response{StatusCode: 200, ContentLength: int64(len(rdf)), Header: http.Header{}, Body: io.NopCloser(strings.NewReader(rdf)), Request: r}, nil
+	})}
+	m := newModel(context.Background(), app.Service{Providers: map[string]app.Searcher{"openlibrary": catalog{}, "archive": archiveHit{}, "gutenberg": g}})
+	m.Update(tea.WindowSizeMsg{Width: 100, Height: 30})
+	m.Update(key(tea.KeyF2))
+	m.Update(key(tea.KeyF2))
+	m.secondary.SetValue(path)
+	m.input.SetValue("pride")
+	_, cmd := m.Update(key(tea.KeyEnter))
+	m.Update(cmd())
+	m.Update(key(tea.KeyF6))
+	m.Update(tea.KeyPressMsg{Text: "e", Code: 'e'})
+	_, cmd = m.Update(key(tea.KeyEnter))
+	m.Update(cmd())
+	if m.mode != "evaluate" || len(m.entries) != 1 || calls != 0 {
+		t.Fatal(m.mode, len(m.entries), calls, m.viewport.GetContent())
+	}
+	m.Update(key(tea.KeyF6))
+	_, cmd = m.Update(tea.KeyPressMsg{Text: "d", Code: 'd'})
+	if cmd != nil || calls != 0 || !strings.Contains(m.status, "Ctrl+N") {
+		t.Fatal(cmd, calls, m.status)
+	}
+	m.secondary.SetValue(filepath.Join(dir, "packet"))
+	_, cmd = m.Update(tea.KeyPressMsg{Text: "d", Code: 'd'})
+	if cmd == nil || calls != 0 || !strings.Contains(m.status, "bibliographic record") {
+		t.Fatal(calls, m.status)
+	}
+	m.Update(cmd())
+	if calls != 1 || len(m.entries) != 1 || m.entries[0].sourceID != "1342.epub.noimages" || !strings.Contains(m.viewport.GetContent(), "public_file_no_source_checksum") {
+		t.Fatal(calls, m.entries, m.viewport.GetContent())
+	}
+	_, cmd = m.Update(tea.KeyPressMsg{Text: "d", Code: 'd'})
+	if cmd != nil || calls != 1 || m.downloadReview == nil || !strings.Contains(m.report, "gutenberg.pglaf.org") || !strings.Contains(m.report, "no checksum") {
+		t.Fatal(calls, m.report)
+	}
+}
+
+type roundTrip func(*http.Request) (*http.Response, error)
+
+func (f roundTrip) RoundTrip(r *http.Request) (*http.Response, error) { return f(r) }
 
 func TestTerminalWorkflow(t *testing.T) {
 	m := newModel(context.Background(), app.Service{Providers: map[string]app.Searcher{"openlibrary": catalog{}}})

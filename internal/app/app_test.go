@@ -208,6 +208,35 @@ func (detectingProvider) Download(context.Context, discovery.OfferedFile) (*http
 	return nil, errors.New("unreachable")
 }
 
+func TestAcquireGutenbergUsesThePinnedMirror(t *testing.T) {
+	var calls []string
+	g := discovery.NewGutenberg()
+	g.FileClient = &http.Client{Transport: transportFunc(func(r *http.Request) (*http.Response, error) {
+		calls = append(calls, r.URL.String())
+		return nil, errors.New("stop")
+	})}
+	s := Service{Providers: map[string]Searcher{"gutenberg": g}}
+	output := filepath.Join(t.TempDir(), "packet")
+	_, err := s.Acquire(context.Background(), acquisition.Request{SourceID: "gutenberg:1342", File: "1342.epub.noimages", Output: output, MaxBytes: 1000, NoScan: true})
+	if err == nil || !strings.Contains(err.Error(), "gutenberg.pglaf.org") {
+		t.Fatal(err)
+	}
+	if len(calls) != 1 || !strings.HasSuffix(calls[0], "/cache/epub/1342/pg1342.rdf") || strings.Contains(calls[0], "www.gutenberg.org") {
+		t.Fatal(calls)
+	}
+	if _, statErr := os.Lstat(output); !os.IsNotExist(statErr) {
+		t.Fatal("mirror miss created a packet", statErr)
+	}
+	_, err = (Service{}).Acquire(context.Background(), acquisition.Request{SourceID: "gutenberg:1342", File: "1342.epub.noimages", Output: output, MaxBytes: 1000, NoScan: true})
+	if err == nil || !strings.Contains(err.Error(), "unavailable") {
+		t.Fatal(err)
+	}
+}
+
+type transportFunc func(*http.Request) (*http.Response, error)
+
+func (f transportFunc) RoundTrip(r *http.Request) (*http.Response, error) { return f(r) }
+
 func TestAcquireAppliesServiceDetectionPolicy(t *testing.T) {
 	s := Service{Providers: map[string]Searcher{"archive": detectingProvider{}}, Scanner: kindScanner{kind: "clamav"}, OnDetection: "delete"}
 	// With "delete" no quarantine directory is needed, so validation passes and

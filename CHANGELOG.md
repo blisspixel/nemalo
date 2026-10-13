@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+## 0.1.0-alpha.10
+
+Tenth native prerelease. This remains an early library, not 1.0.
+
+- Acquire one selected Project Gutenberg EPUB. `evaluate gutenberg:NUMBER --files` fetches one bibliographic record from gutenberg.pglaf.org and lists the files that record names. `acquire gutenberg:NUMBER --file NAME --output NEW_DIRECTORY` downloads one of `N.epub.noimages`, `N.epub.images`, or `N.epub3.images` into untrusted intake. The record has no checksum. A declared extent that differs from the response length is recorded, and the transfer checks the response length. Other formats are listed and not downloaded. Search still reads only the local catalog. There is no Gutenberg MCP tool
+  ([decision 0029](docs/decisions/0029-gutenberg-selected-epub.md)).
+- An interrupted download is offered for `--resume` only when that response had a strong validator. A packet that has partial bytes and no strong validator says to start a new output.
+
 ## 0.1.0-alpha.9
 
 Ninth native prerelease. This remains an early library, not 1.0. Closes issues 11, 12, 13, 14, 15, 16, 17, and 18.

@@ -19,8 +19,12 @@ func TestResumeWordingMatchesTheOutcome(t *testing.T) {
 	if strings.Contains(early, "--resume") || !strings.Contains(early, "start a new output") || !strings.Contains(early, "no transfer record") {
 		t.Fatal(early)
 	}
-	partial := Acquisition(acquisition.Result{Output: "packet", Status: "retained_incomplete", TransferRecorded: true, Transfer: transfer.Result{Bytes: 40}})
+	partial := Acquisition(acquisition.Result{Output: "packet", Status: "retained_incomplete", TransferRecorded: true, StrongValidator: true, Transfer: transfer.Result{Bytes: 40}})
 	if !strings.Contains(partial, "--resume") || strings.Contains(partial, "start a new output") {
 		t.Fatal(partial)
+	}
+	weak := Acquisition(acquisition.Result{Output: "packet", Status: "retained_incomplete", TransferRecorded: true, Transfer: transfer.Result{Bytes: 40}})
+	if strings.Contains(weak, "--resume") || !strings.Contains(weak, "no strong validator") || !strings.Contains(weak, "start a new output") {
+		t.Fatal(weak)
 	}
 }

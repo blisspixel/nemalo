@@ -403,10 +403,14 @@ The implemented metadata boundary supports explicit Open Library/Internet Archiv
 search and Archive item/file evaluation through the shared provider registry.
 [Decision 0005](decisions/0005-provider-search-and-evaluation.md) records current
 contracts, checked direct connections, limits, and unverified access/rights states.
-Project Gutenberg search and evaluation read a local `pg_catalog.csv`. The only
-Gutenberg network step is `catalog fetch gutenberg`, which downloads that one
-file. [Decision 0028](decisions/0028-gutenberg-local-catalog.md) records the
-catalog rules. Ebook download and the wider provider behavior below remain planned.
+Project Gutenberg search and catalog evaluation read a local `pg_catalog.csv`.
+`catalog fetch gutenberg` downloads that one CSV.
+`evaluate gutenberg:NUMBER --files` and `acquire gutenberg:NUMBER --file NAME`
+fetch one bibliographic record from gutenberg.pglaf.org and can download one
+pinned EPUB from that host.
+[Decision 0028](decisions/0028-gutenberg-local-catalog.md) records the catalog.
+[Decision 0029](decisions/0029-gutenberg-selected-epub.md) records the EPUB.
+Website search and the wider provider behavior below remain planned.
 
 Provider capabilities distinguish search, lookup, asset resolution, download,
 web reading, streaming, and borrowing. Implement adapters in Go only as needed;

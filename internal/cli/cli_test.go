@@ -7,6 +7,7 @@ import (
 	"errors"
 	"flag"
 	"io"
+	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
@@ -329,6 +330,58 @@ func TestGutenbergCatalogCommands(t *testing.T) {
 		t.Fatal(code, stderr)
 	}
 }
+
+func TestEvaluateFilesListsGutenbergOffers(t *testing.T) {
+	rdf := `<?xml version="1.0" encoding="utf-8"?>
+<rdf:RDF xml:base="http://www.gutenberg.org/" xmlns:dcterms="http://purl.org/dc/terms/" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#" xmlns:pgterms="http://www.gutenberg.org/2009/pgterms/">
+  <pgterms:ebook rdf:about="ebooks/1342">
+    <dcterms:rights>Public domain in the USA.</dcterms:rights>
+    <dcterms:title>Pride and Prejudice</dcterms:title>
+    <pgterms:marc520>automatically generated summary should not be stored</pgterms:marc520>
+    <dcterms:hasFormat><pgterms:file rdf:about="https://www.gutenberg.org/ebooks/1342.epub.noimages"><dcterms:extent>561111</dcterms:extent><dcterms:format><rdf:Description><rdf:value>application/epub+zip</rdf:value></rdf:Description></dcterms:format></pgterms:file></dcterms:hasFormat>
+    <dcterms:hasFormat><pgterms:file rdf:about="https://www.gutenberg.org/ebooks/1342.txt.utf-8"><dcterms:extent>50</dcterms:extent><dcterms:format><rdf:Description><rdf:value>text/plain</rdf:value></rdf:Description></dcterms:format></pgterms:file></dcterms:hasFormat>
+  </pgterms:ebook>
+</rdf:RDF>`
+	var calls []string
+	g := discovery.NewGutenberg()
+	g.FileClient = &http.Client{Transport: roundTrip(func(r *http.Request) (*http.Response, error) {
+		calls = append(calls, r.URL.String())
+		return &http.Response{StatusCode: 200, ContentLength: int64(len(rdf)), Header: http.Header{}, Body: io.NopCloser(strings.NewReader(rdf)), Request: r}, nil
+	})}
+	dir := t.TempDir()
+	run := func(args ...string) (int, string, string) {
+		t.Helper()
+		var out, errOut bytes.Buffer
+		code := Execute(context.Background(), args, &out, &errOut, app.Service{Providers: map[string]app.Searcher{"gutenberg": g, "archive": searcher{}}}, func(string) string { return "" }, func() (config.Paths, error) {
+			return config.Paths{Config: filepath.Join(dir, "missing.json")}, nil
+		}, func(context.Context, app.Service) error { return nil })
+		return code, out.String(), errOut.String()
+	}
+	code, out, stderr := run("evaluate", "gutenberg:1342", "--files")
+	if code != 0 || stderr != "" || !strings.Contains(out, "mirror_rdf") || !strings.Contains(out, "1342.epub.noimages") || !strings.Contains(out, "https://gutenberg.pglaf.org/cache/epub/1342/pg1342.epub") || strings.Contains(out, "automatically generated") {
+		t.Fatal(code, out, stderr)
+	}
+	if !strings.Contains(out, "1342.txt.utf-8") || !strings.Contains(out, "not acquired") {
+		t.Fatal(out)
+	}
+	if len(calls) != 1 || !strings.HasSuffix(calls[0], "/pg1342.rdf") || strings.Contains(calls[0], "www.gutenberg.org") {
+		t.Fatal(calls)
+	}
+	code, out, stderr = run("evaluate", "gutenberg:1342", "--files", "--json")
+	if code != 0 || stderr != "" || !strings.Contains(out, `"access_status":"public_file_no_source_checksum"`) || !strings.Contains(out, "pg1342.epub") {
+		t.Fatal(code, out, stderr)
+	}
+	if code, _, stderr = run("evaluate", "archive:demo", "--files"); code != 2 || !strings.Contains(stderr, "gutenberg:NUMBER") {
+		t.Fatal(code, stderr)
+	}
+	if code, _, stderr = run("acquire", "gutenberg:1342", "--file", "1342.txt.utf-8", "--output", filepath.Join(dir, "packet"), "--no-scan"); code != 2 || len(calls) != 2 {
+		t.Fatal(code, stderr, calls)
+	}
+}
+
+type roundTrip func(*http.Request) (*http.Response, error)
+
+func (f roundTrip) RoundTrip(r *http.Request) (*http.Response, error) { return f(r) }
 
 func TestSearchOrderSelection(t *testing.T) {
 	code, out, stderr := execute(t, []string{"search", "Verne", "--source", "archive", "--sort", "identifier", "--json"}, nil)

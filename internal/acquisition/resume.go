@@ -123,8 +123,15 @@ func resumable(root *os.Root, file discovery.OfferedFile) bool {
 	if readRecord(root, "transfer.json", &rec) != nil || !rec.StrongETag || !discovery.StrongETag(rec.ETag) || rec.File != file.Name {
 		return false
 	}
-	info, err := root.Lstat("content." + format(file.Name))
-	return err == nil && info.Mode().IsRegular() && file.Bytes != nil && info.Size() > 0 && info.Size() < *file.Bytes
+	info, err := root.Lstat("content." + contentFormat(file))
+	limit := int64(0)
+	if file.Bytes != nil {
+		limit = *file.Bytes
+	}
+	if file.Access == discovery.GutenbergEPUBAccess && rec.ContentLength > 0 {
+		limit = rec.ContentLength
+	}
+	return err == nil && info.Mode().IsRegular() && limit > 0 && info.Size() > 0 && info.Size() < limit
 }
 
 // resumeTransfer continues the content of the packet in root and verifies the
@@ -152,14 +159,28 @@ func resumeTransfer(ctx context.Context, ranged RangeProvider, root *os.Root, ab
 	if planned.Bytes == nil || file.Bytes == nil || *planned.Bytes != *file.Bytes || planned.MD5 != file.MD5 || planned.SHA1 != file.SHA1 {
 		return nil, result, refused("source declarations for this file changed since the transfer began; start a new output")
 	}
-	name := "content." + format(file.Name)
+	size := *file.Bytes
+	expect := transfer.Expectation{Bytes: *file.Bytes, MD5: file.MD5, SHA1: file.SHA1}
+	budget := max(request.MaxBytes, intent.Request.MaxBytes)
+	if file.Access == discovery.GutenbergEPUBAccess {
+		// Resume the response length recorded before the body, not the extent.
+		if rec.ContentLength < 1 || rec.ContentLength > budget {
+			return nil, result, refused("the transfer record has no response length inside the budget, so it cannot be resumed; start a new output")
+		}
+		size = rec.ContentLength
+		expect = transfer.Expectation{Bytes: rec.ContentLength}
+		if rec.ContentLength != *file.Bytes {
+			result.SizeNote = fmt.Sprintf("The bibliographic record declared %d bytes. The response length was %d. The transfer checked the response length. The record has no checksum.", *file.Bytes, rec.ContentLength)
+		}
+	}
+	name := "content." + contentFormat(file)
 	info, err := root.Lstat(name)
 	if err != nil || !info.Mode().IsRegular() {
 		return nil, result, refused("the packet has no partial content to resume")
 	}
 	offset := info.Size()
-	if offset < 1 || offset >= *file.Bytes {
-		return nil, result, refused(fmt.Sprintf("the partial content holds %d of %d bytes; nothing can be resumed", offset, *file.Bytes))
+	if offset < 1 || offset >= size {
+		return nil, result, refused(fmt.Sprintf("the partial content holds %d of %d bytes; nothing can be resumed", offset, size))
 	}
 	f, err := safeio.OpenRegular(root, name, info, os.O_RDWR)
 	if err != nil {
@@ -176,7 +197,7 @@ func resumeTransfer(ctx context.Context, ranged RangeProvider, root *os.Root, ab
 		return nil, result, err
 	}
 	defer resp.Body.Close()
-	if err := validRange(resp, offset, *file.Bytes, rec.ETag); err != nil {
+	if err := validRange(resp, offset, size, rec.ETag); err != nil {
 		_ = f.Close()
 		return nil, result, err
 	}
@@ -184,7 +205,7 @@ func resumeTransfer(ctx context.Context, ranged RangeProvider, root *os.Root, ab
 		_ = f.Close()
 		return nil, result, err
 	}
-	result.Transfer, err = transfer.Continue(ctx, f, io.NewSectionReader(f, 0, offset), offset, resp.Body, p.request.MaxBytes, transfer.Expectation{Bytes: *file.Bytes, MD5: file.MD5, SHA1: file.SHA1})
+	result.Transfer, err = transfer.Continue(ctx, f, io.NewSectionReader(f, 0, offset), offset, resp.Body, p.request.MaxBytes, expect)
 	state, result, err := completeTransfer(ctx, p, result, resp, file, err)
 	if err != nil {
 		_ = f.Close()
