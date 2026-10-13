@@ -2,6 +2,7 @@ package tui
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"strconv"
@@ -69,6 +70,8 @@ type pager struct {
 	chapterCursor string
 	// representationID is the id of the text this session is showing.
 	representationID string
+	// help replaces the page with the key list until ? is pressed again.
+	help bool
 }
 
 type pagerChunk struct {
@@ -127,6 +130,9 @@ type ReadOptions struct {
 // Read runs only the reader and returns the position it closed at, so the
 // caller can show how to return there. Nothing is recorded.
 func Read(ctx context.Context, service app.Service, in io.Reader, out io.Writer, o ReadOptions) (*reader.Position, error) {
+	if !interactiveTerminal(in, out) {
+		return nil, errors.New("read requires an interactive terminal")
+	}
 	units, err := service.TextUnits(ctx, o.Catalog, o.Root, o.Asset)
 	if err != nil {
 		return nil, err
@@ -441,6 +447,14 @@ func (m *model) pagerKey(key string) tea.Cmd {
 	switch key {
 	case "q", "esc":
 		return m.closePager()
+	case "?":
+		p.help = !p.help
+		return tea.ClearScreen
+	}
+	if p.help {
+		return nil
+	}
+	switch key {
 	case "m":
 		return m.saveBookmark()
 	case "'":
@@ -523,6 +537,7 @@ func (m *model) pageKey(key string) tea.Cmd {
 		p.speed, p.playing, p.word = true, false, p.doc.ItemFor(at)
 		p.gen = m.nextSeq()
 		p.notice = "Paused. Space starts at " + strconv.Itoa(p.rate) + " words per minute."
+		return tea.Batch(m.pagerMore(), tea.ClearScreen)
 	}
 	return m.pagerMore()
 }
@@ -558,7 +573,7 @@ func (m *model) speedKey(key string) tea.Cmd {
 		p.speed, p.playing, p.waiting = false, false, false
 		p.gen = m.nextSeq()
 		p.top = p.layout.LineFor(at)
-		return m.pagerMore()
+		return tea.Batch(m.pagerMore(), tea.ClearScreen)
 	default:
 		return nil
 	}
@@ -590,7 +605,11 @@ func (m *model) pagerView() string {
 		}
 	}
 	var body []string
-	if p.speed {
+	if p.help {
+		for _, line := range readerHelp(p.speed, p.chapter) {
+			body = append(body, margin+line)
+		}
+	} else if p.speed {
 		body = m.speedBody(width, margin)
 		state := "paused"
 		if p.playing {
@@ -607,23 +626,102 @@ func (m *model) pagerView() string {
 		body = append(body, "")
 	}
 	notice := p.notice
-	if p.failure != "" && m.pagerAtEnd() {
+	if p.help {
+		notice = "Press ? to return to the text. q closes; nothing is recorded."
+	}
+	if p.failure != "" && m.pagerAtEnd() && !p.help {
 		notice = p.failure
 	}
-	if p.speed && p.rate > reader.SkimRate && notice == "" {
+	if p.speed && !p.help && p.rate > reader.SkimRate && notice == "" {
 		notice = "Above 350 words per minute, studies found comprehension falls; treat this as skimming."
 	}
-	keys := "Space next  b back  j/k line  [ ] unit  +/- width  s speed  m save  ' restore  q close"
-	if p.chapter && !p.speed {
-		keys = "Space next  b back  j/k line  +/- width  s speed  m save  ' restore  q close"
-	}
-	if p.speed {
-		keys = "Space play/pause  Left/Right sentence  Up/Down rate  [ ] unit  p pages  q close"
-	}
+	keys := readerKeys(p.speed, p.chapter, max(1, m.width-2))
 	lines := []string{m.paint(clip(header, m.width-2), muted, false)}
 	lines = append(lines, body[:m.pagerBody()]...)
 	lines = append(lines, m.paint(clip(position, m.width-2), muted, false), m.paint(clip(notice, m.width-2), warning, false), m.paint(clip(keys, m.width-2), muted, false))
+	for i, line := range lines {
+		lines[i] = padCells(line, m.width)
+	}
+	for len(lines) < m.height {
+		lines = append(lines, strings.Repeat(" ", max(0, m.width)))
+	}
 	return strings.Join(lines, "\n")
+}
+
+// readerKeys keeps ? and q close on screen when the terminal is narrow.
+func readerKeys(speed, chapter bool, width int) string {
+	const tail = "  ? keys  q close"
+	body := "Space/b page  j/k line  [ ] unit  +/- width  s word  m save"
+	if chapter && !speed {
+		body = "Space/b page  j/k line  +/- width  s word  m save"
+	}
+	if speed {
+		body = "Space play/pause  Left/Right sentence  Up/Down rate  p pages"
+	}
+	if lipgloss.Width(body+tail) <= width {
+		return body + tail
+	}
+	room := width - lipgloss.Width(tail)
+	if room < 1 {
+		return clip(tail, width)
+	}
+	head := strings.TrimRight(lipgloss.NewStyle().MaxWidth(room).Render(body), " ")
+	if head == "" {
+		return clip(tail, width)
+	}
+	return head + tail
+}
+
+func readerHelp(speed, chapter bool) []string {
+	if speed {
+		return []string{
+			"Reader keys",
+			"Space       play or pause",
+			"Left/Right  previous or next sentence",
+			"Up/Down     slower or faster",
+			"[ ]         previous or next unit",
+			"p           pages at this word",
+			"m           save this location",
+			"'           restore the saved location",
+			"q, Escape   close; nothing is recorded",
+			"?           hide this list",
+		}
+	}
+	lines := []string{
+		"Reader keys",
+		"Space, Right, l, n   next page",
+		"b, Left, h           previous page",
+		"j/Down, k/Up         one line",
+		"g, G                 start or end of loaded text",
+	}
+	if chapter {
+		lines = append(lines, "[ ]                  stay in this declared entry")
+	} else {
+		lines = append(lines, "[ ]                  previous or next unit")
+	}
+	return append(lines,
+		"+, -                wider or narrower",
+		"s                    one word at a time",
+		"m                    save this location",
+		"'                    restore the saved location",
+		"q, Escape            close; nothing is recorded",
+		"?                    hide this list",
+	)
+}
+
+// padCells fills a row to the terminal width so a shorter frame cannot leave
+// the previous row's cells on screen.
+func padCells(line string, width int) string {
+	if width < 1 {
+		return ""
+	}
+	if lipgloss.Width(line) > width {
+		return clip(line, width)
+	}
+	if gap := width - lipgloss.Width(line); gap > 0 {
+		return line + strings.Repeat(" ", gap)
+	}
+	return line
 }
 
 // pagerLine renders a row; in speed mode the word at mark is emphasized.

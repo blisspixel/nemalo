@@ -199,6 +199,14 @@ func (m *model) start(reset bool) tea.Cmd {
 			data, err := m.service.Audit(ctx, value, second, limits)
 			return result{id, data, err}
 		case "search":
+			if source == "gutenberg" {
+				path := strings.TrimSpace(second)
+				if path == "" {
+					path = m.catalog
+				}
+				data, err := m.service.SearchGutenberg(ctx, path, value, order, 10, offset)
+				return result{id, data, err}
+			}
 			data, err := m.service.SearchSourceOrdered(ctx, source, value, order, 10, offset)
 			return result{id, data, err}
 		case "check", "scan":
@@ -211,13 +219,20 @@ func (m *model) start(reset bool) tea.Cmd {
 	}
 }
 
-// searchOrder is the selected result order; relevance unless the user chose
-// another order Archive supports.
+// searchOrder is the selected result order. Archive can use downloads or
+// identifier. Gutenberg can use identifier. Anything else stays relevance.
 func (m *model) searchOrder() string {
-	if m.order == "" || m.source != "archive" {
-		return discovery.OrderRelevance
+	switch m.source {
+	case "archive":
+		if m.order == discovery.OrderDownloads || m.order == discovery.OrderIdentifier {
+			return m.order
+		}
+	case "gutenberg":
+		if m.order == discovery.OrderIdentifier {
+			return m.order
+		}
 	}
-	return m.order
+	return discovery.OrderRelevance
 }
 
 func isDir(p string) bool {

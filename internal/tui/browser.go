@@ -45,10 +45,14 @@ func (m *model) populate(data any) {
 		}
 	case discovery.Page:
 		for _, r := range p.Results {
+			note := "Discovery metadata only.\nDownload availability not resolved.\n"
+			if r.Access == "local_catalog" {
+				note = "Local catalog row. The Gutenberg website was not queried.\nNo file or download URL is listed.\n"
+			}
 			m.entries = append(m.entries, entry{
 				title:   fmt.Sprintf("%q", r.Title),
 				summary: fmt.Sprintf("%q | %q", r.Authors, r.Languages),
-				detail:  fmt.Sprintf("%q\n\nAuthors: %q\nLanguages: %q\n\nDiscovery metadata only.\nDownload availability not resolved.\n\nID: %q\nSource page: %q\nDeclared access: %q\n", r.Title, r.Authors, r.Languages, r.ID, r.LandingPage, r.Access), sourceID: r.ID,
+				detail:  fmt.Sprintf("%q\n\nAuthors: %q\nLanguages: %q\n\n%s\nID: %q\nSource page: %q\nDeclared access: %q\n", r.Title, r.Authors, r.Languages, note, r.ID, r.LandingPage, r.Access), sourceID: r.ID,
 			})
 		}
 	case library.Page:
@@ -263,13 +267,27 @@ func (m *model) browserKey(key string) (bool, tea.Cmd) {
 		}
 		return true, nil
 	case "e":
-		if len(m.entries) > 0 && m.mode == "search" && strings.HasPrefix(m.entries[m.selected].sourceID, "archive:") {
+		if len(m.entries) > 0 && m.mode == "search" {
 			id := m.entries[m.selected].sourceID
-			cmd := m.switchMode("evaluate")
-			m.input.SetValue(id)
-			m.status = "Selected item. Enter requests Archive metadata; no download."
-			m.resize()
-			return true, cmd
+			switch {
+			case strings.HasPrefix(id, "archive:"):
+				cmd := m.switchMode("evaluate")
+				m.input.SetValue(id)
+				m.status = "Selected item. Enter requests Archive metadata; no download."
+				m.resize()
+				return true, cmd
+			case strings.HasPrefix(id, "gutenberg:"):
+				path := strings.TrimSpace(m.submittedSecond)
+				if path == "" {
+					path = m.catalog
+				}
+				m.service.UseGutenbergCatalog(path)
+				cmd := m.switchMode("evaluate")
+				m.input.SetValue(id)
+				m.status = "Selected item. Enter reads the local catalog. The website is not queried."
+				m.resize()
+				return true, cmd
+			}
 		}
 	case "r":
 		if m.mode == "holdings" && len(m.entries) > 0 {

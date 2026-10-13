@@ -1,8 +1,10 @@
 # Source directory and integration research
 
 Research date: 2026-10-08. Open Library/Internet Archive metadata search and Archive
-item/file evaluation and selected EPUB/PDF/MP3 intake are implemented. Other integrations below remain
-planned. See [decision 0005](decisions/0005-provider-search-and-evaluation.md) for
+item/file evaluation and selected EPUB/PDF/MP3 intake are implemented. Project Gutenberg
+local catalog search, evaluation, and explicit catalog fetch are implemented
+([decision 0028](decisions/0028-gutenberg-local-catalog.md)). Gutenberg ebook
+download and the other integrations below remain planned. See [decision 0005](decisions/0005-provider-search-and-evaluation.md) for
 implemented contracts and limits. The [acquisition guide](ACQUISITION.md)
 distinguishes metadata from actual transfers. This directory
 covers books, scholarly literature, textbooks, audio, children's reading, and
@@ -35,7 +37,7 @@ the [roadmap](../ROADMAP.md) for dependencies and release sequencing.
 
 | Source | Priority and role | Interface and constraints supported by primary sources |
 | --- | --- | --- |
-| [Project Gutenberg](https://www.gutenberg.org/) | P0 classics and multilingual ebooks | Use machine-readable catalogs and permitted acquisition/harvest or mirror routes. Do not automate ordinary website search pages. See [robot policy](https://www.gutenberg.org/policy/robot_access.html) and [catalog guidance](https://www.gutenberg.org/ebooks/offline_catalogs.html). Retain [US-based rights statements](https://www.gutenberg.org/policy/permission.html). |
+| [Project Gutenberg](https://www.gutenberg.org/) | P0 classics and multilingual ebooks | Local search and evaluation of the official CSV are implemented. `catalog fetch gutenberg` downloads that file. Do not automate ordinary website search pages. Ebook bytes are not in the CSV; harvest and mirror acquisition remain planned. See [robot policy](https://www.gutenberg.org/policy/robot_access.html), [catalog guidance](https://www.gutenberg.org/ebooks/offline_catalogs.html), and [decision 0028](decisions/0028-gutenberg-local-catalog.md). Retain [US-based rights statements](https://www.gutenberg.org/policy/permission.html). |
 | [Internet Archive](https://archive.org/) | P0 selected books; P1 audio | Search and item/file metadata through [developer interfaces](https://archive.org/developers/). Resolve actual public files; account for private, restricted, lending, and missing assets. [Download guidance](https://archivesupport.zendesk.com/hc/en-us/articles/360016398872-Downloading-A-Basic-Guide) does not imply all items are downloadable or reusable. |
 | [Open Library](https://openlibrary.org/) | P0 bibliographic discovery | [APIs](https://openlibrary.org/developers/api) for human lookups, not catalog harvesting. Default 1 request/second, properly identified clients 3/second. Bulk work uses monthly dumps. [Search documentation](https://openlibrary.org/dev/docs/api/search) separates works and matching editions; availability must be resolved for the selected edition. |
 | [LibriVox](https://librivox.org/) | P1 primary audiobook catalog | [API](https://librivox.org/api/info): default limit 50, maximum 500 since the September 2026 update; paginate with `offset`, use `since` for newly cataloged projects, space requests. Extended records include sections and Archive references. Recording rights use a [US-based public-domain declaration](https://librivox.org/pages/public-domain/). |

@@ -7,7 +7,7 @@ needed for the application, tests, or first-party tooling.
 
 ## Current operations
 
-`help`, `version`, `doctor`, `search`, `evaluate`, `acquire`, `inspect`, `check`, `library snapshot`,
+`help`, `version`, `doctor`, `search`, `evaluate`, `catalog fetch`, `acquire`, `inspect`, `check`, `library snapshot`,
 `library list`, `library audit`, `library check`, `library import`, `library ingest`, `library cleanup`, `library restore`,
 `library rescan`, `library recordings`,
 `library open`, `library export`, `library init`, `library status`, `bookmark`,
@@ -15,7 +15,10 @@ needed for the application, tests, or first-party tooling.
 `content read`, `content locate`, `content source`, `content resource`, `content capabilities`,
 `read`, `mcp serve`, and `tui` are implemented.
 Search defaults to Open Library work metadata; `--source archive` selects Internet
-Archive text/audio item search. Neither search resolves download permissions.
+Archive text/audio item search. `--source gutenberg` reads a local
+`pg_catalog.csv` (`--catalog`, `gutenberg_catalog`, or `NEMALO_GUTENBERG_CATALOG`)
+and does not contact gutenberg.org. `catalog fetch gutenberg --output FILE`
+downloads that one official CSV. Neither search resolves download permissions.
 Results keep the provider's relevance ranking, and the result names its order.
 For Archive, `--sort identifier` pages repeatably and `--sort downloads` ranks by
 the declared download count, a popularity signal rather than quality; both use
@@ -34,6 +37,8 @@ are currently unsupported. Private/reserved/mixed DNS destinations are rejected,
 and connections use the validated numeric address with normal TLS validation.
 Metadata/rights URLs returned by a provider are not fetched. See
 [decision 0005](decisions/0005-provider-search-and-evaluation.md).
+Gutenberg ranking, the catalog failure rules, and the absence of ebook files
+are in [decision 0028](decisions/0028-gutenberg-local-catalog.md).
 Explicit selected-file acquisition has its own
 [intake and transfer contract](ACQUISITION.md). It does not publish checked holdings.
 
@@ -245,7 +250,10 @@ nemalo read /path/to/library --root /path/to/library --asset sha256:HASH --speed
 `read` opens the terminal reader (decision 0025) on EPUB or PDF text: pages
 sized to the terminal, or one word at a time with `--speed`. `--unit` and
 `--text-offset` choose the start; closing prints the values that return to the
-same place. It requires an interactive terminal and has no `--json`.
+same place. It requires an interactive terminal and has no `--json`. A missing
+`--root` or `--asset` names that flag. For a managed library, `--root` is the
+same folder as the catalog. `nemalo tui` has the same terminal requirement.
+Without a terminal, both commands say so and exit 2.
 
 A PDF reads as `pdf-text/1`: one unit per physical page, with the printed page
 label separately, text in content-stream order, and located gaps; `check`

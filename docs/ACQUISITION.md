@@ -140,7 +140,11 @@ checks of the audio. See
   overwrite, clean up, or publish those bytes into a library.
 
 Keep a failed packet for review. `acquire ... --file NAME --output PACKET
---resume` continues an interrupted transfer in that packet: every transfer syncs
+--resume` continues an interrupted transfer in that packet when `transfer.json`
+was synced before the body and partial bytes remain. A refusal before any
+bytes, such as an HTTP 500 with only `intent.json` in the folder, has no
+transfer record: the summary says to start a new output, and `--resume` is not
+offered. Every transfer that does start syncs
 `transfer.json` with the response's validator before its body, and a resume
 requests only the missing bytes with `If-Range` on that strong `ETag`. A reply
 other than exactly the missing range of the same file, a weak or missing

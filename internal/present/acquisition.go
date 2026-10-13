@@ -41,7 +41,19 @@ func Acquisition(r acquisition.Result) string {
 		b.WriteString("A detection can be a false positive; a no-detection result is not proof of safety.\n")
 		return b.String()
 	}
-	b.WriteString("Untrusted intake only. File rights, DRM, malware safety, and semantic completeness are not established.\nIncomplete folders are retained, never deleted; --resume continues an interrupted transfer.\n")
+	b.WriteString("Untrusted intake only. File rights, DRM, malware safety, and semantic completeness are not established.\n")
+	switch {
+	case r.Complete:
+		b.WriteString("Incomplete folders are retained, never deleted. --resume continues a packet that has a transfer record and partial bytes.\n")
+	case r.ResumedFrom > 0:
+		b.WriteString("Incomplete folders are retained, never deleted.\n")
+	case r.TransferRecorded && r.Transfer.Bytes > 0 && !r.TransferComplete:
+		b.WriteString("Incomplete folders are retained, never deleted. This packet has a transfer record; --resume continues the interrupted transfer.\n")
+	case r.Output != "" && !r.TransferRecorded:
+		b.WriteString("Incomplete folders are retained, never deleted. This packet has no transfer record, so its bytes cannot be resumed; start a new output.\n")
+	default:
+		b.WriteString("Incomplete folders are retained, never deleted.\n")
+	}
 	return b.String()
 }
 

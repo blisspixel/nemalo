@@ -16,6 +16,9 @@ const maxConfigBytes = 64 << 10
 type Config struct {
 	Library string `json:"library,omitempty"`
 	Review  string `json:"review,omitempty"`
+	// GutenbergCatalog is an absolute path of a local pg_catalog.csv.
+	// Search and evaluation read this file and do not contact gutenberg.org.
+	GutenbergCatalog string `json:"gutenberg_catalog,omitempty"`
 	// OnDetection is what acquisition does with a download the scanner flags:
 	// "quarantine" (the default when empty) or "delete".
 	OnDetection string `json:"on_detection,omitempty"`
@@ -98,16 +101,25 @@ func Load(path string, explicit bool, env func(string) string, overrides Config)
 	if v := env("NEMALO_REVIEW"); v != "" {
 		c.Review = v
 	}
+	if v := env("NEMALO_GUTENBERG_CATALOG"); v != "" {
+		c.GutenbergCatalog = v
+	}
 	if overrides.Library != "" {
 		c.Library = overrides.Library
 	}
 	if overrides.Review != "" {
 		c.Review = overrides.Review
 	}
+	if overrides.GutenbergCatalog != "" {
+		c.GutenbergCatalog = overrides.GutenbergCatalog
+	}
 	for _, path := range []string{c.Library, c.Review} {
 		if path != "" && !filepath.IsAbs(path) {
 			return c, errors.New("library and review paths must be absolute")
 		}
+	}
+	if c.GutenbergCatalog != "" && !filepath.IsAbs(c.GutenbergCatalog) {
+		return c, errors.New("gutenberg catalog path must be absolute")
 	}
 	if c.OnDetection != "" && c.OnDetection != "quarantine" && c.OnDetection != "delete" {
 		return c, errors.New("on_detection must be quarantine or delete")

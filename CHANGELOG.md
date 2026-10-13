@@ -2,6 +2,19 @@
 
 ## Unreleased
 
+## 0.1.0-alpha.9
+
+Ninth native prerelease. This remains an early library, not 1.0. Closes issues 11, 12, 13, 14, 15, 16, 17, and 18.
+
+- Search and evaluate a local Project Gutenberg catalog. `catalog fetch gutenberg --output FILE` downloads the official CSV. Search does not contact gutenberg.org, ranks results on this machine, and lists no ebook files
+  ([decision 0028](docs/decisions/0028-gutenberg-local-catalog.md)).
+- A failed search prints only the error. It does not print a zero-match page.
+- `library cleanup` on a missing library prints only `library not found`. It does not print a preview.
+- `nemalo read` names a missing `--root` or `--asset`. For a managed library, `--root` is the catalog folder. `read` and `tui` require an interactive terminal and say so, with exit 2, before starting the interface.
+- The reader footer keeps `q close` visible at 80 columns. `?` lists the keys. A resize, or a switch between pages and one word at a time, repaints the whole frame.
+- In Evaluate, `a` or `d` with an empty Intake field asks for a folder (Ctrl+N) before review.
+- An acquisition that fails before any bytes says to start a new output. `--resume` is offered when the packet has a transfer record and partial bytes.
+
 ## 0.1.0-alpha.8
 
 Eighth native prerelease. This remains an early library, not 1.0. Closes issues 9 and 10.

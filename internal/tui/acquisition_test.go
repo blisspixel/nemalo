@@ -90,7 +90,7 @@ func TestTerminalDownloadRejectsStaleAndIncompleteForms(t *testing.T) {
 	}
 	m.input.SetValue("archive:old")
 	m.requestDownload()
-	if m.downloadReview != nil || !strings.Contains(m.status, "error") {
+	if m.downloadReview != nil || !strings.Contains(m.status, "Ctrl+N") || strings.Contains(m.status, "acquire requires") {
 		t.Fatal(m.status)
 	}
 	m.secondary.SetValue(filepath.Join(t.TempDir(), "packet"))
@@ -173,6 +173,22 @@ func (p recordingTUIProvider) Download(_ context.Context, f discovery.OfferedFil
 	*p.calls++
 	body := "ID3 " + f.Name
 	return &http.Response{StatusCode: 200, ContentLength: int64(len(body)), Header: http.Header{}, Body: io.NopCloser(strings.NewReader(body))}, nil
+}
+
+func TestTerminalRecordingAsksForAnIntakeFolder(t *testing.T) {
+	p := recordingTUIProvider{new(int)}
+	m := newModel(context.Background(), app.Service{Providers: map[string]app.Searcher{"archive": p}})
+	m.switchMode("evaluate")
+	m.input.SetValue("archive:demo")
+	m.submittedInput = "archive:demo"
+	e, _ := p.Evaluate(context.Background(), "archive:demo")
+	m.id++
+	m.Update(result{m.id, e, nil})
+	m.resultsFocused = true
+	m.selectEntry(1)
+	if handled, _ := m.browserKey("a"); !handled || m.recordingReview != nil || !strings.Contains(m.status, "Ctrl+N") || strings.Contains(m.status, "acquire --recording") {
+		t.Fatal(handled, m.status)
+	}
 }
 
 func TestTerminalRecordingRequiresReviewAndAcquiresEveryTrack(t *testing.T) {

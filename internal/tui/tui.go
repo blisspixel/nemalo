@@ -3,10 +3,13 @@ package tui
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"os"
 	"strings"
+
+	"github.com/charmbracelet/x/term"
 
 	"charm.land/bubbles/v2/textinput"
 	"charm.land/bubbles/v2/viewport"
@@ -71,6 +74,7 @@ type model struct {
 	mode                       string
 	source                     string
 	order                      string
+	catalog                    string
 	format                     string
 	status                     string
 	busy                       bool
@@ -106,6 +110,9 @@ func newModel(ctx context.Context, service app.Service) *model {
 	view := viewport.New(viewport.WithWidth(80), viewport.WithHeight(16))
 	view.SoftWrap = true
 	m := &model{ctx: ctx, service: service, input: input, secondary: secondary, width: 80, height: 25, dark: true, viewport: view, mode: "search", source: "openlibrary", format: "epub", drafts: map[string]draft{}, status: "Ready. Network activity only on explicit search/evaluation."}
+	if g, ok := service.Providers["gutenberg"].(*discovery.Gutenberg); ok {
+		m.catalog = g.Catalog
+	}
 	m.preview = viewport.New()
 	m.preview.SoftWrap = true
 	m.resize()
@@ -146,7 +153,7 @@ func (m *model) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 		m.resize()
 		if m.pager != nil {
 			m.pagerLayout()
-			return m, m.pagerMore()
+			return m, tea.Batch(m.pagerMore(), tea.ClearScreen)
 		}
 	case result:
 		if msg.id != m.id {
@@ -300,11 +307,15 @@ func (m *model) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 		if value, ok := msg.data.(acquisition.Result); ok && strings.HasPrefix(value.Status, "detected_") {
 			m.offerOtherFiles(value)
 		} else if ok && msg.err != nil && value.Output != "" && !value.Complete && m.lastEvaluation != nil && m.lastEvaluation.ID == m.submittedInput {
-			// The packet is kept; the item's files return so d on the same file
-			// and output reviews resuming it.
+			// The packet is kept. Resume is offered only when a transfer record
+			// and partial bytes exist; an early failure needs a new folder.
 			m.populate(*m.lastEvaluation)
 			m.evidence = true
-			m.status = fmt.Sprintf("Transfer stopped: %q. The packet was kept; select the same file and press d to review resuming it.", msg.err.Error())
+			if value.TransferRecorded && value.Transfer.Bytes > 0 {
+				m.status = fmt.Sprintf("Transfer stopped: %q. The packet was kept; select the same file and press d to review resuming it.", msg.err.Error())
+			} else {
+				m.status = fmt.Sprintf("Transfer stopped: %q. The packet was kept and has no transfer record. Start a new output.", msg.err.Error())
+			}
 		}
 		data, err := textsafe.MarshalJSON(msg.data, true)
 		switch value := msg.data.(type) {
@@ -343,7 +354,11 @@ func (m *model) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 		case assessment.Report:
 			data = []byte(present.Health(value))
 		case discovery.Page:
-			data = []byte(present.Search(value))
+			if msg.err != nil {
+				data = nil
+			} else {
+				data = []byte(present.Search(value))
+			}
 		case inventory.Report:
 			data = []byte(present.Inventory(value))
 		case content.Result:
@@ -430,23 +445,46 @@ func (m *model) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 				m.status = "Archive result order: " + m.order + ". Press Enter to search."
 				m.resize()
 			}
+			if !m.busy && m.mode == "search" && m.source == "gutenberg" {
+				orders := []string{discovery.OrderRelevance, discovery.OrderIdentifier}
+				for i, order := range orders {
+					if order == m.searchOrder() {
+						m.order = orders[(i+1)%len(orders)]
+						break
+					}
+				}
+				m.offset, m.total = 0, 0
+				m.setReport("")
+				m.populate(nil)
+				m.status = "Gutenberg result order: " + m.order + ". Press Enter to read the local catalog."
+				m.resize()
+			}
 			return m, nil
 		case "ctrl+right", "ctrl+left":
 			return m, m.turnPage(msg.String() == "ctrl+right")
 		case "f2":
 			if m.mode == "search" && !m.busy {
-				if m.source == "openlibrary" {
+				switch m.source {
+				case "openlibrary":
 					m.source = "archive"
-				} else {
+				case "archive":
+					m.source = "gutenberg"
+				default:
 					m.source = "openlibrary"
 				}
-				m.input.Placeholder = "Search " + m.source + " (network on Enter; F2 changes provider)"
-				m.status = "Ready. Search provider: " + m.source
-				// Only Archive offers orders besides relevance.
 				m.order = discovery.OrderRelevance
 				m.offset, m.total = 0, 0
 				m.setReport("")
 				m.populate(nil)
+				if m.source == "gutenberg" {
+					m.status = "Ready. Search provider: gutenberg. Enter reads the local catalog. The website is not queried."
+				} else {
+					m.status = "Ready. Search provider: " + m.source + ". Enter searches that provider on the network."
+					if m.secondaryFocused {
+						m.secondaryFocused = false
+						m.secondary.Blur()
+					}
+				}
 				m.resize()
 			}
 			return m, nil
@@ -507,6 +545,11 @@ func (m *model) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 			return m, cmd
 		}
 	}
+	// The reader owns the screen. An unhandled message, including the
+	// clear-screen command, must not reach the query field.
+	if m.pager != nil {
+		return m, nil
+	}
 	if m.busy {
 		return m, nil
 	}
@@ -523,10 +566,25 @@ func (m *model) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m *model) form() bool {
+	if m.mode == "search" {
+		return m.source == "gutenberg"
+	}
 	return m.mode == "snapshot" || m.mode == "holdings" || m.mode == "audit" || m.mode == "read" || m.mode == "evaluate" || m.mode == "state"
 }
 
+func interactiveTerminal(in io.Reader, out io.Writer) bool {
+	inFile, inOK := in.(*os.File)
+	outFile, outOK := out.(*os.File)
+	if !inOK || !outOK {
+		return false
+	}
+	return term.IsTerminal(inFile.Fd()) && term.IsTerminal(outFile.Fd())
+}
+
 func Run(ctx context.Context, service app.Service, in io.Reader, out io.Writer) error {
+	if !interactiveTerminal(in, out) {
+		return errors.New("tui requires an interactive terminal")
+	}
 	m := newModel(ctx, service)
 	defer func() {
 		if m.cancel != nil {

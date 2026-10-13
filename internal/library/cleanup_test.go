@@ -16,6 +16,15 @@ import (
 //   - held.epub (imported), stray.epub (not imported), notes.txt
 //   - packet/ with receipt.json, intent.json, content.epub (imported)
 //   - held.zip (every member imported), mixed.zip (one member is not a book)
+func TestCleanupOfAMissingLibraryNamesThePath(t *testing.T) {
+	folder := t.TempDir()
+	lib := filepath.Join(t.TempDir(), "missing")
+	_, err := Cleanup(context.Background(), CleanupRequest{Library: lib, Folder: folder})
+	if err == nil || !strings.Contains(err.Error(), "library not found:") || !strings.Contains(err.Error(), "missing") {
+		t.Fatal(err)
+	}
+}
+
 func cleanupFixture(t *testing.T) (root, folder string) {
 	t.Helper()
 	ctx := context.Background()

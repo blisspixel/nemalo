@@ -56,11 +56,14 @@ func (m *model) fields() string {
 	case "audit":
 		label, hint, second = "Catalog", "Catalog file, or a library folder to check", "Root"
 	case "evaluate":
-		label, hint, second = "Item ID", "archive:ITEM (Enter retrieves metadata only)", "Intake"
+		label, hint, second = "Item ID", "archive:ITEM or gutenberg:NUMBER (metadata only)", "Intake"
 	case "state":
 		label, hint, second = "Folder", "Existing library folder; Enter reads status", "Source"
 	case "read":
 		label, hint, second = "Catalog", "Catalog selected from Holdings", "Root"
+	}
+	if m.mode == "search" && m.source == "gutenberg" {
+		label, hint, second = "Query", "Title, author, subject, or text number", "Catalog"
 	}
 	m.input.Placeholder = hint
 	marker := " "
@@ -89,6 +92,9 @@ func (m *model) contextLine() string {
 		return "Enter status | F7 init | F8 import | F9 cleanup | Ctrl+R rescan"
 	}
 	if m.mode == "search" {
+		if m.source == "gutenberg" {
+			return "gutenberg; F2 provider | F3 order: " + m.searchOrder() + " | Local catalog; the Gutenberg website is not queried"
+		}
 		if m.source == "archive" {
 			return "archive; F2 provider | F3 order: " + m.searchOrder() + " | Explicit network search"
 		}
@@ -136,7 +142,7 @@ func (m *model) footer() string {
 	help := "Enter run  F6 browse  Tab/Shift+Tab modes  Ctrl+C quit"
 	if m.resultsFocused {
 		help = "Up/Down select  Enter details  F6 edit  Esc back  Ctrl+C quit"
-		if m.mode == "search" && len(m.entries) > 0 && strings.HasPrefix(m.entries[m.selected].sourceID, "archive:") {
+		if m.mode == "search" && len(m.entries) > 0 && (strings.HasPrefix(m.entries[m.selected].sourceID, "archive:") || strings.HasPrefix(m.entries[m.selected].sourceID, "gutenberg:")) {
 			help += "  e evaluate"
 		}
 		if m.mode == "holdings" && len(m.entries) > 0 {
@@ -207,6 +213,13 @@ func (m *model) resize() {
 	m.secondary.SetWidth(max(1, m.width-16))
 	m.secondary.SetCursor(m.secondary.Position())
 	m.secondary.Placeholder = map[string]string{"snapshot": "New catalog path outside the source folder", "holdings": "Optional title, language, filename, or hash", "audit": "Source directory for a catalog; leave empty to check a library", "read": "Explicit source directory (required)", "evaluate": "New untrusted intake directory, for d acquire", "state": "EPUB, PDF, MP3, or completed intake packet"}[m.mode]
+	if m.mode == "search" && m.source == "gutenberg" {
+		if m.catalog != "" {
+			m.secondary.Placeholder = m.catalog
+		} else {
+			m.secondary.Placeholder = "Absolute path of pg_catalog.csv"
+		}
+	}
 	// Layout height follows the actual wrapped navigation, context, and help.
 	reserved := lipgloss.Height(m.top()) + lipgloss.Height(m.footer()) + lipgloss.Height(m.statusText()) + lipgloss.Height(m.position()) + 2
 	m.viewport.SetHeight(max(1, m.height-reserved))
@@ -303,11 +316,11 @@ func (m *model) position() string {
 func (m *model) emptyHelp() string {
 	switch m.mode {
 	case "search":
-		return "Find something worth keeping.\n\nEnter a title, author, or topic. F2 selects Open Library or Internet Archive.\nEnter searches that provider. Discovery does not download files."
+		return "Find something worth keeping.\n\nEnter a title, author, or topic. F2 selects Open Library, Internet Archive, or a local Project Gutenberg catalog.\nEnter searches that provider. Gutenberg reads the catalog file and does not contact gutenberg.org.\nDiscovery does not download files."
 	case "holdings":
 		return "Browse your collection.\n\nChoose a saved catalog and optionally filter by title or language.\nEPUB filenames are selected by default; F4 changes the format."
 	case "evaluate":
-		return "Look before acquiring.\n\nEnter archive:ITEM, or select an Archive search result and press e.\nEnter retrieves metadata only. F6 browses source files.\nEnter a new intake folder with Ctrl+N; select a file and press d to review acquisition.\nDownloads remain untrusted; existing intake is never overwritten."
+		return "Look before acquiring.\n\nEnter archive:ITEM, or gutenberg:NUMBER. Select a search result and press e.\nEnter retrieves metadata only. A Gutenberg row lists no files.\nF6 browses source files when the evaluation lists any.\nEnter a new intake folder with Ctrl+N; select a file and press d to review acquisition.\nDownloads remain untrusted; existing intake is never overwritten."
 	case "state":
 		return "Establish a library identity.\n\nEnter an existing folder, then Enter to read its control status.\nF7 reviews initialization before writing control metadata.\nCtrl+N sets one source. F8 reviews import and does not scan or delete it.\nCtrl+R reviews a scan of review EPUBs that lack scan evidence.\nF9 previews moving the source folder's held files to the library's recoverable holding area; with a cleanup ID as the source, it previews restoring that cleanup."
 	case "read":

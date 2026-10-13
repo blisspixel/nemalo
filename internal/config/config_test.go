@@ -68,6 +68,12 @@ func TestLoadPrecedence(t *testing.T) {
 	if _, err = Load(filepath.Join(dir, "missing"), false, environment(nil), Config{}); err != nil {
 		t.Fatal(err)
 	}
+	if err := os.WriteFile(path, []byte(`{"gutenberg_catalog":`+quote(filepath.Join(dir, "from-file.csv"))+`}`), 0600); err != nil {
+		t.Fatal(err)
+	}
+	if c, err = Load(path, true, environment(nil), Config{}); err != nil || c.GutenbergCatalog != filepath.Join(dir, "from-file.csv") {
+		t.Fatalf("catalog file: %+v %v", c, err)
+	}
 	if err := os.WriteFile(path, []byte(`{"on_detection":"delete"}`), 0600); err != nil {
 		t.Fatal(err)
 	}
@@ -76,6 +82,22 @@ func TestLoadPrecedence(t *testing.T) {
 	}
 	if _, err = Load(filepath.Join(dir, "missing"), true, environment(nil), Config{}); err == nil {
 		t.Fatal("explicit missing file accepted")
+	}
+	catalog := filepath.Join(dir, "pg_catalog.csv")
+	flagCatalog := filepath.Join(dir, "flag-catalog.csv")
+	c, err = Load(path, true, environment(map[string]string{"NEMALO_GUTENBERG_CATALOG": catalog}), Config{})
+	if err != nil || c.GutenbergCatalog != catalog {
+		t.Fatalf("catalog environment: %+v %v", c, err)
+	}
+	c, err = Load(path, true, environment(map[string]string{"NEMALO_GUTENBERG_CATALOG": catalog}), Config{GutenbergCatalog: flagCatalog})
+	if err != nil || c.GutenbergCatalog != flagCatalog {
+		t.Fatalf("catalog flag: %+v %v", c, err)
+	}
+	if _, err = Load(path, true, environment(nil), Config{GutenbergCatalog: "relative.csv"}); err == nil || !strings.Contains(err.Error(), "gutenberg catalog path must be absolute") {
+		t.Fatal(err)
+	}
+	if _, err = Load(path, true, environment(nil), Config{Library: "relative"}); err == nil || !strings.Contains(err.Error(), "library and review paths must be absolute") {
+		t.Fatal(err)
 	}
 }
 

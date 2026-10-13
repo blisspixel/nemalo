@@ -178,7 +178,35 @@ func scannerName(kind string) string {
 }
 
 func New() Service {
-	return Service{Providers: map[string]Searcher{"openlibrary": discovery.NewOpenLibrary(), "archive": discovery.NewArchive()}}
+	return Service{Providers: map[string]Searcher{
+		"openlibrary": discovery.NewOpenLibrary(),
+		"archive":     discovery.NewArchive(),
+		"gutenberg":   discovery.NewGutenberg(),
+	}}
+}
+
+// UseGutenbergCatalog points the Gutenberg provider at a local catalog.
+// A service without that provider, or an empty path, leaves the provider unchanged.
+func (s Service) UseGutenbergCatalog(path string) {
+	g, ok := s.Providers["gutenberg"].(*discovery.Gutenberg)
+	if !ok || strings.TrimSpace(path) == "" {
+		return
+	}
+	g.Catalog = path
+}
+
+// SearchGutenberg reads one local catalog for this call. It does not change
+// the shared provider and does not contact gutenberg.org.
+func (s Service) SearchGutenberg(ctx context.Context, catalog, query, order string, limit, offset int) (discovery.Page, error) {
+	if _, ok := s.Providers["gutenberg"]; !ok {
+		return discovery.Page{}, errors.New("search provider unavailable")
+	}
+	return (&discovery.Gutenberg{Catalog: catalog}).SearchOrdered(ctx, query, order, limit, offset)
+}
+
+// FetchGutenbergCatalog downloads the official catalog to a new file.
+func (s Service) FetchGutenbergCatalog(ctx context.Context, output string) (discovery.CatalogFile, error) {
+	return discovery.FetchCatalog(ctx, output)
 }
 
 func (s Service) Search(ctx context.Context, query string, limit, offset int) (discovery.Page, error) {

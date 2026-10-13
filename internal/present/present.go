@@ -14,9 +14,17 @@ func Search(page discovery.Page) string {
 	fmt.Fprintf(&b, "%q search %q: %d matches; %d shown from offset %d.\n", page.Source, page.Query, page.Total, len(page.Results), page.Offset)
 	switch page.Order {
 	case discovery.OrderRelevance:
-		b.WriteString("Order: provider relevance ranking; ties may move between requests.\n")
+		if page.Source == "gutenberg" {
+			b.WriteString("Order: local catalog ranking. Title or exact text number, then author, then subject or bookshelf. Equal ranks use the lower text number. The Gutenberg website was not queried.\n")
+		} else {
+			b.WriteString("Order: provider relevance ranking; ties may move between requests.\n")
+		}
 	case discovery.OrderIdentifier:
-		b.WriteString("Order: ascending source identifier, stable for paging; not relevance.\n")
+		if page.Source == "gutenberg" {
+			b.WriteString("Order: ascending text number, stable for paging. The Gutenberg website was not queried.\n")
+		} else {
+			b.WriteString("Order: ascending source identifier, stable for paging; not relevance.\n")
+		}
 	case discovery.OrderDownloads:
 		b.WriteString("Order: declared download count, most first; popularity, not quality or relevance.\n")
 	}
@@ -27,6 +35,10 @@ func Search(page discovery.Page) string {
 		fmt.Fprintf(&b, "\n%d. %q\n   ID: %q\n   Authors: %q\n   Languages: %q\n   %q\n   Discovery metadata; download availability not resolved.\n", page.Offset+i+1, r.Title, r.ID, r.Authors, r.Languages, r.LandingPage)
 	}
 	return b.String()
+}
+
+func Catalog(file discovery.CatalogFile) string {
+	return fmt.Sprintf("Catalog written: %q\nBytes: %d\nSHA-256: %q\nSearch with: nemalo search QUERY --source gutenberg --catalog %q\nThis file is catalog metadata. It does not include ebook bytes or a rights statement.\n", file.Path, file.Bytes, file.SHA256, file.Path)
 }
 
 func Inventory(r inventory.Report) string {

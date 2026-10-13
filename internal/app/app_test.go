@@ -91,7 +91,8 @@ func TestSharedServices(t *testing.T) {
 	if d.Capabilities[2].Recommended || d.Capabilities[3].Recommended {
 		t.Fatal(d.Capabilities)
 	}
-	if New().Providers["openlibrary"] == nil {
+	providers := New().Providers
+	if providers["openlibrary"] == nil || providers["archive"] == nil || providers["gutenberg"] == nil {
 		t.Fatal("missing catalog")
 	}
 	if _, err := Lookup("nemalo-nonexistent-fixture-tool"); err == nil {

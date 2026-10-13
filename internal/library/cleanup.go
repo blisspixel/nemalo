@@ -147,6 +147,9 @@ func Cleanup(ctx context.Context, request CleanupRequest) (result CleanupResult,
 	}
 	state, err := LibraryStatus(ctx, libraryRoot)
 	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return result, fmt.Errorf("library not found: %s", libraryRoot)
+		}
 		return result, err
 	}
 	if state.Status != "initialized" {

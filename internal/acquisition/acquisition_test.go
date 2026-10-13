@@ -101,6 +101,21 @@ func request(t *testing.T) Request {
 	return Request{SourceID: "archive:demo", File: "folder/book.PDF", Output: filepath.Join(t.TempDir(), "packet"), MaxBytes: 1000}
 }
 
+func TestAcquireStopsBeforeBytesWhenTheSourceRefuses(t *testing.T) {
+	p, r := fixture(), request(t)
+	p.status = 500
+	result, err := Acquire(context.Background(), p, r)
+	if err == nil || result.TransferRecorded || result.Transfer.Bytes != 0 || result.Output == "" {
+		t.Fatal(result, err)
+	}
+	if _, statErr := os.Stat(filepath.Join(r.Output, "intent.json")); statErr != nil {
+		t.Fatal(statErr)
+	}
+	if _, statErr := os.Stat(filepath.Join(r.Output, "transfer.json")); !os.IsNotExist(statErr) {
+		t.Fatal("transfer record written before any bytes", statErr)
+	}
+}
+
 func TestAcquirePreservesIntentAndVerifiedIntake(t *testing.T) {
 	p, r := fixture(), request(t)
 	p.beforeDownload = func() {

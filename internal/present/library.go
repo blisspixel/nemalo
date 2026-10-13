@@ -272,6 +272,11 @@ func firstNonEmpty(values ...string) string {
 // Cleanup shows every folder entry with its disposition, and the plan digest
 // that --apply --plan must repeat.
 func Cleanup(r library.CleanupResult) string {
+	// A failure before a plan exists has no digest. Printing a preview would
+	// claim that nothing would move, beside the error that stopped planning.
+	if r.Digest == "" && !r.Applied {
+		return ""
+	}
 	var b strings.Builder
 	fmt.Fprintf(&b, "Library: %q\nFolder: %q\nMove: %d (%s) | Keep: %d\nPlan digest: %s\n", r.Library, r.Folder, r.Move, byteCount(r.MoveBytes), r.Keep, r.Digest)
 	if r.Applied {

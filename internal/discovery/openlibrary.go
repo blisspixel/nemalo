@@ -18,8 +18,9 @@ type Result struct {
 	Access      string   `json:"access_type"`
 }
 
-// Result orders. Relevance is the provider's own ranking; Nemalo adds no
-// ranking signal of its own. Identifier order is stable for deliberate paging.
+// Result orders. Open Library and Archive relevance is that provider's ranking.
+// Gutenberg relevance is the local catalog ranking and the result says so.
+// Identifier order is stable for deliberate paging.
 // Downloads is the provider's declared download count, a popularity signal the
 // user selects explicitly; it is not quality, relevance, or a recommendation.
 const (

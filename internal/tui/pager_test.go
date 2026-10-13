@@ -13,6 +13,7 @@ import (
 	"time"
 
 	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 	"github.com/blisspixel/nemalo/internal/app"
 	"github.com/blisspixel/nemalo/internal/inventory"
 	"github.com/blisspixel/nemalo/internal/library"
@@ -644,5 +645,71 @@ func TestTheReaderOpensAtTheUnitOfTheLastRangeRead(t *testing.T) {
 	run(m, m.readSelected(false))
 	if m.pager == nil || m.pager.start.Unit != 1 {
 		t.Fatal("reader did not open at the unit just read")
+	}
+}
+
+func TestReaderFooterKeepsCloseAndFillsTheFrame(t *testing.T) {
+	catalog, root, asset, _ := readerBook(t, true)
+	m := newModel(context.Background(), app.New())
+	m.Update(tea.WindowSizeMsg{Width: 40, Height: 20})
+	run(m, m.openPager(catalog, root, asset, "epub-text/2", reader.Position{}, false, reader.DefaultRate))
+	press(m, "space")
+	_, cmd := m.Update(tea.WindowSizeMsg{Width: 160, Height: 50})
+	run(m, cmd)
+	press(m, "s")
+	if !m.pager.speed {
+		t.Fatal("speed mode did not open after a resize")
+	}
+	view := m.pagerView()
+	lines := strings.Split(view, "\n")
+	if len(lines) != 50 {
+		t.Fatal("frame height", len(lines))
+	}
+	for i, line := range lines {
+		if lipgloss.Width(line) != 160 {
+			t.Fatalf("line %d width %d", i, lipgloss.Width(line))
+		}
+	}
+	m.Update(tea.WindowSizeMsg{Width: 80, Height: 24})
+	view = m.pagerView()
+	lines = strings.Split(view, "\n")
+	if len(lines) != 24 || !strings.Contains(view, "q close") || !strings.Contains(view, "? keys") || strings.Contains(view, "...") {
+		t.Fatal(view)
+	}
+	for i, line := range lines {
+		if lipgloss.Width(line) != 80 {
+			t.Fatalf("80-column line %d width %d", i, lipgloss.Width(line))
+		}
+	}
+	press(m, "?")
+	if !m.pager.help || !strings.Contains(m.pagerView(), "play or pause") || !strings.Contains(m.pagerView(), "q close") {
+		t.Fatal(m.pagerView())
+	}
+	press(m, "space")
+	if !m.pager.help || m.pager.playing {
+		t.Fatal("the key list accepted play", m.pager.playing)
+	}
+	press(m, "?")
+	if m.pager.help || !strings.Contains(m.pagerView(), "wpm") {
+		t.Fatal(m.pagerView())
+	}
+}
+
+func TestReadAndTUIRefuseAPipe(t *testing.T) {
+	in, err := os.Open(os.DevNull)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = in.Close() })
+	out, err := os.OpenFile(os.DevNull, os.O_WRONLY, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = out.Close() })
+	if _, err := Read(context.Background(), app.New(), in, out, ReadOptions{}); err == nil || err.Error() != "read requires an interactive terminal" {
+		t.Fatal(err)
+	}
+	if err := Run(context.Background(), app.New(), in, out); err == nil || err.Error() != "tui requires an interactive terminal" {
+		t.Fatal(err)
 	}
 }

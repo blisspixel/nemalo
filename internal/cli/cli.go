@@ -24,10 +24,11 @@ import (
 	"github.com/blisspixel/nemalo/internal/reader"
 	"github.com/blisspixel/nemalo/internal/textsafe"
 	"github.com/blisspixel/nemalo/internal/tui"
+	"github.com/charmbracelet/x/term"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
-const Version = "0.1.0-alpha.8"
+const Version = "0.1.0-alpha.9"
 
 const help = `Nemalo
 Find knowledge. Care for it. Realize its potential.
@@ -36,9 +37,14 @@ Usage: nemalo <command> [options]
 
   tui                 Open the interactive terminal interface
   doctor              Report configuration and optional tool availability
-  search QUERY        Search a selected catalog (explicit network access)
-  evaluate archive:ITEM
-                      Inspect source-declared files, rights, and access restrictions
+  search QUERY        Search a selected catalog. Open Library and Internet Archive
+                      use the network. Gutenberg reads a local catalog file.
+  evaluate archive:ITEM|gutenberg:NUMBER
+                      Inspect source-declared files, rights, and access restrictions.
+                      gutenberg:NUMBER is one local catalog row and lists no files.
+  catalog fetch gutenberg --output FILE
+                      Download the official Gutenberg catalog to a new file.
+                      Search does not do this, and it does not download ebooks.
   acquire archive:ITEM --file NAME --output NEW_DIRECTORY
                       Download a selected EPUB/PDF/MP3 into untrusted intake
   acquire archive:ITEM --recording FORMAT --output NEW_DIRECTORY [--resume]
@@ -127,9 +133,13 @@ Usage: nemalo <command> [options]
   help                Show this help
 
 Shared options: --json, --config FILE, --library DIRECTORY, --review DIRECTORY
-Search options: --source openlibrary|archive (default openlibrary), --limit 10, --offset 0,
-                --sort relevance|identifier|downloads (the last two are Archive only;
-                identifier pages stably, downloads ranks by declared popularity)
+Search options: --source openlibrary|archive|gutenberg (default openlibrary),
+                --limit 10, --offset 0,
+                --sort relevance|identifier|downloads (identifier and downloads are
+                Archive only; Gutenberg also accepts identifier),
+                --catalog FILE (absolute pg_catalog.csv for Gutenberg search,
+                evaluate, and tui; also gutenberg_catalog in config, or
+                NEMALO_GUTENBERG_CATALOG). Gutenberg does not query the website.
 Acquire options: --file exact-source-filename, --output new-directory,
                  --max-file-bytes 268435456 (maximum 256 MiB),
                  --no-scan, --on-detection quarantine|delete,
@@ -138,9 +148,12 @@ Acquire options: --file exact-source-filename, --output new-directory,
                  --resume (continue a recording directory; completed tracks stay)
 Acquisition creates missing parent folders, retains incomplete output, and never
 overwrites it. --resume continues an interrupted file in its packet when the
-source still has the same bytes, and continues a recording, keeping completed tracks. When a scanner is installed it scans the downloaded
-bytes once. A detection moves them to the Nemalo quarantine (or deletes them)
-and lists other files from the same item. Rights remain unresolved.
+source still has the same bytes and the packet already has a transfer record
+and partial bytes. A failure before any bytes has no transfer record; start a
+new output. --resume also continues a recording, keeping completed tracks.
+When a scanner is installed it scans the downloaded bytes once. A detection
+moves them to the Nemalo quarantine (or deletes them) and lists other files
+from the same item. Rights remain unresolved.
 Inspect options: --hashes, --max-entries 10000, --max-depth 32,
                  --max-file-bytes 268435456, --max-total-bytes 1073741824
 Check options: --scan, --expected-bytes N, --expected-sha256 HASH
@@ -216,7 +229,7 @@ func Execute(ctx context.Context, args []string, out, errOut io.Writer, service 
 	command := args[0]
 	action := ""
 	arguments := args[1:]
-	if (command == "library" || command == "content" || command == "mcp" || command == "bookmark") && len(arguments) > 0 {
+	if (command == "library" || command == "content" || command == "mcp" || command == "bookmark" || command == "catalog") && len(arguments) > 0 {
 		action = arguments[0]
 		arguments = arguments[1:]
 		if action == "--help" || action == "-h" {
@@ -232,6 +245,7 @@ func Execute(ctx context.Context, args []string, out, errOut io.Writer, service 
 	limit, offset := flags.Int("limit", 10, "search page size"), flags.Int("offset", 0, "search offset")
 	source := flags.String("source", "openlibrary", "search provider")
 	sortOrder := flags.String("sort", discovery.OrderRelevance, "search result order")
+	catalogPath := flags.String("catalog", "", "absolute path of a local Project Gutenberg catalog")
 	limits := inventory.Defaults()
 	checkOptions := assessment.Options{}
 	output := flags.String("output", "", "new snapshot output path")
@@ -334,7 +348,7 @@ func Execute(ctx context.Context, args []string, out, errOut io.Writer, service 
 		}
 		return write(service.ContentCapabilities(), nil, 0)
 	}
-	if command != "doctor" && command != "search" && command != "evaluate" && command != "acquire" && command != "inspect" && command != "check" && command != "tui" && command != "library" && command != "content" && command != "mcp" && command != "read" && command != "bookmark" {
+	if command != "doctor" && command != "search" && command != "evaluate" && command != "acquire" && command != "inspect" && command != "check" && command != "tui" && command != "library" && command != "content" && command != "mcp" && command != "read" && command != "bookmark" && command != "catalog" {
 		return write(nil, fmt.Errorf("unknown command %q; use nemalo help", command), 2)
 	}
 	p, err := paths()
@@ -345,7 +359,7 @@ func Execute(ctx context.Context, args []string, out, errOut io.Writer, service 
 	if !explicit {
 		*configFile = p.Config
 	}
-	c, err := config.Load(*configFile, explicit, env, config.Config{Library: *libraryDir, Review: *review})
+	c, err := config.Load(*configFile, explicit, env, config.Config{Library: *libraryDir, Review: *review, GutenbergCatalog: *catalogPath})
 	if err != nil {
 		return write(nil, err, 2)
 	}
@@ -358,6 +372,7 @@ func Execute(ctx context.Context, args []string, out, errOut io.Writer, service 
 	if service.Handoff == "" && p.State != "" {
 		service.Handoff = filepath.Join(p.State, "handoff")
 	}
+	service.UseGutenbergCatalog(c.GutenbergCatalog)
 	// guide prints one next step after human output when scan evidence is missing.
 	guide := func(code int, antivirus string, scanRequested bool) int {
 		if hint := service.ScanGuidance(antivirus, scanRequested); hint != "" && !*jsonMode {
@@ -447,8 +462,17 @@ func Execute(ctx context.Context, args []string, out, errOut io.Writer, service 
 		}
 		return write(r, nil, 0)
 	case "read":
-		if *jsonMode || flags.NArg() != 1 || *auditRoot == "" || contentRequest.AssetID == "" {
-			return write(nil, errors.New("use read CATALOG --root DIRECTORY --asset sha256:HASH; read is interactive and has no --json"), 2)
+		switch {
+		case *jsonMode:
+			return write(nil, errors.New("read is interactive and has no --json"), 2)
+		case flags.NArg() != 1:
+			return write(nil, errors.New("use read CATALOG --root DIRECTORY --asset sha256:HASH"), 2)
+		case *auditRoot == "":
+			return write(nil, fmt.Errorf("read needs --root; for a managed library use the same folder: --root %s", flags.Arg(0)), 2)
+		case contentRequest.AssetID == "":
+			return write(nil, errors.New("read needs --asset sha256:HASH"), 2)
+		case !stdinTerminal():
+			return write(nil, errors.New("read requires an interactive terminal"), 2)
 		}
 		if *rate < reader.MinRate || *rate > reader.MaxRate {
 			return write(nil, fmt.Errorf("--rate must be %d through %d words per minute", reader.MinRate, reader.MaxRate), 2)
@@ -469,8 +493,8 @@ func Execute(ctx context.Context, args []string, out, errOut io.Writer, service 
 		}
 		return 0
 	case "evaluate":
-		if flags.NArg() != 1 || !discovery.ValidArchiveID(flags.Arg(0)) {
-			return write(nil, errors.New("evaluate requires exactly one archive:ITEM identifier"), 2)
+		if flags.NArg() != 1 || (!discovery.ValidArchiveID(flags.Arg(0)) && !discovery.ValidGutenbergID(flags.Arg(0))) {
+			return write(nil, errors.New("evaluate requires exactly one archive:ITEM or gutenberg:NUMBER identifier"), 2)
 		}
 		data, err := service.Evaluate(ctx, flags.Arg(0))
 		if err != nil {
@@ -753,12 +777,25 @@ func Execute(ctx context.Context, args []string, out, errOut io.Writer, service 
 			return write(nil, errors.New("doctor takes no arguments"), 2)
 		}
 		return write(service.Doctor(p, c, app.Lookup), nil, 0)
+	case "catalog":
+		if action != "fetch" || flags.NArg() != 1 || flags.Arg(0) != "gutenberg" || *output == "" {
+			return write(nil, errors.New("use catalog fetch gutenberg --output FILE"), 2)
+		}
+		data, err := service.FetchGutenbergCatalog(ctx, *output)
+		if err != nil {
+			return write(data, err, 1)
+		}
+		return write(data, nil, 0)
 	case "search":
 		query := strings.Join(flags.Args(), " ")
-		if *source != "openlibrary" && *source != "archive" {
-			return write(nil, errors.New("search source must be openlibrary or archive"), 2)
+		if *source != "openlibrary" && *source != "archive" && *source != "gutenberg" {
+			return write(nil, errors.New("search source must be openlibrary, archive, or gutenberg"), 2)
 		}
-		if *sortOrder != discovery.OrderRelevance && ((*sortOrder != discovery.OrderIdentifier && *sortOrder != discovery.OrderDownloads) || *source != "archive") {
+		if *source == "gutenberg" {
+			if *sortOrder != discovery.OrderRelevance && *sortOrder != discovery.OrderIdentifier {
+				return write(nil, errors.New("gutenberg search order must be relevance or identifier"), 2)
+			}
+		} else if *sortOrder != discovery.OrderRelevance && ((*sortOrder != discovery.OrderIdentifier && *sortOrder != discovery.OrderDownloads) || *source != "archive") {
 			return write(nil, errors.New("search order must be relevance, or identifier or downloads with --source archive"), 2)
 		}
 		if strings.TrimSpace(query) == "" || len(query) > 1000 || *limit < 1 || *limit > 50 || *offset < 0 || *offset > 10000 {
@@ -766,7 +803,12 @@ func Execute(ctx context.Context, args []string, out, errOut io.Writer, service 
 		}
 		data, err := service.SearchSourceOrdered(ctx, *source, query, *sortOrder, *limit, *offset)
 		if err != nil {
-			return write(data, err, 1)
+			// Human output is the error alone. JSON still carries the provider
+			// value so its fields are escaped beside that error.
+			if *jsonMode {
+				return write(data, err, 1)
+			}
+			return write(nil, err, 1)
 		}
 		return write(data, nil, 0)
 	case "inspect":
@@ -781,6 +823,9 @@ func Execute(ctx context.Context, args []string, out, errOut io.Writer, service 
 	case "tui":
 		if *jsonMode || flags.NArg() != 0 {
 			return write(nil, errors.New("tui takes no arguments and does not support --json"), 2)
+		}
+		if !stdinTerminal() {
+			return write(nil, errors.New("tui requires an interactive terminal"), 2)
 		}
 		if err := terminal(ctx, service); err != nil {
 			return write(nil, err, 1)
@@ -822,6 +867,12 @@ func Execute(ctx context.Context, args []string, out, errOut io.Writer, service 
 // readTerminal runs the interactive reader; tests replace it.
 var readTerminal = func(ctx context.Context, s app.Service, out io.Writer, o tui.ReadOptions) (*reader.Position, error) {
 	return tui.Read(ctx, s, os.Stdin, out, o)
+}
+
+// stdinTerminal reports whether this process is attached to a terminal.
+// Tests replace it. read and tui both need standard input and output.
+var stdinTerminal = func() bool {
+	return term.IsTerminal(os.Stdin.Fd()) && term.IsTerminal(os.Stdout.Fd())
 }
 
 // mcpInput is the protocol input stream; tests replace it.
@@ -934,7 +985,11 @@ func flagApplies(command, action, name string) bool {
 	case "acquire":
 		return name == "file" || name == "output" || name == "max-file-bytes" || name == "no-scan" || name == "on-detection" || name == "recording" || name == "resume" || name == "max-recording-bytes"
 	case "search":
-		return name == "limit" || name == "offset" || name == "source" || name == "sort"
+		return name == "limit" || name == "offset" || name == "source" || name == "sort" || name == "catalog"
+	case "evaluate", "tui":
+		return name == "catalog"
+	case "catalog":
+		return action == "fetch" && name == "output"
 	case "check":
 		return name == "scan" || name == "expected-bytes" || name == "expected-sha256"
 	case "inspect":
@@ -1032,6 +1087,9 @@ func printData(out io.Writer, data any) error {
 		return err
 	case discovery.Page:
 		_, err := io.WriteString(out, present.Search(value))
+		return err
+	case discovery.CatalogFile:
+		_, err := io.WriteString(out, present.Catalog(value))
 		return err
 	case content.Result:
 		_, err := io.WriteString(out, present.ContentCommand(value))

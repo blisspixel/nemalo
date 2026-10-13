@@ -13,6 +13,7 @@ import (
 	"testing"
 
 	"github.com/blisspixel/nemalo/internal/app"
+	"github.com/blisspixel/nemalo/internal/config"
 	"github.com/blisspixel/nemalo/internal/content"
 	"github.com/blisspixel/nemalo/internal/inventory"
 	"github.com/blisspixel/nemalo/internal/library"
@@ -153,6 +154,25 @@ func TestReadCLIOpensTheReaderAndPrintsWhereItClosed(t *testing.T) {
 	fail = errors.New("no terminal")
 	if code, _, stderr := execute(t, []string{"read", "catalog.json", "--root", "books", "--asset", asset}, nil); code != 1 || !strings.Contains(stderr, "no terminal") {
 		t.Fatal(code, stderr)
+	}
+	code, _, stderr = execute(t, []string{"read", "catalog.json", "--asset", asset}, nil)
+	if code != 2 || !strings.Contains(stderr, "read needs --root") || !strings.Contains(stderr, "--root catalog.json") || strings.Contains(stderr, "has no --json") {
+		t.Fatal(code, stderr)
+	}
+	code, _, stderr = execute(t, []string{"read", "catalog.json", "--root", "books"}, nil)
+	if code != 2 || !strings.Contains(stderr, "read needs --asset") {
+		t.Fatal(code, stderr)
+	}
+	code, out, stderr = execute(t, []string{"read", "catalog.json", "--root", "books", "--asset", asset, "--json"}, nil)
+	if code != 2 || stderr != "" || !strings.Contains(out, "has no --json") || strings.Contains(out, "needs --root") {
+		t.Fatal(code, out, stderr)
+	}
+	stdinTerminal = func() bool { return false }
+	var plain, errOut bytes.Buffer
+	if code := Execute(context.Background(), []string{"read", "catalog.json", "--root", "books", "--asset", asset}, &plain, &errOut, app.New(), func(string) string { return "" }, func() (config.Paths, error) {
+		return config.Paths{Config: filepath.Join(t.TempDir(), "missing.json")}, nil
+	}, nil); code != 2 || !strings.Contains(errOut.String(), "read requires an interactive terminal") || len(got) != 3 {
+		t.Fatal(code, errOut.String(), len(got))
 	}
 	for _, args := range [][]string{
 		{"read"},

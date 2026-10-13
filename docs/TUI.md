@@ -41,20 +41,21 @@ item's other files for a new, deliberate review. See
 | F5 | Toggle complete evidence report |
 | PageUp / PageDown | Scroll detail/report |
 | Ctrl+Left / Ctrl+Right | Previous / next search or holdings page |
-| F2 in search | Switch Open Library / Internet Archive |
+| F2 in search | Switch Open Library / Internet Archive / local Gutenberg catalog |
 | F3 in Archive search | Cycle relevance / downloads / identifier order |
+| F3 in Gutenberg search | Cycle relevance / identifier. The website is not queried |
 | F3 in inspect, snapshot, audit | Select bounded 1 GiB / 5 GiB read budget |
 | F4 in holdings | Cycle EPUB / PDF / MP3 / all filename filters |
 | F7 in State | Review initialization of an explicit existing folder |
 | F8 in State | Review import of the folder and one source; no antivirus scan |
 | Ctrl+R in State | Review a rescan of review EPUBs that lack scan evidence |
-| Ctrl+N in two-field forms | Switch between fields, including State source |
+| Ctrl+N in two-field forms | Switch between fields, including the Gutenberg catalog and the State source |
 | Ctrl+A in snapshot | Toggle historical health metadata |
-| e in Archive results | Prepare selected-item evaluation, without requesting it |
+| e in Archive or Gutenberg results | Prepare selected-item evaluation, without requesting it. A Gutenberg row lists no files |
 | d in Evaluate results | Review selected-file acquisition into a new intake directory |
 | F9 in State | Preview moving the source folder's held files to the holding area; Enter applies that exact plan. With a cleanup ID in the source field (set after a cleanup), preview restoring it |
 | t in Holdings results | Show the recording that holds the selected track: order, missing tracks, timing |
-| a in Evaluate results | Review acquiring every track of the recording that holds the selected MP3 |
+| a in Evaluate results | Review acquiring every track of the recording that holds the selected MP3. An empty Intake field asks for a folder (Ctrl+N) and does not open that review |
 | r in Holdings results | Stage source access; explicit root still required |
 | o in managed Holdings results | Open a verified read-only copy in the default application |
 | Enter in Read results | Retrieve the selected source unit |
@@ -111,7 +112,9 @@ EPUB notes, render images, or play audio. Unsupported units fail explicitly.
 reader on EPUB or PDF text ([decision 0025](decisions/0025-terminal-reading.md)).
 Pages are 66 columns for EPUB and 100 for PDF, narrower on a smaller terminal.
 A wrapped PDF source line continues with a hanging indent. Omitted images and
-tables appear where they were omitted.
+tables appear where they were omitted. A resize, or a switch between pages and
+one word at a time, repaints the whole frame. `?` lists the keys. The footer
+keeps `q close` visible at 80 columns.
 
 | Key | Pages | Speed reading |
 | --- | --- | --- |
@@ -126,6 +129,7 @@ tables appear where they were omitted.
 | m | Save this location. Closing does not save | Save this location. Closing does not save |
 | ' | Restore the saved location | Restore the saved location |
 | q, Escape | Close. Nothing is saved | Close. Nothing is saved |
+| ? | Show or hide the key list. `q close` stays in the footer at 80 columns | Show or hide the key list. `q close` stays in the footer at 80 columns |
 
 Speed reading starts paused at 250 words per minute and holds sentence ends
 twice as long. Above 350 the footer calls it skimming, since comprehension fell

@@ -27,6 +27,60 @@ func (c catalog) Evaluate(_ context.Context, id string) (discovery.Evaluation, e
 }
 func key(code rune) tea.KeyPressMsg { return tea.KeyPressMsg{Code: code} }
 
+type archiveHit struct{}
+
+func (archiveHit) Search(_ context.Context, q string, _, _ int) (discovery.Page, error) {
+	return discovery.Page{Source: "archive", Query: q, Results: []discovery.Result{{ID: "archive:item", Title: "FROM-ARCHIVE", Access: "metadata"}}}, nil
+}
+
+func TestGutenbergSearchReadsTheLocalCatalog(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "pg_catalog.csv")
+	body := "Text#,Type,Issued,Title,Language,Authors,Subjects,LoCC,Bookshelves\n11,Text,1865-11-26,Alice,en,Carroll,Fantasy,PZ,Children\n"
+	if err := os.WriteFile(path, []byte(body), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	g := discovery.NewGutenberg()
+	g.Catalog = path
+	m := newModel(context.Background(), app.Service{Providers: map[string]app.Searcher{"openlibrary": catalog{}, "archive": archiveHit{}, "gutenberg": g}})
+	m.Update(tea.WindowSizeMsg{Width: 100, Height: 30})
+	m.Update(key(tea.KeyF2))
+	m.secondary.SetValue(path)
+	m.input.SetValue("alice")
+	_, cmd := m.Update(key(tea.KeyEnter))
+	m.Update(cmd())
+	if !strings.Contains(m.viewport.GetContent(), "FROM-ARCHIVE") || strings.Contains(m.viewport.GetContent(), "gutenberg:11") {
+		t.Fatal("archive search used the catalog field", m.viewport.GetContent())
+	}
+	m.Update(key(tea.KeyF2))
+	if m.source != "gutenberg" || !m.form() {
+		t.Fatal("catalog field unavailable", m.source)
+	}
+	m.Update(key(tea.KeyF3))
+	if m.searchOrder() != discovery.OrderIdentifier {
+		t.Fatal(m.searchOrder())
+	}
+	m.Update(key(tea.KeyF3))
+	if m.searchOrder() != discovery.OrderRelevance || strings.Contains(m.status, "downloads") {
+		t.Fatal(m.status, m.searchOrder())
+	}
+	_, cmd = m.Update(key(tea.KeyEnter))
+	m.Update(cmd())
+	if !strings.Contains(m.viewport.GetContent(), "gutenberg:11") || strings.Contains(m.viewport.GetContent(), "FROM-ARCHIVE") || !strings.Contains(m.viewport.GetContent(), "website was not queried") {
+		t.Fatal(m.viewport.GetContent())
+	}
+	m.Update(key(tea.KeyF6))
+	m.Update(tea.KeyPressMsg{Text: "e", Code: 'e'})
+	if m.mode != "evaluate" || m.input.Value() != "gutenberg:11" {
+		t.Fatal(m.mode, m.input.Value())
+	}
+	_, cmd = m.Update(key(tea.KeyEnter))
+	m.Update(cmd())
+	if len(m.entries) != 0 || !strings.Contains(m.viewport.GetContent(), "local_catalog") || !strings.Contains(m.viewport.GetContent(), "Files listed: 0") {
+		t.Fatal(len(m.entries), m.viewport.GetContent())
+	}
+}
+
 func TestTerminalWorkflow(t *testing.T) {
 	m := newModel(context.Background(), app.Service{Providers: map[string]app.Searcher{"openlibrary": catalog{}}})
 	if m.Init() == nil || !strings.Contains(m.View().Content, "Nemalo") {
@@ -200,6 +254,10 @@ func TestTerminalWorkflow(t *testing.T) {
 	m.Update(cmd())
 	if !strings.Contains(m.viewport.GetContent(), "Archive query") {
 		t.Fatal("Archive search not routed")
+	}
+	m.Update(key(tea.KeyF2))
+	if m.source != "gutenberg" || !strings.Contains(m.contextLine(), "website is not queried") {
+		t.Fatal("gutenberg provider unavailable", m.source)
 	}
 	m.Update(key(tea.KeyF2))
 	if m.source != "openlibrary" {

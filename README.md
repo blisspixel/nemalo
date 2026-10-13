@@ -17,6 +17,9 @@ AI service. The agent interface (MCP) uses the same application services.
 
 - Search Open Library and Internet Archive by provider relevance, or Archive by
   download count or identifier; evaluate Archive item/file metadata.
+- Search and evaluate a local Project Gutenberg catalog (`pg_catalog.csv`).
+  Ranking is local. `catalog fetch gutenberg` downloads that one file when
+  you ask. Search does not contact gutenberg.org and does not download ebooks.
 - Acquire a selected Archive EPUB, PDF, or MP3 into exclusive untrusted intake,
   with source checksums, local checks, a scan by the installed antivirus, and a
   provenance receipt. A detection is quarantined and other files are offered.

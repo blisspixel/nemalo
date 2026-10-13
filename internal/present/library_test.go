@@ -25,4 +25,11 @@ func TestLibraryEvidenceAndTerminalEscaping(t *testing.T) {
 	if !strings.Contains(imported, `Identity: "edition" "isbn:9780306406157"`) || !strings.Contains(imported, "Package identifiers recorded: 1") || !strings.Contains(imported, "Identifiers omitted: 1") {
 		t.Fatal(imported)
 	}
+	if Cleanup(library.CleanupResult{Library: "lib", Folder: "folder", Limitations: []string{"kept"}}) != "" {
+		t.Fatal("a cleanup that failed before planning rendered a preview")
+	}
+	planned := Cleanup(library.CleanupResult{Library: "lib", Folder: "folder", Digest: strings.Repeat("ab", 32)})
+	if !strings.Contains(planned, "Nothing here is held") || !strings.Contains(planned, "Preview only") {
+		t.Fatal(planned)
+	}
 }

@@ -18,6 +18,11 @@ func (m *model) requestDownload() {
 		m.resize()
 		return
 	}
+	if strings.TrimSpace(m.secondary.Value()) == "" {
+		m.status = "Enter a new intake folder first (Ctrl+N)."
+		m.resize()
+		return
+	}
 	request := acquisition.Request{SourceID: m.submittedInput, File: m.entries[m.selected].sourceID, Output: m.secondary.Value(), MaxBytes: 256 << 20}
 	if err := request.Validate(); err != nil {
 		m.status = fmt.Sprintf("Acquisition error: %q", err.Error())
@@ -113,6 +118,11 @@ func (m *model) recordingFor(file string) *discovery.Recording {
 func (m *model) requestRecording() {
 	if m.input.Value() != m.submittedInput {
 		m.status = "Item changed. Evaluate again before selecting a download."
+		m.resize()
+		return
+	}
+	if strings.TrimSpace(m.secondary.Value()) == "" {
+		m.status = "Enter a new intake folder first (Ctrl+N)."
 		m.resize()
 		return
 	}

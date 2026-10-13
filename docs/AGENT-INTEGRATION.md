@@ -41,7 +41,9 @@ Implemented tools are all read-only: `nemalo_capabilities`, `library_status`,
 `content_resource`. `content_navigation` lists source-declared EPUB contents;
 a read of one entry uses `content_read` with representation `epub-nav/1`.
 `catalog_search` and `catalog_evaluate` exist only with
-`--allow-network`. Each returns the CLI's data in a
+`--allow-network`. They search Open Library and Internet Archive.
+Gutenberg search reads a local catalog in the CLI and TUI and is not an MCP
+tool. Each returns the CLI's data in a
 `{schema_version, tool, data, error}` envelope; failures are tool errors that keep
 the service status. Paths must resolve inside a `--scope` directory or the
 configured library and review folders. At most four calls run at once, each with

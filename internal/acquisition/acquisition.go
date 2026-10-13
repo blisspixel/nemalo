@@ -95,6 +95,9 @@ type Result struct {
 	Durability       string        `json:"durability"`
 	// ResumedFrom is the byte offset a resumed transfer continued from.
 	ResumedFrom int64 `json:"resumed_from,omitempty"`
+	// TransferRecorded is set once transfer.json is synced, before the body.
+	// It is presentation state for this call. A receipt does not store it.
+	TransferRecorded bool `json:"-"`
 }
 
 // Alternative is another acquirable file from the same evaluation. It carries
@@ -252,6 +255,7 @@ func transferPacket(ctx context.Context, provider Provider, parent *os.Root, abs
 	if err := writeRecord(root, "transfer.json", responseRecord(resp, file)); err != nil {
 		return nil, result, err
 	}
+	result.TransferRecorded = true
 	p.name = "content." + format(file.Name)
 	p.f, err = root.OpenFile(p.name, os.O_RDWR|os.O_CREATE|os.O_EXCL, 0600)
 	if err != nil {

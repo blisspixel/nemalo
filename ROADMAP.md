@@ -317,7 +317,11 @@ acquired as ordered track packets with track-level resume
 ([decision 0018](docs/decisions/0018-whole-recording-acquisition.md)), and an
 interrupted transfer resumes byte-wise against a strong validator
 ([decision 0023](docs/decisions/0023-validator-bound-download-resume.md)).
-Gutenberg production integration and broader provider contracts remain planned. Transfers and checked publication use milestones 2 and 3. Source cleanup
+Gutenberg search and evaluation read a local copy of the official CSV, and
+`catalog fetch gutenberg` downloads that file
+([decision 0028](docs/decisions/0028-gutenberg-local-catalog.md)).
+Ebook download, website search, and broader provider contracts remain planned.
+Transfers and checked publication use milestones 2 and 3. Source cleanup
 is independent and requires 4.
 
 Complete Gutenberg and Archive acquisition over the existing Go provider core.

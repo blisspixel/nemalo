@@ -124,6 +124,14 @@ func TestProviderSearchAndEvaluationCommands(t *testing.T) {
 	if code != 1 || !strings.Contains(out, "provider unavailable") {
 		t.Fatal(code, out)
 	}
+	code, out, stderr := execute(t, []string{"search", "frankenstein", "--source", "archive"}, errors.New("provider resolved to a nonpublic destination"))
+	if code != 1 || strings.TrimSpace(out) != "" || strings.Contains(out, "matches") || strings.Contains(out, "No results") || !strings.Contains(stderr, "nonpublic destination") {
+		t.Fatal(code, out, stderr)
+	}
+	code, out, stderr = execute(t, []string{"search", "frankenstein", "--source", "archive", "--json"}, errors.New("provider resolved to a nonpublic destination"))
+	if code != 1 || stderr != "" || strings.Contains(out, "No results") || !strings.Contains(out, `"error"`) || !strings.Contains(out, "nonpublic destination") {
+		t.Fatal(code, out, stderr)
+	}
 	for _, args := range [][]string{{"evaluate"}, {"evaluate", "demo"}, {"evaluate", "archive:../x"}, {"evaluate", "openlibrary:OL1W"}, {"evaluate", "archive:demo", "extra"}, {"evaluate", "archive:demo", "--source", "archive"}, {"search", "x", "--source", "missing"}, {"inspect", "x", "--source", "archive"},
 		{"search", "x", "--sort", "identifier"}, {"search", "x", "--source", "archive", "--sort", "popularity"}, {"search", "x", "--sort", "downloads"}, {"search", "x", "--source", "archive", "--sort", ""}, {"evaluate", "archive:demo", "--sort", "relevance"}} {
 		if code, _, _ := execute(t, args, nil); code != 2 {
@@ -138,6 +146,9 @@ func (brokenWriter) Write([]byte) (int, error) { return 0, errors.New("write fai
 
 func execute(t *testing.T, args []string, searchErr error) (int, string, string) {
 	t.Helper()
+	saved := stdinTerminal
+	stdinTerminal = func() bool { return true }
+	t.Cleanup(func() { stdinTerminal = saved })
 	dir := t.TempDir()
 	var out, errOut bytes.Buffer
 	code := Execute(context.Background(), args, &out, &errOut, app.Service{Providers: map[string]app.Searcher{"openlibrary": searcher{searchErr}, "archive": searcher{searchErr}}}, func(string) string { return "" }, func() (config.Paths, error) { return config.Paths{Config: filepath.Join(dir, "missing.json")}, nil }, func(context.Context, app.Service) error { return nil })
@@ -224,8 +235,29 @@ func TestUsageAndConfigurationFailures(t *testing.T) {
 	}
 	dir := t.TempDir()
 	paths = func() (config.Paths, error) { return config.Paths{Config: filepath.Join(dir, "missing")}, nil }
+	stdinTerminal = func() bool { return true }
 	if code := Execute(context.Background(), []string{"tui"}, io.Discard, io.Discard, app.New(), func(string) string { return "" }, paths, func(context.Context, app.Service) error { return errors.New("no terminal") }); code != 1 {
 		t.Fatal(code)
+	}
+	stdinTerminal = func() bool { return false }
+	var out, errOut bytes.Buffer
+	if code := Execute(context.Background(), []string{"tui"}, &out, &errOut, app.New(), func(string) string { return "" }, paths, func(context.Context, app.Service) error {
+		t.Fatal("tui started without a terminal")
+		return nil
+	}); code != 2 || !strings.Contains(errOut.String(), "tui requires an interactive terminal") {
+		t.Fatal(code, out.String(), errOut.String())
+	}
+}
+
+func TestMissingLibraryCleanupPrintsNoPreview(t *testing.T) {
+	lib := filepath.Join(t.TempDir(), "missing")
+	folder := t.TempDir()
+	code, out, stderr := execute(t, []string{"library", "cleanup", lib, folder}, nil)
+	if code != 1 || strings.TrimSpace(out) != "" || strings.Contains(out, "Preview") || strings.Contains(out, "Nothing here is held") {
+		t.Fatal(code, out, stderr)
+	}
+	if !strings.Contains(stderr, "library not found") || !strings.Contains(stderr, "missing") {
+		t.Fatal(stderr)
 	}
 }
 
@@ -242,6 +274,59 @@ func TestOutputFailures(t *testing.T) {
 	f.Int("limit", 1, "")
 	if err := parse(f, []string{"title", "--json", "--limit=2"}); err != nil || f.Arg(0) != "title" {
 		t.Fatal(err)
+	}
+}
+
+func TestGutenbergCatalogCommands(t *testing.T) {
+	dir := t.TempDir()
+	catalog := filepath.Join(dir, "pg_catalog.csv")
+	body := "Text#,Type,Issued,Title,Language,Authors,Subjects,LoCC,Bookshelves\n11,Text,1865-11-26,Alice,en; fr,Carroll,Fantasy,PZ,Children\n"
+	if err := os.WriteFile(catalog, []byte(body), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	paths := func() (config.Paths, error) { return config.Paths{Config: filepath.Join(dir, "missing.json")}, nil }
+	env := func(string) string { return "" }
+	run := func(args ...string) (int, string, string) {
+		t.Helper()
+		var out, errOut bytes.Buffer
+		code := Execute(context.Background(), args, &out, &errOut, app.New(), env, paths, func(context.Context, app.Service) error { return nil })
+		return code, out.String(), errOut.String()
+	}
+	code, out, stderr := run("search", "alice", "--source", "gutenberg", "--catalog", catalog)
+	if code != 0 || stderr != "" || !strings.Contains(out, "gutenberg:11") || !strings.Contains(out, "website was not queried") || strings.Contains(out, "ties may move") {
+		t.Fatal(code, out, stderr)
+	}
+	code, out, stderr = run("search", "alice", "--source", "gutenberg", "--catalog", catalog, "--sort", "identifier", "--json")
+	if code != 0 || stderr != "" || !strings.Contains(out, `"order":"identifier"`) || !strings.Contains(out, `"id":"gutenberg:11"`) {
+		t.Fatal(code, out, stderr)
+	}
+	code, out, stderr = run("evaluate", "gutenberg:11", "--catalog", catalog)
+	if code != 0 || stderr != "" || !strings.Contains(out, "local_catalog") || !strings.Contains(out, "Files listed: 0") || !strings.Contains(out, "download URL") {
+		t.Fatal(code, out, stderr)
+	}
+	code, out, _ = run("evaluate", "gutenberg:11", "--catalog", catalog, "--json")
+	if code != 0 || !strings.Contains(out, `"files":[]`) || !strings.Contains(out, `"languages":["en","fr"]`) {
+		t.Fatal(code, out)
+	}
+	for _, args := range [][]string{
+		{"search", "alice", "--source", "gutenberg", "--sort", "downloads", "--catalog", catalog},
+		{"search", "alice", "--source", "gutenberg", "--catalog", "relative.csv"},
+		{"evaluate", "gutenberg:01", "--catalog", catalog},
+		{"catalog", "fetch"},
+		{"catalog", "fetch", "other", "--output", filepath.Join(dir, "out.csv")},
+		{"doctor", "--catalog", catalog},
+	} {
+		if code, _, _ := run(args...); code != 2 {
+			t.Fatal(args, code)
+		}
+	}
+	code, _, stderr = run("search", "alice", "--source", "gutenberg")
+	if code != 1 || !strings.Contains(stderr, "does not query") {
+		t.Fatal(code, stderr)
+	}
+	code, _, stderr = run("evaluate", "gutenberg:99", "--catalog", catalog)
+	if code != 1 || !strings.Contains(stderr, "no record") {
+		t.Fatal(code, stderr)
 	}
 }
 

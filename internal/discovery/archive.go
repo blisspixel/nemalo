@@ -190,6 +190,9 @@ type Evaluation struct {
 	Publishers     []string          `json:"publishers"`
 	Rights         []string          `json:"rights_statements"`
 	LicenseURLs    []string          `json:"declared_license_urls"`
+	Subjects       []string          `json:"subjects,omitempty"`
+	Bookshelves    []string          `json:"bookshelves,omitempty"`
+	Classes        []string          `json:"loc_classes,omitempty"`
 	LandingPage    string            `json:"landing_page"`
 	MetadataURL    string            `json:"metadata_url"`
 	CheckedAt      time.Time         `json:"checked_at"`
