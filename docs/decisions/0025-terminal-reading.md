@@ -8,7 +8,9 @@ held EPUB and PDF text in the terminal, over the existing content service.
 `nemalo read CATALOG|LIBRARY --root DIRECTORY --asset sha256:HASH` and `p` or
 `s` in TUI Read open a full-screen reader over `epub-text/2` or `pdf-text/1`.
 `internal/reader` lays out delivered ranges; it reads no files and stores
-nothing. The reader requests the same bounded ranges and continuations as
+nothing. Closing prints the unit and byte and does not save a bookmark.
+An explicit save is the library journal in
+[decision 0027](0027-explicit-local-bookmarks.md). The reader requests the same bounded ranges and continuations as
 `content read`, 64 KiB at a time, ahead of the reader, within 4 MiB a session
 (more than a very long novel; at most about 40 MiB of memory). At that limit,
 `]` continues in a new session from exactly where the session stopped: a word

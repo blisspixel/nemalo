@@ -27,7 +27,7 @@ import (
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
-const Version = "0.1.0-alpha.7"
+const Version = "0.1.0-alpha.8"
 
 const help = `Nemalo
 Find knowledge. Care for it. Realize its potential.
@@ -82,8 +82,31 @@ Usage: nemalo <command> [options]
                       Initialize local control state in an existing explicit folder
   library status DIRECTORY
                       Read control identity and journal state without creating files
+  bookmark enable LIBRARY
+                      Allow explicit local bookmarks in this library
+  bookmark disable LIBRARY
+                      Keep saved places and refuse new saves and resume
+  bookmark list LIBRARY
+                      List explicit bookmarks. Notes are not book text
+  bookmark save LIBRARY --asset sha256:HASH --representation ID
+                      --representation-id sha256:HASH --unit N --text-offset N
+                      [--cursor TOKEN]
+                      Save one source location. Repeating the same place writes nothing
+  bookmark note LIBRARY --asset sha256:HASH [--text NOTE]
+                      Set the reader's note, or clear it when text is empty
+  bookmark delete LIBRARY --asset sha256:HASH
+                      Drop one asset's saved location. Earlier journal lines stay
+  bookmark export LIBRARY --output FILE
+                      Write current bookmarks to a new file outside .nemalo
+  bookmark import LIBRARY --input FILE [--replace]
+                      Add bookmarks from an export. A difference writes nothing
+                      unless --replace is set
+  bookmark resume LIBRARY --asset sha256:HASH
+                      Open the saved location when those bytes still match
   content units CATALOG --root DIRECTORY --asset sha256:HASH
                       List supported EPUB reading-order documents, offline
+  content navigation CATALOG --root DIRECTORY --asset sha256:HASH
+                      List source-declared EPUB contents (nav and NCX), offline
   content read CATALOG --root DIRECTORY --asset sha256:HASH
                       Retrieve bounded source text with exact continuation, offline
   content locate CATALOG --root DIRECTORY --asset sha256:HASH --text TEXT
@@ -128,11 +151,21 @@ Library import options: --apply, --scan
 Library rescan options: --apply (without it, scans and reports but writes nothing)
 Library audit options: --root DIRECTORY for a snapshot catalog
 Content read options: --unit 0, --text-offset 0, --max-bytes 4096, --cursor TOKEN
-                     --representation epub-text/2|epub-text/1|epub-structure/1|pdf-text/1|mpeg-audio/1,
-                     --part ID, --sample N (mpeg-audio/1)
+                     --representation epub-text/2|epub-text/1|epub-structure/1|epub-nav/1|pdf-text/1|mpeg-audio/1,
+                     --navigation nav-doc|ncx, --part ID, --sample N (mpeg-audio/1)
 The default epub-text/2 omits images, tables, mathematics, and media from the
 text and locates each omission as a gap. A continuation keeps the representation
-it was issued for. Extraction is not rendered layout or acknowledgement of reading.
+it was issued for. epub-nav/1 reads one source-declared contents entry: --unit
+is that entry's order, and --text-offset is relative to the entry. When a book
+has both a navigation document and an NCX, a read names which one with
+--navigation. Extraction is not rendered layout or acknowledgement of reading.
+Bookmarks are a separate explicit record. Reading, repeating, continuing, and
+closing do not write one. bookmark save checks the representation id you pass
+and refuses the save when the bytes no longer match. bookmark resume returns
+no text when the file or the representation changed. A note is your text, kept
+with the bookmark and never written into the book. MCP does not read or write
+bookmarks. Enabling bookmarks adds .nemalo/bookmarks.jsonl; a library that has
+that file needs this version or newer to open its control directory.
 MCP options: --scope DIRECTORY (repeatable; the configured library and review
              folders are added), --allow-network (catalog search and evaluation),
              --transport stdio. Tools are read-only; stdout carries protocol only.
@@ -183,7 +216,7 @@ func Execute(ctx context.Context, args []string, out, errOut io.Writer, service 
 	command := args[0]
 	action := ""
 	arguments := args[1:]
-	if (command == "library" || command == "content" || command == "mcp") && len(arguments) > 0 {
+	if (command == "library" || command == "content" || command == "mcp" || command == "bookmark") && len(arguments) > 0 {
 		action = arguments[0]
 		arguments = arguments[1:]
 		if action == "--help" || action == "-h" {
@@ -233,6 +266,10 @@ func Execute(ctx context.Context, args []string, out, errOut io.Writer, service 
 	flags.StringVar(&contentRequest.Cursor, "cursor", "", "source-bound continuation token")
 	flags.StringVar(&contentRequest.Representation, "representation", "", "negotiated content representation; a continuation selects its own")
 	flags.StringVar(&contentRequest.Part, "part", "", "exact source part ID")
+	flags.StringVar(&contentRequest.Navigation, "navigation", "", "epub-nav/1 source: nav-doc or ncx")
+	representationID := flags.String("representation-id", "", "sha256: representation id observed for this location")
+	bookmarkInput := flags.String("input", "", "bookmark export to import")
+	replaceBookmarks := flags.Bool("replace", false, "replace differing bookmark locations on import")
 	flags.Int64Var(&contentRequest.Sample, "sample", 0, "encoded sample where an mpeg-audio/1 read starts")
 	flags.BoolVar(&checkOptions.Scan, "scan", false, "invoke installed antivirus")
 	flags.Int64Var(&checkOptions.ExpectedBytes, "expected-bytes", 0, "known expected file size")
@@ -297,7 +334,7 @@ func Execute(ctx context.Context, args []string, out, errOut io.Writer, service 
 		}
 		return write(service.ContentCapabilities(), nil, 0)
 	}
-	if command != "doctor" && command != "search" && command != "evaluate" && command != "acquire" && command != "inspect" && command != "check" && command != "tui" && command != "library" && command != "content" && command != "mcp" && command != "read" {
+	if command != "doctor" && command != "search" && command != "evaluate" && command != "acquire" && command != "inspect" && command != "check" && command != "tui" && command != "library" && command != "content" && command != "mcp" && command != "read" && command != "bookmark" {
 		return write(nil, fmt.Errorf("unknown command %q; use nemalo help", command), 2)
 	}
 	p, err := paths()
@@ -368,8 +405,8 @@ func Execute(ctx context.Context, args []string, out, errOut io.Writer, service 
 		}
 		return guide(write(data, nil, 0), data.Antivirus, true)
 	case "content":
-		if flags.NArg() != 1 || (action != "units" && action != "read" && action != "source" && action != "resource" && action != "locate") {
-			return write(nil, errors.New("use content units/read/locate/source/resource CATALOG --root DIRECTORY --asset sha256:HASH"), 2)
+		if flags.NArg() != 1 || (action != "units" && action != "read" && action != "source" && action != "resource" && action != "locate" && action != "navigation") {
+			return write(nil, errors.New("use content units/navigation/read/locate/source/resource CATALOG --root DIRECTORY --asset sha256:HASH"), 2)
 		}
 		if action == "locate" {
 			if *findText == "" {
@@ -377,7 +414,13 @@ func Execute(ctx context.Context, args []string, out, errOut io.Writer, service 
 			}
 			contentRequest.Find = *findText
 		}
-		contentRequest.Catalog, contentRequest.Root, contentRequest.UnitsOnly = flags.Arg(0), *auditRoot, action == "units"
+		contentRequest.Catalog, contentRequest.Root, contentRequest.UnitsOnly = flags.Arg(0), *auditRoot, action == "units" || action == "navigation"
+		if action == "navigation" {
+			if contentRequest.Representation != "" && contentRequest.Representation != "epub-nav/1" {
+				return write(nil, errors.New("content navigation lists representation epub-nav/1"), 2)
+			}
+			contentRequest.Representation = "epub-nav/1"
+		}
 		if action == "source" {
 			contentRequest.Representation = "epub-source/1"
 		}
@@ -419,7 +462,7 @@ func Execute(ctx context.Context, args []string, out, errOut io.Writer, service 
 			return write(nil, err, 1)
 		}
 		if stop != nil {
-			_, err = fmt.Fprintf(out, "Closed at unit %d, byte %d. Nothing was recorded. To return there, repeat this command with --unit %d --text-offset %d.\n", stop.Unit, stop.Offset, stop.Unit, stop.Offset)
+			_, err = fmt.Fprintf(out, "Closed at unit %d, byte %d. Nothing was recorded. To return there, repeat this command with --unit %d --text-offset %d. Closing does not save a bookmark.\n", stop.Unit, stop.Offset, stop.Unit, stop.Offset)
 			if err != nil {
 				return 1
 			}
@@ -615,6 +658,84 @@ func Execute(ctx context.Context, args []string, out, errOut io.Writer, service 
 			return write(r, err, 1)
 		}
 		return write(r, nil, 0)
+	case "bookmark":
+		usage := "use bookmark enable/disable/list/save/note/delete/export/import/resume LIBRARY"
+		if flags.NArg() != 1 {
+			return write(nil, errors.New(usage), 2)
+		}
+		lib := flags.Arg(0)
+		fail := func(data any, err error) int {
+			if err != nil {
+				switch value := data.(type) {
+				case library.BookmarkState:
+					if value.LibraryID == "" {
+						data = nil
+					}
+				case library.Bookmark:
+					if value.ID == "" {
+						data = nil
+					}
+				case app.BookmarkResume:
+					if value.Status == "" {
+						data = nil
+					}
+				}
+				return write(data, err, 1)
+			}
+			return write(data, nil, 0)
+		}
+		switch action {
+		case "enable":
+			data, err := service.EnableBookmarks(ctx, lib)
+			return fail(data, err)
+		case "disable":
+			data, err := service.DisableBookmarks(ctx, lib)
+			return fail(data, err)
+		case "list":
+			data, err := service.ListBookmarks(ctx, lib)
+			return fail(data, err)
+		case "save":
+			if contentRequest.AssetID == "" || contentRequest.Representation == "" || *representationID == "" {
+				return write(nil, errors.New("use bookmark save LIBRARY --asset sha256:HASH --representation ID --representation-id sha256:HASH --unit N --text-offset N [--cursor TOKEN]"), 2)
+			}
+			data, err := service.SaveBookmark(ctx, app.BookmarkSave{
+				Library: lib, AssetID: contentRequest.AssetID, Representation: contentRequest.Representation,
+				RepresentationID: *representationID, Unit: contentRequest.Unit, Offset: contentRequest.Offset, Cursor: contentRequest.Cursor,
+			})
+			return fail(data, err)
+		case "note":
+			if contentRequest.AssetID == "" {
+				return write(nil, errors.New("use bookmark note LIBRARY --asset sha256:HASH [--text NOTE]"), 2)
+			}
+			data, err := service.SetBookmarkNote(ctx, lib, contentRequest.AssetID, *findText)
+			return fail(data, err)
+		case "delete":
+			if contentRequest.AssetID == "" {
+				return write(nil, errors.New("use bookmark delete LIBRARY --asset sha256:HASH"), 2)
+			}
+			data, err := service.DeleteBookmark(ctx, lib, contentRequest.AssetID)
+			return fail(data, err)
+		case "export":
+			if *output == "" {
+				return write(nil, errors.New("use bookmark export LIBRARY --output FILE"), 2)
+			}
+			data, err := service.ExportBookmarks(ctx, lib, *output)
+			return fail(data, err)
+		case "import":
+			if *bookmarkInput == "" {
+				return write(nil, errors.New("use bookmark import LIBRARY --input FILE [--replace]"), 2)
+			}
+			data, err := service.ImportBookmarks(ctx, lib, *bookmarkInput, *replaceBookmarks)
+			return fail(data, err)
+		case "resume":
+			if contentRequest.AssetID == "" {
+				return write(nil, errors.New("use bookmark resume LIBRARY --asset sha256:HASH"), 2)
+			}
+			data, err := service.ResumeBookmark(ctx, lib, contentRequest.AssetID)
+			return fail(data, err)
+		default:
+			return write(nil, errors.New(usage), 2)
+		}
 	case "check":
 		if flags.NArg() != 1 {
 			return write(nil, errors.New("check requires exactly one file"), 2)
@@ -736,15 +857,36 @@ func flagApplies(command, action, name string) bool {
 	if command == "version" {
 		return false
 	}
+	if command == "bookmark" {
+		switch action {
+		case "save":
+			return name == "asset" || name == "representation" || name == "representation-id" || name == "unit" || name == "text-offset" || name == "cursor"
+		case "note":
+			return name == "asset" || name == "text"
+		case "delete", "resume":
+			return name == "asset"
+		case "export":
+			return name == "output"
+		case "import":
+			return name == "input" || name == "replace"
+		}
+		return false
+	}
 	if name == "config" || name == "library" || name == "review" {
 		return true
 	}
 	if command == "content" {
-		if action != "units" && action != "read" && action != "source" && action != "resource" && action != "locate" {
+		if action != "units" && action != "read" && action != "source" && action != "resource" && action != "locate" && action != "navigation" {
 			return false
 		}
 		if name == "root" || name == "asset" {
 			return true
+		}
+		if action == "navigation" {
+			return name == "representation" || name == "navigation"
+		}
+		if name == "navigation" {
+			return action == "read" || action == "units"
 		}
 		if name == "representation" {
 			return action == "read" || action == "units" || action == "locate"
@@ -893,6 +1035,15 @@ func printData(out io.Writer, data any) error {
 		return err
 	case content.Result:
 		_, err := io.WriteString(out, present.ContentCommand(value))
+		return err
+	case library.BookmarkState:
+		_, err := io.WriteString(out, present.Bookmarks(value))
+		return err
+	case library.Bookmark:
+		_, err := io.WriteString(out, present.Bookmark(value))
+		return err
+	case app.BookmarkResume:
+		_, err := io.WriteString(out, present.BookmarkResume(value.Status, value.Detail, value.Bookmark, value.Content))
 		return err
 	case inventory.Report:
 		_, err := io.WriteString(out, present.Inventory(value))

@@ -61,6 +61,14 @@ type pager struct {
 	notice   string
 	// only closes the program with the reader (nemalo read).
 	only bool
+	// chapter follows one declared contents entry. The first fetch uses the
+	// entry order; later fetches use its cursor. Spine unit jumps do not apply.
+	chapter       bool
+	navEvidence   string
+	navOrder      int
+	chapterCursor string
+	// representationID is the id of the text this session is showing.
+	representationID string
 }
 
 type pagerChunk struct {
@@ -84,8 +92,9 @@ func (m *model) nextSeq() int {
 // after schedules the next word; tests replace it to step time by hand.
 var after = tea.Tick
 
-// openPager starts a session at start. representation is epub-text/2 or
-// pdf-text/1; the units listing comes first so headings can name units.
+// openPager starts a session at start. representation is epub-text/2,
+// pdf-text/1, or epub-nav/1; the units listing comes first so headings can
+// name spine documents. A declared entry uses openChapter.
 func (m *model) openPager(catalog, root, asset, representation string, start reader.Position, speed bool, rate int) tea.Cmd {
 	measure := defaultMeasure
 	if representation == "pdf-text/1" {
@@ -94,6 +103,17 @@ func (m *model) openPager(catalog, root, asset, representation string, start rea
 	m.pager = &pager{catalog: catalog, root: root, asset: asset, representation: representation, start: start, measure: measure, rate: min(max(rate, reader.MinRate), reader.MaxRate), speed: speed, failed: -1}
 	m.pager.notice = "Retrieving source text. Nothing about this reading is recorded."
 	return m.pagerFetch(content.Request{UnitsOnly: true}, true)
+}
+
+// openChapter pages one source-declared entry, from its resolved spine
+// position, and stops when that entry's declared range ends.
+func (m *model) openChapter(catalog, root, asset, evidence string, order int, at reader.Position, speed bool) tea.Cmd {
+	cmd := m.openPager(catalog, root, asset, "epub-nav/1", at, speed, reader.DefaultRate)
+	m.pager.chapter = true
+	m.pager.navEvidence = evidence
+	m.pager.navOrder = order
+	m.pager.notice = "Retrieving one declared entry. Nothing about this reading is recorded."
+	return cmd
 }
 
 // ReadOptions opens the reader directly on one asset.
@@ -170,6 +190,11 @@ func (m *model) pagerOpen(at reader.Position, note string) tea.Cmd {
 	p.top, p.word, p.blocked, p.failed, p.failure, p.waiting, p.playing = 0, 0, false, -1, "", false, false
 	p.gen = m.nextSeq()
 	p.notice = note + "Retrieving " + p.doc.Label(at.Unit) + "."
+	if p.chapter && p.chapterCursor != "" {
+		cursor := p.chapterCursor
+		p.chapterCursor = ""
+		return m.pagerFetch(content.Request{Cursor: cursor}, false)
+	}
 	return m.pagerFetch(content.Request{Unit: at.Unit, Offset: at.Offset}, false)
 }
 
@@ -194,7 +219,18 @@ func (m *model) pagerChunk(msg pagerChunk) tea.Cmd {
 		}
 		p.doc = reader.New(p.representation, p.units)
 		p.doc.StartAt(p.start)
+		if p.chapter {
+			if p.chapterCursor != "" {
+				cursor := p.chapterCursor
+				p.chapterCursor = ""
+				return m.pagerFetch(content.Request{Cursor: cursor}, false)
+			}
+			return m.pagerFetch(content.Request{Unit: p.navOrder, Offset: 0, Navigation: p.navEvidence}, false)
+		}
 		return m.pagerFetch(content.Request{Unit: p.start.Unit, Offset: p.start.Offset}, false)
+	}
+	if msg.data.Locator != nil {
+		p.representationID = msg.data.Locator.RepresentationID
 	}
 	before := len(p.doc.Items)
 	if err := p.doc.Append(msg.data); err != nil {
@@ -206,6 +242,9 @@ func (m *model) pagerChunk(msg pagerChunk) tea.Cmd {
 	}
 	if strings.HasPrefix(p.notice, "Retrieving") {
 		p.notice = ""
+	}
+	if p.chapter && msg.data.RangeStatus == "range_end" && msg.data.Continuation == "" {
+		p.notice = "End of this declared entry."
 	}
 	m.pagerLayout()
 	// Playback that ran out of text resumes at the first new word, or keeps
@@ -277,6 +316,9 @@ func (m *model) pagerFull() {
 	if p.resume == nil {
 		at := p.doc.Stop()
 		p.resume = &at
+		if p.chapter {
+			p.chapterCursor = p.doc.Next
+		}
 		m.pagerLayout()
 	}
 	p.notice = fullNotice
@@ -380,10 +422,10 @@ func (m *model) closePager() tea.Cmd {
 	if p.cancel != nil {
 		p.cancel()
 	}
-	m.status = "Closed the reader. Nothing about this reading was recorded."
+	m.status = "Closed the reader. Nothing about this reading was recorded. Closing does not save a bookmark."
 	if at, ok := m.pagerPosition(); ok {
 		m.readerStop = &at
-		m.status = fmt.Sprintf("Closed the reader at unit %d, byte %d (%s). Nothing about this reading was recorded.", at.Unit, at.Offset, p.doc.Label(at.Unit))
+		m.status = fmt.Sprintf("Closed the reader at unit %d, byte %d (%s). Nothing about this reading was recorded. Closing does not save a bookmark.", at.Unit, at.Offset, p.doc.Label(at.Unit))
 	}
 	only := p.only
 	m.pager = nil
@@ -399,7 +441,18 @@ func (m *model) pagerKey(key string) tea.Cmd {
 	switch key {
 	case "q", "esc":
 		return m.closePager()
+	case "m":
+		return m.saveBookmark()
+	case "'":
+		return m.restoreBookmark()
 	case "]", "[":
+		if p.chapter {
+			if key == "]" && p.resume != nil && m.pagerAtEnd() {
+				return m.pagerOpen(*p.resume, "Continued in a new session. ")
+			}
+			p.notice = "This session follows one declared entry. Close it and choose another."
+			return nil
+		}
 		unit := p.start.Unit
 		if at, ok := m.pagerPosition(); ok {
 			unit = at.Unit
@@ -560,7 +613,10 @@ func (m *model) pagerView() string {
 	if p.speed && p.rate > reader.SkimRate && notice == "" {
 		notice = "Above 350 words per minute, studies found comprehension falls; treat this as skimming."
 	}
-	keys := "Space next  b back  j/k line  [ ] unit  +/- width  s speed  q close"
+	keys := "Space next  b back  j/k line  [ ] unit  +/- width  s speed  m save  ' restore  q close"
+	if p.chapter && !p.speed {
+		keys = "Space next  b back  j/k line  +/- width  s speed  m save  ' restore  q close"
+	}
 	if p.speed {
 		keys = "Space play/pause  Left/Right sentence  Up/Down rate  [ ] unit  p pages  q close"
 	}

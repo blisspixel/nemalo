@@ -39,8 +39,9 @@ and inconsistent IDs are rejected. Invalid state is never truncated, overwritten
 or silently repaired. A crash before the initial record is complete can leave an
 empty/partial control namespace requiring review.
 
-The directory must contain the two required regular files. Decision 0009 allows
-optional regular `operations.jsonl` and `holdings.jsonl` files. Any other entry,
+The directory must contain the two required regular files. Optional regular
+files are `operations.jsonl` and `holdings.jsonl` (decision 0009),
+`cleanup.jsonl` (decision 0022), and `bookmarks.jsonl` (decision 0027). Any other entry,
 directory, duplicate, or empty managed journal is rejected. Control
 symlinks/reparse points, hard-linked control files, and changed file identities
 are rejected. Files open relative to `os.Root`; source content is

@@ -55,6 +55,13 @@ type Coverage struct {
 	KnownGaps              []string `json:"known_gaps"`
 	ReferencedOutsideRange []string `json:"referenced_outside_range"`
 	Unknown                []string `json:"unknown"`
+	// Navigation names which declared sources were found: absent, nav-doc,
+	// ncx, or nav-doc+ncx. Set only for epub-nav/1.
+	Navigation string `json:"navigation,omitempty"`
+	// NavigationConflict is true when NAV and NCX disagree on hierarchy or
+	// resolved targets. Labels alone are not a conflict.
+	NavigationConflict bool `json:"navigation_conflict,omitempty"`
+	UnresolvedEntries  int  `json:"unresolved_entries,omitempty"`
 }
 
 type ResourceData struct {

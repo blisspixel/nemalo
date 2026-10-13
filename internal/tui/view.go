@@ -83,7 +83,7 @@ func (m *model) contextLine() string {
 		if m.reader.asset == "" {
 			return "Local source access | Select an asset in Holdings, then r"
 		}
-		return fmt.Sprintf("Offline | No progress tracking | Asset %q", m.reader.asset)
+		return fmt.Sprintf("Offline | Bookmark only on m | Asset %q", m.reader.asset)
 	}
 	if m.mode == "state" {
 		return "Enter status | F7 init | F8 import | F9 cleanup | Ctrl+R rescan"
@@ -152,7 +152,7 @@ func (m *model) footer() string {
 			}
 		}
 		if m.mode == "read" {
-			help = "Enter unit  n next range  r repeat  u units  p pages  s speed  F6 edit  Ctrl+C quit"
+			help = "Enter unit  n next  r repeat  u units  c contents  p pages  s speed  m save  ' restore"
 		}
 	}
 	if m.busy {
@@ -311,7 +311,7 @@ func (m *model) emptyHelp() string {
 	case "state":
 		return "Establish a library identity.\n\nEnter an existing folder, then Enter to read its control status.\nF7 reviews initialization before writing control metadata.\nCtrl+N sets one source. F8 reviews import and does not scan or delete it.\nCtrl+R reviews a scan of review EPUBs that lack scan evidence.\nF9 previews moving the source folder's held files to the library's recoverable holding area; with a cleanup ID as the source, it previews restoring that cleanup."
 	case "read":
-		return "Read from exact source bytes.\n\nSelect an asset in Holdings and press r. Enter its explicit root, then Enter lists units.\nF6 browses units; Enter retrieves text. n continues, r repeats, u lists units.\np opens the selected unit as pages sized to the terminal; s opens it one word at a time.\nDelivery does not record reading progress. Notes and image resources are available through content CLI references."
+		return "Read from exact source bytes.\n\nSelect an asset in Holdings and press r. Enter its explicit root, then Enter lists units.\nF6 browses units; Enter retrieves text. n continues, r repeats, u lists units.\nc lists the book's declared contents. Enter reads one entry and stops at its declared end.\np opens the selection as pages sized to the terminal; s opens it one word at a time.\nm saves a bookmark in an initialized library. ' restores that bookmark.\nDelivery does not record reading progress, and closing does not save a bookmark.\nNotes and image resources are available through content CLI references."
 	default:
 		return "Enter the fields above, then press Enter.\n\nResults stay with their operation when you switch modes.\nSources are preserved. Escape cancels active work."
 	}

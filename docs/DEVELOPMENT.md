@@ -10,7 +10,8 @@ needed for the application, tests, or first-party tooling.
 `help`, `version`, `doctor`, `search`, `evaluate`, `acquire`, `inspect`, `check`, `library snapshot`,
 `library list`, `library audit`, `library check`, `library import`, `library ingest`, `library cleanup`, `library restore`,
 `library rescan`, `library recordings`,
-`library open`, `library export`, `library init`, `library status`, `content units`,
+`library open`, `library export`, `library init`, `library status`, `bookmark`,
+`content units`, `content navigation`,
 `content read`, `content locate`, `content source`, `content resource`, `content capabilities`,
 `read`, `mcp serve`, and `tui` are implemented.
 Search defaults to Open Library work metadata; `--source archive` selects Internet
@@ -58,6 +59,13 @@ note references, original markup, and bounded local image bytes are available in
 CLI/JSON, and through the read-only MCP server.
 See [source-bound access](CONTENT-ACCESS.md) and [structured EPUB](STRUCTURED-EPUB.md)
 for supported representations, exact contracts, bounds, and remaining issue scope.
+`content navigation` lists source-declared EPUB contents, and
+`content read --representation epub-nav/1` reads one entry until its declared
+end ([decision 0026](decisions/0026-epub-navigation-and-chapter-selection.md)).
+`bookmark enable LIBRARY` creates `.nemalo/bookmarks.jsonl`. Save, note, delete,
+export, import, and resume are explicit. A library with that file cannot be
+opened by an earlier prerelease
+([decision 0027](decisions/0027-explicit-local-bookmarks.md)).
 
 JSON mode uses schema version 1 and exit codes 0
 (success), 1 (failed/incomplete operation), and 2 (usage/configuration error).

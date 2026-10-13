@@ -22,6 +22,13 @@ type entry struct {
 	// recording is the source ID of a declared recording this holding is a
 	// track of, if any.
 	recording string
+	// nav marks one source-declared contents entry. navOrder is its index in
+	// that navigation document, which is not a spine unit.
+	nav                bool
+	navEvidence        string
+	navOrder           int
+	navUnit, navOffset int
+	navResolved        bool
 }
 
 // Browsing is a presentation of shared service results, not another catalog.
@@ -111,6 +118,33 @@ func (m *model) populate(data any) {
 		} else if p.Status == "units_available" && p.Representation == "pdf-text/1" {
 			for _, u := range p.Units {
 				m.entries = append(m.entries, entry{title: fmt.Sprintf("Page %d, label %q", u.Index, u.PageLabel), summary: fmt.Sprintf("%s | %d text bytes | %d gaps", u.Extraction, u.TextBytes, u.KnownGaps), detail: fmt.Sprintf("PDF page\n\nPhysical index: %d (zero-based)\nPrinted label: %q\nExtraction: %s\nText bytes: %d; located gaps: %d\n\nText is in content-stream order; columns are not reconstructed and there is no OCR.\nEnter retrieves a bounded range of this page.\nNo reading progress is recorded.", u.Index, u.PageLabel, u.Extraction, u.TextBytes, u.KnownGaps)})
+			}
+		} else if p.Status == "units_available" && p.Representation == "epub-nav/1" {
+			if len(p.Navigation) == 0 {
+				m.entries = append(m.entries, entry{title: "No declared navigation", summary: "This EPUB has no NAV document and no NCX", detail: "Spine documents are still available with u.\nNo contents list was inferred from headings.\n"})
+			}
+			for _, doc := range p.Navigation {
+				if doc.Problem != "" {
+					m.entries = append(m.entries, entry{title: fmt.Sprintf("%s: %q", doc.Evidence, doc.Problem), summary: "This navigation source was not used", detail: fmt.Sprintf("Evidence: %s\nPath: %q\nProblem: %q\n\nThe source was recorded and not fetched or repaired.\n", doc.Evidence, doc.Path, doc.Problem)})
+					continue
+				}
+				for _, e := range doc.Entries {
+					where := e.Status
+					if e.Unit != nil && e.Offset != nil {
+						where = fmt.Sprintf("unit %d, byte %d", *e.Unit, *e.Offset)
+					}
+					parent := "none"
+					if e.Parent != nil {
+						parent = fmt.Sprintf("%d", *e.Parent)
+					}
+					indent := strings.Repeat("  ", max(0, e.Level-1))
+					detail := fmt.Sprintf("Declared entry %d\n\nLabel: %q\nEvidence: %s\nLevel: %d\nParent: %s\nStatus: %s\nTarget: %s\nHref: %q\n\nEnter reads this entry and stops at its declared end.\np pages it. Neither records reading progress.\n", e.Order, e.Label, doc.Evidence, e.Level, parent, e.Status, where, e.Href)
+					item := entry{title: indent + fmt.Sprintf("%q", e.Label), summary: fmt.Sprintf("%s | L%d | %s", doc.Evidence, e.Level, where), detail: detail, nav: true, navEvidence: doc.Evidence, navOrder: e.Order}
+					if e.Status == "resolved" && e.Unit != nil && e.Offset != nil {
+						item.navResolved, item.navUnit, item.navOffset = true, *e.Unit, *e.Offset
+					}
+					m.entries = append(m.entries, item)
+				}
 			}
 		} else if p.Status == "units_available" {
 			for _, u := range p.Units {
@@ -304,6 +338,18 @@ func (m *model) browserKey(key string) (bool, tea.Cmd) {
 	case "u":
 		if m.mode == "read" {
 			return true, m.startRead(true, 0, "", false)
+		}
+	case "c":
+		if m.mode == "read" {
+			return true, m.listNavigation()
+		}
+	case "m":
+		if m.mode == "read" {
+			return true, m.saveBookmark()
+		}
+	case "'":
+		if m.mode == "read" {
+			return true, m.restoreBookmark()
 		}
 	case "p", "s":
 		if m.mode == "read" {

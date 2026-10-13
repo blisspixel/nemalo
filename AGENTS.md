@@ -141,6 +141,12 @@ Preserve stateless offline reads, exact-byte/extractor-bound references, explici
 unsupported units, no silent continuation skips, and no inferred consumption.
 The default is `epub-text/2` (decision 0011). Keep earlier representations
 selectable and their continuations valid; changed rules need a new extractor ID.
+Declared EPUB contents are `epub-nav/1` (decision 0026): nesting depth from the
+navigation document or NCX, and a read stops at the next entry that is not a
+descendant. Do not add a heading level to `epub-structure/1` part kinds.
+Explicit bookmarks are `.nemalo/bookmarks.jsonl` (decision 0027), written only
+by enable, save, note, delete, and import. The reader package still stores
+nothing, and MCP has no bookmark tool.
 Derive plain text from the structured extractor rather than adding a parser.
 PDF parsing is `internal/pdftext`, exposed as `pdf-text/1` (decision 0021): use the
 object parser only through its budgets and guards; unmapped codes are gaps, never guesses.

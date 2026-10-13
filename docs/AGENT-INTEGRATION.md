@@ -37,8 +37,10 @@ nemalo mcp serve --scope /path/to/library --allow-network
 
 Implemented tools are all read-only: `nemalo_capabilities`, `library_status`,
 `library_list`, `library_recordings`, `library_audit`, `library_check`, `file_check` (no antivirus), and
-`content_capabilities`, `content_units`, `content_read`, `content_locate`, `content_source`,
-`content_resource`. `catalog_search` and `catalog_evaluate` exist only with
+`content_capabilities`, `content_units`, `content_navigation`, `content_read`, `content_locate`, `content_source`,
+`content_resource`. `content_navigation` lists source-declared EPUB contents;
+a read of one entry uses `content_read` with representation `epub-nav/1`.
+`catalog_search` and `catalog_evaluate` exist only with
 `--allow-network`. Each returns the CLI's data in a
 `{schema_version, tool, data, error}` envelope; failures are tool errors that keep
 the service status. Paths must resolve inside a `--scope` directory or the
@@ -66,6 +68,8 @@ including [versioned structured parts and resources](STRUCTURED-EPUB.md).
 The implemented `content_*` tools reuse their source identity, continuation, gap,
 and failure semantics unchanged. No external Kilo integration is implemented.
 Retrieval has no consumption side effects; acknowledgements belong to the caller.
+Bookmarks are not MCP tools. A local CLI or TUI bookmark does not authorize a
+write through this server.
 Expose capability/version negotiation and preserve per-range coverage, part links,
 original-markup versus text offsets, and parent/member resource identity. Following
 references stays an explicit bounded read, never permission to fetch remote links

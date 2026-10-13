@@ -138,7 +138,7 @@ func TestToolsAreReadOnlyAndNetworkIsExplicit(t *testing.T) {
 	calls := 0
 	service := app.Service{Providers: map[string]app.Searcher{"openlibrary": catalog{&calls}}, Scanner: noScanner{t}}
 	offline := toolNames(t, connect(t, service, Options{Scopes: []string{t.TempDir()}, Version: "test"}))
-	want := []string{"content_capabilities", "content_locate", "content_read", "content_resource", "content_source", "content_units", "file_check", "library_audit", "library_check", "library_list", "library_recordings", "library_status", "nemalo_capabilities"}
+	want := []string{"content_capabilities", "content_locate", "content_navigation", "content_read", "content_resource", "content_source", "content_units", "file_check", "library_audit", "library_check", "library_list", "library_recordings", "library_status", "nemalo_capabilities"}
 	if !slices.Equal(offline, want) {
 		t.Fatal("offline tools", offline)
 	}
@@ -152,7 +152,7 @@ func TestToolsAreReadOnlyAndNetworkIsExplicit(t *testing.T) {
 	}
 	_, env = call(t, online, "nemalo_capabilities", map[string]any{})
 	data := env["data"].(map[string]any)
-	if data["read_only"] != true || data["network"] != true || len(data["tools"].([]any)) != 15 {
+	if data["read_only"] != true || data["network"] != true || len(data["tools"].([]any)) != 16 {
 		t.Fatal("capabilities", data)
 	}
 }
@@ -179,6 +179,18 @@ func TestContentThroughMCPMatchesTheService(t *testing.T) {
 	}
 	if direct.Text != "Before\nAfter the picture.\n" || len(direct.Gaps) != 1 {
 		t.Fatal(direct.Text, direct.Gaps)
+	}
+	_, env = call(t, s, "content_navigation", map[string]any{"catalog": root, "root": root, "asset": asset})
+	navDirect, err := service.Content(context.Background(), content.Request{SchemaVersion: 1, Catalog: root, Root: root, AssetID: asset, MaxBytes: 4096, Representation: "epub-nav/1", UnitsOnly: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	want, _ = json.Marshal(navDirect)
+	got, _ = json.Marshal(env["data"])
+	_ = json.Unmarshal(want, &a)
+	_ = json.Unmarshal(got, &b)
+	if env["data"].(map[string]any)["status"] != "units_available" || !jsonEqual(a, b) {
+		t.Fatal("navigation through MCP", env)
 	}
 	_, env = call(t, s, "content_units", map[string]any{"catalog": root, "root": root, "asset": asset})
 	if env["data"].(map[string]any)["status"] != "units_available" {

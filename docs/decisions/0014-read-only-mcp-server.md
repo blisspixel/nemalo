@@ -23,13 +23,16 @@ All tools are read-only and annotated as such:
 | --- | --- |
 | `nemalo_capabilities` | Version, scopes, network setting, tools, content representations, limits |
 | `library_status` | Library control identity and journal state |
-| `library_list` | Holdings from a catalog snapshot |
+| `library_list` | Holdings from a catalog snapshot or a managed library |
+| `library_recordings` | Held recording manifests, and verified track timing when a source is named |
 | `library_audit` | Managed holdings audit, or snapshot audit with an explicit root |
+| `library_check` | Read-only whole-library report |
 | `file_check` | Bounded file checks without antivirus |
-| `content_capabilities`, `content_units`, `content_read`, `content_source`, `content_resource` | Source-bound EPUB retrieval, including the default `epub-text/2` gaps and structured references |
+| `content_capabilities`, `content_units`, `content_navigation`, `content_read`, `content_locate`, `content_source`, `content_resource` | Source-bound retrieval, including `epub-text/2` gaps, `epub-nav/1` declared contents, PDF pages, and structured references |
 | `catalog_search`, `catalog_evaluate` | Provider search and Archive evaluation, registered only with `--allow-network` |
 
-No tool imports, initializes, acquires, rescans, snapshots, scans, or deletes.
+No tool imports, initializes, acquires, rescans, snapshots, scans, deletes, or
+writes a bookmark. Local CLI and TUI bookmarks do not authorize an MCP write.
 Write tools need the plan, authorization, and durable job design in the agent
 integration document and are a later increment.
 

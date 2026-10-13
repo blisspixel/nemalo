@@ -2,13 +2,34 @@
 
 ## Unreleased
 
+## 0.1.0-alpha.8
+
+Eighth native prerelease. This remains an early library, not 1.0. Closes issues 9 and 10.
+
 - `nemalo read` and `p` or `s` in TUI Read open a full-screen reader for EPUB
   and PDF text: pages sized to the terminal, or one word at a time with
   sentence pauses, starting paused at 250 words per minute. Omitted images and
   tables are shown where they were omitted, PDF pages keep their lines, and an
   unreadable unit stops reading until you choose the next one. Closing prints
-  the position to return to; nothing is recorded
+  the position to return to and does not save a bookmark
   ([decision 0025](docs/decisions/0025-terminal-reading.md)).
+- `content navigation` and `--representation epub-nav/1` (MCP
+  `content_navigation`; TUI Read: `c`) list source-declared EPUB 3 nav and
+  EPUB 2 NCX entries. A read follows one entry until the next entry that is
+  not nested inside it. A short result and the end of a spine file are
+  reported separately from that end. When both sources exist, a read names
+  `--navigation nav-doc` or `--navigation ncx`. `epub-structure/1` heading
+  parts are unchanged
+  ([decision 0026](docs/decisions/0026-epub-navigation-and-chapter-selection.md)).
+- Explicit bookmarks: `bookmark enable`, `disable`, `list`, `save`, `note`,
+  `delete`, `export`, `import`, and `resume`. Enable creates
+  `.nemalo/bookmarks.jsonl`. Reading, repeating, continuing, and closing write
+  nothing. In the TUI, `m` saves the place on screen and `'` restores it. A
+  changed or missing file is reported and is not remapped. A note stays
+  separate from the book. There is no reading acknowledgement. MCP does not
+  read or write bookmarks. A library with the bookmark file needs this version
+  or newer to open its control directory
+  ([decision 0027](docs/decisions/0027-explicit-local-bookmarks.md)).
 
 ## 0.1.0-alpha.7
 

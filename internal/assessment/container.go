@@ -66,7 +66,7 @@ func Inspect(r io.ReaderAt, size int64, format string) (Checks, error) {
 }
 
 func InspectContext(ctx context.Context, r io.ReaderAt, size int64, format string) (Checks, error) {
-	return inspectContext(ctx, r, size, format, nil, nil)
+	return inspectContext(ctx, r, size, format, nil, nil, nil)
 }
 
 // EPUBDocument identifies an actual spine entry, not an inferred chapter. Data
@@ -91,7 +91,34 @@ type EPUBMember struct {
 // must not publish results before the whole operation succeeds. No resources
 // are fetched, rendered, executed, or extracted to disk.
 func VisitEPUB(ctx context.Context, r io.ReaderAt, size int64, visit func(EPUBDocument) error) (Checks, error) {
-	return inspectContext(ctx, r, size, "epub", visit, nil)
+	return inspectContext(ctx, r, size, "epub", visit, nil, nil)
+}
+
+// EPUBNavSource is one navigation document declared by the package. Bytes are
+// the member body when it fits the read budget. Problem is set instead of
+// failing package validation: a missing or oversized table of contents is a
+// content fact, not a broken ZIP.
+type EPUBNavSource struct {
+	Package string
+	Kind    string
+	Path    string
+	Media   string
+	Data    []byte
+	Problem string
+}
+
+// EPUBNavigation collects manifest navigation documents while the package is
+// validated. Inspect does not retain it.
+type EPUBNavigation struct {
+	Sources []EPUBNavSource
+}
+
+// ReadEPUBNavigation validates the EPUB and returns declared NAV and NCX
+// members. It does not fetch remote hrefs or run document scripts.
+func ReadEPUBNavigation(ctx context.Context, r io.ReaderAt, size int64) (EPUBNavigation, Checks, error) {
+	var nav EPUBNavigation
+	c, err := inspectContext(ctx, r, size, "epub", nil, nil, &nav)
+	return nav, c, err
 }
 
 type memberRequest struct {
@@ -107,14 +134,14 @@ func VisitEPUBResource(ctx context.Context, r io.ReaderAt, size int64, visit fun
 		return Checks{}, nil, ErrLimit
 	}
 	request := &memberRequest{name: name, limit: limit}
-	c, err := inspectContext(ctx, r, size, "epub", visit, request)
+	c, err := inspectContext(ctx, r, size, "epub", visit, request, nil)
 	if err != nil {
 		return c, nil, err
 	}
 	return c, request.data, err
 }
 
-func inspectContext(ctx context.Context, r io.ReaderAt, size int64, format string, visit func(EPUBDocument) error, resource *memberRequest) (Checks, error) {
+func inspectContext(ctx context.Context, r io.ReaderAt, size int64, format string, visit func(EPUBDocument) error, resource *memberRequest, nav *EPUBNavigation) (Checks, error) {
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Minute)
 	defer cancel()
 	r = contextAt{ctx, r}
@@ -171,7 +198,7 @@ func inspectContext(ctx context.Context, r io.ReaderAt, size int64, format strin
 			return c, errors.New("ZIP signature missing")
 		}
 		c.Signature = "zip"
-		if err := inspectEPUB(ctx, r, size, &c, visit, resource); err != nil {
+		if err := inspectEPUB(ctx, r, size, &c, visit, resource, nav); err != nil {
 			return c, err
 		}
 	default:
@@ -180,7 +207,7 @@ func inspectContext(ctx context.Context, r io.ReaderAt, size int64, format strin
 	return c, nil
 }
 
-func inspectEPUB(ctx context.Context, r io.ReaderAt, size int64, c *Checks, visit func(EPUBDocument) error, resource *memberRequest) error {
+func inspectEPUB(ctx context.Context, r io.ReaderAt, size int64, c *Checks, visit func(EPUBDocument) error, resource *memberRequest, nav *EPUBNavigation) error {
 	// Bound directory parsing before zip.NewReader can allocate per-member state.
 	metadata := &metadataReader{r: r, ctx: ctx, remaining: 2 << 20, workRemaining: 1 << 30, limited: true}
 	z, err := zip.NewReader(metadata, size)
@@ -384,6 +411,11 @@ func inspectEPUB(ctx context.Context, r io.ReaderAt, size int64, c *Checks, visi
 				c.EPUB.TextCharacters += n
 			}
 		}
+		if nav != nil {
+			if err := collectNavigation(files, entry.Path, data, documents, nav); err != nil {
+				return err
+			}
+		}
 	}
 	if c.EPUB.TextCharacters == 0 {
 		c.Warnings = append(c.Warnings, "no measured body text in HTML reading order; may be image-based or unsupported")
@@ -564,6 +596,79 @@ func htmlPolicyContext(ctx context.Context, data []byte) (int, bool, bool, error
 			}
 		}
 	}
+}
+
+// collectNavigation reads NAV and NCX members without changing package
+// validation. Remote declarations are recorded and never fetched. An oversized
+// member sets Problem and does not fail the EPUB.
+func collectNavigation(files map[string]*zip.File, packagePath string, opf []byte, documents map[string]EPUBDocument, nav *EPUBNavigation) error {
+	var doc struct {
+		XMLName xml.Name `xml:"http://www.idpf.org/2007/opf package"`
+		Items   []struct {
+			ID         string `xml:"id,attr"`
+			Href       string `xml:"href,attr"`
+			Media      string `xml:"media-type,attr"`
+			Properties string `xml:"properties,attr"`
+		} `xml:"manifest>item"`
+		Spine struct {
+			TOC string `xml:"toc,attr"`
+		} `xml:"spine"`
+	}
+	if err := xml.Unmarshal(opf, &doc); err != nil {
+		nav.Sources = append(nav.Sources, EPUBNavSource{Package: packagePath, Problem: "package_navigation_unreadable"})
+		return nil
+	}
+	tocID := strings.TrimSpace(doc.Spine.TOC)
+	ids := map[string]bool{}
+	for _, item := range doc.Items {
+		ids[item.ID] = true
+	}
+	if tocID != "" && !ids[tocID] {
+		nav.Sources = append(nav.Sources, EPUBNavSource{Package: packagePath, Kind: "ncx", Problem: "toc_attribute_missing_item"})
+	}
+	for _, item := range doc.Items {
+		navProp := false
+		for _, property := range strings.Fields(item.Properties) {
+			if property == "nav" {
+				navProp = true
+			}
+		}
+		ncx := item.Media == "application/x-dtbncx+xml" || (tocID != "" && item.ID == tocID && item.Media == "application/x-dtbncx+xml")
+		// The spine toc attribute can name the NCX even when the media type is
+		// the legacy one. A nav property is never treated as NCX.
+		if tocID != "" && item.ID == tocID && !navProp {
+			ncx = true
+		}
+		if !navProp && !ncx {
+			continue
+		}
+		kind := "nav"
+		if ncx && !navProp {
+			kind = "ncx"
+		}
+		source := EPUBNavSource{Package: packagePath, Kind: kind, Path: item.Href, Media: item.Media}
+		if strings.Contains(item.Href, ":") || strings.HasPrefix(item.Href, "//") {
+			source.Problem = "external_not_fetched"
+			nav.Sources = append(nav.Sources, source)
+			continue
+		}
+		path := documents[item.ID].Path
+		if path != "" {
+			source.Path = path
+		}
+		body, err := member(files, source.Path, 2<<20)
+		if errors.Is(err, ErrLimit) {
+			source.Problem = "over_budget"
+			nav.Sources = append(nav.Sources, source)
+			continue
+		}
+		if err != nil {
+			return err
+		}
+		source.Data = body
+		nav.Sources = append(nav.Sources, source)
+	}
+	return nil
 }
 
 func member(files map[string]*zip.File, name string, limit uint64) ([]byte, error) {

@@ -246,6 +246,11 @@ tools, PDF pages, and MP3 frame ranges use the same service; full-text indexes
 remain planned. `internal/reader` lays out delivered ranges for a person as
 terminal pages or one word at a time, under the TUI and `nemalo read`; it reads
 no files and keeps no state ([decision 0025](decisions/0025-terminal-reading.md)).
+Explicit bookmarks are a separate library journal, written only by bookmark
+commands and the TUI save key
+([decision 0027](decisions/0027-explicit-local-bookmarks.md)).
+Declared EPUB contents are `epub-nav/1`
+([decision 0026](decisions/0026-epub-navigation-and-chapter-selection.md)).
 
 Expand bounded text extraction and search per supported format. Derived indexes key
 on asset hash and extractor version; rebuild them without modifying originals.

@@ -94,12 +94,16 @@ timing, and declared chapters, and a range reports its frames, samples, and file
 bytes without printing or playing audio.
 
 In focused Read results, `n` requests the returned continuation, `r` repeats the
-last request, and `u` lists units again. Failed requests retain the previous next
+last request, and `u` lists units again. `c` lists the book's declared contents.
+Enter, `p`, or `s` on a resolved entry reads that entry and stops at its
+declared end. Failed requests retain the previous next
 reference; repeat retries the failed request. Changing catalog/root requires a
 fresh units request before continuation. Switching operations preserves the
 session's report and references. Nothing records reading or acknowledgement.
+`m` saves a bookmark in an initialized library, and `'` restores it. Neither
+runs on its own, and closing does not save. A catalog snapshot writes nothing.
 The CLI exposes note/source/resource references; the TUI does not yet navigate
-notes, render images, or play audio. Unsupported units fail explicitly.
+EPUB notes, render images, or play audio. Unsupported units fail explicitly.
 
 ## Reader
 
@@ -117,9 +121,11 @@ tables appear where they were omitted.
 | j, Down / k, Up | One line down / up | Slower / faster by 25 |
 | - / + | Narrower / wider | Slower / faster by 25 |
 | g / G | Start / end of the loaded text | |
-| [ / ] | Previous / next unit | Previous / next unit |
+| [ / ] | Previous / next unit. Inside a declared entry, these stay in that entry | Previous / next unit. Inside a declared entry, these stay in that entry |
 | s / p | s: speed reading from this page | p: pages at this word |
-| q, Escape | Close | Close |
+| m | Save this location. Closing does not save | Save this location. Closing does not save |
+| ' | Restore the saved location | Restore the saved location |
+| q, Escape | Close. Nothing is saved | Close. Nothing is saved |
 
 Speed reading starts paused at 250 words per minute and holds sentence ends
 twice as long. Above 350 the footer calls it skimming, since comprehension fell
@@ -127,7 +133,8 @@ at those rates in studies. Paused, the surrounding rows show the word marked.
 An unreadable unit stops reading when you reach it, after everything already
 delivered; `]` opens the next unit. A session holds up to 4 MiB of text; at
 that limit `]` continues from the same place in a new session.
-Closing shows the unit and byte; nothing records reading.
+Closing shows the unit and byte and does not save a bookmark. `m` saves only
+when bookmarks are enabled on an initialized library.
 
 ## Appearance and boundaries
 

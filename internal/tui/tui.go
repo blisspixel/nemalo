@@ -196,6 +196,38 @@ func (m *model) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 			m.resize()
 			return m, nil
 		}
+		if value, ok := msg.data.(library.Bookmark); ok && msg.err == nil {
+			m.bookmarkStatus(fmt.Sprintf("Saved unit %d, offset %d. Closing does not save a bookmark.", value.Unit, value.Offset))
+			return m, nil
+		}
+		if value, ok := msg.data.(app.BookmarkResume); ok {
+			m.populate(nil)
+			m.setReport(present.BookmarkResume(value.Status, value.Detail, value.Bookmark, value.Content))
+			m.status = value.Detail
+			m.viewport.GotoTop()
+			if value.Status == "restored" && value.Content != nil && value.Content.Locator != nil {
+				m.remember(*value.Content)
+				loc := value.Content.Locator
+				switch value.Content.Representation {
+				case "epub-text/2", "pdf-text/1":
+					m.resize()
+					return m, m.openPager(m.input.Value(), m.secondary.Value(), value.Bookmark.AssetID, value.Content.Representation, reader.Position{Unit: loc.Unit, Offset: loc.Start}, false, reader.DefaultRate)
+				case "epub-nav/1":
+					if len(value.Content.Navigation) == 1 && len(value.Content.Navigation[0].Entries) == 1 && value.Bookmark.Cursor != "" {
+						entry := value.Content.Navigation[0].Entries[0]
+						cmd := m.openChapter(m.input.Value(), m.secondary.Value(), value.Bookmark.AssetID, value.Content.Navigation[0].Evidence, entry.Order, reader.Position{Unit: loc.Unit, Offset: loc.Start}, false)
+						if m.pager != nil {
+							m.pager.chapterCursor = value.Bookmark.Cursor
+							m.pager.representationID = loc.RepresentationID
+						}
+						m.resize()
+						return m, cmd
+					}
+				}
+			}
+			m.resize()
+			return m, nil
+		}
 		// Opening a copy leaves the holdings list and report in place.
 		if value, ok := msg.data.(library.ExportResult); ok {
 			m.status = fmt.Sprintf("Opened a verified read-only copy: %q", value.Path)
@@ -241,11 +273,15 @@ func (m *model) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		case content.Result:
 			if msg.err == nil {
+				m.remember(value)
 				m.reader.next = value.Continuation
 				m.reader.boundCatalog, m.reader.boundRoot = m.reader.last.Catalog, m.reader.last.Root
 				switch value.Status {
 				case "units_available":
 					m.status = "Source units available. Select deliberately; no progress is recorded."
+					if value.Representation == "epub-nav/1" {
+						m.status = "Declared navigation. Enter reads one entry and stops at its declared end. Nothing is recorded."
+					}
 				case "partial_range":
 					m.status = "Bounded range delivered; continuation available."
 				default:
@@ -254,7 +290,7 @@ func (m *model) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		}
 		if msg.err != nil {
-			m.status = fmt.Sprintf("Incomplete: %q", msg.err.Error())
+			m.bookmarkStatus(fmt.Sprintf("Incomplete: %q", msg.err.Error()))
 		}
 		m.populate(msg.data)
 		if msg.err != nil {

@@ -391,7 +391,12 @@ ordered manifests ([decision 0020](docs/decisions/0020-recording-manifest.md)), 
 PDFs have page indexes, printed labels, text with located gaps, and exact
 quotation spans ([decision 0021](docs/decisions/0021-pdf-pages-and-text.md)).
 A terminal reader shows EPUB and PDF text as pages or one word at a time over
-the same ranges, recording nothing ([decision 0025](docs/decisions/0025-terminal-reading.md)).
+the same ranges. Closing reports the place and writes nothing
+([decision 0025](docs/decisions/0025-terminal-reading.md)).
+Source-declared EPUB 3 nav and EPUB 2 NCX hierarchies are `epub-nav/1`: a read
+follows one entry until the next entry that is not nested inside it, and a
+spine boundary is not that end
+([decision 0026](docs/decisions/0026-epub-navigation-and-chapter-selection.md)).
 Claude Code validated the MCP contract as an external caller. Both issues are
 closed; OCR, column reconstruction, narrator identity, and M4B continue in
 milestones 7 and 8.
@@ -413,8 +418,11 @@ milestones 7 and 8.
   functionality and permission boundaries. Add interfaces without duplicated logic.
 - Useful curation: user-controlled filters, saved searches, and explained selections;
   measure task usefulness rather than growth, clicks, or time spent in the application.
-- Optional local notes, bookmarks, and reading lists with stable content references,
-  export/recovery support, and explicit handling of edition-update conflicts.
+- Explicit local bookmarks, one saved location per asset plus an optional note,
+  with export, import, and a conflict when the bytes or representation change
+  ([decision 0027](docs/decisions/0027-explicit-local-bookmarks.md)). Reading
+  lists remain planned. Bookmarks stay optional and local. MCP does not read
+  or write them.
 
 ## Milestone 7: research papers and PDF collections
 

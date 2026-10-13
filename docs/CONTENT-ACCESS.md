@@ -136,6 +136,39 @@ change invalidates earlier references. On six illustrated Project Gutenberg
 EPUBs from issue 5, version 1 read 28 of 54 units and version 2 read all 54,
 locating 84 omissions.
 
+## Declared contents: `epub-nav/1`
+
+```sh
+nemalo content navigation CATALOG --root DIRECTORY --asset sha256:HASH --json
+nemalo content read CATALOG --root DIRECTORY --asset sha256:HASH --representation epub-nav/1 --unit 0 --json
+nemalo content read CATALOG --root DIRECTORY --asset sha256:HASH --representation epub-nav/1 --unit 0 --navigation ncx --json
+```
+
+`units` lists spine documents, in the `epub-text/2` coordinate system, and every
+EPUB 3 navigation document (`nav-doc`) and EPUB 2 NCX (`ncx`). A spine document
+is a reading-order file. Several declared entries can share one file, and one
+entry can span files. Labels are the declared text. Level is the `ol`/`li` or
+`navPoint` depth, not an `h1` through `h6` level. `epub-structure/1` part kinds
+are unchanged. See
+[decision 0026](decisions/0026-epub-navigation-and-chapter-selection.md).
+
+`read` takes `--unit` as the entry's order in the chosen source. `--text-offset`
+is relative to that entry's start. The entry ends at the next entry that is not
+nested inside it. `range_status` is `within_range` or `range_end`. `end_of_unit`
+remains the spine fact. A cap, and the end of an intermediate spine file, leave
+the range open and return a continuation that stays inside the entry. An
+unresolved following entry fails with `unresolved_navigation` and does not
+continue to the end of the file. When both sources were found, the read names
+`--navigation nav-doc` or `--navigation ncx`. Listing does not require that
+choice. `coverage.navigation` is `absent`, `nav-doc`, `ncx`, or `nav-doc+ncx`.
+`navigation_conflict` means the resolved hierarchy or targets differ. Labels
+alone do not set it.
+
+Remote hrefs stay `external_not_fetched`. A `javascript:` link refuses the
+source as active content. Nothing is fetched or executed. A navigation member
+that is not in the spine does not change the `epub-text/2` representation id.
+It does change the `epub-nav/1` id.
+
 ## MP3 tracks: `mpeg-audio/1`
 
 ```sh
@@ -181,7 +214,8 @@ offsets across a recording ([decision 0020](decisions/0020-recording-manifest.md
 Stable operation statuses include `units_available`, `complete_range`,
 `partial_range`, `invalid_request`, `missing_asset`, `changed_source`,
 `unsupported_extraction`, `malformed_content`, `budget_exceeded`, `cancelled`,
-`stale_reference`, and `unavailable`. Failed operations return nonzero, with no
+`stale_reference`, `unavailable`, `navigation_choice_required`, `no_navigation`,
+and `unresolved_navigation`. Failed operations return nonzero, with no
 text, locator, or continuation. Unknown/duplicate cursor fields, future schemas,
 invalid encodings, and incompatible references are refused. A truncated JSON
 transport response cannot be treated as success by a caller.
@@ -199,11 +233,14 @@ reading/listening. Future provenance must extend the shared contract deliberatel
 Nemalo owns offline retrieval and evidence. A caller owns voluntary selection,
 pause/switch/resume/stop, and explicit acknowledgement of what it actually processed.
 Retrieval, retries, peeks, preparation, or delivery never create consumption state.
-Optional bookmarks remain separately enabled, local, and exportable future work.
+Explicit bookmarks are a separate opt-in journal,
+[decision 0027](decisions/0027-explicit-local-bookmarks.md): `bookmark enable`
+creates it, and only save, note, delete, and import write it. There is no
+acknowledgement. A changed source is `changed_source` and is not remapped.
 The terminal reader ([decision 0025](decisions/0025-terminal-reading.md)) is
 such a caller: it requests ranges and continuations like any other and keeps
-its position only on screen. Closing reports the unit and byte offset; nothing
-is stored.
+its position only on screen. Closing reports the unit and byte offset and does
+not save a bookmark. MCP does not read or write bookmarks.
 
 Implemented validation covers over 300 actual synthetic service calls across
 multiple works, deterministic retries, source-order continuation, Unicode/stanzas,

@@ -20,6 +20,9 @@ func Content(r content.Result) string {
 	if r.Status == "units_available" && r.Audio == nil {
 		writeUnits(&b, r)
 	}
+	if len(r.Navigation) > 0 {
+		writeNavigation(&b, r)
+	}
 	if r.Locator != nil {
 		if r.Representation == "pdf-text/1" {
 			fmt.Fprintf(&b, "Page index %d (zero-based) | printed label %q | bytes %d..%d (%s)\n", r.Locator.Unit, r.Locator.PageLabel, r.Locator.Start, r.Locator.End, offsetUnit(r.Locator))
@@ -122,6 +125,44 @@ func writeUnits(b *strings.Builder, r content.Result) {
 	}
 	if len(r.UnsupportedUnits) > 0 {
 		fmt.Fprintf(b, "Unsupported units %v return no text; select another unit explicitly.\n", r.UnsupportedUnits)
+	}
+}
+
+func writeNavigation(b *strings.Builder, r content.Result) {
+	fmt.Fprintf(b, "Declared navigation: %d source(s). Labels and targets come from the book, not from heading text.\n", len(r.Navigation))
+	if r.Coverage != nil && r.Coverage.NavigationConflict {
+		b.WriteString("NAV and NCX disagree. A read must name --navigation nav-doc or --navigation ncx.\n")
+	}
+	for _, doc := range r.Navigation {
+		path := doc.Path
+		if path == "" {
+			path = "(none)"
+		}
+		fmt.Fprintf(b, "  %s %q", doc.Evidence, path)
+		if doc.Problem != "" {
+			fmt.Fprintf(b, "  problem %q", doc.Problem)
+		}
+		b.WriteByte('\n')
+		for _, e := range doc.Entries {
+			parent := ""
+			if e.Parent != nil {
+				parent = fmt.Sprintf("  parent %d", *e.Parent)
+			}
+			where := e.Status
+			if e.Unit != nil && e.Offset != nil {
+				where = fmt.Sprintf("unit %d byte %d", *e.Unit, *e.Offset)
+			}
+			fmt.Fprintf(b, "    %4d  L%d  %-22s  %s%s\n", e.Order, e.Level, strconv.Quote(e.Label), where, parent)
+			if e.Range != nil {
+				fmt.Fprintf(b, "          range %s  %d:%d .. %d:%d\n", e.Range.Status, e.Range.StartUnit, e.Range.StartOffset, e.Range.EndUnit, e.Range.EndOffset)
+			}
+		}
+	}
+	if r.RangeStatus != "" {
+		fmt.Fprintf(b, "Declared range: %s\n", r.RangeStatus)
+		if r.RangeEnd != nil {
+			fmt.Fprintf(b, "Declared end: unit %d byte %d\n", r.RangeEnd.Unit, r.RangeEnd.Start)
+		}
 	}
 }
 

@@ -55,6 +55,9 @@ type Request struct {
 	// Find locates every exact occurrence of this text in a text
 	// representation instead of reading a range.
 	Find string
+	// Navigation selects epub-nav/1 evidence when a book declares more than
+	// one: nav-doc or ncx. It is required for a read in that case.
+	Navigation string
 }
 
 func (r Request) Validate() error {
@@ -82,6 +85,9 @@ func (r Request) Validate() error {
 	}
 	if (r.Resource && r.Representation != "epub-structure/1") || (r.UnitsOnly && r.Representation == "epub-source/1") {
 		return errors.New("operation is unavailable for the selected representation; inspect content capabilities")
+	}
+	if r.Navigation != "" && (r.Navigation != "nav-doc" && r.Navigation != "ncx" || r.Representation != "epub-nav/1" || r.Cursor != "") {
+		return errors.New("navigation source must be nav-doc or ncx, applies only to an epub-nav/1 request, and cannot be combined with a cursor")
 	}
 	return nil
 }
@@ -143,6 +149,13 @@ type Result struct {
 	Audio            *audio.Track  `json:"audio,omitempty"`
 	AudioRange       *audio.Range  `json:"audio_range,omitempty"`
 	Matches          []Match       `json:"matches,omitempty"`
+	// Navigation is the source-declared table of contents for epub-nav/1.
+	// A read carries the one selected entry. Spine units stay in Units.
+	Navigation []NavDocument `json:"navigation,omitempty"`
+	// RangeStatus is within_range or range_end for an epub-nav/1 read.
+	// A spine boundary is EndOfUnit; it does not by itself end the declared range.
+	RangeStatus string   `json:"range_status,omitempty"`
+	RangeEnd    *Locator `json:"range_end,omitempty"`
 }
 
 type cursor struct {
@@ -197,6 +210,8 @@ func Get(ctx context.Context, req Request) (result Result, err error) {
 			result.Units = nil
 			result.Parts, result.Coverage, result.Resource, result.Gaps = nil, nil, nil, nil
 			result.Audio, result.AudioRange, result.Matches = nil, nil, nil
+			result.Navigation, result.RangeEnd = nil, nil
+			result.RangeStatus = ""
 			result.EndOfUnit, result.EndOfSource = false, false
 		}
 	}()
@@ -241,6 +256,11 @@ func Get(ctx context.Context, req Request) (result Result, err error) {
 			return result, errors.New("part/resource access is unavailable for pdf-text/1")
 		}
 		return getPDFText(ctx, req, result)
+	case "epub-nav/1":
+		if req.Part != "" || req.Resource || req.Find != "" || req.Sample != 0 {
+			return result, errors.New("epub-nav/1 reads a declared entry by --unit, or continues with its cursor")
+		}
+		return getNavigation(ctx, req, result)
 	default:
 		result.Status = "unsupported_representation"
 		return result, errors.New("unsupported content representation; inspect content capabilities")

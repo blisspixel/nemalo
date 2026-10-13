@@ -37,6 +37,9 @@ warnings or make static content safe.
 Structured text retains decoded source whitespace, combining characters, explicit
 line breaks and stanza separation. Common block boundaries add a missing LF.
 It does not apply CSS, normalize typography, or infer chapter/poem boundaries.
+Declared contents are a separate representation, `epub-nav/1`
+([decision 0026](decisions/0026-epub-navigation-and-chapter-selection.md)).
+Heading parts stay kind `heading` with no level field.
 Parts identify declared paragraphs, headings, preformatted text, sections, stanzas,
 notes, references, figures, and captions, with inherited language/direction or
 `unknown`. Source IDs are prefixed `id:`; otherwise IDs are deterministic `part:N`
