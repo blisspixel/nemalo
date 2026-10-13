@@ -28,7 +28,7 @@ import (
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
-const Version = "0.1.0-alpha.10"
+const Version = "0.1.0-alpha.11"
 
 const help = `Nemalo
 Find knowledge. Care for it. Realize its potential.

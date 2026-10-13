@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+## 0.1.0-alpha.11
+
+Eleventh native prerelease. This remains an early library, not 1.0.
+
 - The installers choose the highest semantic version among published releases. The GitHub releases list does not put that version first. After 0.1.0-alpha.10 was published, the first list item was still v0.1.0-alpha.9
   ([decision 0013](docs/decisions/0013-release-installer-scripts.md)).
 - List editions of one Open Library work, then read one edition. A page whose entry count differs from the requested window is refused. When that edition's `ocaid` names one Archive item, evaluation continues with that item's existing metadata. Search does not read work-level Archive identifiers. Acquire remains `archive:ITEM`. There is no Open Library edition MCP tool

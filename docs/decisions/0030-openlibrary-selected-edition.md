@@ -85,7 +85,8 @@ different item from the edition's `ocaid`.
 
 ## Consequences
 
-CLI and TUI can list a page of editions and then evaluate one edition. MCP
+CLI and TUI can list a page of editions and then evaluate one edition.
+0.1.0-alpha.11 is the first release that includes it. MCP
 `catalog_search` remains work search. `catalog_evaluate` remains
 `archive:ITEM`. There is no Open Library edition tool. Checked publication
 is unchanged.
