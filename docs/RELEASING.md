@@ -27,8 +27,9 @@ native validation, cross-built artifacts, and remaining limits.
    local checksums. Review tag-triggered CI as well.
 7. Run `scripts/install.sh` and `scripts/install.ps1` against the new release on
    each native platform, without a pin and with `--version`/`-Version`, then
-   `--uninstall`/`-Uninstall`. The installers resolve the newest release from the
-   GitHub release list, so they reach a prerelease only after it is published.
+   `--uninstall`/`-Uninstall`. The installers select the highest semantic
+   version among non-draft releases. The GitHub list order is not that version
+   order. They reach a prerelease only after it is published.
 
 The Go packaging command refuses a dirty checkout and existing output, validates
 each executable's embedded target and clean VCS revision, and rechecks the source

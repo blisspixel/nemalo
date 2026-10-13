@@ -26,6 +26,50 @@ function Fail([string]$Message, [string]$Hint = "") {
     throw "nemalo install: $Message"
 }
 
+function Compare-VersionNumber([string]$A, [string]$B) {
+    $A = $A.TrimStart("0")
+    $B = $B.TrimStart("0")
+    if ($A -eq "") { $A = "0" }
+    if ($B -eq "") { $B = "0" }
+    if ($A.Length -ne $B.Length) { return $A.Length.CompareTo($B.Length) }
+    return [string]::CompareOrdinal($A, $B)
+}
+
+# Compare-NemaloVersion returns 1 when A is a higher semantic version than B.
+function Compare-NemaloVersion([string]$A, [string]$B) {
+    $pattern = '^([0-9]+)\.([0-9]+)\.([0-9]+)(?:-([0-9A-Za-z.]+))?$'
+    $am = [regex]::Match($A, $pattern)
+    $bm = [regex]::Match($B, $pattern)
+    if (-not $am.Success -or -not $bm.Success) { return 0 }
+    foreach ($i in 1, 2, 3) {
+        $cmp = Compare-VersionNumber $am.Groups[$i].Value $bm.Groups[$i].Value
+        if ($cmp -ne 0) { return $cmp }
+    }
+    $ap = $am.Groups[4].Value
+    $bp = $bm.Groups[4].Value
+    if ($ap -eq "" -and $bp -eq "") { return 0 }
+    if ($ap -eq "") { return 1 }
+    if ($bp -eq "") { return -1 }
+    $left = $ap.Split(".")
+    $right = $bp.Split(".")
+    $count = [Math]::Min($left.Length, $right.Length)
+    for ($i = 0; $i -lt $count; $i++) {
+        $leftNumber = $left[$i] -match '^[0-9]+$'
+        $rightNumber = $right[$i] -match '^[0-9]+$'
+        if ($leftNumber -and $rightNumber) {
+            $cmp = Compare-VersionNumber $left[$i] $right[$i]
+        } elseif ($leftNumber) {
+            $cmp = -1
+        } elseif ($rightNumber) {
+            $cmp = 1
+        } else {
+            $cmp = [string]::CompareOrdinal($left[$i], $right[$i])
+        }
+        if ($cmp -ne 0) { return $cmp }
+    }
+    return $left.Length.CompareTo($right.Length)
+}
+
 if (-not $Dir) { $Dir = $env:NEMALO_INSTALL_DIR }
 if (-not $Dir) { $Dir = Join-Path $env:LOCALAPPDATA "Programs\nemalo" }
 if (-not [IO.Path]::IsPathRooted($Dir)) { Fail "install directory must be an absolute path: $Dir" }
@@ -94,19 +138,33 @@ if ($env:PROCESSOR_ARCHITECTURE -eq "ARM64" -or $env:PROCESSOR_ARCHITEW6432 -eq 
 }
 
 if (-not $Version) {
-    # Releases are currently prereleases, which /releases/latest excludes. The
-    # list endpoint returns the newest release first, prereleases included.
+    # /releases/latest excludes prereleases. The list endpoint's order is not
+    # semantic version order: on 2026-10-13 its first item was v0.1.0-alpha.9
+    # after v0.1.0-alpha.10 was published. Choose the highest version.
     # A GITHUB_TOKEN, when set, is sent only to api.github.com, to avoid the
     # unauthenticated rate limit on shared networks such as CI runners.
     $headers = @{}
     if ($env:GITHUB_TOKEN) { $headers["Authorization"] = "Bearer $($env:GITHUB_TOKEN)" }
     try {
-        $releases = Invoke-RestMethod -UseBasicParsing -Headers $headers -Uri "https://api.github.com/repos/$Repo/releases?per_page=1"
+        # PowerShell may return the JSON array as one value. Pipe it so each
+        # release is its own object; a nested array would hide every tag.
+        $releases = @(Invoke-RestMethod -UseBasicParsing -Headers $headers -Uri "https://api.github.com/repos/$Repo/releases?per_page=100" | ForEach-Object { $_ })
     } catch {
         Fail "could not query the release list" "pass -Version VERSION to skip the lookup"
     }
-    $Version = @($releases)[0].tag_name
-    if (-not $Version) { Fail "no published release found" }
+    if ($releases.Count -ge 100) {
+        Fail "the release list is too long to choose a version" "pass -Version VERSION"
+    }
+    $best = ""
+    foreach ($release in $releases) {
+        if ($release.draft) { continue }
+        $tag = [string]$release.tag_name
+        if ($tag -notmatch '^v?([0-9]+\.[0-9]+\.[0-9]+(?:-[0-9A-Za-z.]+)?)$') { continue }
+        $candidate = $Matches[1]
+        if ($best -eq "" -or (Compare-NemaloVersion $candidate $best) -gt 0) { $best = $candidate }
+    }
+    if (-not $best) { Fail "no published release found" }
+    $Version = $best
 }
 $Version = $Version -replace '^v', ''
 if ($Version -notmatch '^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.]+)?$') { Fail "invalid version $Version" }

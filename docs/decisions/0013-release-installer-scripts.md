@@ -16,9 +16,14 @@ This is the concrete unmet requirement that justifies the exception.
 `scripts/install.sh` (POSIX `sh`, Linux and macOS) and `scripts/install.ps1`
 (Windows PowerShell 5.1 and PowerShell 7) install one published release:
 
-- Resolve the newest release from the GitHub releases list endpoint, because
+- Resolve the highest semantic version among non-draft releases, because
   current releases are prereleases and `/releases/latest` excludes them, or use
-  `--version` / `-Version`.
+  `--version` / `-Version`. The releases list endpoint does not return that
+  version first. On 2026-10-13 its first item was `v0.1.0-alpha.9` after
+  `v0.1.0-alpha.10` was published, despite the later commit date, later
+  `published_at`, and higher release id. The scripts read one page of up to
+  100 releases and compare versions themselves. A full page fails closed
+  rather than ignoring a later page.
 - Download the platform archive and `SHA256SUMS` over HTTPS, require exactly one
   valid digest for the archive, and refuse a mismatch. Extract only the
   executable, run `nemalo version` from the staging directory, then replace the

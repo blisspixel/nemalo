@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- The installers choose the highest semantic version among published releases. The GitHub releases list does not put that version first. After 0.1.0-alpha.10 was published, the first list item was still v0.1.0-alpha.9
+  ([decision 0013](docs/decisions/0013-release-installer-scripts.md)).
+
 ## 0.1.0-alpha.10
 
 Tenth native prerelease. This remains an early library, not 1.0.

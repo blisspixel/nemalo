@@ -96,19 +96,94 @@ work=$(mktemp -d "${TMPDIR:-/tmp}/nemalo-install.XXXXXX")
 trap 'rm -rf "$work"' EXIT INT TERM
 
 if [ -z "$VERSION" ]; then
-  # Releases are currently prereleases, which /releases/latest excludes. The
-  # list endpoint returns the newest release first, prereleases included.
+  # /releases/latest excludes prereleases. The list endpoint's order is not
+  # semantic version order: on 2026-10-13 its first item was v0.1.0-alpha.9
+  # after v0.1.0-alpha.10 was published. Choose the highest version.
   # A GITHUB_TOKEN, when set, is sent only to api.github.com, to avoid the
   # unauthenticated rate limit on shared networks such as CI runners. The
   # header goes through stdin so the token never appears in process arguments.
   if [ -n "${GITHUB_TOKEN:-}" ] && have curl; then
     printf 'Authorization: Bearer %s\n' "$GITHUB_TOKEN" |
       curl -fsSL --proto '=https' --tlsv1.2 -H @- \
-        "https://api.github.com/repos/$REPO/releases?per_page=1" -o "$work/releases.json"
+        "https://api.github.com/repos/$REPO/releases?per_page=100" -o "$work/releases.json"
   else
-    fetch "https://api.github.com/repos/$REPO/releases?per_page=1" "$work/releases.json"
+    fetch "https://api.github.com/repos/$REPO/releases?per_page=100" "$work/releases.json"
   fi || err "could not query the release list" "pass --version VERSION to skip the lookup"
-  VERSION=$(sed -n 's/^ *"tag_name": *"\([^"]*\)".*/\1/p' "$work/releases.json" | head -n 1)
+  VERSION=$(awk '
+    function numcmp(a, b, aa, bb) {
+      aa = a
+      bb = b
+      sub(/^0+/, "", aa)
+      sub(/^0+/, "", bb)
+      if (aa == "") aa = "0"
+      if (bb == "") bb = "0"
+      if (length(aa) > length(bb)) return 1
+      if (length(aa) < length(bb)) return -1
+      if (aa > bb) return 1
+      if (aa < bb) return -1
+      return 0
+    }
+    function vercmp(a, b, ac, bc, ap, bp, i, c, an, bn, n, as, bs, left, right) {
+      ac = a
+      bc = b
+      sub(/^v/, "", ac)
+      sub(/^v/, "", bc)
+      ap = ""
+      bp = ""
+      if (match(ac, /-/)) {
+        ap = substr(ac, RSTART + 1)
+        ac = substr(ac, 1, RSTART - 1)
+      }
+      if (match(bc, /-/)) {
+        bp = substr(bc, RSTART + 1)
+        bc = substr(bc, 1, RSTART - 1)
+      }
+      split(ac, as, ".")
+      split(bc, bs, ".")
+      for (i = 1; i <= 3; i++) {
+        c = numcmp(as[i], bs[i])
+        if (c != 0) return c
+      }
+      if (ap == "" && bp == "") return 0
+      if (ap == "") return 1
+      if (bp == "") return -1
+      an = split(ap, left, ".")
+      bn = split(bp, right, ".")
+      n = an
+      if (bn < n) n = bn
+      for (i = 1; i <= n; i++) {
+        if (left[i] ~ /^[0-9]+$/ && right[i] ~ /^[0-9]+$/) c = numcmp(left[i], right[i])
+        else if (left[i] ~ /^[0-9]+$/) c = -1
+        else if (right[i] ~ /^[0-9]+$/) c = 1
+        else if (left[i] > right[i]) c = 1
+        else if (left[i] < right[i]) c = -1
+        else c = 0
+        if (c != 0) return c
+      }
+      if (an > bn) return 1
+      if (an < bn) return -1
+      return 0
+    }
+    BEGIN { best = ""; count = 0; tag = ""; draft = 0; too = 0 }
+    /^  \{$/ { tag = ""; draft = 0; next }
+    /^    "tag_name": "/ {
+      tag = $0
+      sub(/^    "tag_name": "/, "", tag)
+      sub(/".*$/, "", tag)
+      next
+    }
+    /^    "draft": true[,]?$/ { draft = 1; next }
+    /^  \},?$/ {
+      count++
+      if (count >= 100) { too = 1; exit }
+      if (!draft && tag ~ /^v?[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.]+)?$/ && (best == "" || vercmp(tag, best) > 0)) best = tag
+      tag = ""
+      draft = 0
+      next
+    }
+    END { if (too) print "TOO_MANY"; else if (best != "") print best }
+  ' "$work/releases.json") || err "could not read the release list" "pass --version VERSION to skip the lookup"
+  [ "$VERSION" != "TOO_MANY" ] || err "the release list is too long to choose a version" "pass --version VERSION"
   [ -n "$VERSION" ] || err "no published release found"
 fi
 VERSION=${VERSION#v}
