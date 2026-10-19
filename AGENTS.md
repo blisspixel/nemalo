@@ -128,9 +128,10 @@ decision 0006. The initialization journal stays two records. Managed operations
 are separate intent/completed pairs (import, rescan); every writer completes a
 trailing rescan intent before its own work. Preserve explicit roots,
 retained corrupt state, canonical records, OS-held locks, and TUI write review.
-Archive extraction is `internal/staging` (decision 0017): flat indexed staging
-names, never member paths; one archive staged at a time; account for every
-member and every entry beside a packet; ingest reuses Import.
+Archive extraction is `internal/staging` (decisions 0017, 0043): flat indexed staging
+names, never member paths; RAR and 7z only through an installed 7-Zip, by exact name
+to stdout; one archive staged at a time; account for every member and every entry
+beside a packet; ingest reuses Import.
 `library check` (decision 0024) is the read-only whole-library report; it never repairs.
 Source cleanup is `library/cleanup.go` and `restore.go` (decision 0022): move only held,
 verified bytes into the holding area via verified copy, hard-link publish, then source

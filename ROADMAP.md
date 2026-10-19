@@ -227,10 +227,13 @@ Acceptance:
 
 Status: partial. Inventory, standalone file checks, and folder ingest with ZIP
 extraction into private staging exist
-([decision 0017](docs/decisions/0017-folder-and-zip-ingest.md)). RAR, 7z,
-multipart sets, nested archives, and PAR2 remain planned. The pure-Go RAR and 7z
-readers checked on 2026-10-11 lack verifiable checksums or memory bounds; see the
-[research record](docs/RESEARCH.md#version-sensitive-research-record). Depends on
+([decision 0017](docs/decisions/0017-folder-and-zip-ingest.md)). RAR and 7z
+members are extracted through an installed 7-Zip, by exact name to standard
+output, with the same accounting and CRC checks
+([decision 0043](docs/decisions/0043-rar-and-7z-through-7-zip.md)); the pure-Go
+readers checked on 2026-10-11 lack verifiable checksums or memory bounds (see the
+[research record](docs/RESEARCH.md#version-sensitive-research-record)).
+Multipart sets, nested archives, and PAR2 remain planned. Depends on
 milestone 1.
 
 Deliver recursive inventory, file-signature checks, ZIP handling, additional archive

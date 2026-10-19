@@ -78,7 +78,7 @@ type ingestUnit struct {
 func Ingest(ctx context.Context, request IngestRequest) (result IngestResult, err error) {
 	result = IngestResult{SchemaVersion: 1, Applied: request.Apply, Items: []IngestItem{}, Limitations: []string{
 		"The folder and its archives are preserved. Nothing is moved or deleted; cleanup is a separate, later step.",
-		"Only EPUB, PDF, MP3, M4B, and M4A files, intake packets, and ZIP members are imported. Other files and archive formats are listed, not imported.",
+		"Only EPUB, PDF, MP3, M4B, and M4A files, intake packets, and members of ZIP archives, and of RAR and 7z archives when 7-Zip is installed, are imported. Other files and archive formats are listed, not imported.",
 		"Each import is assessed and journaled like library import. A no-detection scan is not proof of safety.",
 	}}
 	libraryRoot, err := filepath.Abs(request.Library)
@@ -274,7 +274,7 @@ func planIngest(folder string, entries []inventory.Entry, result *IngestResult) 
 			item.Outcome, item.Detail = "not_imported", "intake packet without a receipt; retained for review"
 		case (path.Base(e.Path) == "recording.json" || path.Base(e.Path) == "recording-intent.json") && has(path.Join(path.Dir(e.Path), "recording-intent.json")):
 			item.Outcome, item.Detail = "packet_part", "recording record; its track packets are imported on their own"
-		case strings.EqualFold(path.Ext(e.Path), ".zip"):
+		case staging.Supported(e.Path):
 			archive := filepath.Join(folder, filepath.FromSlash(e.Path))
 			if strings.Contains(archive, "!/") {
 				// "!/" separates an archive from its member in provenance labels.
@@ -294,7 +294,8 @@ func planIngest(folder string, entries []inventory.Entry, result *IngestResult) 
 	return units
 }
 
-// ingestArchive extracts one ZIP into its own staging directory, imports the
+// ingestArchive extracts one ZIP, RAR, or 7z archive into its own staging
+// directory, imports the
 // extracted members with "ARCHIVE!/MEMBER" provenance, and removes the staging
 // directory before returning, so staging never holds more than one archive's
 // extraction budget. resume names a pending member to import before any other.
@@ -317,7 +318,16 @@ func ingestArchive(ctx context.Context, src *os.Root, folder, dir string, u inge
 		return err
 	}
 	item := u.item
-	members, extractErr := staging.ExtractZip(ctx, src, rel, stage, supportedImport, staging.Defaults())
+	members, extractErr := staging.Extract(ctx, src, rel, stage, supportedImport, staging.Defaults())
+	if errors.Is(extractErr, staging.ErrNoArchiveTool) {
+		// Without 7-Zip a RAR or 7z is listed and preserved, as before.
+		item.Outcome, item.Detail = "not_imported", extractErr.Error()
+		result.Items = append(result.Items, item)
+		if resume != "" {
+			return pendingError(u.file + "!/" + resume)
+		}
+		return nil
+	}
 	if extractErr != nil {
 		if ctx.Err() != nil {
 			return ctx.Err()

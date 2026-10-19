@@ -14,6 +14,7 @@ import (
 	"testing"
 
 	"github.com/blisspixel/nemalo/internal/scanner"
+	"github.com/blisspixel/nemalo/internal/staging"
 )
 
 // messyFolder builds a folder with a loose EPUB, a PDF, an intake packet, a ZIP
@@ -425,5 +426,35 @@ func TestIngestRefusesArchivePathsWithTheLabelSeparator(t *testing.T) {
 	r, err := Ingest(ctx, IngestRequest{Library: root, Folder: folder, Apply: true})
 	if err == nil || r.Failed != 1 || !strings.Contains(r.Items[0].Detail, "provenance") {
 		t.Fatal("separator in archive path accepted", r, err)
+	}
+}
+
+// Without 7-Zip a RAR or 7z archive is listed and preserved, never guessed
+// at, and the rest of the folder is still imported.
+func TestIngestPreservesRARAnd7zWithoutAnArchiveTool(t *testing.T) {
+	saved := staging.SevenZip
+	staging.SevenZip = func() (string, error) { return "", errors.New("missing") }
+	t.Cleanup(func() { staging.SevenZip = saved })
+	ctx := context.Background()
+	root, folder := t.TempDir(), t.TempDir()
+	if _, err := Initialize(ctx, root); err != nil {
+		t.Fatal(err)
+	}
+	writeTree(t, folder, map[string][]byte{"bundle.rar": []byte("Rar!\x1a\x07\x01\x00"), "bundle.7z": []byte("7z\xbc\xaf\x27\x1c"), "book.epub": mustRead(t, writeEPUBParagraph(t, t.TempDir(), "Loose"))})
+	r, err := Ingest(ctx, IngestRequest{Library: root, Folder: folder, Apply: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	outcomes := map[string]IngestItem{}
+	for _, item := range r.Items {
+		outcomes[item.Source] = item
+	}
+	for _, archive := range []string{"bundle.rar", "bundle.7z"} {
+		if item := outcomes[archive]; item.Outcome != "not_imported" || !strings.Contains(item.Detail, "7-Zip") {
+			t.Fatal(archive, item)
+		}
+	}
+	if outcomes["book.epub"].Outcome != "review" {
+		t.Fatal(outcomes["book.epub"])
 	}
 }

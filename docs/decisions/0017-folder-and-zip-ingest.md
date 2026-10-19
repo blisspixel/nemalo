@@ -22,7 +22,9 @@ import, assessment, journal, and crash recovery as `library import`.
   own like any other entry.
 - Loose EPUB, PDF, and MP3 files, and M4B and M4A files since
   [decision 0039](0039-mp4-audio-samples.md), are imported as files. Other files, links,
-  special files, RAR, 7z, tar, and compressed streams are listed and preserved.
+  special files, tar, and compressed streams are listed and preserved. RAR and
+  7z archives are too unless 7-Zip is installed
+  ([decision 0043](0043-rar-and-7z-through-7-zip.md)).
 - ZIP archives are extracted by `internal/staging` into a private temporary
   directory one at a time: an archive's members are staged, imported (or
   previewed), and removed before the next archive is opened, so staging never

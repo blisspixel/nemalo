@@ -330,7 +330,10 @@ new intent is written. The existing bytes stay in place.
 and supported ZIP member, through the same import and journal, and lists every
 other entry with a reason. ZIP members are extracted into private temporary
 staging with path, size, ratio, and CRC checks and recorded as
-`ARCHIVE!/MEMBER`. The folder and its archives are never changed. See
+`ARCHIVE!/MEMBER`. With 7-Zip installed, RAR and 7z members are extracted the
+same way, one at a time by exact name to standard output, from a private
+snapshot of the archive ([decision 0043](decisions/0043-rar-and-7z-through-7-zip.md)).
+The folder and its archives are never changed. See
 [decision 0017](decisions/0017-folder-and-zip-ingest.md).
 
 Stored files live under `assets/sha256/` beside `.nemalo`. Operations and
