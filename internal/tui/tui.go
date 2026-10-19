@@ -42,7 +42,9 @@ type model struct {
 	height           int
 	width            int
 	color            bool
-	dark             bool
+	// outcome colours the status line. A key press clears it; a result,
+	// or a refusal before any request, sets it from the operation itself.
+	outcome          outcome
 	largeBudget      bool
 	drafts           map[string]draft
 	offset           int
@@ -109,7 +111,7 @@ func newModel(ctx context.Context, service app.Service) *model {
 	secondary.SetStyles(textinput.Styles{Cursor: textinput.CursorStyle{Blink: true}})
 	view := viewport.New(viewport.WithWidth(80), viewport.WithHeight(16))
 	view.SoftWrap = true
-	m := &model{ctx: ctx, service: service, input: input, secondary: secondary, width: 80, height: 25, dark: true, viewport: view, mode: "search", source: "openlibrary", format: "epub", drafts: map[string]draft{}, status: "Ready. Network activity only on explicit search/evaluation."}
+	m := &model{ctx: ctx, service: service, input: input, secondary: secondary, width: 80, height: 25, viewport: view, mode: "search", source: "openlibrary", format: "epub", drafts: map[string]draft{}, status: "Ready. Network activity only on explicit search/evaluation."}
 	if g, ok := service.Providers["gutenberg"].(*discovery.Gutenberg); ok {
 		m.catalog = g.Catalog
 	}
@@ -120,7 +122,7 @@ func newModel(ctx context.Context, service app.Service) *model {
 }
 
 func (m *model) Init() tea.Cmd {
-	return tea.Batch(m.input.Focus(), tea.RequestBackgroundColor, m.initial)
+	return tea.Batch(m.input.Focus(), m.initial)
 }
 
 func (m *model) Update(message tea.Msg) (tea.Model, tea.Cmd) {
@@ -141,8 +143,6 @@ func (m *model) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 		}
 	}
 	switch msg := message.(type) {
-	case tea.BackgroundColorMsg:
-		m.dark = msg.IsDark()
 	case tea.ColorProfileMsg:
 		profile := msg.Profile.String()
 		m.color = (profile == "ANSI" || profile == "ANSI256" || profile == "TrueColor") && os.Getenv("NO_COLOR") == "" && os.Getenv("TERM") != "dumb"
@@ -167,6 +167,7 @@ func (m *model) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 			m.cancel = nil
 		}
 		m.status = "Complete."
+		m.outcome = resultOutcome(msg.data, msg.err)
 		// A cleanup preview with something to move becomes a review; Enter
 		// applies exactly that plan digest.
 		if value, ok := msg.data.(library.CleanupResult); ok && msg.err == nil && !value.Applied && value.Move > 0 {
@@ -383,6 +384,7 @@ func (m *model) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		if err != nil {
 			m.status = fmt.Sprintf("Output error: %s", present.Error(err))
+			m.outcome = outcomeFailed
 			m.setReport("")
 		} else {
 			if msg.err != nil {
@@ -396,6 +398,7 @@ func (m *model) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 			return m, m.focusForm()
 		}
 	case tea.KeyPressMsg:
+		m.outcome = outcomeNone
 		if m.reviewingDownload() {
 			return m, m.confirmDownload(msg)
 		}

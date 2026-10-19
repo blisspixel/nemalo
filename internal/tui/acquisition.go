@@ -45,12 +45,14 @@ func (m *model) requestDownload() tea.Cmd {
 	request := acquisition.Request{SourceID: sourceID, File: m.entries[m.selected].sourceID, Output: m.secondary.Value(), MaxBytes: 256 << 20}
 	if err := request.Validate(); err != nil {
 		m.status = fmt.Sprintf("Acquisition error: %s", present.Error(err))
+		m.outcome = outcomeFailed
 		m.resize()
 		return nil
 	}
 	abs, err := filepath.Abs(request.Output)
 	if err != nil {
 		m.status = fmt.Sprintf("Acquisition error: %s", present.Error(err))
+		m.outcome = outcomeFailed
 		return nil
 	}
 	request.Output = abs
@@ -160,12 +162,14 @@ func (m *model) requestRecording() {
 	request := acquisition.RecordingRequest{SourceID: m.submittedInput, Format: recording.Format, Output: m.secondary.Value(), MaxBytes: recording.Bytes}
 	if err := request.Validate(); err != nil {
 		m.status = fmt.Sprintf("Acquisition error: %s", present.Error(err))
+		m.outcome = outcomeFailed
 		m.resize()
 		return
 	}
 	abs, err := filepath.Abs(request.Output)
 	if err != nil {
 		m.status = fmt.Sprintf("Acquisition error: %s", present.Error(err))
+		m.outcome = outcomeFailed
 		return
 	}
 	request.Output = abs

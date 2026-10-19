@@ -16,6 +16,7 @@
 - List an EPUB's declared page labels, such as `iv` or `42`, with `content pages`, MCP `content_pages`, or `g` in TUI Read, and read from one with `epub-page-list/1` by reference or exact label. A duplicate label lists its candidates. The package's stated pagination source is shown, or `unknown`. A page end is given only when the next marker follows. Page labels are the book's own markers, never generated, and the table of contents and its ids are unchanged ([decision 0031](docs/decisions/0031-epub-page-list.md)). Closes issue 22.
 - A failed `content` request prints only the error.
 - `nemalo help` is a one-screen overview grouped by find, acquire, check, keep, and read. `nemalo help COMMAND` and `COMMAND --help` print that command's options and limits, with today's text. Help wraps to a terminal narrower than 80 columns. `nemalo --version` and `nemalo version` print the version and, when built from a source checkout, the commit. Closes issue 34.
+- The TUI uses the terminal's own ANSI colours: blue accent, green for done, yellow for work and attention, red for failures and detections, and dim context. It no longer emits truecolor values that assumed a dark background, which left about 2:1 contrast on light themes. The status line's colour comes from the operation's result, not from words in the status. Closes issue 32.
 
 ## 0.1.0-alpha.11
 

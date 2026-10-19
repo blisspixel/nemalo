@@ -3,7 +3,6 @@ package tui
 import (
 	"context"
 	"fmt"
-	"image/color"
 	"os"
 	"path/filepath"
 	"strings"
@@ -210,13 +209,15 @@ func TestColorPreferencesAndBusyInput(t *testing.T) {
 	if !m.color || !strings.Contains(m.View().Content, "\x1b[") {
 		t.Fatal("capable terminal has no styles")
 	}
-	m.Update(tea.BackgroundColorMsg{Color: color.RGBA{R: 255, G: 255, B: 255, A: 255}})
-	if m.dark || !strings.Contains(m.paint("accent", accent, true), "67;56;202") {
-		t.Fatal("light palette not applied")
+	// Roles are the terminal's own ANSI colours, never fixed truecolor values
+	// that assume a background (issue 32).
+	if strings.Contains(m.View().Content, "38;2;") {
+		t.Fatal("truecolor foreground emitted")
 	}
-	m.Update(tea.BackgroundColorMsg{Color: color.Black})
-	if !m.dark {
-		t.Fatal("dark palette not restored")
+	for r, want := range map[role]string{accent: "34", success: "32", warning: "33", danger: "31", muted: "2"} {
+		if got := m.paint("x", r, false); !strings.Contains(got, "\x1b["+want+"m") || strings.Contains(got, "38;2;") {
+			t.Fatalf("role %d painted %q, want ANSI %s", r, got, want)
+		}
 	}
 	t.Setenv("NO_COLOR", "1")
 	m.Update(tea.ColorProfileMsg{Profile: colorprofile.TrueColor})

@@ -11,23 +11,39 @@ import (
 	"github.com/blisspixel/nemalo/internal/present"
 )
 
+// role is a colour's meaning. Each is one of the terminal's own ANSI
+// colours, so the terminal theme sets its shade and its contrast on that
+// theme's background; nothing depends on guessing the background.
+type role int
+
 const (
-	accent  = "#A5B4FC"
-	muted   = "#94A3B8"
-	warning = "#FBBF24"
-	danger  = "#FCA5A5"
+	accent role = iota
+	success
+	warning
+	danger
+	muted
 )
 
-func (m *model) paint(text, color string, bold bool) string {
+// paint styles text in a role. Without colour, text is plain; meaning never
+// depends on colour alone.
+func (m *model) paint(text string, r role, bold bool) string {
 	if !m.color {
 		return text
 	}
-	if !m.dark {
-		if light, ok := map[string]string{accent: "#4338CA", muted: "#475569", warning: "#854D0E", danger: "#B91C1C"}[color]; ok {
-			color = light
-		}
+	style := lipgloss.NewStyle().Bold(bold)
+	switch r {
+	case accent:
+		style = style.Foreground(lipgloss.Blue)
+	case success:
+		style = style.Foreground(lipgloss.Green)
+	case warning:
+		style = style.Foreground(lipgloss.Yellow)
+	case danger:
+		style = style.Foreground(lipgloss.Red)
+	case muted:
+		style = style.Faint(true)
 	}
-	return lipgloss.NewStyle().Foreground(lipgloss.Color(color)).Bold(bold).Render(text)
+	return style.Render(text)
 }
 
 func (m *model) navigation() string {
@@ -193,11 +209,17 @@ func (m *model) View() tea.View {
 		return v
 	}
 	state := m.statusText()
+	// The status colour is the state and outcome of the work, not its wording.
 	color := accent
-	if m.busy || m.confirmRoot != "" || m.reviewingDownload() {
+	switch {
+	case m.busy || m.confirmRoot != "" || m.reviewingDownload():
 		color = warning
-	} else if strings.Contains(state, "Incomplete") || strings.Contains(state, "error") {
+	case m.outcome == outcomeFailed:
 		color = danger
+	case m.outcome == outcomeAttention:
+		color = warning
+	case m.outcome == outcomeOK:
+		color = success
 	}
 	state = lipgloss.Wrap(m.paint(state, color, false), m.width-2, " ")
 	position := m.position()

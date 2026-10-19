@@ -18,6 +18,7 @@ func (m *model) requestInitialization() {
 	root, err := filepath.Abs(m.input.Value())
 	if err != nil {
 		m.status = fmt.Sprintf("Initialization error: %s", present.Error(err))
+		m.outcome = outcomeFailed
 		m.resize()
 		return
 	}
@@ -39,12 +40,14 @@ func (m *model) requestImport() {
 	root, err := filepath.Abs(m.input.Value())
 	if err != nil {
 		m.status = fmt.Sprintf("Import error: %s", present.Error(err))
+		m.outcome = outcomeFailed
 		m.resize()
 		return
 	}
 	source, err := filepath.Abs(m.secondary.Value())
 	if err != nil {
 		m.status = fmt.Sprintf("Import error: %s", present.Error(err))
+		m.outcome = outcomeFailed
 		m.resize()
 		return
 	}
@@ -68,6 +71,7 @@ func (m *model) requestRescan() {
 	root, err := filepath.Abs(m.input.Value())
 	if err != nil {
 		m.status = fmt.Sprintf("Rescan error: %s", present.Error(err))
+		m.outcome = outcomeFailed
 		m.resize()
 		return
 	}

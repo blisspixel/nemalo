@@ -167,11 +167,14 @@ text has no links to follow.
 
 ## Appearance and boundaries
 
-The indigo and neutral palette adapts to light and dark terminal backgrounds.
-Amber indicates active work; errors have explicit text. `NO_COLOR` and `TERM=dumb`
-disable colored styling. `foot`, Ghostty, Alacritty, and Kitty, including the
-terminals selectable on Omarchy 4, keep truecolor. A tmux session stays
-256-color. Minimum size is 40 columns by 20 rows; state survives
+Colours are the terminal's own ANSI colours, so the terminal theme sets their
+shade and their contrast on its background: blue for the brand, selected mode,
+and headings; green for done (imported, verified, checked); yellow for active
+work, reviews, and results that need attention; red for failures and
+detections; dim for context and hints. No truecolor value is emitted and the
+background is not queried. The status line's colour is the operation's
+outcome, read from its result, never from the status wording, and every
+outcome also has explicit text. `NO_COLOR` and `TERM=dumb` disable styling. Minimum size is 40 columns by 20 rows; state survives
 the resize prompt. No image, animation, or color is required for navigation.
 Omarchy's Super shortcuts and F9 dictation binding do not take Nemalo's Alt+1
 through Alt+0, F2 through F8, or Ctrl+C keys. See
