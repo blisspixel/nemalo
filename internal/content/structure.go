@@ -79,12 +79,17 @@ type document struct {
 	// elements holds each part's source element local name, parallel to parts.
 	// It is deliberately not serialized, so structure/1 hashes are unchanged.
 	elements []string
-	raw      []byte
+	// breaks marks the LF bytes of text that come from structure. It is
+	// layout evidence over the same text, so no hash includes it.
+	breaks breakMarks
+	raw    []byte
 }
 type frame struct {
 	part                int
 	language, direction string
 	skip                bool
+	// pre is set inside preformatted text, whose line feeds are lines.
+	pre bool
 }
 
 func attr(t xml.StartElement, name string) string {
@@ -149,9 +154,32 @@ func extractDocument(ctx context.Context, data []byte, budget int) (document, er
 		text.WriteString(s)
 		return nil
 	}
+	// filled is the end of the last text that is not whitespace, and marked
+	// the last marked LF, so each boundary between text is marked once.
+	filled, marked := 0, -1
+	mark := func(at int, block bool) {
+		d.breaks.mark(at, block)
+		marked = at
+	}
+	// A block boundary adds a missing LF, as before. A line break already
+	// after the last text becomes the block end; otherwise the LF the text
+	// now ends with is marked.
 	boundary := func() error {
-		if text.Len() > 0 && !strings.HasSuffix(text.String(), "\n") {
-			return appendText("\n")
+		if text.Len() == 0 {
+			return nil
+		}
+		if !strings.HasSuffix(text.String(), "\n") {
+			if err := appendText("\n"); err != nil {
+				return err
+			}
+		}
+		switch {
+		case filled == 0:
+			// Nothing to separate yet.
+		case marked >= filled:
+			mark(marked, true)
+		default:
+			mark(text.Len()-1, true)
 		}
 		return nil
 	}
@@ -184,7 +212,7 @@ func extractDocument(ctx context.Context, data []byte, budget int) (document, er
 			f := frame{part: -1, language: "unknown", direction: "unknown"}
 			if len(stack) > 0 {
 				parent := stack[len(stack)-1]
-				f.language, f.direction, f.skip = parent.language, parent.direction, parent.skip
+				f.language, f.direction, f.skip, f.pre = parent.language, parent.direction, parent.skip, parent.pre
 			}
 			for _, a := range t.Attr {
 				if a.Name.Local == "lang" && (a.Name.Space == "" || a.Name.Space == "http://www.w3.org/XML/1998/namespace") {
@@ -254,6 +282,10 @@ func extractDocument(ctx context.Context, data []byte, budget int) (document, er
 						if err := appendText("\n"); err != nil {
 							return d, err
 						}
+						mark(text.Len()-1, false)
+					}
+					if t.Name.Local == "pre" {
+						f.pre = true
 					}
 				}
 				if kind != "" {
@@ -312,8 +344,18 @@ func extractDocument(ctx context.Context, data []byte, budget int) (document, er
 			}
 			if body && len(stack) > 0 && !stack[len(stack)-1].skip {
 				s := strings.ReplaceAll(strings.ReplaceAll(string(t), "\r\n", "\n"), "\r", "\n")
+				at := text.Len()
 				if err := appendText(s); err != nil {
 					return d, err
+				}
+				if trimmed := strings.TrimRight(s, " \t\n"); trimmed != "" {
+					filled = at + len(trimmed)
+				}
+				if stack[len(stack)-1].pre {
+					for i := strings.IndexByte(s, '\n'); i >= 0; i = strings.IndexByte(s, '\n') {
+						mark(at+i, false)
+						at, s = at+i+1, s[i+1:]
+					}
 				}
 			}
 		case xml.EndElement:

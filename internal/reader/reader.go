@@ -34,8 +34,8 @@ type Kind uint8
 
 const (
 	Word Kind = iota
-	// Break is a source line break. A soft break keeps a PDF line; a block
-	// break separates EPUB blocks.
+	// Break is a line break. A soft break keeps a PDF line or an EPUB line
+	// break, such as a line of verse; a block break separates blocks.
 	Break
 	Gap
 	Heading
@@ -89,6 +89,8 @@ type Doc struct {
 	expect   Position
 	tail     string
 	tailPos  Position
+	// breaks is the pending boundary before the next word: 1 keeps a line,
+	// 2 or more separates blocks.
 	breaks   int
 	gaps     []content.Gap
 	unitHas  bool
@@ -97,7 +99,9 @@ type Doc struct {
 
 // New starts an empty session over units from a units listing of the same
 // representation. PDF pages keep the extractor's line breaks; no paragraphs
-// are inferred.
+// are inferred. EPUB text breaks only where a range's Breaks mark a block
+// end or a line break; any other line feed is source wrapping and reads as a
+// space, as XHTML whitespace does.
 func New(representation string, units []content.Unit) *Doc {
 	return &Doc{pdf: representation == "pdf-text/1", units: units, lastWord: -1}
 }
@@ -191,7 +195,14 @@ func (d *Doc) Append(r content.Result) error {
 		text, base = d.tail+r.Text, d.tailPos.Offset
 	}
 	d.tail = ""
-	d.scan(at.Unit, text, base, r.EndOfUnit)
+	var marks map[int]string
+	if !d.pdf && len(r.Breaks) > 0 {
+		marks = make(map[int]string, len(r.Breaks))
+		for _, b := range r.Breaks {
+			marks[b.Offset] = b.Kind
+		}
+	}
+	d.scan(at.Unit, text, base, r.EndOfUnit, marks)
 	d.Bytes += len(r.Text)
 	d.expect = Position{at.Unit, r.Locator.End}
 	if r.EndOfUnit {
@@ -212,7 +223,7 @@ func (d *Doc) add(it Item) {
 	d.Items = append(d.Items, it)
 }
 
-func (d *Doc) scan(unit int, text string, base int, endOfUnit bool) {
+func (d *Doc) scan(unit int, text string, base int, endOfUnit bool, marks map[int]string) {
 	start := -1
 	for i, r := range text {
 		if unicode.IsSpace(r) {
@@ -220,7 +231,14 @@ func (d *Doc) scan(unit int, text string, base int, endOfUnit bool) {
 				d.word(unit, text[start:i], base+start)
 				start = -1
 			}
-			if r == '\n' {
+			switch {
+			case r != '\n':
+			case d.pdf:
+				d.breaks++
+			case marks[base+i] == "block":
+				d.breaks = 2
+			case marks[base+i] == "line":
+				// Two line breaks in a row leave a blank line, as a block does.
 				d.breaks++
 			}
 			continue
@@ -241,9 +259,16 @@ func (d *Doc) scan(unit int, text string, base int, endOfUnit bool) {
 
 func (d *Doc) word(unit int, raw string, offset int) {
 	if d.breaks > 0 && d.unitHas {
-		block := !d.pdf || d.breaks > 1
-		if block && d.lastWord >= 0 && d.Items[d.lastWord].Pos.Unit == unit {
-			d.Items[d.lastWord].Pause = Paragraph
+		block := d.breaks > 1
+		if d.lastWord >= 0 && d.Items[d.lastWord].Pos.Unit == unit {
+			last := &d.Items[d.lastWord]
+			switch {
+			case block:
+				last.Pause = Paragraph
+			case !d.pdf && last.Pause == None:
+				// The end of a line of verse is heard; it holds as a clause.
+				last.Pause = Clause
+			}
 		}
 		at := offset
 		for _, g := range d.gaps {

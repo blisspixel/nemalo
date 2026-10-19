@@ -10,9 +10,16 @@ import (
 	"github.com/blisspixel/nemalo/internal/content"
 )
 
-// ranges delivers unit texts as content would: rune-aligned ranges of at most
-// size bytes, each gap disclosed once in the range that holds its offset.
+// ranges delivers unit texts as content would, with every line feed a block
+// end, as the extractor marks the boundaries it adds.
 func ranges(texts []string, gaps [][]content.Gap, size int) []content.Result {
+	return marked(texts, gaps, func(string, int) string { return "block" }, size)
+}
+
+// marked delivers unit texts as content would: rune-aligned ranges of at most
+// size bytes, each gap and break disclosed once in the range that holds its
+// offset. kind names the break at each line feed, or "" for source wrapping.
+func marked(texts []string, gaps [][]content.Gap, kind func(text string, offset int) string, size int) []content.Result {
 	var out []content.Result
 	for u, text := range texts {
 		for start := 0; ; {
@@ -33,6 +40,11 @@ func ranges(texts []string, gaps [][]content.Gap, size int) []content.Result {
 			for _, g := range gaps[u] {
 				if (g.Offset >= start && g.Offset < end) || (g.Offset == end && r.EndOfUnit) {
 					r.Gaps = append(r.Gaps, g)
+				}
+			}
+			for i := start; i < end; i++ {
+				if k := kind(text, i); text[i] == '\n' && k != "" {
+					r.Breaks = append(r.Breaks, content.Break{Offset: i, Kind: k})
 				}
 			}
 			out = append(out, r)
@@ -369,7 +381,7 @@ func TestFullStopsAtTheBudget(t *testing.T) {
 
 func TestStopAndFinishPlaceEverythingDelivered(t *testing.T) {
 	g := content.Gap{Element: "img", Offset: 8, Image: &content.GapImage{Source: "a.png", Alt: &alt}}
-	first := content.Result{Text: "one two\nthr", Locator: &content.Locator{Start: 0, End: 11, OffsetUnit: "utf8_bytes"}, Gaps: []content.Gap{g}, Continuation: "next"}
+	first := content.Result{Text: "one two\nthr", Locator: &content.Locator{Start: 0, End: 11, OffsetUnit: "utf8_bytes"}, Gaps: []content.Gap{g}, Breaks: []content.Break{{Offset: 7, Kind: "block"}}, Continuation: "next"}
 	// A failed continuation shows the cut word and the omission it disclosed.
 	d := New("epub-text/2", nil)
 	d.StartAt(Position{})
@@ -441,5 +453,87 @@ func TestHangingRowsNeverExceedTheWidth(t *testing.T) {
 		if w > 24 {
 			t.Fatalf("row of %d cells: %q", w, l.Text(row))
 		}
+	}
+}
+
+// wrapped is a hard-wrapped Project Gutenberg paragraph, a verse stanza with
+// line breaks, and a stanza break, as epub-text/2 delivers them (issue 23).
+const wrapped = "On his approaching them soon afterwards, though without seeming to have\nany intention of speaking, Miss Lucas defied her friend to mention such\na subject to him, and she said,—\n\nThe first line of verse that runs on\nthe second line runs past a narrow measure\n\nA new stanza\n"
+
+func wrappedKinds(text string, i int) string {
+	switch {
+	case strings.HasSuffix(text[:i], "said,—"), strings.HasSuffix(text[:i], "narrow measure"), strings.HasSuffix(text[:i], "stanza"):
+		return "block"
+	case strings.HasSuffix(text[:i], "runs on"):
+		return "line"
+	}
+	return ""
+}
+
+func TestSourceWrappingFlowsAndOnlyStructureBreaks(t *testing.T) {
+	texts, gaps := []string{wrapped}, [][]content.Gap{nil}
+	whole := deliver(t, "epub-text/2", nil, marked(texts, gaps, wrappedKinds, 1<<20))
+	want := "#Document 1 On his approaching them soon afterwards, though without seeming to have any intention of speaking, Miss Lucas defied her friend to mention such a subject to him, and she said,— // The first line of verse that runs on / the second line runs past a narrow measure // A new stanza"
+	if got := kinds(whole); got != want {
+		t.Fatalf("items\n got %s\nwant %s", got, want)
+	}
+	for size := 1; size < 100; size++ {
+		d := deliver(t, "epub-text/2", nil, marked(texts, gaps, wrappedKinds, size))
+		if !reflect.DeepEqual(d.Items, whole.Items) {
+			t.Fatalf("range size %d changed the session:\n%s", size, kinds(d))
+		}
+	}
+	// Speed reading holds for a block end only at a real one; a verse line
+	// end holds as a clause, and a wrapped source line not at all.
+	pauses := map[string]Pause{}
+	for _, it := range whole.Items {
+		if it.Kind == Word {
+			pauses[it.Text] = it.Pause
+		}
+	}
+	if pauses["have"] != None || pauses["such"] != None || pauses["said,—"] != Paragraph || pauses["on"] != Clause || pauses["measure"] != Paragraph {
+		t.Fatal("pauses", pauses)
+	}
+	// Pages fill the measure: no one-word orphan rows, one blank row between
+	// blocks, and a wrapped verse line hangs under its line.
+	var l Layout
+	l.Update(whole, 66)
+	blank := 0
+	for i, row := range l.Lines {
+		text := l.Text(row)
+		if row.Kind == Word && Width(text)+map[bool]int{true: Indent}[row.Hang] > 66 {
+			t.Fatalf("row wider than the measure: %q", text)
+		}
+		if row.Kind == Word && i+1 < len(l.Lines) && l.Lines[i+1].Kind == Word && !strings.Contains(text, " ") {
+			t.Fatalf("orphan row %q", text)
+		}
+		if row.Kind == Break && i > 2 {
+			blank++
+		}
+	}
+	if blank != 2 {
+		t.Fatal("blank rows between blocks", blank)
+	}
+	var narrow Layout
+	narrow.Update(whole, 24)
+	hung, verse := false, false
+	for _, row := range narrow.Lines {
+		verse = verse || strings.Contains(narrow.Text(row), "verse")
+		if row.Hang && !verse {
+			t.Fatal("prose rows must not hang", narrow.Text(row))
+		}
+		if strings.Contains(narrow.Text(row), "measure") {
+			hung = row.Hang
+		}
+	}
+	if !hung {
+		t.Fatal("a wrapped verse line must hang after a line break")
+	}
+}
+
+func TestTwoLineBreaksLeaveABlankRow(t *testing.T) {
+	d := deliver(t, "epub-text/2", nil, marked([]string{"one\n\ntwo\nthree"}, [][]content.Gap{nil}, func(string, int) string { return "line" }, 1<<20))
+	if got := kinds(d); got != "#Document 1 one // two / three" {
+		t.Fatal(got)
 	}
 }

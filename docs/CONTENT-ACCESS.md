@@ -126,6 +126,16 @@ table markup. Each gap is reported once across consecutive ranges: a zero-width
 gap belongs to the range that starts at its offset, or to the final range of its
 unit. `coverage.text` is `known_extraction_gaps` when a range contains one.
 
+Source whitespace stays in the text, so a hard-wrapped paragraph keeps its
+line feeds. Each `epub-text/2` and `epub-nav/1` range lists the line feeds
+that come from structure in `breaks`, each once, with its UTF-8 `offset` and
+a `kind`: `block` ends a paragraph, heading, list item, or other block, and
+`line` is an explicit `br` or a line of preformatted text. A `br` that ends
+its block is that block's end. Any other line feed is XHTML whitespace and
+reads as a space. Breaks describe layout over unchanged text: they move no
+offset and are not part of the representation identity, so existing
+continuations and bookmarks stay valid.
+
 A document the extractor cannot represent, such as an SVG reading-order item,
 is an `unsupported_document` unit in `unsupported_units`; other units stay
 readable and continuations stop there as in version 1. Only container access

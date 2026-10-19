@@ -146,9 +146,12 @@ type Result struct {
 	Coverage         *Coverage     `json:"coverage,omitempty"`
 	Resource         *ResourceData `json:"resource,omitempty"`
 	Gaps             []Gap         `json:"gaps,omitempty"`
-	Audio            *audio.Track  `json:"audio,omitempty"`
-	AudioRange       *audio.Range  `json:"audio_range,omitempty"`
-	Matches          []Match       `json:"matches,omitempty"`
+	// Breaks are the structural line feeds of an epub-text/2 or epub-nav/1
+	// range; other line feeds in Text are source whitespace.
+	Breaks     []Break      `json:"breaks,omitempty"`
+	Audio      *audio.Track `json:"audio,omitempty"`
+	AudioRange *audio.Range `json:"audio_range,omitempty"`
+	Matches    []Match      `json:"matches,omitempty"`
 	// Navigation is the source-declared table of contents for epub-nav/1.
 	// A read carries the one selected entry. Spine units stay in Units.
 	Navigation []NavDocument `json:"navigation,omitempty"`

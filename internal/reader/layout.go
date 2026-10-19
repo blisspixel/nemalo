@@ -8,8 +8,9 @@ import (
 // Line is one laid-out row. A Word row shows the Doc's items From to To;
 // Break is a blank row between blocks; a Gap or Heading row shows Row, one
 // wrapped row of that item's text. Hang marks a row that continues a wrapped
-// PDF source line; it is shown indented by Indent cells, so the source's own
-// line breaks stay visible.
+// PDF source line, or an EPUB line after a line break in its block, such as
+// verse; it is shown indented by Indent cells, so the source's own line
+// breaks stay visible.
 type Line struct {
 	Kind     Kind
 	From, To int
@@ -30,6 +31,8 @@ type Layout struct {
 	doc       *Doc
 	doneItems int
 	doneLines int
+	// lined is set after an EPUB line break until the block ends.
+	lined bool
 }
 
 // Words are the items a Word row shows.
@@ -88,8 +91,8 @@ func (l *Layout) Update(d *Doc, width int) {
 			if from >= 0 && used+sep+w > width {
 				push()
 				sep = 0
-				// A continued PDF line hangs when the word still fits.
-				if d.pdf && Indent+w <= width {
+				// A continued source line hangs when the word still fits.
+				if (d.pdf || l.lined) && Indent+w <= width {
 					used, hang = Indent, true
 				}
 			}
@@ -101,6 +104,7 @@ func (l *Layout) Update(d *Doc, width int) {
 			continue
 		case Break:
 			push()
+			l.lined = it.Soft && !d.pdf
 			if !it.Soft {
 				blank(it.Pos)
 			}
@@ -111,6 +115,7 @@ func (l *Layout) Update(d *Doc, width int) {
 			}
 		case Heading:
 			push()
+			l.lined = false
 			blank(it.Pos)
 			for _, row := range wrap(it.Text, width) {
 				l.Lines = append(l.Lines, Line{Kind: Heading, Row: row, Pos: it.Pos})

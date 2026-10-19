@@ -19,7 +19,11 @@ session, so nothing is lost or repeated.
 
 - **Pages** fill the terminal at a fixed measure: 66 columns for EPUB prose,
   100 for PDF text, adjustable from 24 to 120 and never wider than the
-  terminal. EPUB blocks are separated by a blank row. PDF text keeps the
+  terminal. EPUB blocks are separated by a blank row, at the block ends a
+  range's `breaks` mark; a source line feed inside a block, as in a
+  hard-wrapped Project Gutenberg paragraph, flows as a space. An explicit
+  line break keeps its line, and a wrapped row after one hangs, as verse
+  does; two in a row leave a blank row. PDF text keeps the
   extractor's lines; no paragraphs are inferred, and a wrapped source line
   continues with a hanging indent. Every omitted image, table, or unmapped run
   is shown where it was omitted, with its alternative text when the source
@@ -29,7 +33,8 @@ session, so nothing is lost or repeated.
   fixed guide marks. It starts paused, at 250 words per minute nominal, and
   changes by 25 between 100 and 1000. A sentence end holds twice the base time,
   a clause 1.5 times, a block end 2.5 times, and a word over eight characters
-  1.3 times; omissions and headings hold at least 750 ms. Above 350 the footer
+  1.3 times; omissions and headings hold at least 750 ms. The end of an EPUB
+  line break, such as a line of verse, holds as a clause. Above 350 the footer
   says the rate is skimming. Paused, the rows around the word are shown with the
   word marked. Left and Right move by sentence. Unspaced text, such as CJK,
   is shown in chunks of at most 12 cells.
@@ -123,6 +128,10 @@ range, including after a rate change; and no file changed. An independent
 adversarial review found the cross-session results, lost trailing omissions, a
 stalled wait, multi-row labels, and a hanging row two cells too wide; each is
 fixed with a regression test.
+Issue 23 added hard-wrapped and verse fixtures: delivered in every range size,
+a wrapped paragraph flows with no orphan rows, a block end alone holds, and a
+wrapped verse line hangs. Live, the issue's Gutenberg Pride and Prejudice
+read at 100 by 30 and 40 by 20 in tmux on Linux with filled paragraphs.
 CLI tests cover the printed return position and usage errors. Live: an arXiv
 PDF read in tmux on Linux, paged, narrowed, speed read, closed, and reopened at
 the printed position, with no file written.

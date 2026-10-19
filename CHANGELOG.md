@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- The reader flows a hard-wrapped EPUB paragraph, such as every Project Gutenberg paragraph, as one paragraph. Only a block end gets a blank row and the paragraph hold in word mode. An explicit line break, as in verse, keeps its line. `epub-text/2` and `epub-nav/1` ranges now list these structural line feeds in `breaks`; the text, its offsets, and representation identities are unchanged. Closes issue 23.
+
 ## 0.1.0-alpha.11
 
 Eleventh native prerelease. This remains an early library, not 1.0.

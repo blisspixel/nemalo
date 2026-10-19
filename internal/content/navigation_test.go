@@ -636,3 +636,28 @@ func TestNavigationValidationAndFragmentForms(t *testing.T) {
 		t.Fatal("accepted navigation combined with a cursor")
 	}
 }
+
+// A declared entry carries the same structural breaks as epub-text/2 over
+// the same text, so a reader lays out a chapter as it lays out the book.
+func TestNavigationRangesCarryTextBreaks(t *testing.T) {
+	req := publishEPUB(t, chapterFiles())
+	req.MaxBytes = 4096
+	_, results := readNav(t, req, 0)
+	plain := req
+	plain.Representation, plain.Unit, plain.Navigation = "epub-text/2", results[0].Locator.Unit, ""
+	text := mustGet(t, plain)
+	for _, r := range results {
+		if len(r.Breaks) == 0 {
+			t.Fatal("no breaks in a chapter range", r.Text)
+		}
+		for _, b := range r.Breaks {
+			found := false
+			for _, p := range text.Breaks {
+				found = found || p == b
+			}
+			if !found || b.Offset < r.Locator.Start || b.Offset >= r.Locator.End {
+				t.Fatal("chapter break differs from the text break", b, text.Breaks)
+			}
+		}
+	}
+}

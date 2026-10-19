@@ -178,7 +178,7 @@ func getNavigation(ctx context.Context, req Request, result Result) (Result, err
 			return result, errors.New("text offset is outside the declared entry")
 		}
 	}
-	return readNavRange(ctx, req, result, *entry, doc, texts, gaps, absUnit, absOffset)
+	return readNavRange(ctx, req, result, *entry, doc, texts, gaps, documents, absUnit, absOffset)
 }
 
 func navigationText(documents []document) ([]Unit, []string, [][]Gap) {
@@ -365,7 +365,7 @@ func findNavEntry(docs []NavDocument, evidence string, order int) (*NavEntry, Na
 	return nil, NavDocument{}
 }
 
-func readNavRange(ctx context.Context, req Request, result Result, entry NavEntry, doc NavDocument, texts []string, gaps [][]Gap, unit, offset int) (Result, error) {
+func readNavRange(ctx context.Context, req Request, result Result, entry NavEntry, doc NavDocument, texts []string, gaps [][]Gap, documents []document, unit, offset int) (Result, error) {
 	if err := ctx.Err(); err != nil {
 		result.Status = "cancelled"
 		return result, err
@@ -420,6 +420,7 @@ func readNavRange(ctx context.Context, req Request, result Result, entry NavEntr
 	}
 	result.EndOfSource = result.RangeStatus == "range_end" && span.EndAtSource && result.EndOfUnit && unit == len(texts)-1
 	result.Navigation = []NavDocument{{Evidence: doc.Evidence, Path: doc.Path, Entries: []NavEntry{entry}}}
+	result.Breaks = rangeBreaks(text, documents[unit].breaks, offset, end)
 	result.Gaps = []Gap{}
 	result.Coverage.Text = "bounded_selected_range"
 	result.Coverage.KnownGaps = []string{}

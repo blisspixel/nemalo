@@ -275,3 +275,77 @@ func TestTextV2StaleAfterSourceChange(t *testing.T) {
 		t.Fatal("gap change did not invalidate the representation", r, err)
 	}
 }
+
+// A hard-wrapped Project Gutenberg paragraph (issue 23): its source line feeds
+// stay in the text, and only structure is marked as a break.
+func TestTextV2MarksOnlyStructuralLineFeeds(t *testing.T) {
+	body := "<h1>Chapter 3</h1>\n\n<p>On his approaching them soon afterwards, though\nwithout seeming to\nhave any intention,</p><p>she said,—</p>\n" +
+		"<p class=\"poem\">The first line<br/>\nthe second line<br/>\n</p>\n<pre>keep\nthese lines</pre><div>A div\nwraps too</div>"
+	req := textV2(t, []string{body}, nil)
+	req.MaxBytes = 65536
+	r, err := Get(context.Background(), req)
+	if err != nil {
+		t.Fatal(r, err)
+	}
+	want := "Chapter 3\n\n\nOn his approaching them soon afterwards, though\nwithout seeming to\nhave any intention,\nshe said,—\n\nThe first line\n\nthe second line\n\n\nkeep\nthese lines\nA div\nwraps too\n"
+	if r.Text != want {
+		t.Fatalf("text changed: %q", r.Text)
+	}
+	got := []string{}
+	for _, b := range r.Breaks {
+		if r.Text[b.Offset] != '\n' {
+			t.Fatal("break is not a line feed", b)
+		}
+		before := r.Text[:b.Offset]
+		if i := strings.LastIndexAny(before, "\n"); i >= 0 {
+			before = before[i+1:]
+		}
+		got = append(got, b.Kind+":"+before)
+	}
+	wantBreaks := []string{"block:Chapter 3", "block:have any intention,", "block:she said,—", "line:The first line", "block:the second line", "line:keep", "block:these lines", "block:wraps too"}
+	if strings.Join(got, "|") != strings.Join(wantBreaks, "|") {
+		t.Fatalf("breaks\n got %q\nwant %q", got, wantBreaks)
+	}
+	// Ranges carry only their own breaks, each once, whatever the range size.
+	for size := 4; size <= len(want); size++ {
+		req.MaxBytes, req.Cursor = size, ""
+		var all []Break
+		for {
+			r, err := Get(context.Background(), req)
+			if err != nil {
+				t.Fatal(err)
+			}
+			for _, b := range r.Breaks {
+				if b.Offset < r.Locator.Start || b.Offset >= r.Locator.End {
+					t.Fatal("break outside its range", b, r.Locator)
+				}
+			}
+			all = append(all, r.Breaks...)
+			if r.EndOfSource {
+				break
+			}
+			req.Cursor = r.Continuation
+		}
+		if len(all) != len(wantBreaks) {
+			t.Fatalf("range size %d delivered %d breaks", size, len(all))
+		}
+	}
+}
+
+// Breaks describe layout over the same text, so they do not change the
+// representation identity that bookmarks and continuations are bound to.
+func TestTextV2BreaksAreNotRepresentationIdentity(t *testing.T) {
+	ids := map[string]string{}
+	for _, body := range []string{"<p>a</p><p>b</p>", "<p>a<br/>b\n</p>"} {
+		req := textV2(t, []string{body}, nil)
+		req.MaxBytes = 4096
+		r, err := Get(context.Background(), req)
+		if err != nil || r.Text != "a\nb\n" {
+			t.Fatalf("%q %v", r.Text, err)
+		}
+		ids[r.RepresentationID] = r.Breaks[0].Kind
+	}
+	if len(ids) != 1 {
+		t.Fatal("identical text and gaps must share a representation identity", ids)
+	}
+}

@@ -153,6 +153,7 @@ func getTextV2(ctx context.Context, req Request, result Result) (Result, error) 
 	result.Locator = &Locator{SchemaVersion: 1, AssetID: req.AssetID, Extractor: TextExtractorV2, RepresentationID: result.RepresentationID, Unit: req.Unit, Start: req.Offset, End: end, Member: units[req.Unit].Member, OffsetUnit: "utf8_bytes"}
 	result.EndOfUnit, result.EndOfSource = end == len(text), end == len(text) && req.Unit == len(texts)-1
 	result.Status = "complete_range"
+	result.Breaks = rangeBreaks(text, documents[req.Unit].breaks, req.Offset, end)
 	result.Coverage = &Coverage{Text: "complete_selected_range", KnownGaps: []string{}, ReferencedOutsideRange: []string{}, Unknown: []string{"CSS visibility, rendered layout, accessibility quality, and semantic completeness are not established."}}
 	if !result.EndOfUnit {
 		result.Status = "partial_range"
