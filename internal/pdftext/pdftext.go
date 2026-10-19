@@ -129,6 +129,14 @@ type Facts struct {
 	// Partial means the page tree walk skipped nodes, so Pages may undercount.
 	Partial  bool     `json:"partial"`
 	Findings []string `json:"findings"`
+	// ActiveContent names what a reader may run, open, fetch, or extract on
+	// its own: scripts, launch and automatic actions, attached files, form
+	// submission, remote documents, rich media, and XFA. ActiveExamined is
+	// false when the walk ran out of budget, which is itself a finding.
+	// WebLinks counts links a person may follow; they are not findings.
+	ActiveContent  []string `json:"active_content"`
+	ActiveExamined bool     `json:"active_content_examined"`
+	WebLinks       int      `json:"web_links"`
 }
 
 // Inspect walks the page tree and page labels only. It applies the same
@@ -157,6 +165,13 @@ func Inspect(ctx context.Context, data []byte, limits Limits) (facts Facts, err 
 	}
 	labels, declared, findings := pageLabels(root.Key("PageLabels"), len(leaves))
 	facts = Facts{Version: r.PDFVersion, Pages: len(leaves), LabelsDeclared: declared, FirstLabel: labels[0], LastLabel: labels[len(labels)-1], Partial: x.partial, Findings: append(append([]string{}, x.findings...), findings...)}
+	facts.ActiveContent, facts.WebLinks, facts.ActiveExamined = scanActive(ctx, r.Trailer())
+	if facts.ActiveContent == nil {
+		facts.ActiveContent = []string{}
+	}
+	if err := ctx.Err(); err != nil {
+		return Facts{}, err
+	}
 	if src.err != nil {
 		return Facts{}, ErrBudget
 	}

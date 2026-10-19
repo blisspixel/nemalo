@@ -10,11 +10,13 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strings"
 	"testing"
 
 	"github.com/blisspixel/nemalo/internal/assessment"
+	"github.com/blisspixel/nemalo/internal/pdftext/pdftest"
 	"github.com/blisspixel/nemalo/internal/safeio"
 	"github.com/blisspixel/nemalo/internal/scanner"
 )
@@ -102,7 +104,8 @@ func TestManagedImportPublicationAuditAndResume(t *testing.T) {
 		t.Fatal(err)
 	}
 	paper, err := Import(ctx, ImportRequest{Library: libraryRoot, Source: pdf, Apply: true, Scan: true, Scanner: cleanScan{}})
-	if err != nil || paper.Status != "review" || paper.Reason != "format_not_checked_for_publication" || paper.Format != "pdf" {
+	// A header and end marker alone have no page tree to walk: review.
+	if err != nil || paper.Status != "review" || paper.Reason != "needs_review" || paper.Format != "pdf" {
 		t.Fatal(paper, err)
 	}
 	if err := os.Remove(filepath.Join(libraryRoot, filepath.FromSlash(paper.Path))); err != nil {
@@ -625,4 +628,74 @@ func TestImportRefusesWhatWouldNotFit(t *testing.T) {
 		}
 		return nil
 	})
+}
+
+// A PDF is checked like an EPUB once its page tree was walked and its active
+// content examined and empty; a script keeps it in review. A PDF held before
+// that policy is assessed again by rescan.
+func TestPDFCheckedPolicy(t *testing.T) {
+	ctx := context.Background()
+	root := t.TempDir()
+	if _, err := Initialize(ctx, root); err != nil {
+		t.Fatal(err)
+	}
+	write := func(name string, data []byte) string {
+		p := filepath.Join(t.TempDir(), name)
+		if err := os.WriteFile(p, data, 0o600); err != nil {
+			t.Fatal(err)
+		}
+		return p
+	}
+	clean, err := Import(ctx, ImportRequest{Library: root, Source: write("paper.pdf", pdftest.Pages("", "Page one.")), Apply: true, Scan: true, Scanner: cleanScan{}})
+	if err != nil || clean.Status != "checked" || clean.Reason != "checks_and_scan_recorded" {
+		t.Fatal(clean.Status, clean.Reason, err)
+	}
+	script := pdftest.Build("<< /Type /Catalog /Pages 2 0 R /OpenAction << /S /JavaScript /JS (app.alert(1)) >> >>", "<< /Type /Pages /Kids [3 0 R] /Count 1 >>", "<< /Type /Page /Parent 2 0 R >>")
+	active, err := Import(ctx, ImportRequest{Library: root, Source: write("active.pdf", script), Apply: true, Scan: true, Scanner: cleanScan{}})
+	if err != nil || active.Status != "review" || !slices.Contains(active.Findings, "pdf_javascript") {
+		t.Fatal(active.Status, active.Reason, active.Findings, err)
+	}
+	unscanned, err := Import(ctx, ImportRequest{Library: root, Source: write("later.pdf", pdftest.Pages("", "Later.")), Apply: true})
+	if err != nil || unscanned.Status != "review" || unscanned.Reason != "unscanned" {
+		t.Fatal(unscanned.Status, unscanned.Reason, err)
+	}
+	r, err := Rescan(ctx, RescanRequest{Library: root, Apply: true, Scanner: cleanScan{}})
+	if err != nil || r.Promoted != 1 {
+		t.Fatal(r, err)
+	}
+	if c, err := CheckLibrary(ctx, root); err != nil && c.Checked != 2 {
+		t.Fatal(c, err)
+	}
+}
+
+// A PDF held by an earlier version, when PDFs could not be checked, carries
+// format_not_checked_for_publication; rescan assesses and promotes it.
+func TestRescanPromotesAPDFHeldBeforeThePolicy(t *testing.T) {
+	ctx := context.Background()
+	root := t.TempDir()
+	if _, err := Initialize(ctx, root); err != nil {
+		t.Fatal(err)
+	}
+	p := filepath.Join(t.TempDir(), "old.pdf")
+	if err := os.WriteFile(p, pdftest.Pages("", "Old."), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := Import(ctx, ImportRequest{Library: root, Source: p, Apply: true}); err != nil {
+		t.Fatal(err)
+	}
+	for _, name := range []string{operationsName, holdingsName} {
+		file := filepath.Join(root, ".nemalo", name)
+		b, _ := os.ReadFile(file)
+		old := bytes.ReplaceAll(b, []byte(`"reason":"unscanned"`), []byte(`"reason":"format_not_checked_for_publication"`))
+		if bytes.Equal(old, b) {
+			t.Fatal("fixture did not record the old reason", name)
+		}
+		if err := os.WriteFile(file, old, 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	r, err := Rescan(ctx, RescanRequest{Library: root, Apply: true, Scanner: cleanScan{}})
+	if err != nil || r.Promoted != 1 || len(r.Skipped) != 0 {
+		t.Fatal(r, err)
+	}
 }

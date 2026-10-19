@@ -86,9 +86,11 @@ bridge (`/proc/self/fd` on Linux, `/dev/fd` on macOS), and scanner recommendatio
 without executing scanners.
 Single-asset import into that library is implemented: one EPUB, PDF, MP3, or
 completed intake packet, with a separate operations/holdings journal, crash
-resume, and managed audit. Checked status is limited to an EPUB whose checks
-passed and whose scan reported no detections. See
-[decision 0009](docs/decisions/0009-managed-epub-import.md).
+resume, and managed audit. Checked status is limited to an EPUB, or a PDF whose
+page tree and active content were fully examined and clean, whose checks passed
+and whose scan reported no detections. See
+[decision 0009](docs/decisions/0009-managed-epub-import.md) and
+[decision 0032](docs/decisions/0032-pdf-checked-policy.md).
 
 Milestone 1 remains in progress. Managed holdings record EPUB package
 identifier evidence for an explicit ISBN, DOI, or Open Library work or edition
@@ -251,8 +253,10 @@ Status: partial. Shared EPUB checks, Defender and ClamAV adapters with batched
 ClamAV scans, and single-asset managed import and rescan exist. EPUB package
 identifiers can be recorded as evidence. `doctor` names the default scanner,
 its setup command, and signature age. ZIP extraction is in milestone 2 ingest.
-Recording and track identities, cross-file work relationships, cleanup, and a
-full checked-library policy remain. Depends on milestone 2.
+PDFs whose page tree and active content were fully examined and clean can be
+checked ([decision 0032](docs/decisions/0032-pdf-checked-policy.md)). Recording
+and track identities, cross-file work relationships, and an MP3 checked policy
+remain. Depends on milestone 2.
 
 Deliver EPUB package checks, content checks, scanner adapters, metadata handling,
 exact duplicate detection, and verified library publication.
@@ -448,9 +452,11 @@ milestones 7 and 8.
 Status: partial. A PDF parser is selected and wrapped with budgets; `check` walks
 page trees, and `pdf-text/1` gives physical page indexes, printed labels, text in
 content-stream order with located gaps, and exact quotation spans
-([decision 0021](docs/decisions/0021-pdf-pages-and-text.md)). Active content and
-attachment assessment, OCR, column reconstruction, providers, and citation export
-remain. Depends on shared assessment/publication and recovery milestones.
+([decision 0021](docs/decisions/0021-pdf-pages-and-text.md)). Active content,
+attachments, automatic actions, form submission, and remote references are
+reported, and a clean PDF can be checked
+([decision 0032](docs/decisions/0032-pdf-checked-policy.md)). OCR, column
+reconstruction, providers, and citation export remain. Depends on shared assessment/publication and recovery milestones.
 
 Deliver a PDF assessment policy, a separate paper collection, arXiv and Europe
 PMC/PMC resolution, then OpenAlex discovery and Unpaywall DOI resolution. Enable

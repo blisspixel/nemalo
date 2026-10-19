@@ -1105,8 +1105,8 @@ func runStage(stage importStage, name string) error {
 func importLimitations() []string {
 	return []string{
 		"Import copies the assessed bytes and preserves the source. Nothing is deleted.",
-		"checked requires an EPUB whose limited checks passed and whose scan reported no detections. Other results stay in review.",
-		"Review is not a safety guarantee. PDF page trees, audio decoding, archive extraction, and cleanup are not part of this operation.",
+		"checked requires an EPUB, or a PDF whose page tree was walked and whose active content was fully examined and empty, with limited checks passed and a scan that reported no detections. Other results stay in review.",
+		"Review is not a safety guarantee. PDF page content, audio decoding, archive extraction, and cleanup are not part of this operation.",
 		"An EPUB package identifier is recorded evidence. It does not merge files or assign a recording or track.",
 		"File sync is required. Directory-entry durability across power loss depends on the filesystem.",
 	}

@@ -198,6 +198,8 @@ func inspectContext(ctx context.Context, r io.ReaderAt, size int64, format strin
 			if facts.Partial {
 				c.Warnings = append(c.Warnings, "pdf_page_tree_partial")
 			}
+			// Active content keeps the file in review; nothing is removed.
+			c.Warnings = append(c.Warnings, facts.ActiveContent...)
 		}
 	case "mp3":
 		if !bytes.HasPrefix(header, []byte("ID3")) && !(len(header) >= 2 && header[0] == 0xff && header[1]&0xe0 == 0xe0) {
