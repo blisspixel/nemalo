@@ -55,6 +55,13 @@ session, so nothing is lost or repeated.
   A declared-entry excerpt reopens its entry at that place with the entry's
   own cursor, keeping its declared end. No other token or representation
   identity moves between representations.
+- `f` opens source links as a detour (issue 21): links in the shown passage
+  come from `epub-structure/1` parts, a declared `noteref` is a note and any
+  other link stays a link, and following one reads only its bounded target
+  part, or the part a short marker anchor sits in, disclosed. External,
+  missing, and off-spine targets are listed and never followed. Detours nest
+  at most four deep over an untouched passage session; Escape returns, late
+  results are ignored, and nothing is recorded.
 - Position is shown as unit and byte. Closing reports it, and `nemalo read`
   prints the `--unit` and `--text-offset` that return there. No position,
   history, rate, or reading time is recorded.

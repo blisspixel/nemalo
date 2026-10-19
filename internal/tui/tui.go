@@ -129,6 +129,8 @@ func (m *model) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 		return m, m.pagerChunk(msg)
 	case pagerTick:
 		return m, m.pagerTick(msg)
+	case noteChunk:
+		return m, m.noteChunk(msg)
 	case tea.KeyPressMsg:
 		if m.pager != nil {
 			if msg.String() == "ctrl+c" {

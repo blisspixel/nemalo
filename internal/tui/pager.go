@@ -73,6 +73,8 @@ type pager struct {
 	representationID string
 	// help replaces the page with the key list until ? is pressed again.
 	help bool
+	// notes is a detour into source notes; the passage above stays as it is.
+	notes *notesState
 }
 
 type pagerChunk struct {
@@ -349,9 +351,11 @@ func (m *model) pagerLayout() {
 		at := p.layout.Lines[min(p.top, len(p.layout.Lines)-1)].Pos
 		p.layout.Update(p.doc, width)
 		p.top = p.layout.LineFor(at)
+		m.noteLayout()
 		return
 	}
 	p.layout.Update(p.doc, width)
+	m.noteLayout()
 }
 
 func (m *model) pagerSchedule() tea.Cmd {
@@ -429,6 +433,9 @@ func (m *model) closePager() tea.Cmd {
 	if p.cancel != nil {
 		p.cancel()
 	}
+	if p.notes != nil && p.notes.cancel != nil {
+		p.notes.cancel()
+	}
 	m.status = "Closed the reader. Nothing about this reading was recorded. Closing does not save a bookmark."
 	if at, ok := m.pagerPosition(); ok {
 		m.readerStop = &at
@@ -446,7 +453,13 @@ func (m *model) closePager() tea.Cmd {
 func (m *model) pagerKey(key string) tea.Cmd {
 	p := m.pager
 	switch key {
-	case "q", "esc":
+	case "q":
+		return m.closePager()
+	case "esc":
+		if p.notes.active() && !p.help {
+			m.closeNote()
+			return tea.ClearScreen
+		}
 		return m.closePager()
 	case "?":
 		p.help = !p.help
@@ -455,7 +468,12 @@ func (m *model) pagerKey(key string) tea.Cmd {
 	if p.help {
 		return nil
 	}
+	if p.notes.active() {
+		return m.noteKey(key)
+	}
 	switch key {
+	case "f":
+		return m.openLinks()
 	case "m":
 		return m.saveBookmark()
 	case "'":
@@ -608,10 +626,15 @@ func (m *model) pagerView() string {
 		}
 	}
 	var body []string
+	noteNotice, inNotes := "", p.notes.active() && !p.help
 	if p.help {
 		for _, line := range readerHelp(p.speed, p.chapter) {
 			body = append(body, margin+line)
 		}
+	} else if inNotes {
+		var title string
+		title, body, noteNotice = m.notesBody(width, margin)
+		header += "  " + title
 	} else if p.speed {
 		body = m.speedBody(width, margin)
 		state := "paused"
@@ -639,6 +662,10 @@ func (m *model) pagerView() string {
 		notice = "Above 350 words per minute, studies found comprehension falls; treat this as skimming."
 	}
 	keys := readerKeys(p.speed, p.chapter, max(1, m.width-2))
+	if inNotes {
+		notice = noteNotice
+		keys = notesKeys(p.notes.listing, max(1, m.width-2))
+	}
 	lines := []string{m.paint(clip(header, m.width-2), muted, false)}
 	lines = append(lines, body[:m.pagerBody()]...)
 	lines = append(lines, m.paint(clip(position, m.width-2), muted, false), m.paint(clip(notice, m.width-2), warning, false), m.paint(clip(keys, m.width-2), muted, false))
@@ -653,14 +680,28 @@ func (m *model) pagerView() string {
 
 // readerKeys keeps ? and q close on screen when the terminal is narrow.
 func readerKeys(speed, chapter bool, width int) string {
-	const tail = "  ? keys  q close"
-	body := "Space/b page  j/k line  [ ] unit  +/- width  s word  m save"
+	body := "Space/b page  j/k line  [ ] unit  +/- width  s word  f notes  m save"
 	if chapter && !speed {
-		body = "Space/b page  j/k line  +/- width  s word  m save"
+		body = "Space/b page  j/k line  +/- width  s word  f notes  m save"
 	}
 	if speed {
-		body = "Space play/pause  Left/Right sentence  Up/Down rate  p pages"
+		body = "Space play/pause  Left/Right sentence  Up/Down rate  p pages  f notes"
 	}
+	return fitKeys(body, width)
+}
+
+// notesKeys are the keys in the link list and in a note.
+func notesKeys(listing bool, width int) string {
+	body := "Space/b page  j/k line  f links  Esc back"
+	if listing {
+		body = "j/k choose  Enter follow  Esc back"
+	}
+	return fitKeys(body, width)
+}
+
+// fitKeys keeps ? and q close on screen when the terminal is narrow.
+func fitKeys(body string, width int) string {
+	const tail = "  ? keys  q close"
 	if lipgloss.Width(body+tail) <= width {
 		return body + tail
 	}
@@ -684,6 +725,7 @@ func readerHelp(speed, chapter bool) []string {
 			"Up/Down     slower or faster",
 			"[ ]         previous or next unit",
 			"p           pages at this word",
+			"f           links and notes near this word (pauses)",
 			"m           save this location",
 			"'           restore the saved location",
 			"q, Escape   close; nothing is recorded",
@@ -705,6 +747,8 @@ func readerHelp(speed, chapter bool) []string {
 	return append(lines,
 		"+, -                wider or narrower",
 		"s                    one word at a time",
+		"f                    links and notes on this page",
+		"Escape               in a note, back to the passage",
 		"m                    save this location",
 		"'                    restore the saved location",
 		"q, Escape            close; nothing is recorded",

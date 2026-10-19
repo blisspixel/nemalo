@@ -328,6 +328,9 @@ func readStructuredRange(ctx context.Context, req Request, result Result, d docu
 	}
 	result.Text = text[req.Offset:end]
 	result.Locator = &Locator{SchemaVersion: 1, AssetID: req.AssetID, Extractor: structuredExtractor, RepresentationID: result.RepresentationID, Unit: req.Unit, Start: req.Offset, End: end, Member: d.unit.Member, OffsetUnit: offsetUnit}
+	if req.Representation == "epub-structure/1" {
+		result.Breaks = rangeBreaks(text, d.breaks, req.Offset, end)
+	}
 	result.Status = "complete_range"
 	if end < limit {
 		result.Status = "partial_range"

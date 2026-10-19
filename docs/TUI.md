@@ -137,7 +137,9 @@ reported by the reader's own read. Word mode opens paused.
 | s / p | s: speed reading from this page | p: pages at this word |
 | m | Save this location. Closing does not save | Save this location. Closing does not save |
 | ' | Restore the saved location | Restore the saved location |
-| q, Escape | Close. Nothing is saved | Close. Nothing is saved |
+| f | Links and notes on this page | Pause, then links and notes near this word |
+| Escape | Close, or in a note go back one level | Close, or in a note go back one level |
+| q | Close. Nothing is saved | Close. Nothing is saved |
 | ? | Show or hide the key list. `q close` stays in the footer at 80 columns | Show or hide the key list. `q close` stays in the footer at 80 columns |
 
 Speed reading starts paused at 250 words per minute and holds sentence ends
@@ -148,6 +150,19 @@ delivered; `]` opens the next unit. A session holds up to 4 MiB of text; at
 that limit `]` continues from the same place in a new session.
 Closing shows the unit and byte and does not save a bookmark. `m` saves only
 when bookmarks are enabled on an initialized library.
+
+`f` lists the EPUB links on the page, from `epub-structure/1`. A link the
+source declares with `epub:type="noteref"` is a note reference; any other is
+listed as a link and is not presumed to be a note. Each shows its status: in
+the book, links back, missing, outside the reading order, or outside the book
+and never fetched. Enter follows a link in the book and reads only its target
+part; when the target is a short marker such as a `[1]` anchor, the part it
+sits in is shown and the note says so. Space continues a long note within its
+part, never into the next one. `f` in a note lists its links, up to four
+notes deep. Escape goes back one level and returns to the same place in the
+passage, paused in word mode; the passage's session is never replaced. `m`
+and `'` keep to the passage: in a note they say so and write nothing. PDF
+text has no links to follow.
 
 ## Appearance and boundaries
 

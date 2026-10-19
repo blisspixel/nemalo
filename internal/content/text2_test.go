@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"strings"
 	"testing"
 	"unicode/utf8"
@@ -70,6 +71,9 @@ func TestTextV2MatchesStructuredTextAndUsesItsPartIDs(t *testing.T) {
 	}
 	if plain.Text != structured.Text || plain.RepresentationID == structured.RepresentationID {
 		t.Fatal("text/2 must share structure/1 text but not its representation identity")
+	}
+	if len(plain.Breaks) == 0 || fmt.Sprint(plain.Breaks) != fmt.Sprint(structured.Breaks) {
+		t.Fatal("structure/1 must mark the same breaks over the same text", plain.Breaks, structured.Breaks)
 	}
 	for _, g := range plain.Gaps {
 		found := false

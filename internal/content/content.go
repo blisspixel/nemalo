@@ -146,8 +146,8 @@ type Result struct {
 	Coverage         *Coverage     `json:"coverage,omitempty"`
 	Resource         *ResourceData `json:"resource,omitempty"`
 	Gaps             []Gap         `json:"gaps,omitempty"`
-	// Breaks are the structural line feeds of an epub-text/2 or epub-nav/1
-	// range; other line feeds in Text are source whitespace.
+	// Breaks are the structural line feeds of an epub-text/2, epub-nav/1, or
+	// epub-structure/1 range; other line feeds in Text are source whitespace.
 	Breaks     []Break      `json:"breaks,omitempty"`
 	Audio      *audio.Track `json:"audio,omitempty"`
 	AudioRange *audio.Range `json:"audio_range,omitempty"`
