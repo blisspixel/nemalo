@@ -1,0 +1,169 @@
+package discovery
+
+import (
+	"context"
+	"io"
+	"net/http"
+	"strings"
+	"sync"
+	"testing"
+	"time"
+)
+
+// arxivTransport answers arXiv requests from fixed bodies and records them.
+type arxivTransport struct {
+	mu       sync.Mutex
+	feeds    map[string]string // id_list value to Atom body
+	oai      string
+	head     int64
+	requests []string
+	at       []time.Time
+}
+
+func (t *arxivTransport) RoundTrip(req *http.Request) (*http.Response, error) {
+	t.mu.Lock()
+	t.requests = append(t.requests, req.Method+" "+req.URL.Host+req.URL.Path+"?"+req.URL.RawQuery)
+	t.at = append(t.at, time.Now())
+	t.mu.Unlock()
+	reply := func(status int, body string, header http.Header) *http.Response {
+		if header == nil {
+			header = http.Header{}
+		}
+		return &http.Response{StatusCode: status, Header: header, Body: io.NopCloser(strings.NewReader(body)), ContentLength: int64(len(body)), Request: req}
+	}
+	switch {
+	case req.URL.Host == ArxivExportHost && req.URL.Path == "/api/query":
+		return reply(200, t.feeds[req.URL.Query().Get("id_list")], nil), nil
+	case req.URL.Host == ArxivOAIHost:
+		return reply(200, t.oai, nil), nil
+	case req.URL.Host == ArxivExportHost && strings.HasPrefix(req.URL.Path, "/pdf/") && req.Method == http.MethodHead:
+		r := reply(200, "", http.Header{"Content-Type": {"application/pdf"}})
+		r.ContentLength = t.head
+		return r, nil
+	case req.URL.Host == ArxivExportHost && strings.HasPrefix(req.URL.Path, "/pdf/"):
+		return reply(200, "%PDF-1.7\n%%EOF", http.Header{"Content-Type": {"application/pdf"}}), nil
+	}
+	return reply(404, "", nil), nil
+}
+
+func feed(id string, version int, title string) string {
+	if title == "" {
+		return `<feed xmlns="http://www.w3.org/2005/Atom" xmlns:opensearch="http://a9.com/-/spec/opensearch/1.1/"><opensearch:totalResults>0</opensearch:totalResults></feed>`
+	}
+	return `<feed xmlns="http://www.w3.org/2005/Atom" xmlns:opensearch="http://a9.com/-/spec/opensearch/1.1/" xmlns:arxiv="http://arxiv.org/schemas/atom"><opensearch:totalResults>1</opensearch:totalResults><entry><id>http://arxiv.org/abs/` + id + `v` + string(rune('0'+version)) + `</id><title>` + title + `</title><published>2017-06-12T17:57:34Z</published><updated>2023-08-02T00:41:18Z</updated><author><name>A. Author</name></author><arxiv:doi>10.1000/x</arxiv:doi><arxiv:primary_category term="cs.CL"/></entry></feed>`
+}
+
+func oaiFor(id, license string) string {
+	return `<OAI-PMH xmlns="http://www.openarchives.org/OAI/2.0/"><GetRecord><record><metadata><arXiv xmlns="http://arxiv.org/OAI/arXiv/"><id>` + id + `</id><license>` + license + `</license></arXiv></metadata></record></GetRecord></OAI-PMH>`
+}
+
+func testArxiv(t *testing.T, tr *arxivTransport) *Arxiv {
+	t.Helper()
+	saved := arxivPace
+	arxivPace = 20 * time.Millisecond
+	t.Cleanup(func() { arxivPace = saved })
+	return &Arxiv{Client: &http.Client{Transport: tr}}
+}
+
+// An unversioned identifier resolves to the latest version, whose license
+// applies; an older version keeps its own record and no license.
+func TestArxivEvaluateResolvesVersionsAndLicenses(t *testing.T) {
+	tr := &arxivTransport{feeds: map[string]string{"1706.03762": feed("1706.03762", 7, "Attention"), "1706.03762v1": feed("1706.03762", 1, "Attention, first")}, oai: oaiFor("1706.03762", "http://arxiv.org/licenses/nonexclusive-distrib/1.0/"), head: 2215244}
+	a := testArxiv(t, tr)
+	e, err := a.Evaluate(context.Background(), "arxiv:1706.03762")
+	if err != nil || !e.Complete || e.ID != "arxiv:1706.03762v7" || len(e.LicenseURLs) != 1 || len(e.Files) != 1 {
+		t.Fatalf("%+v %v", e, err)
+	}
+	f := e.Files[0]
+	if f.Name != "1706.03762v7.pdf" || f.Bytes == nil || *f.Bytes != 2215244 || f.MD5 != "" || f.DownloadURL != "https://export.arxiv.org/pdf/1706.03762v7" {
+		t.Fatalf("%+v", f)
+	}
+	for _, r := range tr.requests {
+		if !strings.Contains(r, ArxivExportHost) && !strings.Contains(r, ArxivOAIHost) {
+			t.Fatal("request outside arXiv's hosts", r)
+		}
+	}
+	for i := 1; i < len(tr.at); i++ {
+		if tr.at[i].Sub(tr.at[i-1]) < 15*time.Millisecond {
+			t.Fatal("requests were not paced")
+		}
+	}
+	old, err := a.Evaluate(context.Background(), "arxiv:1706.03762v1")
+	if err != nil || old.ID != "arxiv:1706.03762v1" || len(old.LicenseURLs) != 0 || !strings.Contains(strings.Join(old.Rights, " "), "version 1 is not established") || old.Title[0] != "Attention, first" {
+		t.Fatalf("%+v %v", old, err)
+	}
+	if _, err := a.Evaluate(context.Background(), "arxiv:1706.03762v9"); err == nil || !strings.Contains(err.Error(), "latest is 7") {
+		t.Fatal(err)
+	}
+}
+
+func TestArxivRefusesWhatItCannotVouchFor(t *testing.T) {
+	tr := &arxivTransport{feeds: map[string]string{"1706.03762": feed("1706.03762", 2, "A"), "2999.99999": feed("", 0, ""), "1111.11111": feed("1706.03762", 2, "Other")}, oai: oaiFor("9999.00000", "http://x/"), head: 0}
+	a := testArxiv(t, tr)
+	for _, id := range []string{"arxiv:2999.99999", "arxiv:1111.11111"} {
+		if _, err := a.Evaluate(context.Background(), id); err == nil {
+			t.Fatal(id, "evaluated")
+		}
+	}
+	// A license record naming another paper, and a PDF without a length.
+	e, err := a.Evaluate(context.Background(), "arxiv:1706.03762")
+	if err != nil || len(e.LicenseURLs) != 0 || e.Files[0].Bytes != nil || len(e.Files[0].Findings) == 0 {
+		t.Fatalf("%+v %v", e, err)
+	}
+	if _, err := a.Download(context.Background(), OfferedFile{Name: "1706.03762v2.pdf", Access: ArxivPDFAccess, DownloadURL: "https://evil.example/pdf/1706.03762v2"}); err == nil {
+		t.Fatal("a download outside the pinned URL was sent")
+	}
+	resp, err := a.Download(context.Background(), OfferedFile{Name: "1706.03762v2.pdf", Access: ArxivPDFAccess, DownloadURL: "https://export.arxiv.org/pdf/1706.03762v2"})
+	if err != nil || resp.StatusCode != 200 {
+		t.Fatal(resp, err)
+	}
+	resp.Body.Close()
+}
+
+func TestArxivIdentifiersAndNames(t *testing.T) {
+	for id, want := range map[string]bool{"arxiv:1706.03762": true, "arxiv:1706.03762v7": true, "arxiv:2301.0123": false, "arxiv:0704.0001": true, "arxiv:1412.12345": false, "arxiv:1713.01234": false, "arxiv:hep-th/9901001v1": true, "arxiv:math.GT/0309136": true,
+		"arxiv:1706.0376": false, "arxiv:1706.03762v0": false, "arxiv:../etc": false, "arxiv:hep-th/99010": false, "1706.03762": false, "arxiv:1706.03762vx": false} {
+		if ValidArxivID(id) != want {
+			t.Errorf("%s: %v", id, !want)
+		}
+	}
+	if name := ArxivPDFName("hep-th/9901001", 2); name != "hep-th_9901001v2.pdf" {
+		t.Fatal(name)
+	}
+	if paper, v, ok := splitArxivPDFName("hep-th_9901001v2.pdf"); !ok || paper != "hep-th/9901001" || v != 2 {
+		t.Fatal(paper, v, ok)
+	}
+	if _, _, ok := splitArxivPDFName("1706.03762.pdf"); ok {
+		t.Fatal("an unversioned PDF name was accepted")
+	}
+}
+
+type statusTransport struct {
+	codes []int
+	calls int
+}
+
+func (s *statusTransport) RoundTrip(req *http.Request) (*http.Response, error) {
+	code := s.codes[min(s.calls, len(s.codes)-1)]
+	s.calls++
+	h := http.Header{}
+	if code == 429 {
+		h.Set("Retry-After", "0")
+	}
+	return &http.Response{StatusCode: code, Header: h, Body: io.NopCloser(strings.NewReader("")), Request: req}, nil
+}
+
+// A quota answer is tried again at the same pace; a refusal is not.
+func TestArxivQuotaIsRetriedAndRefusalIsNot(t *testing.T) {
+	quota := &statusTransport{codes: []int{429, 429, 429}}
+	a := testArxiv(t, nil)
+	a.Client = &http.Client{Transport: quota}
+	if _, err := a.Evaluate(context.Background(), "arxiv:1706.03762"); err == nil || quota.calls != 3 {
+		t.Fatal("quota", quota.calls, err)
+	}
+	refused := &statusTransport{codes: []int{403}}
+	a.Client = &http.Client{Transport: refused}
+	if _, err := a.Evaluate(context.Background(), "arxiv:1706.03762"); err == nil || refused.calls != 1 || !strings.Contains(err.Error(), "403") {
+		t.Fatal("refusal", refused.calls, err)
+	}
+}

@@ -489,8 +489,11 @@ content-stream order with located gaps, and exact quotation spans
 ([decision 0021](docs/decisions/0021-pdf-pages-and-text.md)). Active content,
 attachments, automatic actions, form submission, and remote references are
 reported, and a clean PDF can be checked
-([decision 0032](docs/decisions/0032-pdf-checked-policy.md)). OCR, column
-reconstruction, providers, and citation export remain. Depends on shared assessment/publication and recovery milestones.
+([decision 0032](docs/decisions/0032-pdf-checked-policy.md)). One explicit
+arXiv paper version can be evaluated and acquired, with its latest-version
+license applied only to that version
+([decision 0047](docs/decisions/0047-arxiv-selected-versions.md)). OCR, column
+reconstruction, other providers, and citation export remain. Depends on shared assessment/publication and recovery milestones.
 
 Deliver a PDF assessment policy, a separate paper collection, arXiv and Europe
 PMC/PMC resolution, then OpenAlex discovery and Unpaywall DOI resolution. Enable

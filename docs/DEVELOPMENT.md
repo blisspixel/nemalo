@@ -25,7 +25,11 @@ not download an ebook. `acquire gutenberg:NUMBER --file NAME --output DIRECTORY`
 downloads one EPUB that record names (`N.epub.noimages`, `N.epub.images`, or
 `N.epub3.images`) from the same host. The record has no checksum. The transfer
 checks the response length. Other formats are listed and refused. Neither
-search nor a catalog row resolves a download. `--source all` searches Open
+search nor a catalog row resolves a download. `evaluate arxiv:ID[vN]` resolves one
+paper version through arXiv's query API and its license through OAI-PMH, and
+`acquire arxiv:IDvN --file IDvN.pdf` downloads that PDF from export.arxiv.org,
+one request every three seconds
+([decision 0047](decisions/0047-arxiv-selected-versions.md)). `--source all` searches Open
 Library and Archive at once, and Gutenberg's local catalog when one is
 configured, each by relevance in its own section with its own status; one
 source's failure does not hide another's results, results are not ranked

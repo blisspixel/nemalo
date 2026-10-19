@@ -23,6 +23,9 @@ AI service. The agent interface (MCP) uses the same application services.
 - Search and evaluate a local Project Gutenberg catalog (`pg_catalog.csv`).
   Ranking is local. `catalog fetch gutenberg` downloads that one file when
   you ask. Search does not contact gutenberg.org.
+- Evaluate and acquire one explicit arXiv paper version (`arxiv:1706.03762v7`)
+  from export.arxiv.org at arXiv's request pace, with its latest-version
+  license applied only to that version.
 - Acquire one Gutenberg EPUB named by its bibliographic record, such as
   `1342.epub.noimages`, from gutenberg.pglaf.org. `evaluate --files` lists
   the offers and does not download one. Other formats stay listed.

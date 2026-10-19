@@ -64,7 +64,7 @@ against each other. Sort and page one source at a time.
                    and tui; also gutenberg_catalog in config, or
                    NEMALO_GUTENBERG_CATALOG
 `,
-	"evaluate": `nemalo evaluate archive:ITEM|gutenberg:NUMBER|openlibrary:ID [--files|--editions]
+	"evaluate": `nemalo evaluate archive:ITEM|gutenberg:NUMBER|arxiv:ID|openlibrary:ID [--files|--editions]
   Inspect source-declared files, rights, and access restrictions.
   gutenberg:NUMBER without --files is one local catalog row and lists no
   files. --files fetches one Gutenberg bibliographic record and lists EPUB
@@ -73,6 +73,10 @@ against each other. Sort and page one source at a time.
   openlibrary:EDITION reads that edition. When its ocaid names one Archive
   item, the result is that item's metadata; acquire the printed archive:ITEM.
   A work-level Archive identifier is not selected.
+  arxiv:ID or arxiv:IDvN reads one paper version from arXiv: an unversioned
+  identifier resolves to the latest. The license arXiv records for the latest
+  version is applied only to that version. Requests keep arXiv's pace of one
+  every three seconds.
 `,
 	"catalog": `nemalo catalog fetch gutenberg --output FILE
   Download the official Gutenberg catalog to a new file. Search does not do
@@ -84,6 +88,8 @@ against each other. Sort and page one source at a time.
 nemalo acquire gutenberg:NUMBER --file NAME --output NEW_DIRECTORY
   Download one EPUB named by the bibliographic record, such as
   1342.epub.noimages, into untrusted intake.
+nemalo acquire arxiv:IDvN --file IDvN.pdf --output NEW_DIRECTORY
+  Download one arXiv paper version's PDF; the version must be explicit.
 nemalo acquire archive:ITEM --recording FORMAT --output NEW_DIRECTORY [--resume]
   Download every track of a declared recording, in order.
 

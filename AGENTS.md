@@ -94,6 +94,9 @@ Do not query the Gutenberg website, and do not download ebook bodies from www.gu
 `acquire gutenberg:NUMBER --file NAME` fetch one bibliographic record and one
 pinned EPUB from gutenberg.pglaf.org only (decision 0029). Do not add a Gutenberg
 MCP tool. Do not fall back to another host.
+arXiv (decision 0047): explicit `arxiv:IDvN` only, `export.arxiv.org` and
+`oaipmh.arxiv.org` only, one request every three seconds, no search or MCP tool,
+and a latest-version license never applied to an older version.
 Source evaluation is declaration evidence, never file rights, safety, or write
 authorization. See decision 0005 before changing access classification or networking.
 The bounded collection harness is in `internal/collection` and `cmd/collection`;

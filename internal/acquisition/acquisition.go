@@ -73,11 +73,20 @@ func (p *progressReader) Read(b []byte) (int, error) {
 func (r Request) Validate() error {
 	archiveID := discovery.ValidArchiveID(r.SourceID)
 	gutenbergID := discovery.ValidGutenbergID(r.SourceID)
-	if (!archiveID && !gutenbergID) || r.File == "." || !fs.ValidPath(r.File) || len(r.File) > 1000 || strings.ContainsAny(r.File, "\\:\x00\r\n") || r.Output == "" || r.MaxBytes < 1 || r.MaxBytes > DefaultMaxBytes(r.File) {
-		return errors.New("acquire requires archive:ITEM or gutenberg:NUMBER, an exact source filename, a new output directory, and a byte budget of 1 through 268435456, or 2147483648 for an M4B or M4A")
+	arxivID := discovery.ValidArxivID(r.SourceID)
+	if (!archiveID && !gutenbergID && !arxivID) || r.File == "." || !fs.ValidPath(r.File) || len(r.File) > 1000 || strings.ContainsAny(r.File, "\\:\x00\r\n") || r.Output == "" || r.MaxBytes < 1 || r.MaxBytes > DefaultMaxBytes(r.File) {
+		return errors.New("acquire requires archive:ITEM, gutenberg:NUMBER, or arxiv:ID, an exact source filename, a new output directory, and a byte budget of 1 through 268435456, or 2147483648 for an M4B or M4A")
 	}
 	if archiveID && format(r.File) == "" {
 		return errors.New("acquisition currently supports selected EPUB, PDF, MP3, M4B, and M4A files")
+	}
+	if arxivID {
+		// An explicit version only: an unversioned identifier is resolved by
+		// evaluate, so the version is seen before anything is fetched.
+		paper, version, _ := discovery.SplitArxivID(r.SourceID)
+		if version == 0 || r.File != discovery.ArxivPDFName(paper, version) {
+			return errors.New("arXiv acquisition needs an explicit version, as arxiv:IDvN, and its PDF name from evaluate, such as 1706.03762v7.pdf")
+		}
 	}
 	if gutenbergID && !discovery.GutenbergEPUBName(r.SourceID, r.File) {
 		return errors.New("gutenberg acquisition supports one EPUB named by the bibliographic record, such as 1342.epub.noimages")
@@ -599,6 +608,11 @@ func selectFile(e discovery.Evaluation, request Request) (discovery.OfferedFile,
 	case e.Source == "archive" && e.Access == "no_item_restriction_declared":
 		if f.Access != "public_file_candidate" || f.DownloadURL == "" || f.Bytes == nil || *f.Bytes < 1 || *f.Bytes > request.MaxBytes || (f.MD5 == "" && f.SHA1 == "") {
 			return f, errors.New("selected file needs public availability, a positive size within budget, and a source checksum")
+		}
+	case e.Source == "arxiv" && e.Access == discovery.ArxivAccess:
+		// arXiv publishes no checksum; the host-declared length is checked.
+		if f.Access != discovery.ArxivPDFAccess || f.DownloadURL == "" || f.Bytes == nil || *f.Bytes < 1 || *f.Bytes > request.MaxBytes || contentFormat(f) != "pdf" {
+			return f, errors.New("selected file is not the offered arXiv PDF with a declared length within budget")
 		}
 	case e.Source == "gutenberg" && e.Access == discovery.GutenbergMirrorAccess:
 		if f.Access != discovery.GutenbergEPUBAccess || f.DownloadURL == "" || f.Bytes == nil || *f.Bytes < 1 || *f.Bytes > request.MaxBytes || contentFormat(f) != "epub" {

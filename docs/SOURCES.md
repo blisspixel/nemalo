@@ -74,7 +74,9 @@ arXiv's [OAI documentation](https://info.arxiv.org/help/oa/index.html) specifies
 `https://oaipmh.arxiv.org/oai`, replacing the old `export.arxiv.org/oai2` base in
 March 2025. Its `arXiv` metadata format exposes license information for the latest
 record; `arXivRaw` also exposes history. Do not assign a latest-record license to
-older file versions without evidence that it applies.
+older file versions without evidence that it applies. Nemalo evaluates and acquires
+one explicit version through the query API, OAI-PMH, and `export.arxiv.org/pdf`, at
+one request every three seconds ([decision 0047](decisions/0047-arxiv-selected-versions.md)).
 
 ## Corrections and implementation caveats
 

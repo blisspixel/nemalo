@@ -50,6 +50,13 @@ func (s Service) Acquire(ctx context.Context, request acquisition.Request) (acqu
 // acquireProvider selects Archive for archive:ITEM and the bibliographic
 // record for gutenberg:NUMBER. Recordings stay on Archive.
 func (s Service) acquireProvider(id string) (acquisition.Provider, error) {
+	if discovery.ValidArxivID(id) {
+		a, ok := s.Providers["arxiv"].(acquisition.Provider)
+		if !ok {
+			return nil, errors.New("arxiv acquisition is unavailable")
+		}
+		return a, nil
+	}
 	if discovery.ValidGutenbergID(id) {
 		g, ok := s.Providers["gutenberg"].(*discovery.Gutenberg)
 		if !ok || g == nil {
@@ -200,7 +207,16 @@ func New() Service {
 		"openlibrary": discovery.NewOpenLibrary(),
 		"archive":     archiveWithLibriVox(),
 		"gutenberg":   discovery.NewGutenberg(),
+		"arxiv":       arxivSearcher{discovery.NewArxiv()},
 	}}
+}
+
+// arxivSearcher registers the arXiv provider, which evaluates explicit
+// identifiers and has no search.
+type arxivSearcher struct{ *discovery.Arxiv }
+
+func (arxivSearcher) Search(context.Context, string, int, int) (discovery.Page, error) {
+	return discovery.Page{}, errors.New("arXiv is read by explicit identifier with evaluate arxiv:ID; it has no search here")
 }
 
 // UseGutenbergCatalog points the Gutenberg provider at a local catalog.

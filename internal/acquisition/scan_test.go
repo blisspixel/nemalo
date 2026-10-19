@@ -281,3 +281,36 @@ func TestOneAcquisitionWritesAnOutputAtATime(t *testing.T) {
 		t.Fatal(result, err)
 	}
 }
+
+// An arXiv acquisition names an explicit version and its PDF; its file needs
+// a declared length within budget and no checksum, which arXiv does not give.
+func TestArxivAcquisitionNeedsAnExplicitVersion(t *testing.T) {
+	out := filepath.Join(t.TempDir(), "p")
+	for name, r := range map[string]Request{
+		"unversioned": {SourceID: "arxiv:1706.03762", File: "1706.03762v7.pdf", Output: out, MaxBytes: 1 << 20},
+		"wrong name":  {SourceID: "arxiv:1706.03762v7", File: "1706.03762v6.pdf", Output: out, MaxBytes: 1 << 20},
+		"not a paper": {SourceID: "arxiv:nope", File: "nope.pdf", Output: out, MaxBytes: 1 << 20},
+	} {
+		if r.Validate() == nil {
+			t.Error(name, "accepted")
+		}
+	}
+	r := Request{SourceID: "arxiv:1706.03762v7", File: "1706.03762v7.pdf", Output: out, MaxBytes: 100}
+	if err := r.Validate(); err != nil {
+		t.Fatal(err)
+	}
+	n := int64(14)
+	e := discovery.Evaluation{Complete: true, ID: r.SourceID, Source: "arxiv", Access: discovery.ArxivAccess, Files: []discovery.OfferedFile{{Name: r.File, Format: "PDF", Bytes: &n, Access: discovery.ArxivPDFAccess, DownloadURL: "https://export.arxiv.org/pdf/1706.03762v7"}}}
+	if _, err := selectFile(e, r); err != nil {
+		t.Fatal(err)
+	}
+	e.Files[0].Bytes = nil
+	if _, err := selectFile(e, r); err == nil {
+		t.Fatal("a PDF without a declared length was selected")
+	}
+	big := int64(1000)
+	e.Files[0].Bytes = &big
+	if _, err := selectFile(e, r); err == nil {
+		t.Fatal("a PDF over budget was selected")
+	}
+}

@@ -371,8 +371,9 @@ func Execute(ctx context.Context, args []string, out, errOut io.Writer, service 
 		gutenbergID := discovery.ValidGutenbergID(id)
 		workID := discovery.ValidOpenLibraryWork(id)
 		editionID := discovery.ValidOpenLibraryEdition(id)
-		if flags.NArg() != 1 || (!archiveID && !gutenbergID && !workID && !editionID) {
-			return write(nil, errors.New("evaluate requires exactly one archive:ITEM, gutenberg:NUMBER, or openlibrary:WORK or openlibrary:EDITION identifier"), 2)
+		arxivID := discovery.ValidArxivID(id)
+		if flags.NArg() != 1 || (!archiveID && !gutenbergID && !workID && !editionID && !arxivID) {
+			return write(nil, errors.New("evaluate requires exactly one archive:ITEM, gutenberg:NUMBER, arxiv:ID[vN], or openlibrary:WORK or openlibrary:EDITION identifier"), 2)
 		}
 		if *listFiles && *listEditions {
 			return write(nil, errors.New("evaluate accepts either --files or --editions"), 2)
