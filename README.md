@@ -84,10 +84,11 @@ AI service. The agent interface (MCP) uses the same application services.
 - Use CLI, versioned JSON, an interactive terminal interface, or read-only MCP
   tools for an agent host (`nemalo mcp serve --scope DIRECTORY`), also packaged
   as a Claude Code plugin and an Agent Plugins package. `--allow-write` adds
-  import tools that store only the plan a preview returned.
+  import tools that store only the plan a preview returned, and acquisition
+  and rescan as durable jobs that outlive the connection.
 
 Multipart archives, cleanup of RAR and 7z archives,
-recording identity across holdings, and further MCP write tools are planned. Single-file import is not
+recording identity beyond LibriVox, and CLI and TUI views of jobs are planned. Single-file import is not
 a full checked-library policy.
 File checks report limited evidence, never a safety or completeness guarantee.
 See [current capabilities and limits](docs/DEVELOPMENT.md) and the [roadmap](ROADMAP.md).

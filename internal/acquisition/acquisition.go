@@ -42,6 +42,30 @@ type Request struct {
 	// Resume continues an interrupted transfer into its existing packet. It is
 	// a property of the call, never of the recorded intent.
 	Resume bool `json:"-"`
+	// Progress, when set, is told the phase and, for a transfer, the bytes
+	// received of the declared total. It must return quickly.
+	Progress func(phase string, done, total int64) `json:"-"`
+}
+
+func (r Request) report(phase string, done, total int64) {
+	if r.Progress != nil {
+		r.Progress(phase, done, total)
+	}
+}
+
+// progressReader tells progress how many bytes have been read, starting
+// from offset.
+type progressReader struct {
+	r           io.Reader
+	done, total int64
+	request     Request
+}
+
+func (p *progressReader) Read(b []byte) (int, error) {
+	n, err := p.r.Read(b)
+	p.done += int64(n)
+	p.request.report("transfer", p.done, p.total)
+	return n, err
 }
 
 func (r Request) Validate() error {
@@ -246,6 +270,7 @@ func acquireInto(ctx, outer context.Context, provider Provider, parent *os.Root,
 	if request.Scanner != nil && !request.NoScan {
 		// The scan has its own scanner deadline and is not cut short by the
 		// transfer deadline; the caller's cancellation still applies.
+		request.report("scan", 0, 0)
 		s := request.Scanner.Scan(outer, result.ContentPath)
 		scan = &s
 	}
@@ -339,7 +364,7 @@ func transferPacket(ctx context.Context, provider Provider, parent *os.Root, abs
 		return nil, result, err
 	}
 	result.ContentPath = filepath.Join(abs, p.name)
-	result.Transfer, err = transfer.Copy(ctx, p.f, resp.Body, request.MaxBytes, expect)
+	result.Transfer, err = transfer.Copy(ctx, p.f, &progressReader{r: resp.Body, total: *file.Bytes, request: request}, request.MaxBytes, expect)
 	return completeTransfer(ctx, p, result, resp, file, err)
 }
 

@@ -81,8 +81,9 @@ root-scoped inventory is in `internal/inventory`; configuration is in
 `internal/config`. Verification logic is tested in `internal/verify`. Do not
 move domain policy into a terminal update handler or duplicate it for MCP.
 `internal/mcpserver` is the MCP adapter (decision 0014): tools call `internal/app`,
-return the CLI data in its envelope, scope every path, and stay read-only until
-write authorization and durable jobs exist. Network tools need `--allow-network`.
+return the CLI data in its envelope, and scope every path. Write tools need
+`--allow-write`; long ones run as durable jobs in `internal/jobs` (decision 0045),
+journaled in the state folder and owned through an OS lock. Network tools need `--allow-network`.
 Plugin packages are `plugins/nemalo/` (decision 0019): they run `nemalo` from PATH,
 bundle nothing, and share one portable skill; versions equal `internal/cli.Version`.
 Provider adapters use the shared metadata HTTP client in `internal/discovery`;

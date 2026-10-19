@@ -4,24 +4,23 @@ package library
 
 import (
 	"errors"
+	"github.com/blisspixel/nemalo/internal/safeio"
 	"os"
 
 	"golang.org/x/sys/unix"
 )
 
 func lockState(f *os.File, write bool) error {
-	mode := unix.LOCK_SH | unix.LOCK_NB
-	if write {
-		mode = unix.LOCK_EX | unix.LOCK_NB
+	if err := safeio.TryLock(f, write); err != nil {
+		if errors.Is(err, safeio.ErrLocked) {
+			return ErrBusy
+		}
+		return err
 	}
-	err := unix.Flock(int(f.Fd()), mode)
-	if errors.Is(err, unix.EWOULDBLOCK) || errors.Is(err, unix.EAGAIN) {
-		return ErrBusy
-	}
-	return err
+	return nil
 }
 
-func unlockState(f *os.File) error { return unix.Flock(int(f.Fd()), unix.LOCK_UN) }
+func unlockState(f *os.File) error { return safeio.Unlock(f) }
 
 func linkCount(f *os.File) (uint64, error) {
 	var stat unix.Stat_t

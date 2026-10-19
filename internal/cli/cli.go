@@ -18,6 +18,7 @@ import (
 	"github.com/blisspixel/nemalo/internal/content"
 	"github.com/blisspixel/nemalo/internal/discovery"
 	"github.com/blisspixel/nemalo/internal/inventory"
+	"github.com/blisspixel/nemalo/internal/jobs"
 	"github.com/blisspixel/nemalo/internal/library"
 	"github.com/blisspixel/nemalo/internal/mcpserver"
 	"github.com/blisspixel/nemalo/internal/present"
@@ -801,11 +802,28 @@ func Execute(ctx context.Context, args []string, out, errOut io.Writer, service 
 			}
 			scopes = append(scopes, configured)
 		}
-		server, err := mcpserver.New(service, mcpserver.Options{Scopes: scopes, Network: *allowNetwork, Write: *allowWrite, Version: Version})
+		var store *jobs.Store
+		if *allowWrite {
+			// Durable jobs live in the state folder, so a later connection
+			// reads what an earlier one started.
+			if store, err = jobs.Open(filepath.Join(p.State, "jobs"), 2, 8); err != nil {
+				return fail(err, 1)
+			}
+		}
+		server, err := mcpserver.New(service, mcpserver.Options{Scopes: scopes, Network: *allowNetwork, Write: *allowWrite, Jobs: store, Version: Version})
 		if err != nil {
 			return fail(err, 2)
 		}
 		err = server.Run(ctx, &mcp.IOTransport{Reader: io.NopCloser(mcpInput), Writer: nopWriteCloser{out}})
+		if store != nil {
+			// The connection is over; jobs it started finish before the
+			// process exits, and their results stay in the journal.
+			store.Close()
+			if n := store.Running(); n > 0 {
+				_, _ = fmt.Fprintf(errOut, "nemalo: the connection closed; finishing %d job(s) before exiting\n", n)
+			}
+			_ = store.Wait(ctx)
+		}
 		if err != nil && !errors.Is(err, io.EOF) && !errors.Is(err, mcp.ErrConnectionClosed) && ctx.Err() == nil {
 			return fail(err, 1)
 		}

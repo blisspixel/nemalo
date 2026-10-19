@@ -77,3 +77,6 @@ func size(n int64) string {
 	}
 	return fmt.Sprintf("%d bytes", n)
 }
+
+// ErrLocked means another process holds the lock.
+var ErrLocked = errors.New("locked by another process")

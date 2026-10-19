@@ -385,7 +385,13 @@ search and Archive evaluation. `--allow-write` adds `library_import_preview`
 and `library_import_apply`; an apply stores only the plan digest its preview
 returned and refuses a changed source, assessment, or scan choice
 ([decision 0034](decisions/0034-mcp-import-tools.md)). `library import
---apply --plan DIGEST` gives the CLI the same check. Tool paths must resolve inside a `--scope`
+--apply --plan DIGEST` gives the CLI the same check. `--allow-write` also adds
+`library_rescan_start`, `job_get`, `job_list`, and `job_cancel`, and with
+`--allow-network` `acquisition_start`: long work runs as a durable job journaled
+in the state folder, which outlives the call and the connection; the server
+finishes running jobs before it exits, and a job whose process ended is
+recorded as interrupted ([decision 0045](decisions/0045-durable-mcp-jobs.md)).
+Tool paths must resolve inside a `--scope`
 directory or the configured library and review folders. Stdout carries protocol
 messages only. See [agent integration](AGENT-INTEGRATION.md) and
 [decision 0014](decisions/0014-read-only-mcp-server.md).
@@ -497,8 +503,9 @@ acquire runs (decision 0030). EPUB, PDF, MP3, M4B, and M4A holdings can be
 checked (decisions 0009, 0032, 0033, and 0039). LibriVox readers are credited
 per track when the project links back
 ([decision 0035](decisions/0035-librivox-readers.md)). MCP is a scoped
-adapter over the same services; `--allow-write` adds only previewed imports
-([decision 0034](decisions/0034-mcp-import-tools.md)). Website search, other
+adapter over the same services; `--allow-write` adds previewed imports
+([decision 0034](decisions/0034-mcp-import-tools.md)) and durable acquisition
+and rescan jobs ([decision 0045](decisions/0045-durable-mcp-jobs.md)). Website search, other
 Gutenberg formats, recording identity across hosts, decoded timing in content
 access, files above 2 GiB, OCR, and column reconstruction stay later. Generated analysis
 and model/harness integrations remain post-1.0. Issues 1 and 2 are closed;

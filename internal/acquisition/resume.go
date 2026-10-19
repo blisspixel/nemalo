@@ -102,6 +102,7 @@ func resumeAcquire(ctx, outer context.Context, provider Provider, request Reques
 	}
 	var scan *scanner.Result
 	if request.Scanner != nil && !request.NoScan {
+		request.report("scan", 0, 0)
 		s := request.Scanner.Scan(outer, result.ContentPath)
 		scan = &s
 	}
@@ -209,7 +210,7 @@ func resumeTransfer(ctx context.Context, ranged RangeProvider, root *os.Root, ab
 		_ = f.Close()
 		return nil, result, err
 	}
-	result.Transfer, err = transfer.Continue(ctx, f, io.NewSectionReader(f, 0, offset), offset, resp.Body, p.request.MaxBytes, expect)
+	result.Transfer, err = transfer.Continue(ctx, f, io.NewSectionReader(f, 0, offset), offset, &progressReader{r: resp.Body, done: offset, total: *file.Bytes, request: request}, p.request.MaxBytes, expect)
 	state, result, err := completeTransfer(ctx, p, result, resp, file, err)
 	if err != nil {
 		_ = f.Close()

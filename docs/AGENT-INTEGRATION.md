@@ -4,8 +4,9 @@ Research checked 2026-10-08. A read-only stdio server is implemented
 ([decision 0014](decisions/0014-read-only-mcp-server.md)), with Claude Code and
 Agent Plugins packages ([decision 0019](decisions/0019-agent-plugin-packages.md));
 `--allow-write` adds import tools that apply only a previewed plan
-([decision 0034](decisions/0034-mcp-import-tools.md)); other write tools and
-durable jobs remain design.
+([decision 0034](decisions/0034-mcp-import-tools.md)), and acquisition and rescan
+run as durable jobs read with `job_get`
+([decision 0045](decisions/0045-durable-mcp-jobs.md)).
 Nemalo provides tools to an agent host; it does not need to embed an LLM or implement
 an agent runtime. All executable Nemalo components use Go.
 

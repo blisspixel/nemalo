@@ -2,26 +2,23 @@ package library
 
 import (
 	"errors"
+	"github.com/blisspixel/nemalo/internal/safeio"
 	"os"
 
 	"golang.org/x/sys/windows"
 )
 
 func lockState(f *os.File, write bool) error {
-	flags := uint32(windows.LOCKFILE_FAIL_IMMEDIATELY)
-	if write {
-		flags |= windows.LOCKFILE_EXCLUSIVE_LOCK
+	if err := safeio.TryLock(f, write); err != nil {
+		if errors.Is(err, safeio.ErrLocked) {
+			return ErrBusy
+		}
+		return err
 	}
-	err := windows.LockFileEx(windows.Handle(f.Fd()), flags, 0, 1, 0, &windows.Overlapped{})
-	if errors.Is(err, windows.ERROR_LOCK_VIOLATION) {
-		return ErrBusy
-	}
-	return err
+	return nil
 }
 
-func unlockState(f *os.File) error {
-	return windows.UnlockFileEx(windows.Handle(f.Fd()), 0, 1, 0, &windows.Overlapped{})
-}
+func unlockState(f *os.File) error { return safeio.Unlock(f) }
 
 func linkCount(f *os.File) (uint64, error) {
 	var info windows.ByHandleFileInformation

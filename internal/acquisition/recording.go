@@ -50,6 +50,8 @@ type RecordingRequest struct {
 	OnDetection string             `json:"on_detection,omitempty"`
 	Quarantine  string             `json:"quarantine,omitempty"`
 	Scanner     assessment.Scanner `json:"-"`
+	// Progress, when set, is told how many tracks are done of the total.
+	Progress func(phase string, done, total int64) `json:"-"`
 }
 
 // MaxRecordingBytes bounds one recording's declared total.
@@ -273,6 +275,9 @@ func AcquireRecording(ctx context.Context, provider Provider, request RecordingR
 			if err := ctx.Err(); err != nil {
 				groupErr = err
 				break
+			}
+			if request.Progress != nil {
+				request.Progress("tracks", int64(start-len(group)+i), int64(len(plan)))
 			}
 			trackCtx, cancel := context.WithTimeout(ctx, transferBudget(*p.file.Bytes))
 			req := Request{SourceID: request.SourceID, File: p.file.Name, Output: filepath.Join(abs, p.packet), MaxBytes: *p.file.Bytes, NoScan: request.NoScan, OnDetection: request.OnDetection, Quarantine: request.Quarantine, Scanner: request.Scanner,
