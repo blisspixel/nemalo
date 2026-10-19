@@ -19,11 +19,19 @@ type readerState struct {
 	last                    content.Request
 	hasLast                 bool
 	// mark* is the last delivered source location in this session. It is not
-	// a bookmark until the reader saves it.
+	// a bookmark until the reader saves it. A failed or cancelled read leaves
+	// it as it was.
 	markOK                                   bool
 	markUnit, markOffset                     int
 	markRepresentation, markRepresentationID string
 	markCursor, markAsset                    string
+	// markCatalog and markRoot are the scope the location was read in.
+	markCatalog, markRoot string
+	// markNav is set for a declared-entry read: the entry is markNavEvidence
+	// and markNavOrder, and markCursor continues that entry at the location.
+	markNav         bool
+	markNavEvidence string
+	markNavOrder    int
 }
 
 // remember keeps the location a successful read delivered. A later explicit
@@ -38,6 +46,12 @@ func (m *model) remember(value content.Result) {
 	m.reader.markRepresentation = value.Representation
 	m.reader.markRepresentationID = value.Locator.RepresentationID
 	m.reader.markAsset = value.AssetID
+	m.reader.markCatalog, m.reader.markRoot = m.reader.last.Catalog, m.reader.last.Root
+	m.reader.markNav, m.reader.markNavEvidence, m.reader.markNavOrder = false, "", 0
+	if value.Representation == "epub-nav/1" && len(value.Navigation) == 1 && len(value.Navigation[0].Entries) == 1 {
+		m.reader.markNav = true
+		m.reader.markNavEvidence, m.reader.markNavOrder = value.Navigation[0].Evidence, value.Navigation[0].Entries[0].Order
+	}
 	m.reader.markCursor = ""
 	if m.reader.last.Cursor != "" {
 		m.reader.markCursor = m.reader.last.Cursor
@@ -144,10 +158,12 @@ func (m *model) listNavigation() tea.Cmd {
 	}
 }
 
-// readSelected opens the reader at the selected unit of a units listing for
-// the current inputs, at the unit of the last range read, or at the first. EPUBs read as
-// epub-text/2, which shares the structured representation's unit indexes and
-// also reads books that representation refuses; PDFs read as pdf-text/1.
+// readSelected opens the reader at the selected entry of a units or contents
+// listing for the current inputs; else where the last successful excerpt of
+// this asset and scope began; else at the first unit. EPUBs read as
+// epub-text/2, which shares the structured and navigation representations'
+// text coordinates and also reads books those refuse; PDFs read as pdf-text/1.
+// A declared-entry excerpt reopens that entry, so pages stop at its end.
 func (m *model) readSelected(speed bool) tea.Cmd {
 	if m.busy {
 		return nil
@@ -158,29 +174,61 @@ func (m *model) readSelected(speed bool) tea.Cmd {
 	case m.reader.representation == "mpeg-audio/1":
 		m.status = "Audio has no text to page. Enter retrieves frame ranges."
 	default:
-		representation, unit := "epub-text/2", 0
+		representation := "epub-text/2"
 		if m.reader.representation == "pdf-text/1" {
 			representation = "pdf-text/1"
 		}
-		bound := m.reader.boundCatalog == m.input.Value() && m.reader.boundRoot == m.secondary.Value()
+		catalog, root, asset := m.input.Value(), m.secondary.Value(), m.reader.asset
+		bound := m.reader.boundCatalog == catalog && m.reader.boundRoot == root
 		if bound && len(m.entries) > 0 && m.entries[m.selected].nav {
 			e := m.entries[m.selected]
 			if !e.navResolved {
 				m.status = "This declared entry has no resolved location in the book."
 				break
 			}
-			return m.openChapter(m.input.Value(), m.secondary.Value(), m.reader.asset, e.navEvidence, e.navOrder, reader.Position{Unit: e.navUnit, Offset: e.navOffset}, speed)
+			return m.openChapter(catalog, root, asset, e.navEvidence, e.navOrder, reader.Position{Unit: e.navUnit, Offset: e.navOffset}, speed)
 		}
-		last := m.reader.last
+		// A listing on screen is a deliberate choice; it comes before the
+		// last excerpt.
+		if bound && len(m.entries) > 0 {
+			return m.openPager(catalog, root, asset, representation, reader.Position{Unit: m.selected}, speed, reader.DefaultRate)
+		}
+		at, ok := m.handoff(representation)
 		switch {
-		case bound && len(m.entries) > 0:
-			unit = m.selected
-		case bound && m.reader.hasLast && !last.UnitsOnly && last.Cursor == "":
-			// After a range was read, the unit it was read from.
-			unit = last.Unit
+		case ok && m.reader.markNav && m.reader.markCursor == "":
+			m.status = "That declared entry cannot be reopened at the last passage. Choose it again in the contents list (c)."
+		case ok && m.reader.markNav:
+			cmd := m.openChapter(catalog, root, asset, m.reader.markNavEvidence, m.reader.markNavOrder, at, speed)
+			// The entry continues at the excerpt's start, in its own representation.
+			m.pager.chapterCursor = m.reader.markCursor
+			return cmd
+		case ok:
+			return m.openPager(catalog, root, asset, representation, at, speed, reader.DefaultRate)
+		default:
+			return m.openPager(catalog, root, asset, representation, reader.Position{}, speed, reader.DefaultRate)
 		}
-		return m.openPager(m.input.Value(), m.secondary.Value(), m.reader.asset, representation, reader.Position{Unit: unit}, speed, reader.DefaultRate)
 	}
 	m.resize()
 	return nil
+}
+
+// handoff is where the last successful excerpt began, when it was read from
+// this asset, catalog, and root in a representation whose text coordinates
+// the reader's representation shares. Only the unit and byte move: no token
+// or representation identity is reused, and the reader's own read reports a
+// changed or missing source instead of mapping it elsewhere. The excerpt's
+// continuation names text not yet delivered, so it is never the start.
+func (m *model) handoff(representation string) (reader.Position, bool) {
+	r := m.reader
+	if !r.markOK || r.markAsset != r.asset || r.markCatalog != m.input.Value() || r.markRoot != m.secondary.Value() {
+		return reader.Position{}, false
+	}
+	shared := r.markRepresentation == representation
+	if representation == "epub-text/2" {
+		shared = r.markRepresentation == "epub-text/2" || r.markRepresentation == "epub-structure/1" || r.markRepresentation == "epub-nav/1"
+	}
+	if !shared {
+		return reader.Position{}, false
+	}
+	return reader.Position{Unit: r.markUnit, Offset: r.markOffset}, true
 }

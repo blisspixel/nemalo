@@ -515,6 +515,8 @@ func (m *model) pageKey(key string) tea.Cmd {
 			p.top += body
 		} else if p.doc.End {
 			p.notice = "End of the source."
+		} else if p.chapter && p.doc.Next == "" && !p.fetching && p.resume == nil {
+			p.notice = "End of this declared entry."
 		} else if !p.blocked {
 			p.notice = "Retrieving the next range."
 		}

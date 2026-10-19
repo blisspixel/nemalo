@@ -60,7 +60,7 @@ item's other files for a new, deliberate review. See
 | o in managed Holdings results | Open a verified read-only copy in the default application |
 | Enter in Read results | Retrieve the selected source unit |
 | n / r / u in Read results | Next range / repeat last request / list units |
-| p / s in Read results | Open the selected unit (or the first, without a listing) as pages / one word at a time |
+| p / s in Read results | Open as pages / one word at a time: the selected unit or entry of a listing, else where the last excerpt began, else the first unit |
 | Escape | Back; cancel active work |
 | Ctrl+C | Quit |
 
@@ -115,6 +115,15 @@ A wrapped PDF source line continues with a hanging indent. Omitted images and
 tables appear where they were omitted. A resize, or a switch between pages and
 one word at a time, repaints the whole frame. `?` lists the keys. The footer
 keeps `q close` visible at 80 columns.
+
+Without a listing on screen, `p` and `s` open where the last successful
+excerpt of the same asset, catalog, and root began, at its unit and byte, not
+at its continuation. A failed or cancelled read does not move that place. An
+excerpt of a declared entry reopens that entry there, so pages still stop at
+its declared end, also after it crossed into another spine file. Only the
+unit and byte move between representations, as `epub-structure/1`,
+`epub-text/2`, and `epub-nav/1` share text coordinates; changed bytes are
+reported by the reader's own read. Word mode opens paused.
 
 | Key | Pages | Speed reading |
 | --- | --- | --- |

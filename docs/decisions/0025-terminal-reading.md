@@ -50,6 +50,11 @@ session, so nothing is lost or repeated.
 - Source text shown on one row (page labels, alternative text, omission
   details) has control characters escaped and line breaks and tabs folded to
   spaces.
+- From TUI Read results, the reader opens at the selected listing entry, else
+  where the last successful excerpt of that asset and scope began (issue 20).
+  A declared-entry excerpt reopens its entry at that place with the entry's
+  own cursor, keeping its declared end. No other token or representation
+  identity moves between representations.
 - Position is shown as unit and byte. Closing reports it, and `nemalo read`
   prints the `--unit` and `--text-offset` that return there. No position,
   history, rate, or reading time is recorded.
