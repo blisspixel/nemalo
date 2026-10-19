@@ -35,7 +35,7 @@ func getMP4(ctx context.Context, req Request, result Result) (Result, error) {
 		m, probeErr = audio.ProbeMP4(ctx, r, size)
 		return probeErr
 	})
-	if probeErr != nil {
+	if probeErr != nil && result.Status != "changed_source" {
 		switch {
 		case ctx.Err() != nil:
 			result.Status, probeErr = "cancelled", ctx.Err()

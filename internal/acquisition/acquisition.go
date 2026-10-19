@@ -519,7 +519,7 @@ func alternativesFor(e discovery.Evaluation, selected discovery.OfferedFile, lim
 		if f.Name == selected.Name || contentFormat(f) == "" || len(out) == 10 {
 			continue
 		}
-		if _, err := selectFile(e, Request{SourceID: e.ID, File: f.Name, MaxBytes: limit}); err != nil {
+		if _, err := selectFile(e, Request{SourceID: e.ID, File: f.Name, MaxBytes: min(limit, DefaultMaxBytes(f.Name))}); err != nil {
 			continue
 		}
 		out = append(out, Alternative{File: f.Name, Format: contentFormat(f), Bytes: *f.Bytes})

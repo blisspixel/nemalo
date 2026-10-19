@@ -20,7 +20,8 @@ import, assessment, journal, and crash recovery as `library import`.
   The folder itself can be a packet. Only the receipt and content file are
   packet parts; any other entry in or beside a packet folder is handled on its
   own like any other entry.
-- Loose EPUB, PDF, and MP3 files are imported as files. Other files, links,
+- Loose EPUB, PDF, and MP3 files, and M4B and M4A files since
+  [decision 0039](0039-mp4-audio-samples.md), are imported as files. Other files, links,
   special files, RAR, 7z, tar, and compressed streams are listed and preserved.
 - ZIP archives are extracted by `internal/staging` into a private temporary
   directory one at a time: an archive's members are staged, imported (or

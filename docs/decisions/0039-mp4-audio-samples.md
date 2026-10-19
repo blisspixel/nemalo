@@ -37,11 +37,12 @@ keep a file in review:
   or a table is missing or out of its box.
 - `mp4_fragments_not_indexed`: a fragmented file, whose samples are in movie
   fragments that this extractor does not index.
-- `mp4_audio_encrypted`: an `enca`, `drms`, or `aavd` sample entry or a
-  protection scheme box. It is also an access restriction; Nemalo does not
-  remove protection.
+- `mp4_audio_encrypted`: an `enca`, `drms`, or `aavd` sample entry, in any of
+  the track's descriptions, or a protection scheme box. It is also an access
+  restriction; Nemalo does not remove protection.
 - `mp4_audio_tracks_not_one`, `mp4_audio_codec_unrecognized`,
-  `mp4_no_audio_samples`, `mp4_chapters_unreadable`.
+  `mp4_no_audio_samples` (none, or none holding bytes),
+  `mp4_sample_descriptions_differ`, `mp4_chapters_unreadable`.
 
 A file with no movie box, no audio track, or a malformed box structure is
 `mp4_samples_not_indexed`. Notes do not change what plays: bytes after the
@@ -95,6 +96,19 @@ bounds; and padded brands. A fuzz target found no panic or slow input in
 about ten million runs. Library tests import a clean M4B as checked, a cut-short
 M4A in review, and an M4B intake packet; content and TUI tests list chapters
 and refuse a range.
+
+An independent adversarial review then found six defects, each now with a
+regression test: a second sample size table that crashed the probe by
+indexing the first table's sizes; a handler box after the sample table that
+skipped the sample entry, hiding protection; only the first sample
+description read, so a protected or different second one went unnoticed;
+empty samples skipping every placement check; a chapter track declaring
+millions of samples that allocated over 100 MiB from an 832-byte file; and a
+64-bit media data size that overflowed its reported end. An ISO
+`AudioSampleEntryV1` in a version 1 description box is now read without
+QuickTime's extra fields, a chunk naming a description the track lacks is
+inconsistent, and a probe that fails on a file that changed meanwhile is
+reported as `changed_source`.
 
 Live, on this machine: files written by FFmpeg 9.0 (AAC with chapters, moved
 movie box, fragmented, ALAC, MP3 in MP4, Opus, two tracks, QuickTime) gave the

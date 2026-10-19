@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/binary"
 	"errors"
+	"runtime"
 	"slices"
 	"testing"
 )
@@ -374,4 +375,124 @@ func FuzzProbeMP4(f *testing.F) {
 			}
 		}
 	})
+}
+
+// rawMP4 places one audio track, built by trak from a chunk offset, before n
+// bytes of media data.
+func rawMP4(n int, trak func(offset uint32) []byte) []byte {
+	ftyp := box("ftyp", []byte("M4A "), u32(0))
+	moov := func(offset uint32) []byte {
+		return box("moov", box("mvhd", zeros(12), u32(1000), u32(1000), zeros(80)), trak(offset))
+	}
+	offset := uint32(len(ftyp) + len(moov(0)) + 8)
+	return slices.Concat(ftyp, moov(offset), box("mdat", bytes.Repeat([]byte{1}, n)))
+}
+
+func stbl(entries []byte, count uint32, sizes []byte, offset uint32) []byte {
+	return box("stbl", box("stsd", zeros(4), u32(count), entries),
+		box("stts", zeros(4), u32(1), u32(4), u32(1024)),
+		box("stsc", zeros(4), u32(1), u32(1), u32(4), u32(1)),
+		sizes,
+		box("stco", zeros(4), u32(1), u32(offset)))
+}
+
+func trakOf(mdia ...[]byte) []byte {
+	return box("trak", box("tkhd", zeros(12), u32(1), zeros(64)), box("mdia", mdia...))
+}
+
+var (
+	mdhd     = box("mdhd", zeros(12), u32(44100), u32(4096), zeros(4))
+	hdlrSoun = box("hdlr", zeros(8), []byte("soun"), zeros(12))
+	sizes4   = box("stsz", zeros(4), u32(10), u32(4))
+)
+
+// Regressions from an adversarial review: each input once crashed, hid a
+// finding, or allocated far beyond its size.
+func TestMP4ReviewRegressions(t *testing.T) {
+	ctx := context.Background()
+	probe := func(data []byte) (MP4, error) {
+		return ProbeMP4(ctx, bytes.NewReader(data), int64(len(data)))
+	}
+	entry := audioEntry(defaultSpec())
+	// A second size table once left the first's sizes beside its count.
+	twoSizes := rawMP4(40, func(o uint32) []byte {
+		return trakOf(mdhd, hdlrSoun, box("minf", box("stbl", box("stsd", zeros(4), u32(1), entry),
+			box("stts", zeros(4), u32(1), u32(100), u32(1024)), box("stsc", zeros(4), u32(1), u32(1), u32(100), u32(1)),
+			box("stz2", zeros(4), zeros(3), []byte{8}, u32(2), []byte{1, 1}), box("stsz", zeros(4), u32(1), u32(100)),
+			box("stco", zeros(4), u32(1), u32(o)))))
+	})
+	if m, err := probe(twoSizes); err != nil || !slices.Contains(m.Findings, MP4TablesInconsistent) {
+		t.Fatal("duplicate size tables", m.Findings, err)
+	}
+	// A handler after the sample table once skipped the sample entry.
+	s := defaultSpec()
+	s.entry, s.sinf = "enca", true
+	late := rawMP4(40, func(o uint32) []byte {
+		return trakOf(mdhd, box("minf", stbl(audioEntry(s), 1, sizes4, o)), hdlrSoun)
+	})
+	if m, err := probe(late); err != nil || !slices.Contains(m.Findings, MP4Encrypted) || m.Codec != "encrypted" {
+		t.Fatal("handler after the table", m.Findings, m.Codec, err)
+	}
+	// A protected second description is still protection, and differing
+	// codecs are a finding.
+	second := rawMP4(40, func(o uint32) []byte {
+		return trakOf(mdhd, hdlrSoun, box("minf", stbl(slices.Concat(entry, audioEntry(s)), 2, sizes4, o)))
+	})
+	if m, err := probe(second); err != nil || !slices.Contains(m.Findings, MP4Encrypted) {
+		t.Fatal("protected second entry", m.Findings, err)
+	}
+	alac := box("alac", zeros(6), u16(1), zeros(8), u16(2), u16(16), zeros(4), u32(44100<<16))
+	mixed := rawMP4(40, func(o uint32) []byte {
+		return trakOf(mdhd, hdlrSoun, box("minf", stbl(slices.Concat(entry, alac), 2, sizes4, o)))
+	})
+	if m, err := probe(mixed); err != nil || !slices.Contains(m.Findings, MP4DescriptionsDiffer) {
+		t.Fatal("mixed entries", m.Findings, err)
+	}
+	// A chunk naming a description the track does not have.
+	badIndex := rawMP4(40, func(o uint32) []byte {
+		return trakOf(mdhd, hdlrSoun, box("minf", box("stbl", box("stsd", zeros(4), u32(1), entry),
+			box("stts", zeros(4), u32(1), u32(4), u32(1024)), box("stsc", zeros(4), u32(1), u32(1), u32(4), u32(2)),
+			sizes4, box("stco", zeros(4), u32(1), u32(o)))))
+	})
+	if m, err := probe(badIndex); err != nil || !slices.Contains(m.Findings, MP4TablesInconsistent) {
+		t.Fatal("description index", m.Findings, err)
+	}
+	// Empty samples placed past the end, with no media data, once passed.
+	empty := slices.Concat(box("ftyp", []byte("M4A "), u32(0)), box("moov", box("mvhd", zeros(12), u32(1000), u32(1000), zeros(80)),
+		trakOf(mdhd, hdlrSoun, box("minf", stbl(entry, 1, box("stsz", zeros(4), u32(0), u32(4), zeros(16)), 0xfffffff0)))))
+	if m, err := probe(empty); err != nil || !slices.Contains(m.Findings, MP4NoAudioSamples) || !slices.Contains(m.Findings, MP4SamplesOutsideFile) {
+		t.Fatal("empty samples", m.Findings, err)
+	}
+	// An ISO AudioSampleEntryV1 in a version 1 description box has its
+	// children where version 0 has them.
+	v1 := bytes.Clone(entry)
+	binary.BigEndian.PutUint16(v1[16:], 1)
+	iso := rawMP4(40, func(o uint32) []byte {
+		return trakOf(mdhd, hdlrSoun, box("minf", box("stbl", box("stsd", []byte{1, 0, 0, 0}, u32(1), v1),
+			box("stts", zeros(4), u32(1), u32(4), u32(1024)), box("stsc", zeros(4), u32(1), u32(1), u32(4), u32(1)),
+			sizes4, box("stco", zeros(4), u32(1), u32(o)))))
+	})
+	if m, err := probe(iso); err != nil || len(m.Findings) != 0 || m.Codec != "aac" {
+		t.Fatal("ISO version 1 entry", m.Findings, m.Codec, err)
+	}
+	// A 64-bit media data size near the limit is kept without overflow.
+	huge := slices.Concat(buildMP4(defaultSpec()), u32(1), []byte("mdat"), u64(1<<63-1))
+	if m, err := probe(huge); err != nil || m.MediaData[len(m.MediaData)-1].End < 0 || !slices.Contains(m.Findings, MP4BoxPastFile) {
+		t.Fatal("large media data size", m.MediaData, m.Findings, err)
+	}
+	// A chapter track declaring millions of samples is refused before any
+	// is placed.
+	cs := defaultSpec()
+	cs.chapters = []string{"A"}
+	chapters := buildMP4(cs)
+	at := bytes.LastIndex(chapters, []byte("stsz")) + 8
+	binary.BigEndian.PutUint32(chapters[at:], 1)
+	binary.BigEndian.PutUint32(chapters[at+4:], maxSamples)
+	var before, after runtime.MemStats
+	runtime.ReadMemStats(&before)
+	m, err := probe(chapters)
+	runtime.ReadMemStats(&after)
+	if err != nil || !slices.Contains(m.Findings, MP4ChaptersUnreadable) || after.TotalAlloc-before.TotalAlloc > 16<<20 {
+		t.Fatal("chapter allocation", m.Findings, after.TotalAlloc-before.TotalAlloc, err)
+	}
 }

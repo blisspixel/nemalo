@@ -9,7 +9,7 @@ of [decision 0009](0009-managed-epub-import.md).
 `nemalo mcp serve --allow-write` registers two tools. Without the flag the
 server is unchanged: read-only tools, `read_only: true` in capabilities.
 
-- `library_import_preview` assesses one EPUB, PDF, or MP3 file, or a completed
+- `library_import_preview` assesses one EPUB, PDF, MP3, M4B, or M4A file, or a completed
   intake packet, for an initialized library and writes nothing to it. With
   `scan`, the installed antivirus scans the file. It returns the status the
   import would record and a plan digest.

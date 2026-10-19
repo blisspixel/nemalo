@@ -6,6 +6,7 @@ import (
 	"crypto/sha256"
 	"encoding/binary"
 	"encoding/hex"
+	"errors"
 	"io"
 	"os"
 	"path/filepath"
@@ -99,6 +100,24 @@ func TestOffsetReadsRefuseAFileChangedWhileRead(t *testing.T) {
 		t.Fatal(status, err)
 	}
 	if status, err := useAsset(context.Background(), req.Root, "track.mp3", library.Asset{ID: req.AssetID, SHA256: asset.SHA256, Bytes: assessment.MaxMP4Bytes + 1}, func(io.ReaderAt, int64) error { return nil }); status != "budget_exceeded" || err == nil {
+		t.Fatal(status, err)
+	}
+}
+
+// A read that fails because the file changed under it reports the change.
+func TestOffsetReadFailureOnAChangedFileIsAChange(t *testing.T) {
+	data := mp4Audio(20)
+	req := audioFixture(t, data)
+	path := filepath.Join(req.Root, "track.mp3")
+	sum := sha256.Sum256(data)
+	asset := library.Asset{ID: req.AssetID, SHA256: hex.EncodeToString(sum[:]), Bytes: int64(len(data))}
+	status, err := useAsset(context.Background(), req.Root, "track.mp3", asset, func(io.ReaderAt, int64) error {
+		if err := os.WriteFile(path, append(bytes.Clone(data), 1), 0o600); err != nil {
+			return err
+		}
+		return errors.New("probe failed")
+	})
+	if status != "changed_source" || err == nil {
 		t.Fatal(status, err)
 	}
 }

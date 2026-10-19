@@ -401,13 +401,27 @@ func Execute(ctx context.Context, args []string, out, errOut io.Writer, service 
 			if err != nil {
 				return write(data, err, 1)
 			}
-			return next(write(data, nil, 0), present.NextAfterEvaluation(data, acquisition.Eligible(data, limits.FileBytes)))
+			// Without --max-file-bytes each file may be as large as its format allows.
+			budget := int64(assessment.MaxMP4Bytes)
+			flags.Visit(func(f *flag.Flag) {
+				if f.Name == "max-file-bytes" {
+					budget = limits.FileBytes
+				}
+			})
+			return next(write(data, nil, 0), present.NextAfterEvaluation(data, acquisition.Eligible(data, budget)))
 		}
 		data, err := service.Evaluate(ctx, id)
 		if err != nil {
 			return write(data, err, 1)
 		}
-		return next(write(data, nil, 0), present.NextAfterEvaluation(data, acquisition.Eligible(data, limits.FileBytes)))
+		// Without --max-file-bytes each file may be as large as its format allows.
+		budget := int64(assessment.MaxMP4Bytes)
+		flags.Visit(func(f *flag.Flag) {
+			if f.Name == "max-file-bytes" {
+				budget = limits.FileBytes
+			}
+		})
+		return next(write(data, nil, 0), present.NextAfterEvaluation(data, acquisition.Eligible(data, budget)))
 	case "library":
 		if action == "import" {
 			if flags.NArg() != 2 {

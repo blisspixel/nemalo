@@ -20,7 +20,7 @@ cleanup moves a source into `<library>/cleanup/<id>/files/<folder-relative path>
   existing ancestor of each is compared with the other. A folder containing any
   `.nemalo` control directory is refused. A complete
   inventory of the folder (an incomplete one plans nothing) gives one entry per
-  file or intake packet. A loose EPUB, PDF, or MP3 moves only when a current
+  file or intake packet. A loose EPUB, PDF, MP3, M4B, or M4A moves only when a current
   holding has its exact SHA-256 and that holding's stored bytes verify. An intake
   packet moves as its content, receipt, and intent only when its content is held
   and its receipt is a completed Nemalo receipt for exactly that content; a

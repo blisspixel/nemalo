@@ -78,7 +78,7 @@ type ingestUnit struct {
 func Ingest(ctx context.Context, request IngestRequest) (result IngestResult, err error) {
 	result = IngestResult{SchemaVersion: 1, Applied: request.Apply, Items: []IngestItem{}, Limitations: []string{
 		"The folder and its archives are preserved. Nothing is moved or deleted; cleanup is a separate, later step.",
-		"Only EPUB, PDF, and MP3 files, intake packets, and ZIP members are imported. Other files and archive formats are listed, not imported.",
+		"Only EPUB, PDF, MP3, M4B, and M4A files, intake packets, and ZIP members are imported. Other files and archive formats are listed, not imported.",
 		"Each import is assessed and journaled like library import. A no-detection scan is not proof of safety.",
 	}}
 	libraryRoot, err := filepath.Abs(request.Library)

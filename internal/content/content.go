@@ -619,6 +619,12 @@ func useAsset(ctx context.Context, directory, name string, asset library.Asset, 
 		return "changed_source", errors.New("source replaced while opening")
 	}
 	if err := use(f, asset.Bytes); err != nil {
+		// A failed read of a file that changed meanwhile is the change.
+		current, statErr := root.Lstat(name)
+		after, afterErr := f.Stat()
+		if statErr != nil || afterErr != nil || !os.SameFile(before, current) || !after.ModTime().Equal(before.ModTime()) || after.Size() != before.Size() {
+			return "changed_source", errors.Join(err, errors.New("source changed while it was read"))
+		}
 		return "", err
 	}
 	h := sha256.New()

@@ -25,6 +25,7 @@ const (
 	maxChunks      = 8_000_000
 	maxTracks      = 64
 	maxChapterText = 4096
+	maxEntries     = 16
 )
 
 // ErrNotMP4 means no readable ISO base media movie with an audio track was
@@ -89,6 +90,7 @@ const (
 	MP4NoAudioSamples          = "mp4_no_audio_samples"
 	MP4TablesInconsistent      = "mp4_sample_tables_inconsistent"
 	MP4ChaptersUnreadable      = "mp4_chapters_unreadable"
+	MP4DescriptionsDiffer      = "mp4_sample_descriptions_differ"
 
 	MP4TrailingRegion       = "mp4_unindexed_trailing_region"
 	MP4DeclaredDiffers      = "mp4_declared_duration_differs"
@@ -123,10 +125,16 @@ type mp4Track struct {
 	constSize  uint32
 	sizes      []uint32
 	stts       [][2]uint32
-	stsc       [][2]uint32
+	stsc       [][3]uint32
 	offsets    []int64
 	haveTables int
 	failed     bool
+	// descriptions are the sample description entries, read once the whole
+	// track is known, since its handler may follow its sample table.
+	descriptions []byte
+	stsdVersion  byte
+	entries      int
+	mixed        bool
 }
 
 type mp4Parser struct {
@@ -270,8 +278,10 @@ func ProbeMP4(ctx context.Context, r interface {
 				return m, err
 			}
 		case "mdat":
-			declaredMedia = append(declaredMedia, Region{"mdat", off + header, off + boxSize})
-			m.MediaData = append(m.MediaData, Region{"mdat", off + header, min(off+boxSize, size)})
+			// A declared size past the file is kept, without overflowing.
+			end := off + min(boxSize, math.MaxInt64-off)
+			declaredMedia = append(declaredMedia, Region{"mdat", off + header, end})
+			m.MediaData = append(m.MediaData, Region{"mdat", off + header, min(end, size)})
 		case "moof", "mfra":
 			fragmented = true
 		}
@@ -331,9 +341,9 @@ func ProbeMP4(ctx context.Context, r interface {
 			m.Findings = appendOnce(m.Findings, MP4TablesInconsistent)
 			continue
 		}
-		chunks, _, err := t.layout(false)
+		chunks, _, err := t.layout(ctx, false)
 		if err != nil {
-			if errors.Is(err, ErrBudget) {
+			if errors.Is(err, ErrBudget) || ctx.Err() != nil {
 				return m, err
 			}
 			m.Findings = appendOnce(m.Findings, MP4TablesInconsistent)
@@ -351,23 +361,26 @@ func ProbeMP4(ctx context.Context, r interface {
 		}
 		extents = append(extents, chunks...)
 	}
-	if m.Samples == 0 {
+	// Samples that hold no bytes carry no audio, wherever they are placed.
+	if m.Samples == 0 || m.SampleBytes == 0 {
 		m.Findings = appendOnce(m.Findings, MP4NoAudioSamples)
+	}
+	if a.mixed {
+		m.Findings = appendOnce(m.Findings, MP4DescriptionsDiffer)
 	}
 	sort.Slice(extents, func(i, j int) bool { return extents[i].offset < extents[j].offset })
 	var covered int64
 	var end int64 = -1
 	for _, e := range extents {
-		if e.size == 0 {
-			continue
-		}
+		// An empty chunk is still placed: its offset must lie in the file
+		// and in media data.
 		if e.offset < 0 || e.offset > size || e.size > size-e.offset {
 			m.Findings = appendOnce(m.Findings, MP4SamplesOutsideFile)
 		}
 		if !within(declaredMedia, e) {
 			m.Findings = appendOnce(m.Findings, MP4SamplesOutsideMediaData)
 		}
-		if e.offset < end {
+		if e.size > 0 && e.offset < end {
 			m.Findings = appendOnce(m.Findings, MP4SamplesOverlap)
 		}
 		end = max(end, e.offset+e.size)
@@ -407,7 +420,11 @@ func (p *mp4Parser) movie(data []byte, m *MP4) ([]*mp4Track, error) {
 				return ErrBudget
 			}
 			t := &mp4Track{}
-			if err := p.track(body, t); err != nil {
+			err := p.track(body, t)
+			if err == nil {
+				err = p.sampleEntries(t)
+			}
+			if err != nil {
 				if !errors.Is(err, errMP4Malformed) && !errors.Is(err, errMP4Table) {
 					return err
 				}
@@ -546,13 +563,15 @@ func (p *mp4Parser) sampleTable(data []byte, t *mp4Track) error {
 		}
 		switch typ {
 		case "stsd":
-			if len(body) < 8 || be32(body[4:]) == 0 {
+			n := be32(body[4:])
+			if len(body) < 8 || n == 0 || n > maxEntries || t.haveTables&16 != 0 {
 				return errMP4Table
 			}
-			return p.sampleEntry(body[8:], t)
+			t.stsdVersion, t.entries, t.descriptions = body[0], int(n), body[8:]
+			t.haveTables |= 16
 		case "stts":
 			n := int(be32(body[4:]))
-			if n > maxSamples || len(body) < 8+8*n {
+			if n > maxSamples || len(body) < 8+8*n || t.haveTables&1 != 0 {
 				return errMP4Table
 			}
 			t.stts = make([][2]uint32, n)
@@ -562,16 +581,18 @@ func (p *mp4Parser) sampleTable(data []byte, t *mp4Track) error {
 			t.haveTables |= 1
 		case "stsc":
 			n := int(be32(body[4:]))
-			if n > maxChunks || len(body) < 8+12*n {
+			if n > maxChunks || len(body) < 8+12*n || t.haveTables&2 != 0 {
 				return errMP4Table
 			}
-			t.stsc = make([][2]uint32, n)
+			t.stsc = make([][3]uint32, n)
 			for i := range n {
-				t.stsc[i] = [2]uint32{be32(body[8+12*i:]), be32(body[12+12*i:])}
+				t.stsc[i] = [3]uint32{be32(body[8+12*i:]), be32(body[12+12*i:]), be32(body[16+12*i:])}
 			}
 			t.haveTables |= 2
 		case "stsz":
-			if len(body) < 12 {
+			// One size table per track: a second would leave the first's
+			// sizes beside the second's count.
+			if len(body) < 12 || t.haveTables&4 != 0 {
 				return errMP4Table
 			}
 			t.constSize = be32(body[4:])
@@ -591,7 +612,7 @@ func (p *mp4Parser) sampleTable(data []byte, t *mp4Track) error {
 			}
 			t.haveTables |= 4
 		case "stz2":
-			if len(body) < 12 {
+			if len(body) < 12 || t.haveTables&4 != 0 {
 				return errMP4Table
 			}
 			field, n := int(body[7]), int(be32(body[8:]))
@@ -644,21 +665,50 @@ func (p *mp4Parser) sampleTable(data []byte, t *mp4Track) error {
 	})
 }
 
-// sampleEntry reads the first sample description: the codec, its rate and
-// channels, and whether the samples are protected.
-func (p *mp4Parser) sampleEntry(data []byte, t *mp4Track) error {
-	if len(data) < 8 {
-		return errMP4Table
-	}
-	size := int(be32(data))
-	if size < 8 || size > len(data) {
-		return errMP4Table
-	}
-	t.entry = string(data[4:8])
-	body := data[8:size]
+// sampleEntries reads every sample description of an audio track. The first
+// names the codec, rate, and channels; any protected entry marks the track
+// protected, and entries of different codecs are a finding.
+func (p *mp4Parser) sampleEntries(t *mp4Track) error {
 	if t.handler != "soun" {
 		return nil
 	}
+	if t.descriptions == nil {
+		t.codec = "unrecognized"
+		return nil
+	}
+	data := t.descriptions
+	for k := range t.entries {
+		if len(data) < 8 {
+			return errMP4Table
+		}
+		size := int(be32(data))
+		if size < 8 || size > len(data) {
+			return errMP4Table
+		}
+		e := &mp4Track{handler: t.handler, stsdVersion: t.stsdVersion}
+		if err := p.sampleEntry(data[:size], e); err != nil {
+			return err
+		}
+		if k == 0 {
+			t.entry, t.codec, t.objectType, t.aot = e.entry, e.codec, e.objectType, e.aot
+			t.rate, t.channels, t.bitrate = e.rate, e.channels, e.bitrate
+		} else if e.codec != t.codec {
+			t.mixed = true
+		}
+		t.encrypted = t.encrypted || e.encrypted
+		data = data[size:]
+	}
+	if t.encrypted {
+		t.codec = "encrypted"
+	}
+	return nil
+}
+
+// sampleEntry reads one sample description: the codec, its rate and
+// channels, and whether the samples are protected.
+func (p *mp4Parser) sampleEntry(data []byte, t *mp4Track) error {
+	t.entry = string(data[4:8])
+	body := data[8:]
 	t.codec = "unrecognized"
 	switch t.entry {
 	case "enca", "drms", "aavd":
@@ -672,7 +722,11 @@ func (p *mp4Parser) sampleEntry(data []byte, t *mp4Track) error {
 	switch be16(body[8:]) {
 	case 0:
 	case 1:
-		children = 44
+		// QuickTime sound description version 1 adds four fields. An ISO
+		// AudioSampleEntryV1, in a version 1 sample description box, does not.
+		if t.stsdVersion != 1 {
+			children = 44
+		}
 	case 2:
 		children = 64
 		if len(body) < 64 {
@@ -788,8 +842,8 @@ func esds(body []byte, t *mp4Track) {
 
 // layout returns each chunk's byte extent and, when samples is set, each
 // sample's. The tables must agree on the number of samples.
-func (t *mp4Track) layout(samples bool) ([]mp4Location, []mp4Location, error) {
-	if t.haveTables != 15 {
+func (t *mp4Track) layout(ctx context.Context, samples bool) ([]mp4Location, []mp4Location, error) {
+	if t.haveTables != 31 {
 		return nil, nil, errMP4Table
 	}
 	var total uint64
@@ -805,8 +859,12 @@ func (t *mp4Track) layout(samples bool) ([]mp4Location, []mp4Location, error) {
 	if len(t.stsc) == 0 || t.stsc[0][0] != 1 || len(t.offsets) == 0 {
 		return nil, nil, errMP4Table
 	}
-	for i := 1; i < len(t.stsc); i++ {
-		if t.stsc[i][0] <= t.stsc[i-1][0] || int64(t.stsc[i][0]) > int64(len(t.offsets)) {
+	for i := range t.stsc {
+		// Each run names a sample description the track has.
+		if t.stsc[i][2] < 1 || int(t.stsc[i][2]) > t.entries {
+			return nil, nil, errMP4Table
+		}
+		if i > 0 && (t.stsc[i][0] <= t.stsc[i-1][0] || int64(t.stsc[i][0]) > int64(len(t.offsets))) {
 			return nil, nil, errMP4Table
 		}
 	}
@@ -817,6 +875,11 @@ func (t *mp4Track) layout(samples bool) ([]mp4Location, []mp4Location, error) {
 	}
 	s, entry := 0, 0
 	for c := range t.offsets {
+		if c%65536 == 0 {
+			if err := ctx.Err(); err != nil {
+				return nil, nil, err
+			}
+		}
 		if entry+1 < len(t.stsc) && uint32(c+1) >= t.stsc[entry+1][0] {
 			entry++
 		}
@@ -870,8 +933,14 @@ func (p *mp4Parser) chapters(r interface {
 		return
 	}
 	nero := m.Chapters
-	_, samples, err := track.layout(true)
-	if err != nil || track.failed || len(samples) > maxChapters || track.timescale == 0 {
+	// The count is checked before any sample is placed, so a small file
+	// cannot make the chapter list allocate millions of entries.
+	if track.count > maxChapters || track.failed || track.timescale == 0 {
+		m.Findings = appendOnce(m.Findings, MP4ChaptersUnreadable)
+		return
+	}
+	_, samples, err := track.layout(p.ctx, true)
+	if err != nil {
 		m.Findings = appendOnce(m.Findings, MP4ChaptersUnreadable)
 		return
 	}

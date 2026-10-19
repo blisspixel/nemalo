@@ -12,6 +12,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/blisspixel/nemalo/internal/assessment"
 	"github.com/blisspixel/nemalo/internal/discovery"
 	"github.com/blisspixel/nemalo/internal/scanner"
 )
@@ -241,5 +242,25 @@ func TestDetectionSurvivesHostAntivirusActing(t *testing.T) {
 func TestTransferBudgetGrowsWithTheBytes(t *testing.T) {
 	if transferBudget(0) != 5*time.Minute || transferBudget(2<<30) != 5*time.Minute+4096*time.Second || transferBudget(-1) != 5*time.Minute {
 		t.Fatal(transferBudget(0), transferBudget(2<<30))
+	}
+}
+
+// Each file is held to its own format's limit: a 300 MiB M4B is eligible
+// under the widest budget and an EPUB of that size is not.
+func TestEligibilityUsesEachFormatsLimit(t *testing.T) {
+	big := int64(300 << 20)
+	file := func(name string) discovery.OfferedFile {
+		return discovery.OfferedFile{Name: name, Bytes: &big, MD5: strings.Repeat("a", 32), Access: "public_file_candidate", DownloadURL: "https://archive.org/download/demo/" + name}
+	}
+	e := discovery.Evaluation{Complete: true, ID: "archive:demo", Source: "archive", Access: "no_item_restriction_declared", Files: []discovery.OfferedFile{file("book.m4b"), file("book.epub")}}
+	got := Eligible(e, assessment.MaxMP4Bytes)
+	if len(got) != 1 || got[0].File != "book.m4b" {
+		t.Fatal(got)
+	}
+	if got := Eligible(e, 256<<20); len(got) != 0 {
+		t.Fatal("a lower budget admitted a larger file", got)
+	}
+	if DefaultMaxBytes("book.m4b") != assessment.MaxMP4Bytes || DefaultMaxBytes("1342.epub.noimages") != assessment.MaxParsedBytes {
+		t.Fatal("default budgets")
 	}
 }
