@@ -37,7 +37,12 @@ the selected fixed HTTPS source. Shared metadata responses are bounded to 2 MiB
 of decompressed JSON, page sizes to 50, and requests to one per second per provider
 instance, with a 30-second deadline including waits. Valid `Retry-After` on 429/503
 postpones subsequent requests in that instance. Separate CLI processes do not
-coordinate quotas. No automatic retry or bulk harvesting occurs.
+coordinate quotas. A dropped connection, a timeout, or HTTP 429, 500, 502,
+503, or 504 is tried again at most twice within that deadline and pacing; no
+other failure is retried, and no bulk harvesting occurs. Downloads are
+continued, not restarted, after a dropped connection: `acquire` resumes its
+own packet against the same strong validator, and `catalog fetch` requests
+exactly the missing range.
 
 Provider metadata requests use checked direct connections and fixed-host HTTPS
 redirects. Environment proxies are disabled for this boundary; proxy-only networks

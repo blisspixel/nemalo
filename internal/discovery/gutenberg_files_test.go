@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestGutenbergRecordOffersThePinnedEPUBs(t *testing.T) {
@@ -76,6 +77,9 @@ func TestGutenbergRecordFailsClosed(t *testing.T) {
 }
 
 func TestGutenbergMirrorMissDoesNotFallBack(t *testing.T) {
+	saved := recordPause
+	recordPause = func(int) time.Duration { return 0 }
+	t.Cleanup(func() { recordPause = saved })
 	calls := []string{}
 	g := &Gutenberg{FileClient: &http.Client{Transport: roundTrip(func(r *http.Request) (*http.Response, error) {
 		calls = append(calls, r.URL.String())
@@ -84,8 +88,14 @@ func TestGutenbergMirrorMissDoesNotFallBack(t *testing.T) {
 	if _, err := g.EvaluateFiles(context.Background(), "gutenberg:1342"); err == nil || !strings.Contains(err.Error(), GutenbergMirrorHost) {
 		t.Fatal(err)
 	}
-	if len(calls) != 1 || calls[0] != gutenbergRDFURL("1342") || strings.Contains(calls[0], "www.gutenberg.org") {
+	// A dropped connection is tried again at the mirror, never elsewhere.
+	if len(calls) != metadataAttempts {
 		t.Fatal(calls)
+	}
+	for _, c := range calls {
+		if c != gutenbergRDFURL("1342") || strings.Contains(c, "www.gutenberg.org") {
+			t.Fatal(calls)
+		}
 	}
 	g.FileClient = rdfClient(t, "", 404, nil)
 	if _, err := g.EvaluateFiles(context.Background(), "gutenberg:1342"); err == nil || !strings.Contains(err.Error(), "HTTP 404") {

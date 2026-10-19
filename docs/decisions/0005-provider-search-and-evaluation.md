@@ -86,10 +86,15 @@ policy. A saved evaluation cannot authorize an agent write.
 Open Library and Archive share the standard-library metadata client. Each provider
 instance paces requests at one per second, with a 30-second deadline including
 quota waits, a 2 MiB decompressed JSON limit, and at most two connections per host.
-It validates JSON content types and rejects trailing JSON values. HTTP failures
-are explicit without automatic retries. Valid `Retry-After` on 429/503 postpones
-subsequent requests in that instance, including already waiting callers; cancellation
-can end the wait. Separate CLI processes do not coordinate quotas.
+It validates JSON content types and rejects trailing JSON values. A dropped
+connection, a timeout, or HTTP 429, 500, 502, 503, or 504 is tried again at
+most twice, inside the same 30-second deadline and pacing (revised
+2026-10-19; it was never retried before). Other failures are not retried.
+Valid `Retry-After` on 429/503 postpones subsequent requests in that
+instance, including already waiting callers and the retry itself; a wait past
+the deadline ends the request and says when to try again. Cancellation can
+end the wait. The Gutenberg bibliographic record is tried again the same
+way at its one mirror, never at another host. Separate CLI processes do not coordinate quotas.
 
 Production endpoints and HTTPS hosts are fixed. Redirects must retain that exact
 host, HTTPS, no credentials/fragment, and at most three redirects. Direct dialing

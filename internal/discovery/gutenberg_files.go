@@ -14,6 +14,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/blisspixel/nemalo/internal/transfer"
 )
 
 const (
@@ -32,6 +34,45 @@ const (
 const maxRDFBytes = 1 << 20
 
 const maxRDFTokens = 100000
+
+// recordPause waits before trying the record again; tests shorten it.
+var recordPause = func(attempt int) time.Duration { return time.Duration(attempt) * time.Second }
+
+// fetchRecord requests the bibliographic record once. A short body against
+// its declared length, a dropped connection, or HTTP 429, 500, 502, 503, or
+// 504 may be tried again; anything else may not.
+func (g *Gutenberg) fetchRecord(ctx context.Context, raw string) (body []byte, retry bool, err error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, raw, nil)
+	if err != nil {
+		return nil, false, err
+	}
+	req.Header.Set("User-Agent", "nemalo/0.1 (+https://github.com/blisspixel/nemalo)")
+	req.Header.Set("Accept", "application/rdf+xml, application/xml, text/xml")
+	req.Header.Set("Accept-Encoding", "identity")
+	resp, err := g.mirrorClient().Do(req)
+	if err != nil {
+		return nil, transfer.Transient(err), fmt.Errorf("gutenberg bibliographic record was not available from %s: %w", GutenbergMirrorHost, err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		switch resp.StatusCode {
+		case 429, 500, 502, 503, 504:
+			retry = true
+		}
+		return nil, retry, fmt.Errorf("gutenberg bibliographic record returned HTTP %d from %s", resp.StatusCode, GutenbergMirrorHost)
+	}
+	if resp.ContentLength > maxRDFBytes {
+		return nil, false, errors.New("gutenberg bibliographic record exceeds 1 MiB")
+	}
+	body, err = io.ReadAll(io.LimitReader(resp.Body, maxRDFBytes+1))
+	if err != nil {
+		return nil, transfer.Transient(err), fmt.Errorf("gutenberg bibliographic record from %s stopped partway: %w", GutenbergMirrorHost, err)
+	}
+	if len(body) == 0 || len(body) > maxRDFBytes {
+		return nil, false, errors.New("gutenberg bibliographic record is empty or exceeds 1 MiB")
+	}
+	return body, false, nil
+}
 
 func (g *Gutenberg) mirrorClient() *http.Client {
 	if g != nil && g.FileClient != nil {
@@ -61,30 +102,22 @@ func (g *Gutenberg) EvaluateFiles(ctx context.Context, id string) (Evaluation, e
 	}
 	number := strings.TrimPrefix(id, "gutenberg:")
 	raw := gutenbergRDFURL(number)
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, raw, nil)
+	var body []byte
+	var err error
+	for attempt := 1; ; attempt++ {
+		var retry bool
+		body, retry, err = g.fetchRecord(ctx, raw)
+		if err == nil || !retry || attempt >= metadataAttempts {
+			break
+		}
+		select {
+		case <-ctx.Done():
+			return e, ctx.Err()
+		case <-time.After(recordPause(attempt)):
+		}
+	}
 	if err != nil {
 		return e, err
-	}
-	req.Header.Set("User-Agent", "nemalo/0.1 (+https://github.com/blisspixel/nemalo)")
-	req.Header.Set("Accept", "application/rdf+xml, application/xml, text/xml")
-	req.Header.Set("Accept-Encoding", "identity")
-	resp, err := g.mirrorClient().Do(req)
-	if err != nil {
-		return e, fmt.Errorf("gutenberg bibliographic record was not available from %s: %w", GutenbergMirrorHost, err)
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
-		return e, fmt.Errorf("gutenberg bibliographic record returned HTTP %d from %s", resp.StatusCode, GutenbergMirrorHost)
-	}
-	if resp.ContentLength > maxRDFBytes {
-		return e, errors.New("gutenberg bibliographic record exceeds 1 MiB")
-	}
-	body, err := io.ReadAll(io.LimitReader(resp.Body, maxRDFBytes+1))
-	if err != nil {
-		return e, err
-	}
-	if len(body) == 0 || len(body) > maxRDFBytes {
-		return e, errors.New("gutenberg bibliographic record exceeds 1 MiB")
 	}
 	parsed, err := parseGutenbergRDF(number, body)
 	if err != nil {

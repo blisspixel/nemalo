@@ -211,3 +211,43 @@ func TestDecompressedMetadataBudget(t *testing.T) {
 		t.Fatal("compressed response escaped budget", err)
 	}
 }
+
+// A transient failure is tried again at most twice within the request's
+// deadline and pacing; a permanent one is not.
+func TestMetadataRetriesOnlyTransientFailures(t *testing.T) {
+	for name, tc := range map[string]struct {
+		replies  []int // 0 drops the connection
+		requests int
+		good     bool
+	}{
+		"server error then success": {[]int{500, 200}, 2, true},
+		"dropped then success":      {[]int{0, 200}, 2, true},
+		"gateway errors throughout": {[]int{502, 503, 504, 200}, 3, false},
+		"not found":                 {[]int{404, 200}, 1, false},
+		"forbidden":                 {[]int{403, 200}, 1, false},
+	} {
+		t.Run(name, func(t *testing.T) {
+			var mu sync.Mutex
+			n := 0
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				mu.Lock()
+				reply := tc.replies[min(n, len(tc.replies)-1)]
+				n++
+				mu.Unlock()
+				if reply == 0 {
+					panic(http.ErrAbortHandler)
+				}
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(reply)
+				_, _ = io.WriteString(w, `{"ok":true}`)
+			}))
+			defer server.Close()
+			p := &metadataClient{client: server.Client()}
+			var result map[string]any
+			err := p.getJSON(context.Background(), server.URL, &result)
+			if (err == nil) != tc.good || n != tc.requests {
+				t.Fatalf("err %v after %d requests", err, n)
+			}
+		})
+	}
+}

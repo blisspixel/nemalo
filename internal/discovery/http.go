@@ -16,6 +16,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/blisspixel/nemalo/internal/transfer"
 )
 
 const maxResponse = 2 << 20
@@ -105,50 +107,91 @@ func publicIP(ip netip.Addr) bool {
 	return true
 }
 
+// metadataAttempts bounds one metadata request: the first try and up to two
+// more after a transport failure or a transient server reply.
+const metadataAttempts = 3
+
 // getJSON bounds the decompressed body and shares pacing across a provider's
-// search and item lookups. It never follows links supplied in response metadata.
+// search and item lookups. It never follows links supplied in response
+// metadata. A dropped connection, a timeout, or HTTP 429, 500, 502, 503, or
+// 504 is tried again at most twice, inside the same 30-second deadline and
+// one-request-per-second pacing, after any Retry-After the source sent.
+// A wait the deadline cannot cover ends the request and says so.
 func (p *metadataClient) getJSON(ctx context.Context, endpoint string, target any) error {
 	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
-	if err := p.wait(ctx); err != nil {
-		return err
+	var err error
+	for attempt := 1; attempt <= metadataAttempts; attempt++ {
+		if waitErr := p.waitWithin(ctx); waitErr != nil {
+			if err != nil {
+				return fmt.Errorf("%w; %w", err, waitErr)
+			}
+			return waitErr
+		}
+		var retry bool
+		retry, err = p.getJSONOnce(ctx, endpoint, target)
+		if err == nil || !retry || ctx.Err() != nil {
+			return err
+		}
 	}
+	return err
+}
+
+// waitWithin waits for the next request slot unless it falls after the
+// deadline, which is reported instead of waited for.
+func (p *metadataClient) waitWithin(ctx context.Context) error {
+	p.mu.Lock()
+	next := p.next
+	p.mu.Unlock()
+	if deadline, ok := ctx.Deadline(); ok && next.After(deadline) {
+		return fmt.Errorf("the source asked to wait until %s, after this request's deadline; try again then: %w", next.UTC().Format(time.RFC3339), context.DeadlineExceeded)
+	}
+	return p.wait(ctx)
+}
+
+// getJSONOnce makes one request. retry reports a failure another try may not
+// repeat: a transport failure or a transient server status.
+func (p *metadataClient) getJSONOnce(ctx context.Context, endpoint string, target any) (retry bool, err error) {
 	u, err := url.Parse(endpoint)
 	if err != nil {
-		return err
+		return false, err
 	}
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u.String(), nil)
 	if err != nil {
-		return err
+		return false, err
 	}
 	req.Header.Set("Accept", "application/json")
 	req.Header.Set("User-Agent", "nemalo/0.1 (+https://github.com/blisspixel/nemalo)")
 	resp, err := p.client.Do(req)
 	if err != nil {
-		return err
+		return transfer.Transient(err), err
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
 		if resp.StatusCode == 429 || resp.StatusCode == 503 {
 			p.deferRetry(resp.Header.Get("Retry-After"), time.Now())
 		}
-		return fmt.Errorf("catalog returned HTTP %d; no automatic retry", resp.StatusCode)
+		switch resp.StatusCode {
+		case 429, 500, 502, 503, 504:
+			return true, fmt.Errorf("catalog returned HTTP %d", resp.StatusCode)
+		}
+		return false, fmt.Errorf("catalog returned HTTP %d", resp.StatusCode)
 	}
 	contentType, _, err := mime.ParseMediaType(resp.Header.Get("Content-Type"))
 	if err != nil || (contentType != "application/json" && !(strings.HasPrefix(contentType, "application/") && strings.HasSuffix(contentType, "+json"))) {
-		return errors.New("catalog did not return a JSON content type")
+		return false, errors.New("catalog did not return a JSON content type")
 	}
 	body, err := io.ReadAll(io.LimitReader(resp.Body, maxResponse+1))
 	if err != nil {
-		return err
+		return transfer.Transient(err), err
 	}
 	if len(body) > maxResponse {
-		return errors.New("catalog response exceeds 2 MiB")
+		return false, errors.New("catalog response exceeds 2 MiB")
 	}
 	if err := json.Unmarshal(body, target); err != nil {
-		return fmt.Errorf("decode catalog: %w", err)
+		return false, fmt.Errorf("decode catalog: %w", err)
 	}
-	return nil
+	return false, nil
 }
 
 func (p *metadataClient) deferRetry(raw string, now time.Time) {
