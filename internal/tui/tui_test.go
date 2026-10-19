@@ -249,7 +249,7 @@ func TestTerminalWorkflow(t *testing.T) {
 		t.Fatal("busy field changed")
 	}
 	m.Update(cmd())
-	if !strings.Contains(m.viewport.GetContent(), "File locations: 1") || !strings.Contains(m.viewport.GetContent(), "Saved: "+file+"\n") {
+	if !strings.Contains(m.report, "File locations: 1") || !strings.Contains(m.report, "Saved: "+file+"\n") {
 		t.Fatal("snapshot missing", m.status, m.viewport.GetContent())
 	}
 	m.Update(key(tea.KeyTab))
