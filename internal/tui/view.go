@@ -46,16 +46,49 @@ func (m *model) paint(text string, r role, bold bool) string {
 	return style.Render(text)
 }
 
+// navigation lists the modes on one row. A mode's number and name stay
+// together: when every name does not fit, the other modes show their
+// numbers and the selected one keeps its name.
 func (m *model) navigation() string {
-	items := make([]string, len(modes))
+	width := max(1, m.width-2)
+	full, compact := make([]string, len(modes)), make([]string, len(modes))
 	for i, name := range modes {
-		label := fmt.Sprintf("%d %s", (i+1)%10, strings.ToUpper(name[:1])+name[1:])
+		number := fmt.Sprint((i + 1) % 10)
+		label := number + " " + strings.ToUpper(name[:1]) + name[1:]
+		full[i], compact[i] = label, number
 		if name == m.mode {
-			label = m.paint("["+label+"]", accent, true)
+			full[i] = m.paint("["+label+"]", accent, true)
+			compact[i] = full[i]
 		}
-		items[i] = label
 	}
-	return lipgloss.Wrap(strings.Join(items, "  "), max(1, m.width-2), " ")
+	if row := strings.Join(full, "  "); lipgloss.Width(row) <= width {
+		return row
+	}
+	return strings.Join(compact, " ")
+}
+
+// clipWords shortens one row of text to width cells at a word boundary,
+// ending with "...", so no word is cut.
+func clipWords(text string, width int) string {
+	if lipgloss.Width(text) <= width {
+		return text
+	}
+	words := strings.Fields(text)
+	row := ""
+	for _, w := range words {
+		next := w
+		if row != "" {
+			next = row + " " + w
+		}
+		if lipgloss.Width(next)+3 > width {
+			break
+		}
+		row = next
+	}
+	if row == "" {
+		return clip(text, width)
+	}
+	return strings.TrimRight(row, ";,:|") + "..."
 }
 
 func (m *model) fields() string {
@@ -83,7 +116,7 @@ func (m *model) fields() string {
 	if m.mode == "search" && m.source == "gutenberg" {
 		label, hint, second = "Query", "Title, author, subject, or text number", "Catalog"
 	}
-	m.input.Placeholder = hint
+	m.input.Placeholder = clipWords(hint, max(1, m.width-16))
 	marker := " "
 	if !m.resultsFocused && !m.secondaryFocused {
 		marker = ">"
@@ -146,7 +179,7 @@ func (m *model) top() string {
 	if m.width >= 70 {
 		brand += "   Find knowledge. Care for it. Realize its potential."
 	}
-	return brand + "\n" + m.navigation() + "\n\n" + lipgloss.Wrap(m.paint(m.contextLine(), muted, false), max(1, m.width-2), " ") + "\n" + m.fields()
+	return brand + "\n" + m.navigation() + "\n\n" + m.paint(clipWords(m.contextLine(), max(1, m.width-2)), muted, false) + "\n" + m.fields()
 }
 
 func (m *model) footer() string {
@@ -157,7 +190,7 @@ func (m *model) footer() string {
 		verb := map[string]string{"init": "initialize", "import": "import", "rescan": "rescan", "cleanup": "move to holding", "restore": "restore"}[m.confirmKind]
 		return lipgloss.Wrap(m.paint("Enter "+verb+"  Esc back  PgUp/PgDown review  Ctrl+C quit", warning, false), max(1, m.width-2), " ")
 	}
-	help := "Enter run  F6 browse  Tab/Shift+Tab modes  Ctrl+C quit"
+	help := "Enter run  F6 browse  Tab modes  Ctrl+C quit"
 	if m.resultsFocused {
 		help = "Up/Down select  Enter details  F6 edit  Esc back  Ctrl+C quit"
 		if m.mode == "search" && len(m.entries) > 0 && (strings.HasPrefix(m.entries[m.selected].sourceID, "archive:") || strings.HasPrefix(m.entries[m.selected].sourceID, "gutenberg:") || strings.HasPrefix(m.entries[m.selected].sourceID, "openlibrary:")) {
@@ -189,11 +222,15 @@ func (m *model) footer() string {
 	if m.form() {
 		help += "  Ctrl+N field"
 	}
-	help += "\nF5 full report  PgUp/PgDown scroll  Alt+1..9/0 jump"
+	more := "F5 full report  PgUp/PgDn scroll  Alt+1..9/0 jump"
 	if m.mode == "search" || m.mode == "holdings" {
-		help += "  Ctrl+Left/Right results page"
+		more += "  Ctrl+Left/Right results page"
 	}
-	return lipgloss.Wrap(m.paint(help, muted, false), max(1, m.width-2), " ")
+	// One line when both fit; otherwise each wraps at whole key labels.
+	if lipgloss.Width(help+"  "+more) <= max(1, m.width-2) {
+		return m.paint(help+"  "+more, muted, false)
+	}
+	return lipgloss.Wrap(m.paint(help+"\n"+more, muted, false), max(1, m.width-2), " ")
 }
 
 func (m *model) View() tea.View {
@@ -239,7 +276,7 @@ func (m *model) resize() {
 	m.input.SetCursor(m.input.Position())
 	m.secondary.SetWidth(max(1, m.width-16))
 	m.secondary.SetCursor(m.secondary.Position())
-	m.secondary.Placeholder = map[string]string{"snapshot": "New catalog path outside the source folder", "holdings": "Optional title, language, filename, or hash", "audit": "Source directory for a catalog; leave empty to check a library", "read": "Explicit source directory (required)", "evaluate": "New untrusted intake directory, for d acquire", "state": "EPUB, PDF, MP3, or completed intake packet"}[m.mode]
+	m.secondary.Placeholder = clipWords(map[string]string{"snapshot": "New catalog path outside the source folder", "holdings": "Optional title, language, filename, or hash", "audit": "Source directory for a catalog; leave empty to check a library", "read": "Explicit source directory (required)", "evaluate": "New untrusted intake directory, for d acquire", "state": "EPUB, PDF, MP3, or completed intake packet"}[m.mode], max(1, m.width-16))
 	if m.mode == "search" && m.source == "gutenberg" {
 		if m.catalog != "" {
 			m.secondary.Placeholder = m.catalog
@@ -344,6 +381,8 @@ func (m *model) emptyHelp() string {
 	switch m.mode {
 	case "search":
 		return "Find something worth keeping.\n\nEnter a title, author, or topic. F2 selects Open Library, Internet Archive, or a local Project Gutenberg catalog.\nEnter searches that provider. Gutenberg reads the catalog file and does not contact gutenberg.org.\nDiscovery does not download files."
+	case "scan":
+		return "Scan one file with the installed antivirus.\n\nRecommended for a file you did not produce. Windows uses Microsoft Defender; Linux and macOS use ClamAV.\nThe scanner's own cloud and sample-submission settings apply. Nothing is remediated.\nA missing, failed, or incomplete scan is not clean, and no detection is not proof of safety."
 	case "holdings":
 		return "Browse your collection.\n\nChoose a saved catalog and optionally filter by title or language.\nEPUB filenames are selected by default; F4 changes the format."
 	case "evaluate":

@@ -619,7 +619,11 @@ func (m *model) pagerView() string {
 	header := "Nemalo reader"
 	position := ""
 	if ok {
-		header += "  " + p.doc.Label(at.Unit)
+		// The label is shown once: not in the header when the page opens on
+		// that unit's own heading.
+		if p.speed || p.layout.Lines == nil || !opensOnHeading(p.layout, p.top) {
+			header += "  " + p.doc.Label(at.Unit)
+		}
 		position = fmt.Sprintf("Unit %d, byte %d", at.Unit, at.Offset)
 		if at.Unit < len(p.units) && p.units[at.Unit].TextBytes > 0 {
 			position += fmt.Sprintf(" of %d", p.units[at.Unit].TextBytes)
@@ -853,4 +857,19 @@ func (m *model) speedBody(width int, margin string) []string {
 		}
 	}
 	return rows[:min(len(rows), body)]
+}
+
+// opensOnHeading reports that the page starting at row top shows a unit
+// heading first, past any blank rows.
+func opensOnHeading(l reader.Layout, top int) bool {
+	for i := top; i < len(l.Lines); i++ {
+		switch l.Lines[i].Kind {
+		case reader.Break:
+			continue
+		case reader.Heading:
+			return true
+		}
+		return false
+	}
+	return false
 }

@@ -176,6 +176,12 @@ background is not queried. The status line's colour is the operation's
 outcome, read from its result, never from the status wording, and every
 outcome also has explicit text. `NO_COLOR` and `TERM=dumb` disable styling. Minimum size is 40 columns by 20 rows; state survives
 the resize prompt. No image, animation, or color is required for navigation.
+Mode labels keep their number and name together: when every name does not
+fit, the other modes show their numbers and the selected mode keeps its name.
+Field hints and the context line end at a whole word with `...`; each mode's
+empty view keeps the full explanation. The footer is one line when it fits.
+The reader names the unit in its header except where the page opens on that
+unit's own heading.
 Omarchy's Super shortcuts and F9 dictation binding do not take Nemalo's Alt+1
 through Alt+0, F2 through F8, or Ctrl+C keys. See
 [operation and limits](DEVELOPMENT.md).
