@@ -473,7 +473,10 @@ func (m *model) notesBody(width int, margin string) (header string, body []strin
 		return header, body[:min(len(body), rows)], notice
 	}
 	f := n.top()
-	header = "Note: " + f.link.label
+	header = "Link target: " + f.link.label
+	if f.link.noteref {
+		header = "Note: " + f.link.label
+	}
 	if len(n.frames) > 1 {
 		header += fmt.Sprintf(" (%d deep)", len(n.frames))
 	}
