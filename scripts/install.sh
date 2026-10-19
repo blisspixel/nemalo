@@ -72,14 +72,43 @@ case "$arch" in
   *) err "unsupported architecture $arch" "releases provide amd64 and arm64" ;;
 esac
 
+# fetch downloads one URL to a new file. curl retries transient HTTP
+# errors and timeouts itself; a dropped connection is tried again up to
+# three times, each from an empty file, with a growing pause. A failure to
+# write the file is reported as that, since a retry cannot help, and an
+# empty response is a failure. It returns 22 for an HTTP error response.
 fetch() {
-  if have curl; then
-    curl -fsSL --proto '=https' --tlsv1.2 "$1" -o "$2"
-  elif have wget; then
-    wget -q --https-only -O "$2" "$1"
-  else
-    err "curl or wget is required"
-  fi
+  attempt=1
+  while :; do
+    rm -f "$2"
+    status=0
+    if have curl; then
+      curl -fsSL --proto '=https' --tlsv1.2 --connect-timeout 20 --retry 3 --retry-delay 2 "$1" -o "$2" || status=$?
+      written=23
+      http=22
+    elif have wget; then
+      wget -q --https-only --timeout=20 --tries=3 -O "$2" "$1" || status=$?
+      written=3
+      http=8
+    else
+      err "curl or wget is required"
+    fi
+    if [ "$status" -eq 0 ] && [ -s "$2" ]; then
+      return 0
+    fi
+    rm -f "$2"
+    if [ "$status" -eq "$written" ]; then
+      err "could not write $2" "the folder for temporary files may be full; set TMPDIR to a folder with free space"
+    fi
+    if [ "$status" -eq "$http" ]; then
+      return 22
+    fi
+    if [ "$attempt" -ge 3 ]; then
+      return 1
+    fi
+    sleep $((attempt * 2))
+    attempt=$((attempt + 1))
+  done
 }
 
 sha256() {
@@ -92,7 +121,10 @@ sha256() {
   fi
 }
 
-work=$(mktemp -d "${TMPDIR:-/tmp}/nemalo-install.XXXXXX")
+# A full or missing temporary folder falls back to ~/.cache.
+work=$(mktemp -d "${TMPDIR:-/tmp}/nemalo-install.XXXXXX" 2>/dev/null) ||
+  { mkdir -p "$HOME/.cache" && work=$(mktemp -d "$HOME/.cache/nemalo-install.XXXXXX"); } ||
+  err "could not create a temporary folder" "set TMPDIR to a folder with free space"
 trap 'rm -rf "$work"' EXIT INT TERM
 
 if [ -z "$VERSION" ]; then
@@ -193,8 +225,14 @@ printf '%s\n' "$VERSION" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.]+)?$' 
 asset="nemalo_${VERSION}_${os}_${arch}.tar.gz"
 base="https://github.com/$REPO/releases/download/v$VERSION"
 echo "Installing Nemalo $VERSION ($os/$arch) into $DIR"
-fetch "$base/$asset" "$work/$asset" || err "could not download $base/$asset"
-fetch "$base/SHA256SUMS" "$work/SHA256SUMS" || err "could not download $base/SHA256SUMS"
+fetch "$base/SHA256SUMS" "$work/SHA256SUMS" || {
+  [ $? -eq 22 ] && err "release $VERSION was not found at $base" "check the version, or omit --version for the newest"
+  err "could not download $base/SHA256SUMS" "check the network and retry"
+}
+fetch "$base/$asset" "$work/$asset" || {
+  [ $? -eq 22 ] && err "release $VERSION has no archive $asset" "releases provide linux and darwin, amd64 and arm64"
+  err "could not download $base/$asset" "check the network and retry"
+}
 
 expected=$(awk -v name="$asset" '$2 == name || $2 == "*" name { n++; d = tolower($1) } END { if (n == 1) print d }' "$work/SHA256SUMS")
 printf '%s\n' "$expected" | grep -Eq '^[0-9a-f]{64}$' ||

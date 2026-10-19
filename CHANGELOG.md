@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- The installers retry a dropped connection, a timeout, or a server error up to three times, starting each try from an empty file. A missing release says so at once, and a failure to write the download says the temporary folder may be full instead of reporting a download failure. A temporary folder that cannot be created falls back to `~/.cache` or `%LOCALAPPDATA%`.
 ## 0.1.0-alpha.12
 
 Twelfth native prerelease. This remains an early library, not 1.0. Closes issues 20 through 35.

@@ -37,6 +37,15 @@ This is the concrete unmet requirement that justifies the exception.
   `%USERPROFILE%\bin` and the value kind are preserved.
 - No library, intake folder, configuration, or state is touched. Nothing else is
   downloaded or installed, and there is no Go fallback inside the scripts.
+- `SHA256SUMS` is fetched before the archive. Each download starts from an
+  empty file and is tried up to three times with a growing pause after a
+  dropped connection, a timeout, or a server error; curl also retries its own
+  transient HTTP errors. A missing release or archive (HTTP 404) fails at once
+  and names the version. A failure to write the file (curl exit 23, wget exit
+  3, or a .NET I/O error) fails at once and says the temporary folder may be
+  full, since a retry cannot help. An empty response is a failure. A temporary
+  folder that cannot be created falls back to `~/.cache` or
+  `%LOCALAPPDATA%`. The checksum is verified as before.
 
 ## Limits
 

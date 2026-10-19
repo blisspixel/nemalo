@@ -171,17 +171,50 @@ if ($Version -notmatch '^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.]+)?$') { Fail "inva
 
 $asset = "nemalo_${Version}_windows_${arch}.zip"
 $base = "https://github.com/$Repo/releases/download/v$Version"
-$work = Join-Path ([IO.Path]::GetTempPath()) ("nemalo-install-" + [Guid]::NewGuid().ToString("N"))
-New-Item -ItemType Directory -Path $work | Out-Null
+# Save-Url downloads one URL to a new file. A dropped connection, a timeout,
+# or a server error is tried again up to three times with a growing pause,
+# each time from an empty file. A missing release and a failure to write the
+# file are reported as such, since a retry cannot help. An empty response
+# is a failure.
+function Save-Url([string]$Uri, [string]$Path, [string]$Missing) {
+    for ($attempt = 1; ; $attempt++) {
+        Remove-Item -LiteralPath $Path -Force -ErrorAction SilentlyContinue
+        $problem = "the response was empty"
+        try {
+            Invoke-WebRequest -UseBasicParsing -Uri $Uri -OutFile $Path -TimeoutSec 120
+            if ((Test-Path -LiteralPath $Path) -and (Get-Item -LiteralPath $Path).Length -gt 0) { return }
+        } catch [System.IO.IOException] {
+            Fail "could not write $Path" "the temporary folder may be full; set TEMP to a folder with free space"
+        } catch {
+            $status = $null
+            if ($_.Exception.Response) { $status = [int]$_.Exception.Response.StatusCode }
+            if ($status -eq 404) { Fail $Missing "check the version, or omit -Version for the newest" }
+            $problem = $_.Exception.Message
+        }
+        Remove-Item -LiteralPath $Path -Force -ErrorAction SilentlyContinue
+        if ($attempt -ge 3) { Fail "could not download $Uri ($problem)" "check the network and retry" }
+        Start-Sleep -Seconds (2 * $attempt)
+    }
+}
+
+# A temporary folder that cannot be created falls back to the local
+# application data folder.
+$work = $null
+foreach ($parent in @([IO.Path]::GetTempPath(), $env:LOCALAPPDATA)) {
+    if (-not $parent) { continue }
+    $candidate = Join-Path $parent ("nemalo-install-" + [Guid]::NewGuid().ToString("N"))
+    try {
+        New-Item -ItemType Directory -Path $candidate -ErrorAction Stop | Out-Null
+        $work = $candidate
+        break
+    } catch {}
+}
+if (-not $work) { Fail "could not create a temporary folder" "set TEMP to a folder with free space" }
 try {
     Write-Host "Installing Nemalo $Version (windows/$arch) into $Dir"
     $archive = Join-Path $work $asset
-    try {
-        Invoke-WebRequest -UseBasicParsing -Uri "$base/$asset" -OutFile $archive
-        Invoke-WebRequest -UseBasicParsing -Uri "$base/SHA256SUMS" -OutFile (Join-Path $work "SHA256SUMS")
-    } catch {
-        Fail "could not download the release assets from $base" "check the version and your connection"
-    }
+    Save-Url "$base/SHA256SUMS" (Join-Path $work "SHA256SUMS") "release $Version was not found at $base"
+    Save-Url "$base/$asset" $archive "release $Version has no archive $asset"
     $entries = @(Get-Content -LiteralPath (Join-Path $work "SHA256SUMS") | ForEach-Object {
         if ($_ -match '^(?<digest>[0-9A-Fa-f]{64}) [ *](?<file>\S+)$' -and $Matches.file -eq $asset) { $Matches.digest.ToLower() }
     })
