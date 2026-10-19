@@ -59,6 +59,12 @@ semicolons. Languages split on semicolons, or commas when every piece is a
 short ASCII token of at most 16 bytes; otherwise the field stays one
 language string.
 
+Each result keeps the row's Type and Issued as `media_type` and `issued`,
+omitted when empty, and the CLI and TUI show them as a catalog claim, such
+as `Sound, issued 2007-02-03`. One title can name a text and its recordings
+(issue 24); without these fields they looked identical until evaluated.
+Open Library and Archive results leave both fields empty.
+
 The TUI cycles Open Library, Internet Archive, and Gutenberg. Gutenberg
 search shows a catalog field and does not say the search is a network
 request. That field is not applied to the other providers. `e` evaluates

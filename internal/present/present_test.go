@@ -25,3 +25,18 @@ func TestInventoryFindings(t *testing.T) {
 		t.Fatal(text)
 	}
 }
+
+func TestSearchShowsCatalogTypeAndIssued(t *testing.T) {
+	page := discovery.Page{Source: "gutenberg", Query: "pride", Order: discovery.OrderRelevance, Total: 2, Results: []discovery.Result{
+		{ID: "gutenberg:1342", Title: "Pride and Prejudice", MediaType: "Text", Issued: "1998-06-01"},
+		{ID: "gutenberg:20687", Title: "Pride and Prejudice", MediaType: "Sound\x1b[2J"},
+		{ID: "archive:x", Title: "Other"},
+	}}
+	out := Search(page)
+	if !strings.Contains(out, "   Catalog: Text, issued 1998-06-01\n") || !strings.Contains(out, `   Catalog: Sound\u001b[2J`+"\n") || strings.Count(out, "Catalog:") != 2 {
+		t.Fatal(out)
+	}
+	if CatalogClaim(discovery.Result{Issued: "2007-02-03"}) != "issued 2007-02-03" || CatalogClaim(discovery.Result{}) != "" {
+		t.Fatal("claim forms")
+	}
+}

@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"net/http"
 	"net/http/httptest"
@@ -193,5 +194,26 @@ func TestGutenbergFetchWritesACheckedCatalog(t *testing.T) {
 	}
 	if CatalogURL != "https://www.gutenberg.org/cache/epub/feeds/pg_catalog.csv" {
 		t.Fatal(CatalogURL)
+	}
+}
+
+// Editions with one title differ by the catalog's Type and Issued claims, so a
+// result keeps both (issue 24).
+func TestGutenbergResultsKeepTypeAndIssued(t *testing.T) {
+	g := &Gutenberg{Catalog: writeCatalog(t, "Text#,Type,Issued,Title,Language,Authors,Subjects,LoCC,Bookshelves\n"+
+		"1342,Text,1998-06-01,Pride and Prejudice,en,\"Austen, Jane\",Love stories,PR,Novels\n"+
+		"20686,Sound,2007-02-03,Pride and Prejudice,en,\"Austen, Jane\",Love stories,PR,Audio\n"+
+		"20687,Sound,,Pride and Prejudice,en,\"Austen, Jane\",Love stories,PR,Audio\n")}
+	page, err := g.SearchOrdered(context.Background(), "pride", OrderIdentifier, 10, 0)
+	if err != nil || len(page.Results) != 3 {
+		t.Fatal(page, err)
+	}
+	text, sound, undated := page.Results[0], page.Results[1], page.Results[2]
+	if text.MediaType != "Text" || text.Issued != "1998-06-01" || sound.MediaType != "Sound" || sound.Issued != "2007-02-03" || undated.MediaType != "Sound" || undated.Issued != "" {
+		t.Fatal(page.Results)
+	}
+	b, err := json.Marshal(page.Results)
+	if err != nil || !strings.Contains(string(b), `"media_type":"Sound","issued":"2007-02-03"`) || strings.Count(string(b), `"issued"`) != 2 {
+		t.Fatal(string(b), err)
 	}
 }

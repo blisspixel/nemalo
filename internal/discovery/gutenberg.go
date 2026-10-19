@@ -189,6 +189,8 @@ func (rec catalogRecord) result() Result {
 		Languages:   append([]string(nil), rec.languages...),
 		LandingPage: "https://www.gutenberg.org/ebooks/" + strconv.Itoa(rec.num),
 		Access:      "local_catalog",
+		MediaType:   rec.kind,
+		Issued:      rec.issued,
 	}
 }
 

@@ -81,10 +81,15 @@ func (m *model) populate(data any) {
 			if r.Access == "local_catalog" {
 				note = "Local catalog row. The Gutenberg website was not queried.\nNo file or download URL is listed.\n"
 			}
+			summary, claimed := fmt.Sprintf("%q | %q", r.Authors, r.Languages), ""
+			if claim := present.CatalogClaim(r); claim != "" {
+				summary += " | " + claim
+				claimed = "Catalog: " + claim + "\n"
+			}
 			m.entries = append(m.entries, entry{
 				title:   fmt.Sprintf("%q", r.Title),
-				summary: fmt.Sprintf("%q | %q", r.Authors, r.Languages),
-				detail:  fmt.Sprintf("%q\n\nAuthors: %q\nLanguages: %q\n\n%s\nID: %q\nSource page: %q\nDeclared access: %q\n", r.Title, r.Authors, r.Languages, note, r.ID, r.LandingPage, r.Access), sourceID: r.ID,
+				summary: summary,
+				detail:  fmt.Sprintf("%q\n\nAuthors: %q\nLanguages: %q\n%s\n%s\nID: %q\nSource page: %q\nDeclared access: %q\n", r.Title, r.Authors, r.Languages, claimed, note, r.ID, r.LandingPage, r.Access), sourceID: r.ID,
 			})
 		}
 	case library.Page:

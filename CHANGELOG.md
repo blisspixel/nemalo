@@ -3,6 +3,7 @@
 ## Unreleased
 
 - The reader flows a hard-wrapped EPUB paragraph, such as every Project Gutenberg paragraph, as one paragraph. Only a block end gets a blank row and the paragraph hold in word mode. An explicit line break, as in verse, keeps its line. `epub-text/2` and `epub-nav/1` ranges now list these structural line feeds in `breaks`; the text, its offsets, and representation identities are unchanged. Closes issue 23.
+- Gutenberg search results show the catalog's Type and Issued date, such as `Text, issued 1998-06-01` or `Sound, issued 2007-02-03`, in the CLI and TUI, and as `media_type` and `issued` in JSON. A text and its recordings no longer look identical. Closes issue 24.
 
 ## 0.1.0-alpha.11
 

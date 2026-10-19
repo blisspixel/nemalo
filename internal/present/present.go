@@ -7,6 +7,7 @@ import (
 
 	"github.com/blisspixel/nemalo/internal/discovery"
 	"github.com/blisspixel/nemalo/internal/inventory"
+	"github.com/blisspixel/nemalo/internal/textsafe"
 )
 
 func Search(page discovery.Page) string {
@@ -32,9 +33,26 @@ func Search(page discovery.Page) string {
 		b.WriteString("No results in this page.\n")
 	}
 	for i, r := range page.Results {
-		fmt.Fprintf(&b, "\n%d. %q\n   ID: %q\n   Authors: %q\n   Languages: %q\n   %q\n   Discovery metadata; download availability not resolved.\n", page.Offset+i+1, r.Title, r.ID, r.Authors, r.Languages, r.LandingPage)
+		fmt.Fprintf(&b, "\n%d. %q\n   ID: %q\n   Authors: %q\n   Languages: %q\n", page.Offset+i+1, r.Title, r.ID, r.Authors, r.Languages)
+		if claim := CatalogClaim(r); claim != "" {
+			fmt.Fprintf(&b, "   Catalog: %s\n", claim)
+		}
+		fmt.Fprintf(&b, "   %q\n   Discovery metadata; download availability not resolved.\n", r.LandingPage)
 	}
 	return b.String()
+}
+
+// CatalogClaim is a catalog row's type and issue date as the catalog states
+// them, for example "Sound, issued 2007-02-03", or "" when it states neither.
+func CatalogClaim(r discovery.Result) string {
+	claim := textsafe.Visible(r.MediaType)
+	if r.Issued != "" {
+		if claim != "" {
+			claim += ", "
+		}
+		claim += "issued " + textsafe.Visible(r.Issued)
+	}
+	return claim
 }
 
 func Catalog(file discovery.CatalogFile) string {

@@ -17,6 +17,10 @@ type Result struct {
 	Languages   []string `json:"languages"`
 	LandingPage string   `json:"landing_page"`
 	Access      string   `json:"access_type"`
+	// MediaType and Issued are a local Gutenberg catalog row's Type and
+	// Issued claims, such as Text or Sound; other sources leave them empty.
+	MediaType string `json:"media_type,omitempty"`
+	Issued    string `json:"issued,omitempty"`
 }
 
 // Result orders. Open Library and Archive relevance is that provider's ranking.
