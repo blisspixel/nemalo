@@ -113,7 +113,11 @@ Inventory does not extract archives, validate books, or scan for malware.
   Bounded file health assessment, without rendering content.
 
 Options:
-  --scan, --expected-bytes N, --expected-sha256 HASH
+  --scan, --epubcheck, --expected-bytes N, --expected-sha256 HASH
+
+--epubcheck runs the installed EPUBCheck on an EPUB snapshot. Errors it
+reports, or a check that could not run, are review findings; warnings are
+listed. Nemalo never installs or downloads EPUBCheck.
 
 Check uses a private temporary snapshot (up to 256 MiB). EPUB text and
 document counts are measured; fixed pages, PDF page counts, and audio

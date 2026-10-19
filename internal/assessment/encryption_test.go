@@ -7,6 +7,8 @@ import (
 	"slices"
 	"strings"
 	"testing"
+
+	"github.com/blisspixel/nemalo/internal/conformance"
 )
 
 func encryptionXML(entries ...string) string {
@@ -81,5 +83,26 @@ func TestObfuscatedFontIsNotServedAsAResource(t *testing.T) {
 	}
 	if _, got, err := VisitEPUBResource(context.Background(), bytes.NewReader(data), int64(len(data)), nil, "image2.png", 1<<20); err != nil || string(got) != "plain" {
 		t.Fatal(got, err)
+	}
+}
+
+// A requested EPUBCheck that cannot run is a finding, never a pass, and the
+// option leaves other formats alone.
+func TestRequestedEPUBCheckThatCannotRunIsAFinding(t *testing.T) {
+	saved := conformance.LookPath
+	conformance.LookPath = func() (string, error) { return "", errors.New("not installed") }
+	t.Cleanup(func() { conformance.LookPath = saved })
+	p := write(t, "clean.epub", book(t, body, nil))
+	plain, err := Check(context.Background(), p, Options{}, nil)
+	if err != nil || plain.Status != "limited_checks_passed" || plain.Conformance != nil {
+		t.Fatal(plain.Status, err)
+	}
+	r, _ := Check(context.Background(), p, Options{EPUBCheck: true}, nil)
+	if r.Status != "needs_review" || r.Conformance == nil || r.Conformance.Status != "unavailable" || !slices.ContainsFunc(r.Findings, func(f string) bool { return strings.Contains(f, "EPUBCheck") }) {
+		t.Fatal(r.Status, r.Conformance, r.Findings)
+	}
+	track := write(t, "track.mp3", mp3Frames(10))
+	if r, err := Check(context.Background(), track, Options{EPUBCheck: true}, nil); err != nil || r.Conformance != nil || r.Status != "limited_checks_passed" {
+		t.Fatal(r.Status, err)
 	}
 }

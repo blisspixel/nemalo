@@ -260,7 +260,9 @@ index without damage or truncation can be checked
 obfuscation is a recorded fact, not DRM, while other encryption and DRM
 licenses stay restricted ([decision 0036](docs/decisions/0036-epub-font-obfuscation.md)).
 Holdings filter by declared base language without guessing missing tags
-([decision 0037](docs/decisions/0037-base-language-filter.md)).
+([decision 0037](docs/decisions/0037-base-language-filter.md)). `check
+--epubcheck` runs an installed EPUBCheck as optional conformance evidence
+([decision 0038](docs/decisions/0038-optional-epubcheck.md)).
 Recording and track identities and cross-file work relationships remain. Depends on milestone 2.
 
 Deliver EPUB package checks, content checks, scanner adapters, metadata handling,

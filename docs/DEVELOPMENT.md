@@ -135,6 +135,7 @@ JSON escapes terminal-sensitive Unicode without changing parsed data.
 nemalo check /path/to/book.epub --json
 nemalo check /path/to/paper.pdf --expected-bytes 123456 --expected-sha256 HASH
 nemalo check /path/to/book.epub --scan
+nemalo check /path/to/book.epub --epubcheck
 ```
 
 Supply real known size/hash values in the second example. `check` requires one
@@ -153,10 +154,17 @@ non-whitespace body-text characters. EPUB is internally ZIP; a plain ZIP or RAR
 does not pass its package checks. Page count stays unknown. Text metrics are not
 DOM validation or proof of semantic completeness. Positive script, event,
 embedded-resource, and encryption indicators require review; absence proves nothing.
-PDF checks only recognize header/end markers; MP3 checks only recognize candidate
-signatures. Page trees, PDF active content, and audio decoding remain unsupported.
+Font obfuscation alone is recorded, not a finding
+([decision 0036](decisions/0036-epub-font-obfuscation.md)). PDF checks walk the page
+tree and active content without reading page content
+([decision 0032](decisions/0032-pdf-checked-policy.md)); MP3 checks index frames
+without decoding ([decision 0033](decisions/0033-mp3-checked-policy.md)). Audio
+decoding remains unsupported.
 
 `--expected-bytes` and `--expected-sha256` compare known external expectations.
+`--epubcheck` runs an installed EPUBCheck on an EPUB snapshot; reported errors,
+or a check that could not run, are review findings, and it is not part of the
+checked policy ([decision 0038](decisions/0038-optional-epubcheck.md)).
 Pass a publisher SHA-256 when one exists. A match shows the bytes are the
 published bytes. A locally computed hash alone does not authenticate a source,
 and a checksum does not prove the file is free of malware. File size without

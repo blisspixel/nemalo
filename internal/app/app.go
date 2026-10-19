@@ -505,7 +505,7 @@ func (s Service) doctor(paths config.Paths, cfg config.Config, lookup func(strin
 		{"clamscan", "Recommended on Linux and macOS for a file you did not produce. Windows uses Microsoft Defender instead. A no-detection result is not proof the file is safe."},
 		{"MpCmdRun.exe", "Recommended on Windows for a file you did not produce. This is the built-in Microsoft Defender scanner. A no-detection result is not proof the file is safe."},
 		{"7z", "optional future archive adapter"},
-		{"epubcheck", "optional future EPUB conformance check"},
+		{"epubcheck", "optional EPUB conformance check for check --epubcheck"},
 	} {
 		_, err := lookup(item.name)
 		d.Capabilities = append(d.Capabilities, Capability{Name: item.name, Available: err == nil, Recommended: recommendedScanner(item.name), Use: item.use})

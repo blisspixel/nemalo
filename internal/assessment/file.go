@@ -14,12 +14,16 @@ import (
 	"strings"
 	"time"
 
+	"github.com/blisspixel/nemalo/internal/conformance"
 	"github.com/blisspixel/nemalo/internal/safeio"
 	"github.com/blisspixel/nemalo/internal/scanner"
 )
 
 type Options struct {
-	Scan           bool
+	Scan bool
+	// EPUBCheck runs the installed EPUBCheck on an EPUB snapshot. Errors it
+	// reports, and a requested check that did not complete, are findings.
+	EPUBCheck      bool
 	ExpectedBytes  int64
 	ExpectedSHA256 string
 }
@@ -29,16 +33,17 @@ type Scanner interface {
 }
 
 type Report struct {
-	File           string         `json:"file"`
-	CheckedAt      time.Time      `json:"checked_at"`
-	Bytes          int64          `json:"bytes"`
-	SHA256         string         `json:"sha256"`
-	DetectedFormat string         `json:"detected_format"`
-	Status         string         `json:"status"`
-	Checks         Checks         `json:"checks"`
-	Antivirus      scanner.Result `json:"antivirus"`
-	Findings       []string       `json:"findings"`
-	Limitations    []string       `json:"limitations"`
+	File           string              `json:"file"`
+	CheckedAt      time.Time           `json:"checked_at"`
+	Bytes          int64               `json:"bytes"`
+	SHA256         string              `json:"sha256"`
+	DetectedFormat string              `json:"detected_format"`
+	Status         string              `json:"status"`
+	Checks         Checks              `json:"checks"`
+	Antivirus      scanner.Result      `json:"antivirus"`
+	Conformance    *conformance.Result `json:"conformance,omitempty"`
+	Findings       []string            `json:"findings"`
+	Limitations    []string            `json:"limitations"`
 }
 
 func (o Options) Validate() error {
@@ -99,6 +104,11 @@ func CheckInRoot(ctx context.Context, root *os.Root, name string, options Option
 			av = scanner.New()
 		}
 		if err := p.bindScan(ctx, av.Scan(ctx, p.snapshot)); err != nil {
+			return p.report, err
+		}
+	}
+	if options.EPUBCheck && p.report.DetectedFormat == "epub" {
+		if err := p.bindConformance(ctx, conformance.CheckEPUB(ctx, p.snapshot)); err != nil {
 			return p.report, err
 		}
 	}
@@ -213,6 +223,43 @@ func prepare(ctx context.Context, root *os.Root, name string, options Options) (
 		return p, ctx.Err()
 	}
 	return p, nil
+}
+
+// bindConformance records an EPUBCheck run on the snapshot, revalidated as a
+// scan is. Reported errors and a run that did not complete are findings.
+func (p *prepared) bindConformance(ctx context.Context, result conformance.Result) error {
+	p.report.Conformance = &result
+	if err := p.revalidate(ctx); err != nil {
+		p.report.Status = "incomplete"
+		return errors.New("conformance snapshot changed or could not be revalidated")
+	}
+	switch result.Status {
+	case "passed":
+		return nil
+	case "errors_reported":
+		p.report.Findings = append(p.report.Findings, "EPUBCheck reported errors")
+	default:
+		p.report.Findings = append(p.report.Findings, "EPUBCheck was requested but did not complete: "+result.Status)
+	}
+	if p.report.Status == "limited_checks_passed" {
+		p.report.Status = "needs_review"
+	}
+	return nil
+}
+
+// revalidate proves the snapshot still holds the assessed bytes.
+func (p *prepared) revalidate(ctx context.Context) error {
+	if _, err := p.f.Seek(0, io.SeekStart); err != nil {
+		return err
+	}
+	verified := sha256.New()
+	_, hashErr := io.Copy(verified, io.LimitReader(contextReader{ctx, p.f}, p.n+1))
+	info, statErr := os.Lstat(p.snapshot)
+	identity, identityErr := p.f.Stat()
+	if hashErr != nil || statErr != nil || identityErr != nil || !os.SameFile(info, identity) || !info.Mode().IsRegular() || info.Size() != p.n || hex.EncodeToString(verified.Sum(nil)) != p.report.SHA256 {
+		return errors.New("snapshot changed")
+	}
+	return nil
 }
 
 // bindScan records a scan of the snapshot and proves the scanned bytes were

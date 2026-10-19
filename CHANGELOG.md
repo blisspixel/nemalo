@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- `check --epubcheck` runs an installed EPUBCheck on an EPUB and lists its errors and warnings. Reported errors, or a requested check that could not run, are review findings. It is optional and not part of the checked policy ([decision 0038](docs/decisions/0038-optional-epubcheck.md)).
 - `library list LIBRARY --language TAG` and MCP `library_list` `language` keep holdings that declare that base language, so `en`, `en-US`, and `eng` are one. Free text such as `English` is never read as a language, and holdings without a readable tag are counted ([decision 0037](docs/decisions/0037-base-language-filter.md)).
 - An EPUB whose only encryption is font obfuscation is no longer held for review or refused by content access; the obfuscated fonts are recorded. Other encryption, a wrapped key, an unreadable declaration, or an Adobe or LCP DRM license still keeps it in review, and an obfuscated font is never served as a resource ([decision 0036](docs/decisions/0036-epub-font-obfuscation.md)).
 
