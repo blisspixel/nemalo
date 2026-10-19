@@ -59,8 +59,9 @@ func oaiFor(id, license string) string {
 
 func testArxiv(t *testing.T, tr *arxivTransport) *Arxiv {
 	t.Helper()
+	// Wide enough for coarse Windows timers; the product pace is three seconds.
 	saved := arxivPace
-	arxivPace = 20 * time.Millisecond
+	arxivPace = 100 * time.Millisecond
 	t.Cleanup(func() { arxivPace = saved })
 	return &Arxiv{Client: &http.Client{Transport: tr}}
 }
@@ -84,7 +85,7 @@ func TestArxivEvaluateResolvesVersionsAndLicenses(t *testing.T) {
 		}
 	}
 	for i := 1; i < len(tr.at); i++ {
-		if tr.at[i].Sub(tr.at[i-1]) < 15*time.Millisecond {
+		if tr.at[i].Sub(tr.at[i-1]) < 90*time.Millisecond {
 			t.Fatal("requests were not paced")
 		}
 	}
