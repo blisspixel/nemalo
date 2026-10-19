@@ -26,6 +26,17 @@ books. The command exits 1 when the library needs attention. Files outside
 `assets/` and `cleanup/` in the library folder are the user's and are not
 examined. `library audit LIBRARY` remains as the narrower holdings comparison.
 
+## Interrupted journal writes
+
+Added 2026-10-19. A journal whose last line has no line feed was cut short by
+a crash or a full disk while that line was written; it holds no record.
+Readers use the complete lines, `library check` reports
+`interrupted_journal_write` for that journal, and the next writer, under the
+writer lock, removes the unterminated bytes before it appends. More than one
+record's worth of unterminated bytes (64 KiB) is not a torn write: it stays
+for review and nothing is cut. Tests fill the disk during each of an import's
+three journal writes, then check, list, and finish the import.
+
 ## Validation
 
 Synthetic tests cover a healthy library with review counts and its next step;

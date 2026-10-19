@@ -101,6 +101,11 @@ func CheckLibrary(ctx context.Context, directory string) (r LibraryCheck, err er
 		}
 	}
 
+	for _, name := range []string{operationsName, holdingsName, cleanupName, bookmarkName} {
+		if tornTail(control.root, name) {
+			issue("interrupted_journal_write", ".nemalo/"+name, "an interrupted write, such as a full disk, left an incomplete last line; it holds no record, and the next library write removes it")
+		}
+	}
 	// Unfinished operations.
 	if n := len(events); n > 0 {
 		switch events[n-1].Event {

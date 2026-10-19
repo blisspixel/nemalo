@@ -287,8 +287,13 @@ journaled crash recovery, and restore are implemented in CLI, JSON, and TUI
 sources are retained, with no purge. `library check` reports missing, changed,
 untracked, and unscanned entries, unfinished operations, and held copies without
 changing anything ([decision 0024](docs/decisions/0024-library-check.md)).
-Fault injection for disk-full and scanner-failure cases remains. Depends on
-milestone 3.
+Disk-full and scanner-failure faults are injected in tests: a full disk
+during an import copy, a journal line, a cleanup copy, and an export, and a
+scanner that is unavailable, incomplete, failing, or timing out. Each leaves
+sources intact and the library recoverable. A torn last journal line holds
+no record, is reported by `library check`, and is removed by the next write.
+Writes of known size refuse up front when the disk lacks room. Permission,
+name-conflict, and concurrent-run fault cases remain. Depends on milestone 3.
 Required for a production cleanup release.
 
 Deliver plan-based source cleanup, review handling, library checking, and interruption

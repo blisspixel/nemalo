@@ -196,7 +196,7 @@ func copyHolding(ctx context.Context, root string, h Holding, dest *os.Root, nam
 		return err
 	}
 	sum := sha256.New()
-	n, copyErr := io.Copy(io.MultiWriter(out, sum), io.LimitReader(importReader{ctx, in}, h.Bytes+1))
+	n, copyErr := io.Copy(io.MultiWriter(writeFault("export copy", out), sum), io.LimitReader(importReader{ctx, in}, h.Bytes+1))
 	syncErr, closeErr := out.Sync(), out.Close()
 	if err := errors.Join(copyErr, syncErr, closeErr); err != nil || n != h.Bytes || hex.EncodeToString(sum.Sum(nil)) != h.SHA256 {
 		_ = dest.Remove(name)

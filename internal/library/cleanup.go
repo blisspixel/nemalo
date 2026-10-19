@@ -647,7 +647,7 @@ func copyVerified(ctx context.Context, in io.ReaderAt, root *os.Root, name strin
 		return false, err
 	}
 	sum := sha256.New()
-	n, copyErr := io.Copy(io.MultiWriter(out, sum), io.LimitReader(importReader{ctx, io.NewSectionReader(in, 0, f.Bytes+1)}, f.Bytes+1))
+	n, copyErr := io.Copy(io.MultiWriter(writeFault("cleanup copy", out), sum), io.LimitReader(importReader{ctx, io.NewSectionReader(in, 0, f.Bytes+1)}, f.Bytes+1))
 	syncErr, closeErr := out.Sync(), out.Close()
 	if err := errors.Join(copyErr, syncErr, closeErr); err != nil {
 		_ = root.Remove(name)

@@ -178,10 +178,64 @@ func readOptional(root *os.Root, name string, max int) ([]byte, error) {
 	}
 	defer f.Close()
 	b, err := io.ReadAll(io.LimitReader(f, int64(max)+1))
-	if err != nil || len(b) == 0 || len(b) > max || b[len(b)-1] != '\n' {
+	if err != nil || len(b) == 0 || len(b) > max {
 		return nil, ErrStateReview
 	}
+	if b[len(b)-1] != '\n' {
+		// A write interrupted before its line feed, by a crash or a full
+		// disk, never committed its record: only complete lines count, and
+		// the next writer removes the rest. More than one record's worth of
+		// unterminated bytes is not a torn write.
+		cut := bytes.LastIndexByte(b, '\n')
+		if len(b)-(cut+1) > maxRecord {
+			return nil, ErrStateReview
+		}
+		if cut < 0 {
+			return nil, nil
+		}
+		b = b[:cut+1]
+	}
 	return b, nil
+}
+
+// tornTail reports a journal whose last line was cut short by an interrupted
+// write.
+func tornTail(root *os.Root, name string) bool {
+	f, err := openRegular(root, name, os.O_RDONLY)
+	if err != nil {
+		return false
+	}
+	defer f.Close()
+	st, err := f.Stat()
+	if err != nil || st.Size() == 0 {
+		return false
+	}
+	var tail [1]byte
+	_, err = f.ReadAt(tail[:], st.Size()-1)
+	return err == nil && tail[0] != '\n'
+}
+
+// dropTornTail cuts an unterminated last line from a journal open for
+// writing, under the writer lock, so the next record starts on its own line.
+// It cuts at most one record's worth of bytes.
+func dropTornTail(f *os.File, size int64) (int64, error) {
+	window := min(size, int64(maxRecord)+1)
+	buf := make([]byte, window)
+	if _, err := f.ReadAt(buf, size-window); err != nil {
+		return size, ErrStateReview
+	}
+	cut := bytes.LastIndexByte(buf, '\n')
+	if cut < 0 && size > int64(maxRecord) {
+		return size, ErrStateReview
+	}
+	keep := size - window + int64(cut) + 1
+	if err := f.Truncate(keep); err != nil {
+		return size, err
+	}
+	if err := f.Sync(); err != nil {
+		return size, err
+	}
+	return keep, nil
 }
 
 func parseOperations(b []byte, libraryID string) ([]operation, error) {

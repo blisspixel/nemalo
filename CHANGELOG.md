@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- A library journal line cut short by a crash or a full disk no longer blocks the library. Its complete lines are read, `library check` reports the interrupted write, and the next library write removes the unterminated bytes. A longer unterminated tail is kept for review. Tests fill the disk during import copies, journal lines, cleanup copies, and exports, and fail the scanner, and each leaves the sources intact and the library recoverable.
 - Downloads, imports, ZIP extraction, cleanup copies, and exports check the free space of their folder first and refuse a write that would leave less than 64 MiB free, naming the needed and free sizes. An import is refused before any journal entry. Free space that cannot be read does not refuse a write.
 - A transport failure is judged by its cause: a reset, refused, or unreachable socket, a temporary DNS failure, a timeout, or a body that ended early. A refused destination or other request error is not retried.
 - Search, evaluation, and the Gutenberg bibliographic record retry a dropped connection, a timeout, or HTTP 429, 500, 502, 503, or 504 at most twice, inside the same 30-second deadline and one-request-per-second pacing, after any `Retry-After`. A wait past the deadline ends the request and says when to try again. A 404 or other error is not retried, and the record is never fetched from another host.

@@ -982,7 +982,7 @@ func copyPartial(ctx context.Context, root *os.Root, source, partial string, siz
 		return err
 	}
 	sum := sha256.New()
-	n, copyErr := io.Copy(io.MultiWriter(out, sum), io.LimitReader(importReader{ctx, in}, size+1))
+	n, copyErr := io.Copy(io.MultiWriter(writeFault("import copy", out), sum), io.LimitReader(importReader{ctx, in}, size+1))
 	syncErr := out.Sync()
 	closeErr := out.Close()
 	after, statErr := in.Stat()
@@ -1058,19 +1058,25 @@ func appendCanonical(ctx context.Context, control *control, name string, max int
 	if err != nil {
 		return err
 	}
-	if st.Size() > 0 {
+	size := st.Size()
+	if size > 0 {
 		var tail [1]byte
-		if _, err = f.ReadAt(tail[:], st.Size()-1); err != nil || tail[0] != '\n' {
+		if _, err = f.ReadAt(tail[:], size-1); err != nil {
 			return ErrStateReview
 		}
+		if tail[0] != '\n' {
+			if size, err = dropTornTail(f, size); err != nil {
+				return err
+			}
+		}
 	}
-	if st.Size()+int64(len(data)) > int64(max) {
+	if size+int64(len(data)) > int64(max) {
 		return errors.New("library journal exceeds its byte limit; existing records were preserved")
 	}
 	if _, err = f.Seek(0, io.SeekEnd); err != nil {
 		return err
 	}
-	if _, err = f.Write(data); err != nil {
+	if _, err = writeFault("journal", f).Write(data); err != nil {
 		return err
 	}
 	return f.Sync()
