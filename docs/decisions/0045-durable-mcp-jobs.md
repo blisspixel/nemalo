@@ -70,7 +70,8 @@ Agents can start long operations, return later, and read what happened, and a
 killed server leaves no job looking alive. An interrupted acquisition keeps
 its packet and resumes through the existing validator-bound resume
 ([decision 0023](0023-validator-bound-download-resume.md)). Jobs are per
-user, not per library, and are not visible in the CLI or TUI yet. Ingest,
+user, not per library. `nemalo jobs list`, `jobs get ID`, and `jobs cancel
+ID` read and cancel them from a terminal; the TUI does not show them yet. Ingest,
 cleanup, and purge are not job tools: cleanup and purge stay out of MCP.
 
 ## Validation

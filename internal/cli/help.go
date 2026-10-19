@@ -23,7 +23,7 @@ Keep      library init, import, ingest, list, audit, check, cleanup,
           restore, rescan, open, export, recordings, snapshot, status
 Read      read LIBRARY --root LIBRARY --asset sha256:HASH,
           content units, navigation, pages, read, locate, bookmark
-Tools     tui, doctor, mcp serve, version
+Tools     tui, doctor, mcp serve, jobs, version
 
 First book: catalog fetch gutenberg, search, evaluate --files, acquire,
 library init, library import --apply, read. Each step prints the next.
@@ -197,6 +197,17 @@ results stay in review. Snapshots hash all regular
 files, account for excluded links, refuse incomplete inventories, and never
 overwrite. A snapshot audit requires --root; the catalog cannot authorize a
 scan. A library audit compares managed holdings only.
+`,
+	"jobs": `nemalo jobs list
+  List durable jobs that MCP servers started, newest first.
+nemalo jobs get job:ID
+  Show one job: status, last progress, and its result or error.
+nemalo jobs cancel job:ID
+  Ask the process running the job to stop it.
+
+Jobs run only inside nemalo mcp serve --allow-write. A job whose process
+ended before it finished is recorded as interrupted; start it again, with
+resume for an acquisition.
 `,
 	"bookmark": `nemalo bookmark enable LIBRARY
   Allow explicit local bookmarks in this library.

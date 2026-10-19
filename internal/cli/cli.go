@@ -65,7 +65,7 @@ func Execute(ctx context.Context, args []string, out, errOut io.Writer, service 
 	command := args[0]
 	action := ""
 	arguments := args[1:]
-	if (command == "library" || command == "content" || command == "mcp" || command == "bookmark" || command == "catalog") && len(arguments) > 0 {
+	if (command == "library" || command == "content" || command == "mcp" || command == "bookmark" || command == "catalog" || command == "jobs") && len(arguments) > 0 {
 		action = arguments[0]
 		arguments = arguments[1:]
 		if action == "--help" || action == "-h" {
@@ -200,7 +200,7 @@ func Execute(ctx context.Context, args []string, out, errOut io.Writer, service 
 		}
 		return write(service.ContentCapabilities(), nil, 0)
 	}
-	if command != "doctor" && command != "search" && command != "evaluate" && command != "acquire" && command != "inspect" && command != "check" && command != "tui" && command != "library" && command != "content" && command != "mcp" && command != "read" && command != "bookmark" && command != "catalog" {
+	if command != "doctor" && command != "search" && command != "evaluate" && command != "acquire" && command != "inspect" && command != "check" && command != "tui" && command != "library" && command != "content" && command != "mcp" && command != "read" && command != "bookmark" && command != "catalog" && command != "jobs" {
 		return write(nil, fmt.Errorf("unknown command %q; use nemalo help", command), 2)
 	}
 	p, err := paths()
@@ -713,6 +713,32 @@ func Execute(ctx context.Context, args []string, out, errOut io.Writer, service 
 			return write(nil, errors.New("doctor takes no arguments"), 2)
 		}
 		return write(service.Doctor(p, c, app.Lookup), nil, 0)
+	case "jobs":
+		// The durable jobs MCP servers started, from their journals.
+		store, err := jobs.Open(filepath.Join(p.State, "jobs"), 1, 0)
+		if err != nil {
+			return write(nil, err, 1)
+		}
+		defer store.Close()
+		switch {
+		case action == "list" && flags.NArg() == 0:
+			list, err := store.List()
+			if err != nil {
+				return write(list, err, 1)
+			}
+			return write(list, nil, 0)
+		case (action == "get" || action == "cancel") && flags.NArg() == 1:
+			get := store.Get
+			if action == "cancel" {
+				get = store.Cancel
+			}
+			job, err := get(flags.Arg(0))
+			if err != nil {
+				return write(job, err, 1)
+			}
+			return write(job, nil, 0)
+		}
+		return write(nil, errors.New("use jobs list, jobs get ID, or jobs cancel ID"), 2)
 	case "catalog":
 		if action != "fetch" || flags.NArg() != 1 || flags.Arg(0) != "gutenberg" || *output == "" {
 			return write(nil, errors.New("use catalog fetch gutenberg --output FILE"), 2)
@@ -1062,6 +1088,12 @@ func printData(out io.Writer, data any) error {
 		return err
 	case library.PurgeResult:
 		_, err := io.WriteString(out, present.Purge(value))
+		return err
+	case []jobs.Job:
+		_, err := io.WriteString(out, present.Jobs(value))
+		return err
+	case jobs.Job:
+		_, err := io.WriteString(out, present.Job(value))
 		return err
 	case library.RestoreResult:
 		_, err := io.WriteString(out, present.Restore(value))

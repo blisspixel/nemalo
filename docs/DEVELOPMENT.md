@@ -13,7 +13,7 @@ needed for the application, tests, or first-party tooling.
 `library open`, `library export`, `library init`, `library status`, `bookmark`,
 `content units`, `content navigation`,
 `content read`, `content locate`, `content source`, `content resource`, `content capabilities`,
-`read`, `mcp serve`, and `tui` are implemented.
+`read`, `mcp serve`, `jobs`, and `tui` are implemented.
 Search defaults to Open Library work metadata; `--source archive` selects Internet
 Archive text/audio item search. `--source gutenberg` reads a local
 `pg_catalog.csv` (`--catalog`, `gutenberg_catalog`, or `NEMALO_GUTENBERG_CATALOG`)
@@ -394,6 +394,8 @@ returned and refuses a changed source, assessment, or scan choice
 in the state folder, which outlives the call and the connection; the server
 finishes running jobs before it exits, and a job whose process ended is
 recorded as interrupted ([decision 0045](decisions/0045-durable-mcp-jobs.md)).
+`nemalo jobs list`, `jobs get ID`, and `jobs cancel ID` read and cancel the
+same jobs from a terminal.
 Tool paths must resolve inside a `--scope`
 directory or the configured library and review folders. Stdout carries protocol
 messages only. See [agent integration](AGENT-INTEGRATION.md) and

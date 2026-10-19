@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- `nemalo jobs list`, `jobs get ID`, and `jobs cancel ID` read and cancel the durable jobs MCP servers started, from the same journals.
 - `library ingest` reads split 7z sets (`NAME.7z.001`, ...) and RAR volume sets (`NAME.part1.rar`, ...) whole through their first volume. A split 7z is joined in order; a RAR set is read only when 7-Zip names it multi-volume with exactly the volumes found. The other volumes are reported as parts of the set, and a set with a missing volume is preserved ([decision 0046](docs/decisions/0046-archive-volume-sets.md)).
 - `nemalo mcp serve --allow-write` runs long work as durable jobs: `library_rescan_start`, and with `--allow-network` `acquisition_start` for a selected Archive file or a whole recording, return a job ID at once, and `job_get`, `job_list`, and `job_cancel` read and stop them. Each job is journaled in the state folder and owned through an operating system lock, so its status, progress, and result outlive the call and the connection; the server finishes running jobs before it exits, and a job whose process ended is recorded as interrupted and can be resumed. Only Archive sources are accepted, a server shows only jobs inside its scopes, another process can cancel a job, jobs queued at disconnect do not start, and servers sharing a state folder share one bound ([decision 0045](docs/decisions/0045-durable-mcp-jobs.md)).
 - An acquisition holds a lock named by its output folder, so two acquisitions, from jobs or terminals, never write one packet at once.

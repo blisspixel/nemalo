@@ -88,7 +88,7 @@ AI service. The agent interface (MCP) uses the same application services.
   and rescan as durable jobs that outlive the connection.
 
 Old-style RAR volume names, cleanup of RAR and 7z archives,
-recording identity beyond LibriVox, and CLI and TUI views of jobs are planned. Single-file import is not
+recording identity beyond LibriVox, and a TUI view of jobs are planned. Single-file import is not
 a full checked-library policy.
 File checks report limited evidence, never a safety or completeness guarantee.
 See [current capabilities and limits](docs/DEVELOPMENT.md) and the [roadmap](ROADMAP.md).
