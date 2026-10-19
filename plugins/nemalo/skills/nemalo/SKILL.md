@@ -23,7 +23,9 @@ delete anything.
 
 - `library_list` with a library directory lists managed holdings. Filter with
   `query` (title, language, file name, source, or hash), `format`
-  (`epub`, `pdf`, `mp3`), and `status` (`checked`, `review`). Page with `limit`
+  (`epub`, `pdf`, `mp3`), `status` (`checked`, `review`), and `language`
+  (a base language such as `en`; `language_unknown` counts holdings without a
+  readable tag). Page with `limit`
   and `offset` and report the total.
 - A holding is identified by `sha256:HASH`. Use that exact ID for content tools.
 - An audiobook track lists its place as "Track N of M" from the source's declared

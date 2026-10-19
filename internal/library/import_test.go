@@ -770,3 +770,37 @@ func TestImportPlanBindsAnApplyToItsPreview(t *testing.T) {
 		t.Fatal(done, err)
 	}
 }
+
+// A language filter matches the declared base language across forms and
+// counts the holdings that declare none, rather than dropping them unseen.
+func TestHoldingsLanguageFilterMatchesBaseLanguages(t *testing.T) {
+	ctx := context.Background()
+	root := t.TempDir()
+	if _, err := Initialize(ctx, root); err != nil {
+		t.Fatal(err)
+	}
+	put := func(path string) {
+		if _, err := Import(ctx, ImportRequest{Library: root, Source: path, Apply: true}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	put(writeEPUBMetadata(t, t.TempDir(), "Japanese only.", ""))
+	put(writeEPUBMetadata(t, t.TempDir(), "Also English.", "<dc:language>en-US</dc:language>"))
+	track := filepath.Join(t.TempDir(), "track.mp3")
+	if err := os.WriteFile(track, mp3Track(20), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	put(track)
+	for want, total := range map[string]int{"eng": 1, "en": 1, "EN-gb": 1, "ja": 2, "jpn": 2, "fr": 0} {
+		p, err := FindManagedFiltered(ctx, root, ManagedFilter{Format: "all", Status: "all", Language: want, Limit: 10})
+		if err != nil || p.Total != total || p.LanguageUnknown != 1 || len(p.Holdings) != total {
+			t.Fatal(want, p.Total, p.LanguageUnknown, err)
+		}
+	}
+	if _, err := FindManagedFiltered(ctx, root, ManagedFilter{Format: "all", Status: "all", Language: "English", Limit: 10}); err == nil {
+		t.Fatal("free text accepted as a language filter")
+	}
+	if p, err := FindManagedFiltered(ctx, root, ManagedFilter{Format: "all", Status: "all", Limit: 10}); err != nil || p.Total != 3 || p.LanguageUnknown != 0 || p.Language != "" {
+		t.Fatal(p, err)
+	}
+}

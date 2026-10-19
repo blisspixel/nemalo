@@ -415,6 +415,11 @@ func (s Service) ManagedHoldings(ctx context.Context, directory, query, format, 
 	return library.FindManaged(ctx, directory, query, format, status, limit, offset)
 }
 
+// ManagedHoldingsFiltered lists holdings with a base language filter.
+func (s Service) ManagedHoldingsFiltered(ctx context.Context, directory string, filter library.ManagedFilter) (library.ManagedPage, error) {
+	return library.FindManagedFiltered(ctx, directory, filter)
+}
+
 func (s Service) Audit(ctx context.Context, file, root string, limits inventory.Limits) (library.Audit, error) {
 	c, err := library.Load(file)
 	if err != nil {

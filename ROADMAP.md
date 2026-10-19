@@ -259,6 +259,8 @@ index without damage or truncation can be checked
 ([decision 0033](docs/decisions/0033-mp3-checked-policy.md)). EPUB font
 obfuscation is a recorded fact, not DRM, while other encryption and DRM
 licenses stay restricted ([decision 0036](docs/decisions/0036-epub-font-obfuscation.md)).
+Holdings filter by declared base language without guessing missing tags
+([decision 0037](docs/decisions/0037-base-language-filter.md)).
 Recording and track identities and cross-file work relationships remain. Depends on milestone 2.
 
 Deliver EPUB package checks, content checks, scanner adapters, metadata handling,

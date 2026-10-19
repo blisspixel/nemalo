@@ -138,7 +138,9 @@ nemalo library ingest LIBRARY FOLDER [--apply] [--scan]
 nemalo library list CATALOG|LIBRARY [--query TEXT]
   Browse a snapshot's files, or a managed library's holdings.
   Options: --format all|epub|pdf|mp3, --limit 10, --offset 0,
-           --status all|checked|review (managed library only)
+           --status all|checked|review, --language en (managed library
+           only; matches the declared base language, so en, en-US, and
+           eng are one; holdings without a readable tag are counted)
 nemalo library recordings LIBRARY [--source archive:ITEM]
   List held recordings in declared track order; with --source, verify and
   index each track's timing.

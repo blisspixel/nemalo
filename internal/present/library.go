@@ -205,6 +205,13 @@ func ManagedHoldings(p library.ManagedPage) string {
 	var b strings.Builder
 	field(&b, "Library", Line(p.LibraryID))
 	fmt.Fprintf(&b, "Matching holdings: %d, from offset %d\n", p.Total, p.Offset)
+	if p.Language != "" {
+		fmt.Fprintf(&b, "Language: %s", Line(p.Language))
+		if p.LanguageUnknown > 0 {
+			fmt.Fprintf(&b, " | %d other holding(s) declare no readable language and were not matched", p.LanguageUnknown)
+		}
+		b.WriteString("\n")
+	}
 	for _, h := range p.Holdings {
 		title := h.Path
 		if len(h.Titles) > 0 {

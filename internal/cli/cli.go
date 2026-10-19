@@ -90,6 +90,7 @@ func Execute(ctx context.Context, args []string, out, errOut io.Writer, service 
 	query := flags.String("query", "", "literal holdings metadata filter")
 	format := flags.String("format", "all", "exact holdings filename suffix filter")
 	holdingStatus := flags.String("status", "all", "managed holdings status filter")
+	languageFilter := flags.String("language", "", "managed holdings base language filter")
 	auditRoot := flags.String("root", "", "explicit audit root")
 	assess := flags.Bool("assess", false, "include local health facts without antivirus")
 	apply := flags.Bool("apply", false, "store the assessed import")
@@ -542,14 +543,14 @@ func Execute(ctx context.Context, args []string, out, errOut io.Writer, service 
 			}
 			// A library directory lists managed holdings; a file is a snapshot.
 			if info, statErr := os.Lstat(flags.Arg(0)); statErr == nil && info.IsDir() && info.Mode()&os.ModeSymlink == 0 {
-				r, err := service.ManagedHoldings(ctx, flags.Arg(0), *query, *format, *holdingStatus, *limit, *offset)
+				r, err := service.ManagedHoldingsFiltered(ctx, flags.Arg(0), library.ManagedFilter{Query: *query, Format: *format, Status: *holdingStatus, Language: *languageFilter, Limit: *limit, Offset: *offset})
 				if err != nil {
 					return write(r, err, 1)
 				}
 				return write(r, nil, 0)
 			}
-			if *holdingStatus != "all" {
-				return write(nil, errors.New("--status applies to a managed library directory, not a snapshot catalog"), 2)
+			if *holdingStatus != "all" || *languageFilter != "" {
+				return write(nil, errors.New("--status and --language apply to a managed library directory, not a snapshot catalog"), 2)
 			}
 			r, err := service.HoldingsFormat(flags.Arg(0), *query, *format, *limit, *offset)
 			if err != nil {
@@ -867,7 +868,7 @@ func flagApplies(command, action, name string) bool {
 		case "snapshot":
 			return name == "output" || name == "assess" || strings.HasPrefix(name, "max-")
 		case "list":
-			return name == "query" || name == "format" || name == "limit" || name == "offset" || name == "status"
+			return name == "query" || name == "format" || name == "limit" || name == "offset" || name == "status" || name == "language"
 		case "import":
 			return name == "apply" || name == "scan" || name == "plan"
 		case "rescan":

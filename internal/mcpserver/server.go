@@ -103,10 +103,10 @@ func New(service app.Service, opts Options) (*mcp.Server, error) {
 				return nil, err
 			}
 			if info, statErr := os.Lstat(catalog); statErr == nil && info.IsDir() {
-				return service.ManagedHoldings(ctx, catalog, in.Query, defaultString(in.Format, "all"), defaultString(in.Status, "all"), defaultInt(in.Limit, 10), in.Offset)
+				return service.ManagedHoldingsFiltered(ctx, catalog, library.ManagedFilter{Query: in.Query, Format: defaultString(in.Format, "all"), Status: defaultString(in.Status, "all"), Language: in.Language, Limit: defaultInt(in.Limit, 10), Offset: in.Offset})
 			}
-			if in.Status != "" && in.Status != "all" {
-				return nil, errors.New("status applies to a managed library directory")
+			if (in.Status != "" && in.Status != "all") || in.Language != "" {
+				return nil, errors.New("status and language apply to a managed library directory")
 			}
 			return service.HoldingsFormat(catalog, in.Query, defaultString(in.Format, "all"), defaultInt(in.Limit, 10), in.Offset)
 		})
@@ -371,12 +371,13 @@ type libraryInput struct {
 }
 
 type listInput struct {
-	Catalog string `json:"catalog" jsonschema:"an initialized library directory, or a catalog snapshot file, inside a configured scope"`
-	Status  string `json:"status,omitempty" jsonschema:"all (default), checked, or review; managed library only"`
-	Query   string `json:"query,omitempty" jsonschema:"literal text matched against paths, hashes, and recorded metadata"`
-	Format  string `json:"format,omitempty" jsonschema:"all (default), epub, pdf, or mp3; an exact filename suffix filter"`
-	Limit   int    `json:"limit,omitempty" jsonschema:"page size 1-100, default 10"`
-	Offset  int    `json:"offset,omitempty" jsonschema:"page offset 0-100000"`
+	Catalog  string `json:"catalog" jsonschema:"an initialized library directory, or a catalog snapshot file, inside a configured scope"`
+	Status   string `json:"status,omitempty" jsonschema:"all (default), checked, or review; managed library only"`
+	Query    string `json:"query,omitempty" jsonschema:"literal text matched against paths, hashes, and recorded metadata"`
+	Format   string `json:"format,omitempty" jsonschema:"all (default), epub, pdf, or mp3; an exact filename suffix filter"`
+	Language string `json:"language,omitempty" jsonschema:"base language tag or code such as en, en-US, or eng; managed library only"`
+	Limit    int    `json:"limit,omitempty" jsonschema:"page size 1-100, default 10"`
+	Offset   int    `json:"offset,omitempty" jsonschema:"page offset 0-100000"`
 }
 
 type locateInput struct {

@@ -317,7 +317,10 @@ holdings journals are separate from the initialization journal. A trailing
 import intent resumes only for the same source. Corrupt journals are retained.
 `library list` on the library directory lists current holdings in import order,
 with a literal `--query` over titles, languages, identifiers, paths, and source
-IDs, and `--format` and `--status checked|review` filters. It reads journals only.
+IDs, and `--format`, `--status checked|review`, and `--language TAG` filters;
+the language filter matches the declared base language, so `en`, `en-US`, and
+`eng` are one, and counts holdings with no readable tag
+([decision 0037](decisions/0037-base-language-filter.md)). It reads journals only.
 `library open` hands the default application, or `--app`, a verified read-only
 copy in `<state>/handoff`, never the stored file, because some readers write
 annotations into the files they open. `library export` makes the same verified
