@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+## 0.1.0-alpha.17
+
+Seventeenth native prerelease. This remains an early library, not 1.0. The roadmap now orders the remaining 1.0 work by dependency and brings cited evidence for agent-led reading before 1.0 ([decision 0048](docs/decisions/0048-cited-evidence-before-1-0.md)). Holdings relate by the identifiers their sources declare, collections of exact selections are resolved against the library and acquired idempotently, and 7z archives and split sets can be cleaned up after import.
+
+- Collections, related holdings, and 7z cleanup were reviewed adversarially before release; the fixes are listed below.
 - `library cleanup` moves 7z archives, and split 7z sets as one entry, when every member is held and 7-Zip lists the archive with no comment, offset, or tail and with its header and packed sizes filling the file; restore and purge handle a set volume by volume. A RAR stays, since it can carry blocks no listing accounts for. A ZIP now moves only when its entries and directory cover every byte, and a ZIP or 7z member marked as a directory that holds data is reported and keeps its archive ([decision 0051](docs/decisions/0051-cleanup-of-7z-and-split-sets.md)).
 - Review fixes for collections: a receipted recording, or a packet whose receipt records a detection, is no longer resumed or offered for ingest; identical tracks count by position; a packet that cannot resume is reported as retained; a resume starts only within the remaining `--max-total-bytes`, and `--max-recording-bytes` applies; collection files with trailing data or repeated keys are refused.
 - Collections: a JSON file of exact selections (Archive files and recordings, Gutenberg EPUBs, arXiv versions). `collection status COLLECTION LIBRARY` and the MCP tool `collection_status` resolve each item against holdings offline; `collection acquire COLLECTION LIBRARY --output INTAKE` previews and, with `--apply`, acquires only what the library does not hold, one item at a time through the acquire service, resuming interrupted packets, leaving other existing packets untouched, and honoring `--max-total-bytes`. Running it again fetches only what is still missing ([decision 0050](docs/decisions/0050-collections.md)).
