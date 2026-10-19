@@ -50,15 +50,18 @@ AI service. The agent interface (MCP) uses the same application services.
   note references, local image bytes, and explicit extraction gaps. Illustrated
   chapters stay readable; each omitted image or table is located. List the
   book's declared contents (EPUB 3 nav and EPUB 2 NCX) and read one entry until
-  its declared end. Several entries can share one spine file, and one entry can
+  its declared end. List its declared page labels, such as `iv` or `42`, and
+  read from one. Several entries can share one spine file, and one entry can
   span files. PDFs read by physical page and printed label, with images,
   unmapped text, and scanned pages located as gaps. Exact quotations can be
   located by page and offset. MP3 tracks report probed and declared timing and
   chapters, and return decodable ranges; held recordings list their tracks in
   order with missing positions.
 - Read a held EPUB or PDF in the terminal with `nemalo read`: pages sized to
-  the screen, or one word at a time at a rate you control. Closing prints the
-  place to return to and does not save a bookmark.
+  the screen, or one word at a time at a rate you control. Hard-wrapped
+  paragraphs flow as paragraphs. `f` opens a source note or link and Escape
+  returns to the same place. Closing names where you stopped and how far
+  through you are, and records nothing.
 - Save an explicit bookmark in an initialized library with `bookmark enable`,
   then `bookmark save` or `m` in the terminal. `'` restores that place. A
   changed or missing file is reported and is not remapped. A note stays
