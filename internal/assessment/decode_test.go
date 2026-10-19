@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"strings"
 	"testing"
 
 	"github.com/blisspixel/nemalo/internal/decode"
@@ -61,5 +62,26 @@ func TestDecodeResultsBecomeFindings(t *testing.T) {
 	// Nothing is decoded unless asked.
 	if r, _ := CheckInRoot(ctx, root, "track.mp3", Options{}, nil); r.Decode != nil {
 		t.Fatal("a decode ran unrequested")
+	}
+}
+
+// A requested check that does not apply says so instead of passing silently.
+func TestInapplicableChecksAreNamed(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "track.mp3"), mp3Frames(10), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	root, err := os.OpenRoot(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer root.Close()
+	r, _ := CheckInRoot(context.Background(), root, "track.mp3", Options{EPUBCheck: true}, nil)
+	if !slices.ContainsFunc(r.Limitations, func(l string) bool { return strings.Contains(l, "EPUBCheck did not run") }) {
+		t.Fatal(r.Limitations)
+	}
+	reports, _ := CheckManyInRoot(context.Background(), root, []string{"track.mp3"}, []Options{{Decode: true}}, nil)
+	if !slices.ContainsFunc(reports[0].Limitations, func(l string) bool { return strings.Contains(l, "batched") }) {
+		t.Fatal(reports[0].Limitations)
 	}
 }

@@ -27,7 +27,7 @@ func fakeSeven() {
 		fmt.Sscan(string(b), &n)
 		return n
 	}
-	if len(args) == 0 || !slices.Contains(args, noPassword) || !slices.Contains(args, "--") {
+	if len(args) == 0 || !slices.Contains(args, noPassword) || !slices.Contains(args, "--") || !slices.Contains(args, "-tRar5") {
 		os.Exit(7)
 	}
 	switch args[0] {
@@ -56,6 +56,7 @@ func TestMain(m *testing.M) {
 
 type sevenMember struct {
 	name, attributes string
+	extra            string
 	body             []byte
 	listedSize       int64
 	listedCRC        string
@@ -77,7 +78,9 @@ func sevenFixture(t *testing.T, members []sevenMember) (*os.Root, *os.Root) {
 		if m.listedSize != 0 {
 			size = m.listedSize
 		}
-		if m.listedCRC != "" {
+		if m.listedCRC == "-" {
+			crc = ""
+		} else if m.listedCRC != "" {
 			crc = m.listedCRC
 		}
 		attributes := firstNonEmptyString(m.attributes, "A -rw-r--r--")
@@ -85,7 +88,7 @@ func sevenFixture(t *testing.T, members []sevenMember) (*os.Root, *os.Root) {
 		if m.encrypted {
 			encrypted = "+"
 		}
-		fmt.Fprintf(&listing, "Path = %s\nSize = %d\nPacked Size = %s\nModified = 2026-10-19 07:47:40\nAttributes = %s\nCRC = %s\nEncrypted = %s\nMethod = LZMA2:24\nBlock = 0\n\n", m.name, size, m.packed, attributes, crc, encrypted)
+		fmt.Fprintf(&listing, "Path = %s\nSize = %d\nPacked Size = %s\nModified = 2026-10-19 07:47:40\nAttributes = %s\nCRC = %s\nEncrypted = %s\nMethod = LZMA2:24\nBlock = 0\n%s\n", m.name, size, m.packed, attributes, crc, encrypted, m.extra)
 		served := m.body
 		if m.served != nil {
 			served = m.served
@@ -155,6 +158,14 @@ func TestSevenZipMembersAreClassifiedAndChecked(t *testing.T) {
 		{name: "rarlink.epub", body: []byte("target"), attributes: " lrwxrwxrwx"},
 		{name: "rardir", attributes: " drwxr-xr-x"},
 		{name: "fifo.epub", body: good, attributes: " prw-r--r--"},
+		// Review regressions: a link stated by Mode or a link key, a hex
+		// attribute word holding D, a name that is also a folder, no CRC.
+		{name: "modelink.epub", body: []byte("/etc/passwd"), attributes: "A", extra: "Mode = lrwxrwxrwx\n"},
+		{name: "rar5link.epub", body: []byte("target"), attributes: "A", extra: "Symbolic Link = /etc/passwd\n"},
+		{name: "hexattr.epub", body: good, attributes: "V 0D800000 0rwS--S---"},
+		{name: "shadow.epub", body: good},
+		{name: "shadow.epub/inner.epub", body: good},
+		{name: "nocrc.epub", body: good, listedCRC: "-"},
 	})
 	x, err := Extract(context.Background(), src, "bundle.rar", dst, books, Defaults())
 	if err != nil {
@@ -165,8 +176,10 @@ func TestSevenZipMembersAreClassifiedAndChecked(t *testing.T) {
 		"locked.epub": "encrypted", "../escape.epub": "unsafe_name", "twice.epub": "duplicate_name", "inner.zip": "nested_archive",
 		"badcrc.epub": "failed", "longer.epub": "failed", "missing.epub": "failed", "bomb.epub": "suspicious_ratio", "huge.m4b": "too_large",
 		"rarlink.epub": "link", "rardir": "directory", "fifo.epub": "special",
+		"modelink.epub": "link", "rar5link.epub": "link", "hexattr.epub": "extracted", "shadow.epub": "duplicate_name",
+		"shadow.epub/inner.epub": "extracted", "nocrc.epub": "unsupported_method",
 	}
-	if len(x.Members) != 17 || x.Complete {
+	if len(x.Members) != 23 || x.Complete {
 		t.Fatal(len(x.Members), x.Complete)
 	}
 	for _, m := range x.Members {
@@ -175,7 +188,7 @@ func TestSevenZipMembersAreClassifiedAndChecked(t *testing.T) {
 		}
 	}
 	staged, _ := os.ReadDir(dst.Name())
-	if len(staged) != 1 || staged[0].Name() != "00001.epub" {
+	if len(staged) != 3 || staged[0].Name() != "00001.epub" {
 		t.Fatal("staged", staged)
 	}
 	if b, _ := os.ReadFile(filepath.Join(dst.Name(), "00001.epub")); string(b) != string(good) {
@@ -199,6 +212,15 @@ func TestSevenZipRefusesWhatItCannotList(t *testing.T) {
 	}
 	if _, err := Extract7z(context.Background(), src, "bundle.rar", dst, books, Defaults()); err == nil || !strings.Contains(err.Error(), "could not list") {
 		t.Fatal(err)
+	}
+	// A file whose signature is not the extension's archive is never read.
+	for name, body := range map[string]string{"tar.rar": "ustar\x00 not rar", "zip.7z": "PK\x03\x04"} {
+		if err := os.WriteFile(filepath.Join(src.Name(), name), []byte(body), 0o600); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := Extract7z(context.Background(), src, name, dst, books, Defaults()); err == nil || !strings.Contains(err.Error(), "signature") {
+			t.Fatal(name, err)
+		}
 	}
 	SevenZip = func() (string, error) { return "", errors.New("missing") }
 	if _, err := Extract(context.Background(), src, "bundle.rar", dst, books, Defaults()); !errors.Is(err, ErrNoArchiveTool) {

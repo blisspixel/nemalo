@@ -24,8 +24,11 @@ tools.
 - **Containment.** Both tools read the private snapshot as `file:PATH` with
   `-protocol_whitelist file` and a demuxer fixed by format (`mp3`, or `mov`
   for M4B and M4A), so the file is never probed as a playlist or another kind
-  of input, and no network or other protocol can be opened. FFmpeg's default
-  of not following MP4 data references applies. Arguments are an array; the
+  of input, and no network or other protocol can be opened. The `file`
+  protocol alone would allow any local path, so confinement to the snapshot
+  rests on the `mov` demuxer's defaults of not following data references
+  (`enable_drefs`) or absolute paths (`use_absolute_path`), which are never
+  enabled. Arguments are an array; the
   output is bounded to 64 KiB of messages and counted, never stored.
 - **Measurement.** FFprobe reports the decoder's output sample rate, which can
   differ from the container's. FFmpeg then decodes the first audio stream to
@@ -42,7 +45,9 @@ tools.
   decoded duration more than a second from the encoded duration keep the file
   in review. The decode is bound to the snapshot like a scan: the snapshot is
   rehashed afterwards. It is evidence in the check report, not part of the
-  checked policy, and import does not decode.
+  checked policy, and import does not decode. A `--decode` or `--epubcheck`
+  that does not apply to the assessed format, or a batched check, is named in
+  the report's limitations instead of passing silently.
 
 The check's five-minute bound now covers only the snapshot and inspection; a
 scan, EPUBCheck, and decode run under the caller's context with their own

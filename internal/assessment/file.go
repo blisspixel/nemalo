@@ -132,6 +132,13 @@ func CheckInRoot(ctx context.Context, root *os.Root, name string, options Option
 			return p.report, err
 		}
 	}
+	// A requested check that does not apply to what was assessed says so.
+	if options.EPUBCheck && p.report.DetectedFormat != "epub" {
+		p.report.Limitations = append(p.report.Limitations, "--epubcheck applies only to a file assessed as an EPUB; EPUBCheck did not run.")
+	}
+	if options.Decode && !decode.Supported(p.report.DetectedFormat) {
+		p.report.Limitations = append(p.report.Limitations, "--decode applies only to a file assessed as an MP3, M4B, or M4A; nothing was decoded.")
+	}
 	if options.EPUBCheck && p.report.DetectedFormat == "epub" {
 		if err := p.bindConformance(ctx, conformance.CheckEPUB(ctx, p.snapshot)); err != nil {
 			return p.report, err
@@ -438,6 +445,10 @@ func CheckManyInRoot(ctx context.Context, root *os.Root, names []string, options
 		pctx, cancel := context.WithTimeout(ctx, 5*time.Minute)
 		p, err := prepare(pctx, root, name, options[i])
 		cancel()
+		if p != nil && (options[i].EPUBCheck || options[i].Decode) {
+			// Batched checks scan; EPUBCheck and decode run only from check.
+			p.report.Limitations = append(p.report.Limitations, "EPUBCheck and decode do not run in batched checks.")
+		}
 		switch {
 		case p == nil:
 			reports[i], errs[i] = incompleteReport(root, name), err

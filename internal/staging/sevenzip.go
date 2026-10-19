@@ -110,9 +110,16 @@ func Extract7z(ctx context.Context, src *os.Root, name string, dst *os.Root, sup
 		return x, err
 	}
 	archive := filepath.Join(tmp, snapshot)
+	// 7-Zip opens whatever format a file's bytes name. The type is fixed
+	// from the signature and must match the extension, so a tar, cpio, disk
+	// image, or ZIP renamed .rar or .7z is never read through 7-Zip.
+	kind, err := archiveType(tmpRoot, snapshot, strings.ToLower(filepath.Ext(name)))
+	if err != nil {
+		return x, err
+	}
 	listCtx, cancel := context.WithTimeout(ctx, 2*time.Minute+time.Duration(info.Size()>>27)*time.Minute)
 	defer cancel()
-	listing, code, err := runSeven(listCtx, exe, nil, "l", "-slt", "-ba", noPassword, "--", archive)
+	listing, code, err := runSeven(listCtx, exe, nil, "l", "-slt", "-ba", "-t"+kind, noPassword, "--", archive)
 	if listCtx.Err() != nil {
 		return x, errors.New("7-Zip did not list the archive within its deadline")
 	}
@@ -129,21 +136,35 @@ func Extract7z(ctx context.Context, src *os.Root, name string, dst *os.Root, sup
 	if len(entries) > limits.Members {
 		return x, fmt.Errorf("archive has %d members; the limit is %d", len(entries), limits.Members)
 	}
-	count := map[string]int{}
+	count, folders := map[string]int{}, map[string]bool{}
 	for _, e := range entries {
 		count[e.raw]++
+		// A name also selects every member under a folder of that name.
+		for dir := path.Dir(e.name); dir != "." && dir != "/" && !folders[dir]; dir = path.Dir(dir) {
+			folders[dir] = true
+		}
 	}
 	var total int64
 	x.Complete = true
+	// Each member is extracted by its own run, which decompresses a solid
+	// block from its start, so the archive as a whole has one deadline and
+	// a bounded number of runs.
+	archiveCtx, cancelArchive := context.WithTimeout(ctx, archiveDeadline(info.Size()))
+	defer cancelArchive()
+	runs := 0
 	for i, e := range entries {
 		if err := ctx.Err(); err != nil {
 			return x, err
 		}
 		m := Member{Name: displayName(e.name), Bytes: e.size}
 		m.Disposition, m.Detail = classifySeven(e, supported, limits)
-		if m.Disposition == "eligible" && count[e.raw] > 1 {
+		if m.Disposition == "eligible" && (count[e.raw] > 1 || folders[e.name]) {
 			// Extraction by name would return every member of that name.
-			m.Disposition, m.Detail = "duplicate_name", "another member has this exact name; preserved in the archive"
+			m.Disposition, m.Detail = "duplicate_name", "another member has this name, or a folder of it; preserved in the archive"
+		}
+		if m.Disposition == "eligible" && (runs >= maxRuns || archiveCtx.Err() != nil) {
+			m.Disposition, m.Detail = "failed", "the archive's extraction budget was spent; preserved in the archive"
+			x.Complete = false
 		}
 		if m.Disposition == "eligible" {
 			if total+m.Bytes > limits.TotalBytes {
@@ -151,10 +172,11 @@ func Extract7z(ctx context.Context, src *os.Root, name string, dst *os.Root, sup
 				x.Complete = false
 			} else {
 				staged := fmt.Sprintf("%05d%s", i, strings.ToLower(path.Ext(e.name)))
+				runs++
 				if err := safeio.EnsureSpaceIn(dst, m.Bytes); err != nil {
 					m.Disposition, m.Detail = "failed", err.Error()
 					x.Complete = false
-				} else if err := extractSeven(ctx, exe, archive, e, dst, staged, limits.MemberBytes); err != nil {
+				} else if err := extractSeven(archiveCtx, exe, kind, archive, e, dst, staged, limits.MemberBytes); err != nil {
 					if ctx.Err() != nil {
 						return x, ctx.Err()
 					}
@@ -238,20 +260,23 @@ func parseListing(out []byte) ([]sevenEntry, error) {
 			case "Attributes":
 				// Windows attribute letters, a Unix mode, or both: "A
 				// -rw-r--r--" for 7z and ZIP, " -rw-r--r--" for RAR.
+				// Only a field of letters alone is Windows attributes; a hex
+				// word such as 0D800000 is not.
 				for _, f := range strings.Fields(value) {
 					if mode, ok := unixMode(f); ok {
-						switch mode {
-						case 'l':
-							e.link = true
-						case 'd':
-							e.folder = true
-						case '-':
-						default:
-							e.special = true
-						}
-					} else if strings.Contains(f, "D") {
+						e.applyMode(mode)
+					} else if strings.Trim(f, "ABCDEFGHIJKLMNOPQRSTUVWXYZ") == "" && strings.Contains(f, "D") {
 						e.folder = true
 					}
+				}
+			case "Mode":
+				// tar and cpio listings state the Unix mode here.
+				if mode, ok := unixMode(strings.TrimSpace(value)); ok {
+					e.applyMode(mode)
+				}
+			case "Symbolic Link", "Hard Link", "Copy Link", "Link":
+				if value != "" {
+					e.link = true
 				}
 			case "CRC":
 				if value != "" {
@@ -291,6 +316,48 @@ func unixMode(f string) (byte, bool) {
 	return f[0], true
 }
 
+func (e *sevenEntry) applyMode(mode byte) {
+	switch mode {
+	case 'l':
+		e.link = true
+	case 'd':
+		e.folder = true
+	case '-':
+	default:
+		e.special = true
+	}
+}
+
+const maxRuns = 1000
+
+// archiveDeadline bounds all extraction runs of one archive: ten minutes
+// and a minute per 16 MiB of archive, at most an hour.
+func archiveDeadline(size int64) time.Duration {
+	return min(10*time.Minute+time.Duration(size>>24)*time.Minute, time.Hour)
+}
+
+// archiveType names the 7-Zip handler for the snapshot's signature, which
+// must agree with the extension.
+func archiveType(root *os.Root, name, ext string) (string, error) {
+	f, err := root.Open(name)
+	if err != nil {
+		return "", err
+	}
+	defer f.Close()
+	head := make([]byte, 8)
+	n, _ := io.ReadFull(f, head)
+	head = head[:n]
+	switch {
+	case ext == ".7z" && bytes.HasPrefix(head, []byte("7z\xbc\xaf\x27\x1c")):
+		return "7z", nil
+	case ext == ".rar" && bytes.HasPrefix(head, []byte("Rar!\x1a\x07\x01\x00")):
+		return "Rar5", nil
+	case ext == ".rar" && bytes.HasPrefix(head, []byte("Rar!\x1a\x07\x00")):
+		return "Rar", nil
+	}
+	return "", fmt.Errorf("the file is not a %s archive by its signature; it is preserved", strings.ToUpper(strings.TrimPrefix(ext, ".")))
+}
+
 func classifySeven(e sevenEntry, supported func(string) bool, limits Limits) (string, string) {
 	name := e.name
 	switch {
@@ -314,6 +381,8 @@ func classifySeven(e sevenEntry, supported func(string) bool, limits Limits) (st
 		return "too_large", "member exceeds the per-file budget"
 	case e.size == 0:
 		return "empty", ""
+	case !e.crcKnown:
+		return "unsupported_method", "the archive states no CRC for this member; not extracted"
 	case e.packedKnown && (e.packed == 0 || e.size/e.packed > int64(limits.Ratio)):
 		// A solid archive does not state a packed size per member.
 		return "suspicious_ratio", "declared expansion ratio is beyond the budget"
@@ -324,7 +393,7 @@ func classifySeven(e sevenEntry, supported func(string) bool, limits Limits) (st
 // extractSeven writes one member, selected by its exact name with wildcards
 // off, from 7-Zip's standard output, capped at its listed size plus one byte,
 // and checks its size and CRC. 7-Zip names no file on disk.
-func extractSeven(ctx context.Context, exe, archive string, e sevenEntry, dst *os.Root, staged string, limit int64) error {
+func extractSeven(ctx context.Context, exe, kind, archive string, e sevenEntry, dst *os.Root, staged string, limit int64) error {
 	out, err := dst.OpenFile(staged, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o600)
 	if err != nil {
 		return err
@@ -333,7 +402,7 @@ func extractSeven(ctx context.Context, exe, archive string, e sevenEntry, dst *o
 	w := &cappedWriter{w: io.MultiWriter(out, sum), limit: min(e.size, limit) + 1}
 	memberCtx, cancel := context.WithTimeout(ctx, 2*time.Minute+time.Duration(e.size>>26)*time.Minute)
 	defer cancel()
-	_, code, runErr := runSeven(memberCtx, exe, w, "e", "-so", "-spd", "-ssc", "-bd", noPassword, "--", archive, e.raw)
+	_, code, runErr := runSeven(memberCtx, exe, w, "e", "-so", "-spd", "-ssc", "-bd", "-t"+kind, noPassword, "--", archive, e.raw)
 	closeErr := out.Close()
 	switch {
 	case memberCtx.Err() != nil:
