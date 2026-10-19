@@ -406,7 +406,8 @@ import before its journal intent, a ZIP member before extraction, a cleanup
 copy, and an export or open copy. A write that would leave less than 64 MiB
 free is refused with the needed and free sizes, before any folder, journal
 entry, or request. A root opened through the descriptor bridge is measured
-at the folder it refers to. Free space that cannot be read, or a pseudo
+through its own descriptor (`fstatfs`), since on macOS its `/dev/fd` name is
+not a path to the folder. Free space that cannot be read, or a pseudo
 filesystem that reports no blocks, does not refuse a write, and the write
 still fails cleanly if the disk fills. The check is an early refusal, not a
 reservation; another process can still fill the disk.

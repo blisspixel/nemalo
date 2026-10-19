@@ -608,7 +608,7 @@ func TestImportRefusesWhatWouldNotFit(t *testing.T) {
 	}
 	before, _ := os.ReadFile(filepath.Join(root, ".nemalo", "journal.jsonl"))
 	saved := safeio.FreeSpace
-	safeio.FreeSpace = func(string) (int64, error) { return 1 << 20, nil }
+	safeio.FreeSpace = func(string, *os.Root) (int64, error) { return 1 << 20, nil }
 	t.Cleanup(func() { safeio.FreeSpace = saved })
 	if _, err := Import(ctx, ImportRequest{Library: root, Source: writeEPUB(t, t.TempDir()), Apply: true}); !errors.Is(err, safeio.ErrNoSpace) {
 		t.Fatal(err)

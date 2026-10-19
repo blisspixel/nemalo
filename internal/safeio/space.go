@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 )
 
 // spareBytes is kept free beyond a write's own size, so a filled disk still
@@ -15,9 +14,15 @@ const spareBytes = 64 << 20
 // ErrNoSpace means a write would not fit in the free space of its folder.
 var ErrNoSpace = errors.New("not enough free space")
 
-// FreeSpace reads free space for EnsureSpace; tests replace it to simulate a
-// full disk.
-var FreeSpace = FreeBytes
+// FreeSpace reports the free bytes of a folder: the one open as root when
+// root is not nil, else the one named dir. A negative result is unknown.
+// Tests replace it to simulate a full disk.
+var FreeSpace = func(dir string, root *os.Root) (int64, error) {
+	if root != nil {
+		return freeBytesIn(root)
+	}
+	return FreeBytes(dir)
+}
 
 // EnsureSpace refuses a write of need bytes into dir, or into its nearest
 // existing parent when dir is still to be created, when the filesystem
@@ -28,31 +33,37 @@ func EnsureSpace(dir string, need int64) error {
 	if need <= 0 {
 		return nil
 	}
-	// A root opened through the descriptor bridge is named by its descriptor;
-	// its free space is the folder that descriptor refers to.
-	if strings.HasPrefix(dir, "/proc/self/fd/") || strings.HasPrefix(dir, "/dev/fd/") {
-		target, err := os.Readlink(dir)
-		if err != nil || !filepath.IsAbs(target) {
-			return nil
-		}
-		dir = target
-	}
-	free, err := FreeSpace(dir)
+	free, err := FreeSpace(dir, nil)
 	for d := dir; err != nil; {
 		parent := filepath.Dir(d)
 		if parent == d {
 			return nil
 		}
 		d = parent
-		free, err = FreeSpace(d)
+		free, err = FreeSpace(d, nil)
 	}
-	if free < 0 {
+	return enough(dir, free, need)
+}
+
+// EnsureSpaceIn is EnsureSpace for a write into an open root. The root is
+// measured through its own descriptor, since a root opened through the
+// descriptor bridge has no ordinary path.
+func EnsureSpaceIn(root *os.Root, need int64) error {
+	if need <= 0 {
 		return nil
 	}
-	if free < need+spareBytes {
-		return fmt.Errorf("%w in %s: this needs %s and %s more to keep in reserve, and %s are free", ErrNoSpace, dir, size(need), size(spareBytes), size(free))
+	free, err := FreeSpace(root.Name(), root)
+	if err != nil {
+		return nil
 	}
-	return nil
+	return enough("this folder", free, need)
+}
+
+func enough(where string, free, need int64) error {
+	if free < 0 || free >= need+spareBytes {
+		return nil
+	}
+	return fmt.Errorf("%w in %s: this needs %s and %s more to keep in reserve, and %s are free", ErrNoSpace, where, size(need), size(spareBytes), size(free))
 }
 
 func size(n int64) string {

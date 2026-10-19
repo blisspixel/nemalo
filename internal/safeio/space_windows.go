@@ -1,6 +1,10 @@
 package safeio
 
-import "golang.org/x/sys/windows"
+import (
+	"os"
+
+	"golang.org/x/sys/windows"
+)
 
 // FreeBytes is the space available to this user in the volume holding dir.
 func FreeBytes(dir string) (int64, error) {
@@ -17,3 +21,6 @@ func FreeBytes(dir string) (int64, error) {
 	}
 	return int64(available), nil
 }
+
+// freeBytesIn measures an open root by its path, which Windows roots keep.
+func freeBytesIn(root *os.Root) (int64, error) { return FreeBytes(root.Name()) }

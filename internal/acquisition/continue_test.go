@@ -173,7 +173,7 @@ func TestARecordingTrackThatDropsContinuesInPlace(t *testing.T) {
 // folder is made or byte requested.
 func TestAcquireRefusesADownloadThatWouldNotFit(t *testing.T) {
 	saved := safeio.FreeSpace
-	safeio.FreeSpace = func(string) (int64, error) { return 1 << 20, nil }
+	safeio.FreeSpace = func(string, *os.Root) (int64, error) { return 1 << 20, nil }
 	t.Cleanup(func() { safeio.FreeSpace = saved })
 	p := &flakyProvider{rangeProvider: newRangeProvider("ID3 small"), chunk: 1 << 20}
 	r := Request{SourceID: "archive:demo", File: "track.mp3", Output: filepath.Join(t.TempDir(), "new", "packet"), MaxBytes: 1 << 20}

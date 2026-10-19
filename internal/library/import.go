@@ -314,7 +314,7 @@ func finish(ctx context.Context, control *control, store *os.Root, libraryID str
 	}
 	if !obj.present {
 		// Refused before any journal entry, so nothing is left to recover.
-		if err = safeio.EnsureSpace(store.Name(), holding.Bytes); err != nil {
+		if err = safeio.EnsureSpaceIn(store, holding.Bytes); err != nil {
 			return result, err
 		}
 	}
@@ -974,7 +974,7 @@ func copyPartial(ctx context.Context, root *os.Root, source, partial string, siz
 		return err
 	}
 	defer in.Close()
-	if err := safeio.EnsureSpace(root.Name(), size); err != nil {
+	if err := safeio.EnsureSpaceIn(root, size); err != nil {
 		return err
 	}
 	out, err := root.OpenFile(partial, os.O_RDWR|os.O_CREATE|os.O_EXCL, 0600)
