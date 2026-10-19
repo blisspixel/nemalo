@@ -223,8 +223,9 @@ func TestInputBoundariesAndCancellation(t *testing.T) {
 	if _, err := (contextAt{ctx, bytes.NewReader([]byte("x"))}).ReadAt(make([]byte, 1), 0); !errors.Is(err, context.Canceled) {
 		t.Fatal(err)
 	}
-	if r, err := Check(context.Background(), p, Options{}, nil); err != nil || r.Checks.Signature != "mp3_candidate_only" {
-		t.Fatal(r, err)
+	// A signature alone indexes no frames, so the file stays in review.
+	if r, _ := Check(context.Background(), p, Options{}, nil); r.Checks.Signature != "mp3_candidate_only" || r.Status != "needs_review" || r.Checks.MP3 != nil {
+		t.Fatal(r)
 	}
 	link := filepath.Join(t.TempDir(), "link.mp3")
 	if err := os.Symlink(p, link); err == nil {

@@ -64,8 +64,8 @@ scan evidence; it never replaces a recorded detection or a later scan outcome.
 scans each EPUB holding that is in review only because scan evidence is missing
 or unusable (`unscanned`, `scan_unavailable`, `scan_incomplete`,
 `scan_not_scanned`, `scan_unrecognized`). It is a dry run unless `--apply`.
-PDF and MP3 holdings, earlier detections, and other findings are listed with a
-reason and not scanned; a previous detection needs a deliberate review rather
+Earlier detections and other findings are listed with a reason and not
+scanned (PDF and MP3 holdings are rescanned since decisions 0032 and 0033); a previous detection needs a deliberate review rather
 than an automatic promotion. Stored bytes are never changed. Bytes that no
 longer match the holding receive no status and point to `library audit`.
 

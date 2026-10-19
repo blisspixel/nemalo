@@ -699,3 +699,29 @@ func TestRescanPromotesAPDFHeldBeforeThePolicy(t *testing.T) {
 		t.Fatal(r, err)
 	}
 }
+
+// An MP3 whose frames were indexed without damage or truncation, with a
+// clean scan, is checked; a damaged one stays in review.
+func TestMP3CheckedPolicy(t *testing.T) {
+	ctx := context.Background()
+	root := t.TempDir()
+	if _, err := Initialize(ctx, root); err != nil {
+		t.Fatal(err)
+	}
+	write := func(name string, data []byte) string {
+		p := filepath.Join(t.TempDir(), name)
+		if err := os.WriteFile(p, data, 0o600); err != nil {
+			t.Fatal(err)
+		}
+		return p
+	}
+	clean, err := Import(ctx, ImportRequest{Library: root, Source: write("track.mp3", mp3Track(60)), Apply: true, Scan: true, Scanner: cleanScan{}})
+	if err != nil || clean.Status != "checked" || clean.Reason != "checks_and_scan_recorded" {
+		t.Fatal(clean.Status, clean.Reason, clean.Findings, err)
+	}
+	damaged := append(append(mp3Track(20), bytes.Repeat([]byte{0x11}, 300)...), mp3Track(20)...)
+	bad, err := Import(ctx, ImportRequest{Library: root, Source: write("damaged.mp3", damaged), Apply: true, Scan: true, Scanner: cleanScan{}})
+	if err != nil || bad.Status != "review" || !slices.Contains(bad.Findings, "mp3_unindexed_regions_between_frames") {
+		t.Fatal(bad.Status, bad.Reason, bad.Findings, err)
+	}
+}

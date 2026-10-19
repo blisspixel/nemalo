@@ -34,7 +34,8 @@ limited checks passed with no finding, the page tree was walked completely, the
 active-content walk finished with nothing found, and the installed scanner
 reported no detections. Otherwise it stays in review with the reason, or
 `pdf_not_fully_examined` when the walk did not finish. An encrypted PDF cannot
-be walked and stays in review. MP3 stays `format_not_checked_for_publication`.
+be walked and stays in review. MP3 follows in
+[decision 0033](0033-mp3-checked-policy.md).
 
 `library rescan` now assesses PDF holdings in review for lack of a scan,
 including those an earlier version held as

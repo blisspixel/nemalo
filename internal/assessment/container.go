@@ -19,6 +19,7 @@ import (
 	"unicode"
 	"unicode/utf8"
 
+	"github.com/blisspixel/nemalo/internal/audio"
 	"github.com/blisspixel/nemalo/internal/pdftext"
 	"golang.org/x/net/html"
 )
@@ -37,6 +38,20 @@ type Checks struct {
 	EPUB               *EPUBFacts `json:"epub,omitempty"`
 	// PDF holds the page tree facts of a PDF whose tree could be walked.
 	PDF *pdftext.Facts `json:"pdf,omitempty"`
+	// MP3 holds the frame index facts of an MP3 whose frames were indexed.
+	MP3 *MP3Facts `json:"mp3,omitempty"`
+}
+
+// MP3Facts summarize the MPEG frame index of one track. Notes are measured
+// differences that do not affect what plays, such as a declared length that
+// disagrees with the frames or a nonstandard trailing tag. Nothing is decoded.
+type MP3Facts struct {
+	Format            string   `json:"format"`
+	SampleRate        int      `json:"sample_rate"`
+	Channels          int      `json:"channels"`
+	Frames            int      `json:"frames"`
+	EncodedDurationMs int64    `json:"encoded_duration_ms"`
+	Notes             []string `json:"notes"`
 }
 
 type EPUBFacts struct {
@@ -206,6 +221,42 @@ func inspectContext(ctx context.Context, r io.ReaderAt, size int64, format strin
 			return c, errors.New("MP3 candidate signature missing")
 		}
 		c.Signature = "mp3_candidate_only"
+		data := make([]byte, size)
+		if _, err := r.ReadAt(data, 0); err != nil && !errors.Is(err, io.EOF) {
+			return c, err
+		}
+		track, err := audio.Probe(ctx, data)
+		switch {
+		case ctx.Err() != nil:
+			return c, ctx.Err()
+		case err != nil || track.Frames == 0:
+			c.Warnings = append(c.Warnings, "mp3_frames_not_indexed")
+		default:
+			c.Signature = "mp3_frames_indexed"
+			facts := &MP3Facts{Format: track.Format, SampleRate: track.SampleRate, Channels: track.Channels, Frames: track.Frames, EncodedDurationMs: track.EncodedDurationMs, Notes: []string{}}
+			// A frame count the file itself declares, but does not hold, means
+			// it was cut short; bytes between frames mean damage. Both keep the
+			// file in review.
+			if f := track.Declared.Frames; f != nil && *f != int64(track.Frames) {
+				c.Warnings = append(c.Warnings, "mp3_declared_frames_differ")
+			}
+			for _, g := range track.Gaps {
+				if strings.HasPrefix(g.Kind, "trailing_") {
+					facts.Notes = append(facts.Notes, "mp3_unindexed_trailing_region")
+					break
+				}
+			}
+			for _, g := range track.Gaps {
+				if !strings.HasPrefix(g.Kind, "trailing_") && g.End > track.AudioStart {
+					c.Warnings = append(c.Warnings, "mp3_unindexed_regions_between_frames")
+					break
+				}
+			}
+			if l := track.Declared.LengthMs; l != nil && (*l-track.EncodedDurationMs > 1000 || track.EncodedDurationMs-*l > 1000) {
+				facts.Notes = append(facts.Notes, "mp3_declared_length_differs")
+			}
+			c.MP3 = facts
+		}
 	case "epub":
 		if !bytes.HasPrefix(header, []byte("PK\x03\x04")) {
 			return c, errors.New("ZIP signature missing")

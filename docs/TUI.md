@@ -48,7 +48,7 @@ item's other files for a new, deliberate review. See
 | F4 in holdings | Cycle EPUB / PDF / MP3 / all filename filters |
 | F7 in State | Review initialization of an explicit existing folder |
 | F8 in State | Review import of the folder and one source; no antivirus scan |
-| Ctrl+R in State | Review a rescan of review EPUBs that lack scan evidence |
+| Ctrl+R in State | Review a rescan of review EPUBs, PDFs, and MP3s that lack scan evidence |
 | Ctrl+N in two-field forms | Switch between fields, including the Gutenberg catalog and the State source |
 | Ctrl+A in snapshot | Toggle historical health metadata |
 | e in Archive, Gutenberg, or Open Library results | Prepare selected-item evaluation, without requesting it. A Gutenberg catalog row lists no files. An Open Library work lists editions on Enter. e on an edition row selects that edition |
@@ -76,7 +76,7 @@ exact folder and control-file writes; a second Enter initializes it. Ctrl+N sets
 one EPUB, PDF, MP3, or completed intake packet. F8 reviews that import; a second
 Enter copies it into the library without scanning; a packet whose acquisition
 scan was clean and bound to the same bytes can still be recorded as checked.
-Ctrl+R reviews a rescan; a second Enter scans the review EPUBs that lack scan
+Ctrl+R reviews a rescan; a second Enter scans the review holdings that lack scan
 evidence and records the results. Escape, F7, F8, and Ctrl+R leave any review
 without a new write. Review freezes fields/navigation and supports
 PageUp/PageDown. Initialization is not import; see

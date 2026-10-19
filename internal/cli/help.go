@@ -150,7 +150,7 @@ nemalo library cleanup LIBRARY --stop
 nemalo library restore LIBRARY --cleanup ID [--apply | --stop]
   Return a cleanup's files to their folder, never replacing.
 nemalo library rescan LIBRARY [--apply]
-  Scan review EPUBs that lack scan evidence; --apply records results.
+  Scan review holdings that lack scan evidence; --apply records results.
 nemalo library open LIBRARY --asset sha256:HASH [--app APPLICATION]
   Open a verified read-only copy in a reader or player.
 nemalo library export LIBRARY --asset sha256:HASH --output DIRECTORY

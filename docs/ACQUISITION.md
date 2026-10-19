@@ -89,8 +89,8 @@ post-download scan (below), or `not_scanned` with `--no-scan`.
 Source MD5/SHA-1 checks establish consistency with metadata, not authenticity.
 The measured SHA-256 identifies local bytes, not a trustworthy publisher.
 
-EPUB checks use the shared bounded parser; PDF and MP3 checks establish candidate
-signatures only. Format validity, warnings, antivirus coverage, DRM, licensing,
+EPUB checks use the shared bounded parser; PDF checks walk the page tree and
+active content, and MP3 checks index the frames without decoding. Format validity, warnings, antivirus coverage, DRM, licensing,
 and semantic completeness remain separate.
 
 ## Scan, quarantine, and another source

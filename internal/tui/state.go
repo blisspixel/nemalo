@@ -79,7 +79,7 @@ func (m *model) requestRescan() {
 	m.input.Blur()
 	m.secondary.Blur()
 	m.status = "Review rescan. Enter scans and records results; Escape returns without scanning."
-	m.setReport(fmt.Sprintf("Rescan review holdings\n\nLibrary: %s\n\nRuns the limited checks again and scans, with the installed scanner, each EPUB holding that is in review only because no usable scan was recorded. ClamAV scans them in batches so its signatures load once.\n\nA clean result records the holding as checked; a detection or an incomplete scan keeps it in review with that reason. PDF, MP3, earlier detections, and other findings are listed but not scanned.\n\nStored files are never changed, moved, or deleted. A no-detection result is not proof of safety.\n\nEnter scans and records the results. Escape, F7, F8, or Ctrl+R returns without scanning.\n", present.Exact(root)))
+	m.setReport(fmt.Sprintf("Rescan review holdings\n\nLibrary: %s\n\nRuns the limited checks again and scans, with the installed scanner, each EPUB, PDF, and MP3 holding that is in review only because no usable scan was recorded. ClamAV scans them in batches so its signatures load once.\n\nA clean result records the holding as checked; a detection or an incomplete scan keeps it in review with that reason. Earlier detections and other findings are listed but not scanned.\n\nStored files are never changed, moved, or deleted. A no-detection result is not proof of safety.\n\nEnter scans and records the results. Escape, F7, F8, or Ctrl+R returns without scanning.\n", present.Exact(root)))
 	m.viewport.GotoTop()
 	m.resize()
 }

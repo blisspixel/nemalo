@@ -356,8 +356,8 @@ nemalo library rescan /path/to/library --apply
 Rescan reruns the limited checks and scans each EPUB holding in review only
 because scan evidence is missing or unusable. It writes nothing without
 `--apply`. ClamAV receives up to 32 files per invocation, so signatures load once
-per batch rather than once per file. PDF and MP3 holdings, earlier detections,
-and other findings are listed with a reason and not scanned. Stored bytes are
+per batch rather than once per file. EPUB, PDF, and MP3 holdings are rescanned;
+earlier detections and other findings are listed with a reason and not scanned. Stored bytes are
 never changed; bytes that no longer match their holding receive no status.
 Applied changes are journaled as `rescan_intent`, holding line, and
 `rescan_completed`; the next writer completes an interrupted rescan first. See

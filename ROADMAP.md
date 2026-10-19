@@ -254,9 +254,10 @@ ClamAV scans, and single-asset managed import and rescan exist. EPUB package
 identifiers can be recorded as evidence. `doctor` names the default scanner,
 its setup command, and signature age. ZIP extraction is in milestone 2 ingest.
 PDFs whose page tree and active content were fully examined and clean can be
-checked ([decision 0032](docs/decisions/0032-pdf-checked-policy.md)). Recording
-and track identities, cross-file work relationships, and an MP3 checked policy
-remain. Depends on milestone 2.
+checked ([decision 0032](docs/decisions/0032-pdf-checked-policy.md)). An MP3 whose frames
+index without damage or truncation can be checked
+([decision 0033](docs/decisions/0033-mp3-checked-policy.md)). Recording and track
+identities and cross-file work relationships remain. Depends on milestone 2.
 
 Deliver EPUB package checks, content checks, scanner adapters, metadata handling,
 exact duplicate detection, and verified library publication.

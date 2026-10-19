@@ -116,15 +116,13 @@ func Rescan(ctx context.Context, request RescanRequest) (result RescanResult, er
 		h := current[id]
 		item := RescanItem{AssetID: h.ID, Path: h.Path, Format: h.Format, Before: h.Status, BeforeReason: h.Reason}
 		reason := h.Reason
-		if h.Format == "pdf" && reason == "format_not_checked_for_publication" {
-			// Held before a PDF could become checked; it is assessed now.
+		if reason == "format_not_checked_for_publication" {
+			// Held before a PDF or MP3 could become checked; assessed now.
 			reason = "unscanned"
 		}
 		switch {
 		case h.Status != "review":
 			continue
-		case h.Format != "epub" && h.Format != "pdf":
-			item.Detail = "This format cannot become checked; scanning would not change its status."
 		case h.Reason == "scan_findings":
 			item.Detail = "A scanner reported a detection. Review the file before importing its source again with --scan."
 		case !rescannable[reason]:

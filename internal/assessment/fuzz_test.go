@@ -4,6 +4,7 @@ import (
 	"archive/zip"
 	"bytes"
 	"context"
+	"encoding/binary"
 	"testing"
 )
 
@@ -65,4 +66,48 @@ func FuzzEPUBInspection(f *testing.F) {
 			}
 		}
 	})
+}
+
+// mp3Frames returns n MPEG-1 Layer III frames at 128 kbps and 44.1 kHz.
+func mp3Frames(n int) []byte {
+	f := make([]byte, 417)
+	copy(f, []byte{0xFF, 0xFB, 0x90, 0x40})
+	return bytes.Repeat(f, n)
+}
+
+func TestMP3ChecksIndexFramesAndFindTruncationAndDamage(t *testing.T) {
+	ctx := context.Background()
+	inspect := func(data []byte) Checks {
+		c, err := InspectContext(ctx, bytes.NewReader(data), int64(len(data)), "mp3")
+		if err != nil {
+			t.Fatal(err)
+		}
+		return c
+	}
+	clean := inspect(mp3Frames(40))
+	if clean.Signature != "mp3_frames_indexed" || clean.MP3 == nil || clean.MP3.Frames != 40 || clean.MP3.SampleRate != 44100 || len(clean.Warnings) != 0 {
+		t.Fatalf("%+v %+v", clean, clean.MP3)
+	}
+	// Junk between frames is damage.
+	damaged := append(append(mp3Frames(20), bytes.Repeat([]byte{0x11}, 300)...), mp3Frames(20)...)
+	if c := inspect(damaged); len(c.Warnings) != 1 || c.Warnings[0] != "mp3_unindexed_regions_between_frames" {
+		t.Fatal(c.Warnings)
+	}
+	// An info frame that declares more frames than the file holds: cut short.
+	xing := mp3Frames(1)
+	copy(xing[36:], "Xing")
+	binary.BigEndian.PutUint32(xing[40:], 0xF)
+	binary.BigEndian.PutUint32(xing[44:], 99)
+	if c := inspect(append(xing, mp3Frames(40)...)); len(c.Warnings) != 1 || c.Warnings[0] != "mp3_declared_frames_differ" {
+		t.Fatal(c.Warnings)
+	}
+	// A trailing nonstandard tag is a note, not a finding.
+	trailer := append(mp3Frames(40), []byte("APETAGEX trailing tag bytes")...)
+	if c := inspect(trailer); len(c.Warnings) != 0 || c.MP3 == nil || len(c.MP3.Notes) != 1 || c.MP3.Notes[0] != "mp3_unindexed_trailing_region" {
+		t.Fatal(c.Warnings, c.MP3)
+	}
+	// Bytes that index no frames stay unindexed.
+	if c := inspect(append([]byte("ID3"), bytes.Repeat([]byte{0}, 64)...)); len(c.Warnings) != 1 || c.Warnings[0] != "mp3_frames_not_indexed" {
+		t.Fatal(c.Warnings)
+	}
 }

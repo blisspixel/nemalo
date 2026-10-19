@@ -100,13 +100,12 @@ func classify(report assessment.Report, scan bool) (status, reason string, err e
 	if report.SHA256 == "" || report.Bytes < 1 || report.Status == "" || report.Status == "incomplete" {
 		return "", "", errors.New("assessment incomplete; source unchanged and nothing imported")
 	}
-	if format == "mp3" {
-		return "review", "format_not_checked_for_publication", nil
-	}
 	// A PDF is checked like an EPUB, and only when its page tree was walked
-	// and its active content fully examined and empty; anything less is a
-	// finding that keeps it in review.
-	examined := format == "epub" || (report.Checks.PDF != nil && !report.Checks.PDF.Partial && report.Checks.PDF.ActiveExamined && len(report.Checks.PDF.ActiveContent) == 0)
+	// and its active content fully examined and empty; an MP3 only when its
+	// frames were indexed. Anything less is a finding that keeps it in review.
+	examined := format == "epub" ||
+		(format == "pdf" && report.Checks.PDF != nil && !report.Checks.PDF.Partial && report.Checks.PDF.ActiveExamined && len(report.Checks.PDF.ActiveContent) == 0) ||
+		(format == "mp3" && report.Checks.MP3 != nil && report.Checks.MP3.Frames > 0)
 	if scan && examined && report.Status == "limited_checks_passed" && report.Antivirus.Status == "no_detections_reported" && len(report.Findings) == 0 {
 		return "checked", "checks_and_scan_recorded", nil
 	}
@@ -262,7 +261,7 @@ func parseOperations(b []byte, libraryID string) ([]operation, error) {
 		if event.Status != "review" && event.Status != "checked" {
 			return nil, ErrStateReview
 		}
-		if event.Status == "checked" && ((event.Format != "epub" && event.Format != "pdf") || event.Reason != "checks_and_scan_recorded") {
+		if event.Status == "checked" && event.Reason != "checks_and_scan_recorded" {
 			return nil, ErrStateReview
 		}
 		if event.Reason == "" || len(event.Reason) > 200 || strings.ContainsAny(event.Reason, "\x00\r\n") {
@@ -329,7 +328,7 @@ func validHolding(h Holding, libraryID string) bool {
 	if h.Path != assetRel(h.SHA256, h.Format) || (h.Status != "review" && h.Status != "checked") || !validNote(h.Reason, 200) {
 		return false
 	}
-	if h.Status == "checked" && ((h.Format != "epub" && h.Format != "pdf") || h.Reason != "checks_and_scan_recorded") {
+	if h.Status == "checked" && h.Reason != "checks_and_scan_recorded" {
 		return false
 	}
 	if h.Titles == nil || h.Languages == nil || len(h.Sources) == 0 || len(h.Titles) > 32 || len(h.Languages) > 32 {

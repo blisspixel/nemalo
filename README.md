@@ -40,9 +40,9 @@ AI service. The agent interface (MCP) uses the same application services.
 - Initialize library control state with locking and resumable initialization.
 - Import one EPUB, PDF, or MP3, or a completed intake packet, into an initialized
   library. Preview writes nothing. Checked status requires a passed EPUB check,
-  or a PDF whose page tree and active content (scripts, launch and automatic
-  actions, attachments) were examined and clean, and a recorded no-detection
-  scan; other assessed files stay in review.
+  a PDF whose page tree and active content (scripts, launch and automatic
+  actions, attachments) were examined and clean, or an MP3 whose frames
+  indexed without damage, and a recorded no-detection scan; other assessed files stay in review.
   `library ingest` imports a whole folder, including intake packets and ZIP
   members, and preserves the folder. `library cleanup` then moves sources whose
   books the library holds into a recoverable holding area, and `library restore`

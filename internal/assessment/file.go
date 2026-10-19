@@ -57,7 +57,7 @@ func (o Options) Validate() error {
 // Check assesses a bounded private snapshot. It never opens a reader, renders a
 // document, extracts to the source tree, or mutates the selected file.
 func Check(ctx context.Context, file string, options Options, av Scanner) (report Report, err error) {
-	report = Report{File: file, CheckedAt: time.Now().UTC(), Status: "incomplete", Findings: []string{}, Antivirus: scanner.Result{Status: "not_scanned", ExitCode: -1}, Limitations: []string{"Limited checks do not establish safety, semantic completeness, or edition quality.", "PDF page trees are walked without reading page content; PDF active content and audio decoding/duration are not inspected.", "EPUB text counts are tokenizer measurements, not rendered pages or proof of complete text."}}
+	report = Report{File: file, CheckedAt: time.Now().UTC(), Status: "incomplete", Findings: []string{}, Antivirus: scanner.Result{Status: "not_scanned", ExitCode: -1}, Limitations: []string{"Limited checks do not establish safety, semantic completeness, or edition quality.", "PDF page trees and active content are examined without reading page content; MP3 frames are indexed but audio is not decoded.", "EPUB text counts are tokenizer measurements, not rendered pages or proof of complete text."}}
 	if err := options.Validate(); err != nil {
 		return report, err
 	}
@@ -106,7 +106,7 @@ func CheckInRoot(ctx context.Context, root *os.Root, name string, options Option
 }
 
 func incompleteReport(root *os.Root, name string) Report {
-	return Report{File: filepath.Join(root.Name(), filepath.FromSlash(name)), CheckedAt: time.Now().UTC(), Status: "incomplete", Findings: []string{}, Antivirus: scanner.Result{Status: "not_scanned", ExitCode: -1}, Limitations: []string{"Limited checks do not establish safety, semantic completeness, or edition quality.", "PDF page trees are walked without reading page content; PDF active content and audio decoding/duration are not inspected.", "EPUB text counts are tokenizer measurements, not rendered pages or proof of complete text."}}
+	return Report{File: filepath.Join(root.Name(), filepath.FromSlash(name)), CheckedAt: time.Now().UTC(), Status: "incomplete", Findings: []string{}, Antivirus: scanner.Result{Status: "not_scanned", ExitCode: -1}, Limitations: []string{"Limited checks do not establish safety, semantic completeness, or edition quality.", "PDF page trees and active content are examined without reading page content; MP3 frames are indexed but audio is not decoded.", "EPUB text counts are tokenizer measurements, not rendered pages or proof of complete text."}}
 }
 
 // prepared is one private snapshot whose limited checks are complete and whose
