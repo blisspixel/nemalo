@@ -152,6 +152,8 @@ func Open(dir string, maxRunning, maxPending int) (*Store, error) {
 			continue
 		}
 		if final(j.Status) {
+			// A cancel marker for a finished job is spent.
+			_ = os.Remove(s.cancelName(fileID(id)))
 			if updated, perr := time.Parse(time.RFC3339Nano, j.Updated); perr == nil && time.Since(updated) > keepFinished {
 				_ = os.Remove(s.journal(fileID(id)))
 				_ = os.Remove(s.lockName(fileID(id)))
@@ -278,7 +280,13 @@ func (s *Store) run(ctx context.Context, id string, r *running, run Run) {
 		_ = s.append(id, record{Event: "finished", Status: Cancelled, Detail: "the server closed before the job started"}, true)
 		return
 	}
-	// Another process asks this one to stop a job by leaving a marker.
+	// Another process asks this one to stop a job by leaving a marker; one
+	// left while the job was queued stops it before it starts.
+	if _, err := os.Lstat(s.cancelName(fileID(id))); err == nil {
+		_ = os.Remove(s.cancelName(fileID(id)))
+		_ = s.append(id, record{Event: "finished", Status: Cancelled, Detail: "cancelled before it started"}, true)
+		return
+	}
 	stopWatch := make(chan struct{})
 	defer close(stopWatch)
 	go func() {

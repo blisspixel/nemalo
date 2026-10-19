@@ -550,7 +550,18 @@ func ExtractSet(ctx context.Context, src *os.Root, names []string, dst *os.Root,
 		if err != nil {
 			return x, err
 		}
-		return extractSnapshot(ctx, exe, kind, filepath.Join(tmp, "archive.7z"), total, dst, supported, limits)
+		// The archive must end where the joined volumes end: a stray extra
+		// volume, or a tail left from another split, would be bytes 7-Zip
+		// ignores while it was reported as read.
+		archive := filepath.Join(tmp, "archive.7z")
+		headerCtx, cancel := context.WithTimeout(ctx, 2*time.Minute)
+		defer cancel()
+		out, code, err := runSeven(headerCtx, exe, nil, "l", "-slt", "-t"+kind, noPassword, "--", archive)
+		keys, ok := archiveBlock(out)
+		if err != nil || code != 0 || !ok || keys["Physical Size"] != strconv.FormatInt(total, 10) {
+			return x, errors.New("the joined volumes are not exactly one 7z archive; the set is preserved")
+		}
+		return extractSnapshot(ctx, exe, kind, archive, total, dst, supported, limits)
 	}
 	// RAR volumes keep their number, so 7-Zip finds each next one by name.
 	first := ""
@@ -581,26 +592,40 @@ func ExtractSet(ctx context.Context, src *os.Root, names []string, dst *os.Root,
 	return extractSnapshot(ctx, exe, kind, archive, total, dst, supported, limits)
 }
 
-// setHeader reads the archive block of a listing without -ba: whether 7-Zip
-// calls the archive multi-volume, and how many volumes it names.
-func setHeader(out []byte) (int, bool) {
+// archiveBlock reads the keys of the archive block of a listing without
+// -ba, the block 7-Zip prints before its first member. An archive comment is
+// printed raw inside that block and can hold any text, so nothing at or
+// after a Comment key is read, and a key that appears twice refuses the
+// block rather than letting either value stand.
+func archiveBlock(out []byte) (map[string]string, bool) {
 	text := strings.ReplaceAll(string(out), "\r\n", "\n")
 	start := strings.Index(text, "\n--\n")
-	end := strings.Index(text, "\n----------\n")
-	if start < 0 || end < start {
+	if start < 0 {
+		return nil, false
+	}
+	keys := map[string]string{}
+	for _, line := range strings.Split(text[start+4:], "\n") {
+		key, value, ok := strings.Cut(line, " = ")
+		if !ok || key == "Comment" || strings.HasPrefix(line, "----------") {
+			break
+		}
+		if _, seen := keys[key]; seen {
+			return nil, false
+		}
+		keys[key] = value
+	}
+	return keys, true
+}
+
+// setHeader reports whether 7-Zip calls the archive multi-volume, and how
+// many volumes it names, from its archive block.
+func setHeader(out []byte) (int, bool) {
+	keys, ok := archiveBlock(out)
+	if !ok {
 		return 0, false
 	}
-	volumes, multi := 0, false
-	for _, line := range strings.Split(text[start+4:end], "\n") {
-		key, value, _ := strings.Cut(line, " = ")
-		switch key {
-		case "Multivolume":
-			multi = value == "+"
-		case "Volumes":
-			volumes, _ = strconv.Atoi(value)
-		}
-	}
-	return volumes, multi
+	volumes, _ := strconv.Atoi(keys["Volumes"])
+	return volumes, keys["Multivolume"] == "+"
 }
 
 // joinVolumes writes the volumes of a split archive in order into one

@@ -307,13 +307,19 @@ func planIngest(folder string, entries []inventory.Entry, result *IngestResult) 
 		paths := make([]string, len(vs))
 		for i, v := range vs {
 			paths[i] = filepath.FromSlash(v.path)
+		}
+		first := filepath.Join(folder, paths[0])
+		if strings.Contains(first, "!/") {
+			// "!/" separates an archive from its member in provenance labels.
+			for _, v := range vs {
+				setOf[v.path] = "unlabelable"
+			}
+			continue
+		}
+		for _, v := range vs {
 			setOf[v.path] = vs[0].path
 		}
 		setFirst[vs[0].path] = true
-		first := filepath.Join(folder, paths[0])
-		if strings.Contains(first, "!/") {
-			continue
-		}
 		units = append(units, ingestUnit{item: IngestItem{Source: vs[0].path, Kind: "archive"}, file: first, archive: true, volumes: paths})
 	}
 	for _, e := range entries {
@@ -323,8 +329,10 @@ func planIngest(folder string, entries []inventory.Entry, result *IngestResult) 
 			continue
 		case setOf[e.Path] == "incomplete":
 			item.Outcome, item.Detail = "not_imported", "a volume of a set with a missing volume; preserved"
+		case setOf[e.Path] == "unlabelable":
+			item.Kind, item.Outcome, item.Detail = "archive", "failed", "a volume of a set whose path contains \"!/\", which member provenance cannot represent; preserved"
 		case setOf[e.Path] != "":
-			item.Outcome, item.Detail = "archive_volume", "a volume of the set read through "+setOf[e.Path]
+			item.Outcome, item.Detail = "archive_volume", "a volume of the set read through "+setOf[e.Path]+"; that archive's outcome is the set's"
 		case e.Finding != "" || e.Kind == "link" || e.Kind == "special" || e.Kind == "unreadable":
 			item.Outcome, item.Detail = "not_imported", firstNonEmpty(e.Finding, e.Kind)
 		case e.Kind == "directory":

@@ -26,13 +26,17 @@ left untouched and any unaccounted material preserved.
   an ordinary RAR, which fails and is preserved if it is in fact a volume.
 - A split 7z is joined in volume order into one private snapshot, each
   volume checked unchanged after it is copied, and read as one 7z by its
-  signature, as decision 0043 reads any 7z.
+  signature, as decision 0043 reads any 7z, only when 7-Zip's archive block
+  gives a physical size equal to the joined total, so a stray extra volume
+  or a tail left from another split is never reported as read.
 - A RAR set is copied volume by volume into a private snapshot under its own
   volume numbers, so 7-Zip finds each next volume by name. It is read only
   when 7-Zip's own archive block, listed without `-ba`, says
   `Multivolume = +` and names exactly as many volumes as were found; a set
   7-Zip counts differently, as a stray extra volume or a missing last one
-  would make it, is refused and preserved.
+  would make it, is refused and preserved. An archive comment is printed raw
+  inside that block, so nothing at or after a `Comment` key is read, and a key
+  that appears twice refuses the block.
 - A set is at most 4 GiB and 1,000 volumes. Every member is then classified
   and extracted as in decision 0043, by exact name to standard output, with
   its listed size and CRC.
@@ -60,3 +64,11 @@ RAR5 format description, with an EPUB split across both volumes, which
 `7z t` reports as valid, imported both its books; a set with its second
 volume missing was preserved; and a RAR set with a third, unrelated file
 named as its next volume was refused because 7-Zip counted two volumes.
+
+An independent adversarial review with the installed 7-Zip then found three
+defects, each now fixed with a test: an archive comment holding
+`Volumes = 3` overrode 7-Zip's count, so an unrelated archive named as a
+third volume was reported as read; an extra `.7z.NNN` volume was reported as
+read while 7-Zip ignored its bytes; and a set in a folder whose path holds
+`!/` lost its first volume from the report. A volume of a set now says its
+archive's outcome is the set's.

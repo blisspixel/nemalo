@@ -288,6 +288,7 @@ func TestVolumeSetsAreReadWholeOrPreserved(t *testing.T) {
 		}
 	}
 	_ = os.Remove(filepath.Join(dst.Name(), "00000.epub"))
+	header("Path = x\nType = 7z\nPhysical Size = 11\n")
 	x, err = ExtractSet(context.Background(), src, []string{"set.7z.001", "set.7z.002"}, dst, books, Defaults())
 	if err != nil || len(x.Members) != 1 || x.Members[0].Disposition != "extracted" {
 		t.Fatal(x, err)
@@ -297,5 +298,35 @@ func TestVolumeSetsAreReadWholeOrPreserved(t *testing.T) {
 	}
 	if _, _, ok := VolumeOf("set.rar"); ok {
 		t.Fatal("a plain archive named a volume")
+	}
+}
+
+// A comment in the archive block cannot speak for 7-Zip, a repeated key
+// refuses the block, and a split 7z with bytes past its archive is refused.
+func TestArchiveBlockIgnoresCommentsAndExtraVolumes(t *testing.T) {
+	block := "Listing archive: x\n\n--\nPath = x\nType = Rar5\nMultivolume = +\nVolumes = 2\nComment = Multivolume = +\nVolumes = 3\n----------\nPath = a\n"
+	if n, multi := setHeader([]byte(block)); n != 2 || !multi {
+		t.Fatal(n, multi)
+	}
+	if n, multi := setHeader([]byte("x\n--\nComment = hi\nMultivolume = +\nVolumes = 3\n")); n != 0 || multi {
+		t.Fatal("values after a comment were read", n, multi)
+	}
+	if _, ok := archiveBlock([]byte("x\n--\nVolumes = 2\nVolumes = 3\n")); ok {
+		t.Fatal("a repeated key was accepted")
+	}
+	src, dst := sevenFixture(t, []sevenMember{{name: "book.epub", body: []byte("x")}})
+	t.Setenv("NEMALO_FAKE_7Z_TYPE", "-t7z")
+	dir := os.Getenv("NEMALO_FAKE_7Z")
+	for name, data := range map[string]string{"s.7z.001": "7z\xbc", "s.7z.002": "\xaf\x27\x1c rest", "s.7z.003": "stray"} {
+		if err := os.WriteFile(filepath.Join(src.Name(), name), []byte(data), 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	// 7-Zip reads an 11-byte archive; the three volumes join to 16 bytes.
+	if err := os.WriteFile(filepath.Join(dir, "header.txt"), []byte("Path = x\nType = 7z\nPhysical Size = 11\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := ExtractSet(context.Background(), src, []string{"s.7z.001", "s.7z.002", "s.7z.003"}, dst, books, Defaults()); err == nil || !strings.Contains(err.Error(), "exactly one 7z") {
+		t.Fatal(err)
 	}
 }
