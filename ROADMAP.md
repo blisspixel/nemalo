@@ -297,8 +297,12 @@ during an import copy, a journal line, a cleanup copy, and an export, and a
 scanner that is unavailable, incomplete, failing, or timing out. Each leaves
 sources intact and the library recoverable. A torn last journal line holds
 no record, is reported by `library check`, and is removed by the next write.
-Writes of known size refuse up front when the disk lacks room. Permission,
-name-conflict, and concurrent-run fault cases remain. Depends on milestone 3.
+Writes of known size refuse up front when the disk lacks room. While one
+writer holds a library, import, ingest, cleanup, and rescan are refused as busy
+before writing; racing imports all finish consistently when retried; an
+unwritable store or control folder refuses an import, keeps the source, and
+recovers once writable; an existing different file at an asset, export, or
+restore name is never replaced. Depends on milestone 3.
 Required for a production cleanup release.
 
 Deliver plan-based source cleanup, review handling, library checking, and interruption

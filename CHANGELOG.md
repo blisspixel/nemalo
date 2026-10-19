@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Tests cover every writer refused as busy while another holds the library, racing imports, and an unwritable store or control folder that recovers once writable.
 - `nemalo mcp serve --allow-write` adds `library_import_preview` and `library_import_apply`. An apply stores only the plan digest its preview returned and writes nothing when the source, its assessment, the scan choice, or the library changed. Sources are never changed, and the plugins stay read-only ([decision 0034](docs/decisions/0034-mcp-import-tools.md)).
 - `library import` previews show a plan digest, and `--apply --plan DIGEST` applies only that plan.
 - `check` and import index an MP3's frames. A declared frame count the file does not hold (a cut-short download) or bytes between frames (damage) keep it in review; a trailing nonstandard tag or a differing ID3 length is noted. A cleanly indexed MP3 with a clean scan is now `checked`, and `library rescan` promotes MP3s already held. A library that holds a checked MP3 needs this version or newer ([decision 0033](docs/decisions/0033-mp3-checked-policy.md)).
