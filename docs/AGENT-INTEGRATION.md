@@ -173,6 +173,11 @@ enforcement; the server's scope check and read-only tools are.
 
 ## Post-1.0 processing and knowledge workspaces
 
+Before 1.0, milestone 9 adds a versioned evidence result and reading guidance to
+the existing read-only tools, so the host's own agent explains a work from cited
+passages; Nemalo runs no model there
+([decision 0048](decisions/0048-cited-evidence-before-1-0.md)).
+
 After 1.0 and all existing roadmap work, an optional harness can help maintain Nemalo's
 Markdown knowledge workspace and produce topic-watch insights. OpenCode is one
 candidate, not a required host. OpenRouter is a model-provider candidate, not the

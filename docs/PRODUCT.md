@@ -6,9 +6,12 @@ This document describes the intended product. For implemented behavior, see [dev
 
 **1.0 focuses on the library and finding things:** dependable discovery and
 acquisition, messy-download intake, verified organization, preservation, and access
-for ebooks and audiobooks. CLI, JSON, and MCP expose those library capabilities.
-Model-assisted analysis, generated knowledge workspaces, and video/topic insight
-workflows are post-1.0 work and cannot become prerequisites for the library release.
+for ebooks and audiobooks. CLI, JSON, and MCP expose those library capabilities,
+including cited evidence from holdings that a person's own agent can use to explain
+a work, with no model inside Nemalo
+([decision 0048](decisions/0048-cited-evidence-before-1-0.md)). Model processing inside
+Nemalo, generated knowledge workspaces, and video/topic insight workflows are post-1.0
+work and cannot become prerequisites for the library release.
 See the [1.0 scope](../ROADMAP.md#version-10-library-and-discovery).
 
 The full lifecycle defines the product from the outset, even when capabilities

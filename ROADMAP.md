@@ -24,18 +24,28 @@ Its acceptance centers on:
   to suitable readers or players. Built-in playback is not required.
 - Provide native Go CLI, JSON, and scoped MCP/Agent Plugins interfaces over shared
   services, with the verification and platform evidence specified below.
+- Return cited evidence from holdings, bound to exact assets, versions, extractors,
+  and locators with stated coverage, so a person's own agent can explain a work
+  or answer a question from it. Nemalo runs no model for this.
 
 Milestones deliver these workflows incrementally; the first end-to-end slice is
 earlier than 1.0. Papers/textbooks and their provider plan remain in scope as library
 expansion, but catalog breadth must not displace reliable book/audiobook workflows.
 Additional capabilities below are not a blanket checklist for releasing 1.0.
 
-Model-assisted analysis, generated Markdown knowledge workspaces, video/topic insight
-watches, and inference/harness integrations are explicitly post-1.0. Existing MCP
-library automation does not require them. Do not implement speculative analysis
-infrastructure while the library release remains unfinished.
+Model processing inside Nemalo, generated Markdown knowledge workspaces, video,
+podcast, feed, and web capture, topic watches, and inference/harness integrations
+are post-1.0. Cited evidence and agent-led reading over the existing MCP tools are
+1.0 work (milestone 9), because 1.0 freezes the reference contracts that later
+analysis depends on ([decision 0048](docs/decisions/0048-cited-evidence-before-1-0.md)).
+Do not build model, workspace, or capture infrastructure while the library release
+remains unfinished.
 
 ## First end-to-end slice
+
+Status: complete. Search, evaluate, acquire, assess and scan, import as checked
+with provenance, open or export a verified copy, and `library check` run end to end
+for Archive, Gutenberg, and arXiv sources through CLI, JSON, TUI, and MCP.
 
 Build the smallest coherent lifecycle early: search a permitted source, evaluate
 a specific edition/asset, acquire it, assess it through the same pipeline as an
@@ -53,6 +63,48 @@ initial agent integration. Destructive cleanup remains unavailable until milesto
 passes. Further providers, paper/audio policies, TUI, and richer content retrieval
 broaden this same system rather than create separate applications. CLI and TUI
 are first-class 1.0 interfaces; web/desktop interfaces are outside the current scope.
+
+## Order of work to 1.0
+
+Each stage depends on the ones before it; work inside a stage can proceed in any
+order. A stage is finished when its milestone acceptance items are met and
+verified, not when code exists. No stage has a time estimate.
+
+1. **Identity and collections** (milestone 1, collections workstream). Recording
+   identity beyond LibriVox, alternate hosts of one recording deduplicated by
+   recording evidence and exact hashes, and relationships between distinct
+   editions and versions of one work recorded from explicit identifier evidence,
+   never merged. Declarative collections: intent plus resolved edition, version,
+   recording, and asset records, idempotent repeat acquisition, and a diff before
+   any update. First, because evidence, collections, and stored records cite
+   these identities, and changing them after 1.0 breaks libraries.
+2. **Intake completeness** (milestones 2 and 4). Old-style RAR volume names
+   (`.rar`, `.r00`), split ZIPs, nested archives within the existing bounds,
+   PAR2 sets inventoried and retained without repair, cleanup of RAR and 7z
+   sources and volume sets with every member accounted for, and Windows reparse
+   point tests. These close the ingest and cleanup acceptance for messy folders.
+3. **Audio access** (milestone 8). M4B and M4A byte ranges and decoded timing in
+   content access, bounded ranges usable by an external player, and output
+   demonstrated with a real audiobook reader or server.
+4. **Cited evidence and agent reading** (milestone 9). A versioned evidence
+   result over the content services, documented citation export, and agent
+   guidance for reading a work from its own structure. Depends on stages 1 and
+   3, since evidence names identities and audio ranges.
+5. **Interfaces and platforms** (milestone 6 and the TUI workstream). TUI views
+   for jobs, collections, and evidence; the MCP host and platform matrix; native
+   macOS and Windows runs of destructive and recovery paths, and of the installers.
+6. **1.0 release candidate.** Freeze and document the on-disk formats (journals,
+   holdings, bookmarks, packets), JSON envelopes, extractor IDs, and the evidence
+   contract; upgrade alpha libraries in place or refuse them with a clear path;
+   pass every [release gate](#release-gates); review the documentation against
+   behavior.
+
+Not 1.0 gates, and able to proceed alongside once their dependencies exist:
+remaining paper providers and DOI resolution in milestone 7, the textbook cohort,
+OCR and column reconstruction, and the
+[additional planned capabilities](#additional-planned-capabilities). The
+[post-1.0 phase](#post-10-topic-watches-and-optional-knowledge-processing) follows
+all of these.
 
 ## Implementation status
 
@@ -122,7 +174,6 @@ two discovery adapters, source-declared Archive file/access/rights evaluation,
 and selected EPUB/PDF/MP3 acquisition into exclusive untrusted intake packets.
 Whole recordings are acquired as ordered track packets, interrupted transfers
 resume against a strong validator, and held recordings have ordered manifests.
-Checked publication remains planned.
 All remaining production
 capabilities stay planned. A configured CI workflow is not itself a hosted pass.
 The initial foundation passed hosted native CI on Linux, macOS, and Windows.
@@ -508,7 +559,7 @@ Acceptance:
 - Preserve DOI/PMCID/arXiv IDs and versions; display preprint, review, correction,
   and retraction evidence without treating availability as scientific endorsement.
 - Export documented citation metadata, such as CSL-JSON, with provenance and
-  unknown fields retained rather than invented.
+  unknown fields retained rather than invented. Delivered with milestone 9.
 - Define physical PDF page indexes separately from printed labels, and bind exact
   quotations to asset/version, source page/section, extractor, and extracted span.
   Disclose missing text, two-column order uncertainty, scanned/mixed pages, and
@@ -579,9 +630,89 @@ Acceptance:
   integration remains optional and separately verified.
 - Playback, M4B generation, normalization, AI narration, and speech-to-text are later work.
 
+## Milestone 9: cited evidence and agent reading
+
+Status: planned. The pre-1.0 part of
+[issue 37](https://github.com/blisspixel/nemalo/issues/37) and
+[issue 38](https://github.com/blisspixel/nemalo/issues/38)
+([decision 0048](docs/decisions/0048-cited-evidence-before-1-0.md)). Depends on
+content access, milestone 1 identities, and milestone 8 audio ranges.
+
+Deliver one versioned evidence result through `internal/app`, CLI JSON, and the
+read-only MCP tools: the exact asset, work, edition or version, and recording
+identities; the extractor and representation; passages, pages, sections, or time
+ranges with their locators and exact text; and the coverage of the request, which
+units were read, which were unsupported or had gaps, and where a bound stopped it.
+Add documented citation metadata export, such as CSL-JSON, with provenance and
+unknown fields retained. Extend the shared agent skill so an agent reads a work
+from its question and the work's own structure, cites every location it relies on,
+and reports what it did not read.
+
+Acceptance:
+
+- Quotation and source statement stay distinct from anything a caller generates;
+  Nemalo stores no generated interpretation and runs no model.
+- A request bounded by size or count reports the bound and a continuation, never
+  a complete result. Unsupported units and gaps are listed, not skipped.
+- An evidence reference resolves again to the same bytes and extractor, or fails
+  visibly when the asset changed or was removed.
+- Retrieval stays offline and read-only and records no reading or consumption.
+- Using permitted public-domain works and an arXiv paper, review an agent's
+  actual outputs for: an early idea developed or challenged later, cited at both
+  places; two defensible readings of one passage kept apart; a result whose
+  method and limitations survive the explanation; two sources that agree in
+  summary but differ in definitions; and a changed question that changes what is
+  read. Mechanical checks of citations support this review and do not replace it.
+
+## Release gates
+
+Every production milestone must pass formatting, lint/static analysis, and relevant
+tests: `gofmt`, `go vet`, pinned mature static analysis such as Staticcheck, `go test`,
+supported-platform race tests, vulnerability checks, and at least 80% measured
+coverage. Coverage supports meaningful recovery and failure tests; it cannot
+replace them.
+
+Run native CI on Linux, macOS, and Windows. Initially target Linux amd64/arm64,
+macOS arm64/amd64, and Windows amd64. Cross-building alone does not establish
+runtime support. Race instrumentation may require a native C toolchain in CI even
+when release builds do not use cgo.
+
+Release gates include packaged-binary smoke tests, hostile archive fixtures,
+scanner error/skip cases, parser fuzzing, and cleanup fault injection. CI must enforce
+formatting and coverage thresholds, not merely print them. Include all first-party
+packages in the profile and test destructive paths individually. Publish checksums
+and dependency requirements. Do not claim hosted CI passed without an actual run.
+
+Current Go verification commands:
+
+```sh
+go run ./cmd/verify
+go test -race ./...
+```
+
+The Go verification helper rejects formatting differences and enforces unrounded
+coverage, merging identical blocks from cross-package tests. Staticcheck and
+govulncheck are pinned development tools, not runtime dependencies. Native CI
+also builds and smokes the executable with cgo disabled. Race checks require cgo.
+
+## Remaining implementation choices
+
+1. Settle Linux environments: Ubuntu is the hosted native CI runner; Omarchy 4
+   (Arch Linux x86_64) was reviewed for desktop terminal and descriptor bridge
+   compatibility.
+2. Holding-area retention: held sources are kept until `library purge`
+   removes the copies the library holds, after its own preview
+   ([decision 0041](docs/decisions/0041-purge-held-sources.md)).
+3. EPUBCheck conformance is an optional assessment, not part of the checked
+   policy ([decision 0038](docs/decisions/0038-optional-epubcheck.md)).
+
+The language is settled. These choices can be refined in their milestones with
+conservative defaults; they do not justify starting additional stacks or services.
+
 ## Additional planned capabilities
 
-These capabilities remain in the vision, with delivery after the first end-to-end slice:
+These capabilities remain in the vision. They are not 1.0 gates and can be
+delivered before or after it as their dependencies allow:
 
 - PAR2 verification, then opt-in repair with originals retained and output revalidated.
 - P2 source cohorts, generic permitted OPDS feeds, and reviewed collection manifests.
@@ -600,6 +731,9 @@ is needed to prove the core workflow.
 
 Status: explicitly post-1.0, deferred until all pre-existing roadmap work is complete,
 including the additional planned capabilities and cross-cutting workstreams.
+Cited evidence and agent-led reading over MCP are milestone 9, before 1.0; this
+phase adds processing inside Nemalo, persistence of generated work, and capture
+of sources beyond the library, all built on that evidence contract.
 Conditional choices above remain conditional; this gate does not require adopting
 a database or other option that evidence does not justify. This phase must not
 become a dependency of 1.0 or displace the existing library product plan.
@@ -735,48 +869,3 @@ Acceptance:
 - Evaluate multilingual citation accuracy, faithfulness, and usefulness; measure local
   resource costs. Retain native platform CI and the existing Go verification/coverage
   gates. Do not claim superiority to Distillr without comparative evidence.
-
-## Release gates
-
-Every production milestone must pass formatting, lint/static analysis, and relevant
-tests: `gofmt`, `go vet`, pinned mature static analysis such as Staticcheck, `go test`,
-supported-platform race tests, vulnerability checks, and at least 80% measured
-coverage. Coverage supports meaningful recovery and failure tests; it cannot
-replace them.
-
-Run native CI on Linux, macOS, and Windows. Initially target Linux amd64/arm64,
-macOS arm64/amd64, and Windows amd64. Cross-building alone does not establish
-runtime support. Race instrumentation may require a native C toolchain in CI even
-when release builds do not use cgo.
-
-Release gates include packaged-binary smoke tests, hostile archive fixtures,
-scanner error/skip cases, parser fuzzing, and cleanup fault injection. CI must enforce
-formatting and coverage thresholds, not merely print them. Include all first-party
-packages in the profile and test destructive paths individually. Publish checksums
-and dependency requirements. Do not claim hosted CI passed without an actual run.
-
-Current Go verification commands:
-
-```sh
-go run ./cmd/verify
-go test -race ./...
-```
-
-The Go verification helper rejects formatting differences and enforces unrounded
-coverage, merging identical blocks from cross-package tests. Staticcheck and
-govulncheck are pinned development tools, not runtime dependencies. Native CI
-also builds and smokes the executable with cgo disabled. Race checks require cgo.
-
-## Remaining implementation choices
-
-1. Settle Linux environments: Ubuntu is the hosted native CI runner; Omarchy 4
-   (Arch Linux x86_64) was reviewed for desktop terminal and descriptor bridge
-   compatibility.
-2. Holding-area retention: held sources are kept until `library purge`
-   removes the copies the library holds, after its own preview
-   ([decision 0041](docs/decisions/0041-purge-held-sources.md)).
-3. EPUBCheck conformance is an optional assessment, not part of the checked
-   policy ([decision 0038](docs/decisions/0038-optional-epubcheck.md)).
-
-The language is settled. These choices can be refined in their milestones with
-conservative defaults; they do not justify starting additional stacks or services.

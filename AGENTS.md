@@ -30,8 +30,11 @@ tested, and shipped behavior. Never infer support from a roadmap or a cross-buil
   The only one is `scripts/install.sh`/`install.ps1` (decision 0013).
 - Implement the bounded task requested. Research/documentation work does not
   authorize a rewrite, data cleanup, release, commit, push, or deployment.
-- Topic watches, Markdown knowledge workspaces, and optional model/provider/harness
-  processing are post-1.0 and deferred until all pre-existing roadmap work is complete.
+- Topic watches, Markdown knowledge workspaces, source capture beyond the library, and
+  optional model/provider/harness processing are post-1.0 and deferred until all
+  pre-existing roadmap work is complete. Cited evidence and agent-led reading over the
+  read-only MCP tools are 1.0 milestone 9 (decision 0048): Nemalo runs no model and
+  stores no generated interpretation there. Follow the roadmap's order of work.
   Do not build them or their speculative infrastructure into the 1.0 library. Implement
   them in Nemalo's shared Go services. OpenRouter is a provider candidate; OpenCode is
   a harness candidate. Neither is required. Distillr is a workflow research reference only,

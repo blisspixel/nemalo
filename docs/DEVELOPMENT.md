@@ -516,6 +516,9 @@ adapter over the same services; `--allow-write` adds previewed imports
 ([decision 0034](decisions/0034-mcp-import-tools.md)) and durable acquisition
 and rescan jobs ([decision 0045](decisions/0045-durable-mcp-jobs.md)). Website search, other
 Gutenberg formats, recording identity across hosts, decoded timing in content
-access, files above 2 GiB, OCR, and column reconstruction stay later. Generated analysis
-and model/harness integrations remain post-1.0. Issues 1 and 2 are closed;
+access, files above 2 GiB, OCR, and column reconstruction stay later. The remaining 1.0 work is
+ordered by dependency in the [roadmap](../ROADMAP.md#order-of-work-to-10), starting
+with identity and collections. Cited evidence for agent-led reading is milestone 9
+([decision 0048](decisions/0048-cited-evidence-before-1-0.md)); generated analysis
+inside Nemalo and model/harness integrations remain post-1.0. Issues 1 and 2 are closed;
 their remaining OCR, column, and decoded audio work is milestone 7 and 8.

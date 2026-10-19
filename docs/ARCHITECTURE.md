@@ -15,8 +15,9 @@ These form one product contract. The [product contract](PRODUCT.md) is the canon
 shipping order does not determine which capabilities belong to the product.
 
 The 1.0 product centers on a local library and discovery for books, ebooks, and
-audiobooks. Papers/textbooks extend the library; generated analysis and knowledge
-workspaces are post-1.0. MCP library tools do not require inference or a model harness.
+audiobooks. Papers/textbooks extend the library. Cited evidence for agent-led reading is 1.0
+work; generated analysis inside Nemalo and knowledge workspaces are post-1.0. MCP
+library tools do not require inference or a model harness.
 The [1.0 scope](../ROADMAP.md#version-10-library-and-discovery) defines the release boundary.
 
 Use package-manager ideas where they fit: stable resource IDs, source catalogs,
