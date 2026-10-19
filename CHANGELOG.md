@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- An Archive evaluation lists the ISBN and Open Library edition and work keys the item declares, and import records valid ones on the source. `library related LIBRARY [--asset ID]` and the MCP tool `library_related` group holdings that share a stated work, edition, or version, versions of one arXiv paper, a narration, or files of one source item, each with its evidence; nothing is merged and titles are never compared. A library holding a source identity needs this version or newer ([decision 0049](docs/decisions/0049-declared-identifiers-and-related-holdings.md)).
 ## 0.1.0-alpha.16
 
 Sixteenth native prerelease. This remains an early library, not 1.0. One explicit arXiv paper version can be evaluated and acquired, MCP servers run long work as durable jobs that a terminal can read and cancel, split 7z and RAR volume sets are read whole, and recordings of one reading are related by narration.

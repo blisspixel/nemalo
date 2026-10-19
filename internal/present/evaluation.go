@@ -27,6 +27,13 @@ func Evaluation(e discovery.Evaluation) string {
 	field(&b, "Page", Line(e.LandingPage))
 	field(&b, "Metadata SHA-256", Line(e.MetadataSHA256))
 	field(&b, "Open Library edition", Line(e.OpenLibraryEdition))
+	if len(e.Identifiers) > 0 {
+		ids := make([]string, len(e.Identifiers))
+		for i, d := range e.Identifiers {
+			ids[i] = Line(d.Field) + " " + Line(d.Value)
+		}
+		field(&b, "Declared identifiers", strings.Join(ids, "; "))
+	}
 	if len(e.Files) > 0 {
 		fmt.Fprintf(&b, "Files listed: %d\n", len(e.Files))
 	}

@@ -463,6 +463,12 @@ func (s Service) HoldingsFormat(file, query, format string, limit, offset int) (
 }
 
 // ManagedHoldings lists an initialized library's current holdings.
+// Related groups holdings that share a stated identifier, an arXiv paper, a
+// source item, or a narration; with asset, only that holding's groups.
+func (s Service) Related(ctx context.Context, directory, asset string) (library.RelatedResult, error) {
+	return library.Related(ctx, directory, asset)
+}
+
 // Recordings lists held recordings; a source filter also verifies and indexes
 // each held track's stored bytes.
 func (s Service) Recordings(ctx context.Context, directory, source string) (library.RecordingsResult, error) {

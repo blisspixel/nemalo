@@ -288,6 +288,29 @@ func Ingest(r library.IngestResult) string {
 	return b.String()
 }
 
+// Related shows each group of holdings and the evidence placing each one.
+func Related(r library.RelatedResult) string {
+	var b strings.Builder
+	field(&b, "Library", Line(r.LibraryID))
+	field(&b, "Holding", Line(r.Holding))
+	fmt.Fprintf(&b, "Related groups: %d\n", len(r.Groups))
+	for _, g := range r.Groups {
+		fmt.Fprintf(&b, "\n%s: %s (%d holdings)\n", words(g.Relation), Line(g.Key), len(g.Members))
+		for _, m := range g.Members {
+			version := ""
+			if m.Version > 0 {
+				version = fmt.Sprintf(" version %d", m.Version)
+			}
+			fmt.Fprintf(&b, "  %s %s%s %s\n", Line(m.Holding), Line(m.Format), version, Line(m.Title))
+			for _, e := range m.Evidence {
+				fmt.Fprintf(&b, "    %s\n", Line(e))
+			}
+		}
+	}
+	notes(&b, "Limitation", r.Limitations)
+	return b.String()
+}
+
 // Recordings shows each held recording and its tracks in declared order.
 func Recordings(r library.RecordingsResult) string {
 	var b strings.Builder

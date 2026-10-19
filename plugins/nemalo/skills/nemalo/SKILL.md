@@ -1,6 +1,6 @@
 ---
 name: nemalo
-description: Use when the user asks about books, ebooks, audiobooks, or files in their local Nemalo library, or wants text or audio ranges read from them. Covers the read-only nemalo MCP tools (library_list, library_recordings, library_status, library_audit, library_check, file_check, content_units, content_navigation, content_pages, content_read, content_locate, content_source, content_resource) and when to suggest the nemalo CLI for changes.
+description: Use when the user asks about books, ebooks, audiobooks, or files in their local Nemalo library, or wants text or audio ranges read from them. Covers the read-only nemalo MCP tools (library_list, library_recordings, library_related, library_status, library_audit, library_check, file_check, content_units, content_navigation, content_pages, content_read, content_locate, content_source, content_resource) and when to suggest the nemalo CLI for changes.
 license: Apache-2.0
 compatibility: Requires the nemalo executable on PATH and an MCP host that starts it with nemalo mcp serve.
 ---
@@ -36,6 +36,10 @@ delete anything.
   recording. `complete` means every declared position is held, not that the
   audio was checked. `narrations` groups recordings of one LibriVox reading,
   such as MP3 tracks and an M4B; two readings of one book are two narrations.
+- `library_related` groups holdings that share a stated work, edition, or
+  version, versions of one arXiv paper, a narration, or files of one source
+  item, with the evidence for each member. A group is not a claim that the
+  holdings hold the same text; say which relation and evidence connect them.
 - `library_check` verifies the whole library and lists issues (missing, changed,
   untracked, unfinished work) and review counts with next steps. `library_status`
   and `library_audit` are narrower. Report findings as they are; do not offer to

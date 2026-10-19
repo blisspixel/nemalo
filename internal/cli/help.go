@@ -20,7 +20,8 @@ Find      search QUERY, evaluate ID, catalog fetch gutenberg
 Acquire   acquire ID --file NAME --output NEW_DIRECTORY
 Check     inspect DIRECTORY, check FILE [--scan]
 Keep      library init, import, ingest, list, audit, check, cleanup,
-          restore, rescan, open, export, recordings, snapshot, status
+          restore, rescan, open, export, recordings, related, snapshot,
+          status
 Read      read LIBRARY --root LIBRARY --asset sha256:HASH,
           content units, navigation, pages, read, locate, bookmark
 Tools     tui, doctor, mcp serve, jobs, version
@@ -166,6 +167,10 @@ nemalo library list CATALOG|LIBRARY [--query TEXT]
 nemalo library recordings LIBRARY [--source archive:ITEM]
   List held recordings in declared track order; with --source, verify and
   index each track's timing.
+nemalo library related LIBRARY [--asset sha256:HASH]
+  Group holdings that share an identifier an EPUB package or a source's
+  metadata states, versions of one arXiv paper, files of one source item,
+  or a narration. Nothing is merged, and titles are never compared.
 nemalo library cleanup LIBRARY FOLDER [--apply --plan DIGEST]
   Move sources the library holds into a recoverable holding area; the
   preview lists every entry and a plan digest.

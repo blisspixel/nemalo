@@ -131,6 +131,14 @@ func New(service app.Service, opts Options) (*mcp.Server, error) {
 			}
 			return service.Recordings(ctx, dir, in.Source)
 		})
+	add(&r, "library_related", "Group holdings in an initialized library that share an identifier an EPUB package or a source's metadata states (work, edition, publication version), versions of one arXiv paper, files of one source item, or a narration. Each member lists its evidence. Nothing is merged and titles are never compared.", false,
+		func(ctx context.Context, in relatedInput) (any, error) {
+			dir, err := scopes.path(in.Library)
+			if err != nil {
+				return nil, err
+			}
+			return service.Related(ctx, dir, in.Asset)
+		})
 	add(&r, "library_audit", "Audit stored bytes: an initialized library directory alone compares managed holdings; a catalog file with an explicit root compares a snapshot. Reports findings and changes nothing.", false,
 		func(ctx context.Context, in auditInput) (any, error) {
 			catalog, err := scopes.path(in.Catalog)
@@ -423,6 +431,11 @@ type locateInput struct {
 type recordingsInput struct {
 	Library string `json:"library" jsonschema:"an initialized library directory inside a configured scope"`
 	Source  string `json:"source,omitempty" jsonschema:"archive:ITEM to verify and index that source's recordings; omit to list all from the journal"`
+}
+
+type relatedInput struct {
+	Library string `json:"library" jsonschema:"an initialized library directory inside a configured scope"`
+	Asset   string `json:"asset,omitempty" jsonschema:"an asset ID, sha256: followed by 64 lowercase hex digits, to return only its groups"`
 }
 
 type auditInput struct {

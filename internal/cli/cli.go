@@ -499,6 +499,16 @@ func Execute(ctx context.Context, args []string, out, errOut io.Writer, service 
 			}
 			return write(data, nil, 0)
 		}
+		if action == "related" {
+			if flags.NArg() != 1 {
+				return write(nil, errors.New("use library related LIBRARY [--asset sha256:HASH]"), 2)
+			}
+			data, err := service.Related(ctx, flags.Arg(0), contentRequest.AssetID)
+			if err != nil {
+				return write(data, err, 1)
+			}
+			return write(data, nil, 0)
+		}
 		if action == "recordings" {
 			if flags.NArg() != 1 {
 				return write(nil, errors.New("use library recordings LIBRARY [--source archive:ITEM]"), 2)
@@ -967,6 +977,8 @@ func flagApplies(command, action, name string) bool {
 			return name == "apply" || name == "scan"
 		case "recordings":
 			return name == "source"
+		case "related":
+			return name == "asset"
 		case "check":
 			return false
 		case "cleanup":
@@ -1077,6 +1089,9 @@ func printData(out io.Writer, data any) error {
 		return err
 	case acquisition.RecordingResult:
 		_, err := io.WriteString(out, present.Recording(value))
+		return err
+	case library.RelatedResult:
+		_, err := io.WriteString(out, present.Related(value))
 		return err
 	case library.RecordingsResult:
 		_, err := io.WriteString(out, present.Recordings(value))

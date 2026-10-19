@@ -60,7 +60,7 @@ func TestMCPServeSpeaksOnlyProtocolOnStdout(t *testing.T) {
 	send(`{"jsonrpc":"2.0","id":2,"method":"tools/list"}`)
 	list := receive()
 	tools := list["result"].(map[string]any)["tools"].([]any)
-	if len(tools) != 15 {
+	if len(tools) != 16 {
 		t.Fatal("tool count", len(tools))
 	}
 	send(`{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"library_status","arguments":{"library":"relative"}}}`)

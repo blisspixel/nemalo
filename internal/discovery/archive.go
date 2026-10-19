@@ -223,8 +223,52 @@ type Evaluation struct {
 	// its readers when the project names this item back.
 	LibriVox *LibriVoxLink `json:"librivox,omitempty"`
 	// OpenLibraryEdition is the edition whose ocaid selected this Archive item.
-	OpenLibraryEdition string   `json:"openlibrary_edition,omitempty"`
-	Limitations        []string `json:"limitations"`
+	OpenLibraryEdition string `json:"openlibrary_edition,omitempty"`
+	// Identifiers are bibliographic identifiers the source's own metadata
+	// declares, copied as stated. The library classifies and validates them.
+	Identifiers []DeclaredIdentifier `json:"declared_identifiers,omitempty"`
+	Limitations []string             `json:"limitations"`
+}
+
+// DeclaredIdentifier is one value of a source metadata field that names an
+// edition or a work. It is a declaration, not a registry confirmation.
+type DeclaredIdentifier struct {
+	Field string `json:"field"`
+	Value string `json:"value"`
+}
+
+// MaxDeclaredIdentifiers bounds the identifiers copied from one evaluation.
+const MaxDeclaredIdentifiers = 32
+
+// archiveIdentifierFields are the Archive metadata fields that name an edition
+// or work; from external-identifier only urn:isbn values are copied.
+var archiveIdentifierFields = []string{"isbn", "openlibrary_edition", "openlibrary_work", "external-identifier"}
+
+func archiveIdentifiers(metadata map[string]json.RawMessage) []DeclaredIdentifier {
+	var out []DeclaredIdentifier
+	seen := map[DeclaredIdentifier]bool{}
+	for _, field := range archiveIdentifierFields {
+		var values Strings
+		if b, ok := metadata[field]; !ok || json.Unmarshal(b, &values) != nil {
+			continue
+		}
+		for _, v := range values {
+			v = strings.TrimSpace(v)
+			if v == "" || len(v) > 300 || strings.ContainsAny(v, "\x00\r\n") {
+				continue
+			}
+			if field == "external-identifier" && !strings.HasPrefix(strings.ToLower(v), "urn:isbn:") {
+				continue
+			}
+			d := DeclaredIdentifier{Field: field, Value: v}
+			if seen[d] || len(out) == MaxDeclaredIdentifiers {
+				continue
+			}
+			seen[d] = true
+			out = append(out, d)
+		}
+	}
+	return out
 }
 
 type archiveFile struct {
@@ -288,6 +332,7 @@ func (p *Archive) Evaluate(ctx context.Context, id string) (Evaluation, error) {
 		}
 		*field.dest = v
 	}
+	e.Identifiers = archiveIdentifiers(wire.Metadata)
 	var returned string
 	if err := json.Unmarshal(wire.Metadata["identifier"], &returned); err != nil || returned != item || len(e.Title) == 0 || strings.TrimSpace(e.Title[0]) == "" {
 		return e, errors.New("Archive item identity/title does not match request")

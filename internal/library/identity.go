@@ -10,6 +10,9 @@ import (
 
 const (
 	originEPUBIdentifier  = "epub_package_identifier"
+	originSourceMetadata  = "source_metadata"
+	confidenceDeclared    = "source_declared"
+	maxSourceIdentities   = 16
 	confidenceStated      = "scheme_stated"
 	confidencePreserved   = "preserved"
 	maxIdentifiersOmitted = 2_000_000
@@ -248,6 +251,93 @@ func validDOIBody(body string) bool {
 	return true
 }
 
+// classifySourceIdentifier reads one value of a source metadata field that
+// names an edition or a work: Archive's isbn, openlibrary_edition, and
+// openlibrary_work, and a urn:isbn external-identifier. Any other field or an
+// invalid value is not recorded. The identity is the source's declaration.
+func classifySourceIdentifier(field, raw string) (Identity, bool) {
+	value := strings.TrimSpace(raw)
+	if value != raw || value == "" || len(value) > 300 || strings.ContainsAny(value, "\x00\r\n") {
+		return Identity{}, false
+	}
+	out := Identity{Raw: raw, Scheme: field, Origin: originSourceMetadata, Confidence: confidenceDeclared}
+	var ok bool
+	switch field {
+	case "isbn":
+		out.Role = "edition"
+		out.ID, ok = canonicalISBN(value)
+	case "external-identifier":
+		if strings.HasPrefix(strings.ToLower(value), "urn:isbn:") {
+			out.Role = "edition"
+			out.ID, ok = canonicalISBN(value)
+		}
+	case "openlibrary_edition", "openlibrary_work":
+		mark, role, prefix := "M", "edition", "openlibrary_edition:"
+		if field == "openlibrary_work" {
+			mark, role, prefix = "W", "work", "openlibrary_work:"
+		}
+		var key string
+		if key, ok = olKey(value, mark); ok {
+			out.Role, out.ID = role, prefix+key
+		}
+	}
+	return out, ok
+}
+
+// sourceIdentities classifies a source's declared identifiers, keeping the
+// first statement of each identity, at most 16, in identity order.
+func sourceIdentities(declared []declaredIdentifier) []Identity {
+	var list []Identity
+	seen := map[string]bool{}
+	for _, d := range declared {
+		id, ok := classifySourceIdentifier(d.Field, d.Value)
+		if !ok || seen[id.ID] || len(list) == maxSourceIdentities {
+			continue
+		}
+		seen[id.ID] = true
+		list = append(list, id)
+	}
+	sortIdentities(list)
+	return list
+}
+
+type declaredIdentifier struct {
+	Field string `json:"field"`
+	Value string `json:"value"`
+}
+
+func validSourceIdentities(list []Identity) bool {
+	if len(list) > maxSourceIdentities {
+		return false
+	}
+	seen := map[string]bool{}
+	for i, item := range list {
+		got, ok := classifySourceIdentifier(item.Scheme, item.Raw)
+		if !ok || got != item || seen[item.ID] || (i > 0 && !identityLess(list[i-1], item)) {
+			return false
+		}
+		seen[item.ID] = true
+	}
+	return true
+}
+
+// olKey reads a bare Open Library key, OL<digits> and the mark M or W.
+func olKey(rest, mark string) (string, bool) {
+	if len(rest) < 4 || len(rest) > 16 || !strings.EqualFold(rest[:2], "ol") || !strings.EqualFold(rest[len(rest)-1:], mark) {
+		return "", false
+	}
+	digits := rest[2 : len(rest)-1]
+	if digits == "" || digits[0] == '0' || len(digits) > 12 {
+		return "", false
+	}
+	for _, c := range digits {
+		if c < '0' || c > '9' {
+			return "", false
+		}
+	}
+	return "OL" + digits + strings.ToUpper(mark), true
+}
+
 func openLibraryKey(raw, scheme string) (kind, key string, ok bool) {
 	folded := strings.ToLower(scheme)
 	if folded != "" && folded != "url" && folded != "openlibrary" {
@@ -265,22 +355,11 @@ func openLibraryKey(raw, scheme string) (kind, key string, ok bool) {
 		return "", "", false
 	}
 	rest := strings.TrimSuffix(v[len(prefix):], "/")
-	if rest == "" || strings.ContainsAny(rest, "/?#") || len(rest) < 4 || len(rest) > 16 {
+	if strings.ContainsAny(rest, "/?#") {
 		return "", "", false
 	}
-	if !strings.EqualFold(rest[:2], "ol") || !strings.EqualFold(rest[len(rest)-1:], mark) {
-		return "", "", false
-	}
-	digits := rest[2 : len(rest)-1]
-	if digits == "" || digits[0] == '0' || len(digits) > 12 {
-		return "", "", false
-	}
-	for _, c := range digits {
-		if c < '0' || c > '9' {
-			return "", "", false
-		}
-	}
-	return role, "OL" + digits + strings.ToUpper(mark), true
+	key, ok = olKey(rest, mark)
+	return role, key, ok
 }
 
 func validIdentities(list []Identity, recorded bool, omitted int) bool {

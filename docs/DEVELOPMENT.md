@@ -131,7 +131,12 @@ track timing ([decision 0020](decisions/0020-recording-manifest.md)). A held
 M4B is a single-file recording. Recordings of one LibriVox reading share a
 narration, named only when the LibriVox project names the Archive item back,
 and different readings stay apart ([decision 0044](decisions/0044-narration-identity.md)).
-Edition identity beyond package identifiers and rights policy remain planned.
+An Archive evaluation copies the ISBN and Open Library edition and work keys the
+item declares, import records them on the source, and `library related LIBRARY
+[--asset ID]` groups holdings that share a stated work, edition, or version, an
+arXiv paper, a narration, or a source item, without merging anything
+([decision 0049](decisions/0049-declared-identifiers-and-related-holdings.md)).
+Registry confirmation of identifiers and rights policy remain planned.
 
 ## File health and scanning
 

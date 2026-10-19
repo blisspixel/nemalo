@@ -54,6 +54,9 @@ type Source struct {
 	// Narration names the reading an audio source belongs to, when evidence
 	// names one: a LibriVox project that names the source item back.
 	Narration *Narration `json:"narration,omitempty"`
+	// Identities are the edition and work identifiers the source's metadata
+	// declared at acquisition. They relate holdings; they never merge them.
+	Identities []Identity `json:"identities,omitempty"`
 }
 
 // Narration is one reading of a text. Recordings in different formats of the
@@ -432,6 +435,9 @@ func validHolding(h Holding, libraryID string) bool {
 			return false
 		}
 		if source.Narration != nil && (source.Kind != "packet" || (h.Format != "mp3" && h.Format != "m4b" && h.Format != "m4a") || !validNarration(source.Narration)) {
+			return false
+		}
+		if source.Identities != nil && (source.Kind != "packet" || len(source.Identities) == 0 || !validSourceIdentities(source.Identities)) {
 			return false
 		}
 	}

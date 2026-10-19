@@ -130,6 +130,7 @@ type packetReceipt struct {
 					ArchiveItem string `json:"archive_item"`
 				} `json:"project"`
 			} `json:"librivox"`
+			Identifiers []declaredIdentifier `json:"declared_identifiers"`
 		} `json:"selection"`
 	} `json:"intent"`
 }
@@ -555,6 +556,7 @@ func sourceRecord(source selected) Source {
 		record.Recording = &recording
 	}
 	record.Narration = narrationOf(source.receipt, record.SourceID, importFormat(source.file))
+	record.Identities = sourceIdentities(source.receipt.Intent.Selection.Identifiers)
 	if url := source.receipt.FinalURL; strings.HasPrefix(url, "https://") && len(url) <= 2000 && !strings.ContainsAny(url, " \r\n\x00") {
 		record.DeclaredURL = url
 	}
@@ -622,9 +624,13 @@ func mergeSources(current Holding, add Source) []Source {
 	out := append([]Source{}, current.Sources...)
 	for i, source := range out {
 		if source.Kind == add.Kind && sameImportSource(source.Path, add.Path) {
-			// A narration found since the earlier import is recorded on it.
+			// A narration or identities found since the earlier import are
+			// recorded on it.
 			if source.Narration == nil && add.Narration != nil {
 				out[i].Narration = add.Narration
+			}
+			if source.Identities == nil && add.Identities != nil {
+				out[i].Identities = add.Identities
 			}
 			return out
 		}
@@ -637,7 +643,7 @@ func mergeSources(current Holding, add Source) []Source {
 func sourceKnown(current Holding, add Source) bool {
 	for _, source := range current.Sources {
 		if source.Kind == add.Kind && sameImportSource(source.Path, add.Path) {
-			return source.Narration != nil || add.Narration == nil
+			return (source.Narration != nil || add.Narration == nil) && (source.Identities != nil || add.Identities == nil)
 		}
 	}
 	return false

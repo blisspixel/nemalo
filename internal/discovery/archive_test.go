@@ -277,3 +277,34 @@ func TestSourceSizeChecksumsAndCandidates(t *testing.T) {
 		t.Fatal(e, err)
 	}
 }
+
+// Edition and work identifiers are copied as declared, bounded, and only
+// from their own fields; other external identifiers and malformed fields
+// are ignored without failing the evaluation.
+func TestArchiveIdentifiersAreCopiedAsDeclared(t *testing.T) {
+	meta := map[string]json.RawMessage{
+		"isbn":                json.RawMessage(`["9780306406157", "9780306406157", " "]`),
+		"openlibrary_edition": json.RawMessage(`"OL7353617M"`),
+		"openlibrary_work":    json.RawMessage(`{"not": "a string"}`),
+		"external-identifier": json.RawMessage(`["urn:oclc:record:1", "urn:isbn:0306406152"]`),
+		"title":               json.RawMessage(`"9780306406157"`),
+	}
+	got := archiveIdentifiers(meta)
+	want := []DeclaredIdentifier{{"isbn", "9780306406157"}, {"openlibrary_edition", "OL7353617M"}, {"external-identifier", "urn:isbn:0306406152"}}
+	if len(got) != len(want) {
+		t.Fatal(got)
+	}
+	for i := range want {
+		if got[i] != want[i] {
+			t.Fatal(got)
+		}
+	}
+	many := make([]string, 50)
+	for i := range many {
+		many[i] = fmt.Sprintf("97803064061%02d", i)
+	}
+	b, _ := json.Marshal(many)
+	if n := len(archiveIdentifiers(map[string]json.RawMessage{"isbn": b})); n != MaxDeclaredIdentifiers {
+		t.Fatal(n)
+	}
+}
