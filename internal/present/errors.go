@@ -5,6 +5,7 @@ import (
 	"io"
 	"io/fs"
 	"net/url"
+	"strconv"
 	"strings"
 	"syscall"
 
@@ -64,4 +65,14 @@ func pathProblem(pe *fs.PathError) string {
 // spaces become single spaces, so the text cannot pose as other output.
 func Line(s string) string {
 	return strings.Join(strings.Fields(textsafe.Visible(s)), " ")
+}
+
+// Exact shows a path or identifier so its exact value is clear: as it is when
+// it is plain one-row text, otherwise Go-quoted, so leading, trailing, or
+// repeated spaces and any control character stay visible.
+func Exact(s string) string {
+	if s == "" || (Line(s) == s && strings.TrimSpace(s) == s) {
+		return s
+	}
+	return strconv.Quote(s)
 }

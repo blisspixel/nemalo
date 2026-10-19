@@ -19,8 +19,8 @@ func Acquisition(r acquisition.Result) string {
 		state = "transfer complete, checks incomplete"
 	}
 	fmt.Fprintf(&b, "Acquisition: %s, %s\n", words(r.Status), state)
-	field(&b, "Output", Line(r.Output))
-	field(&b, "Content", Line(r.ContentPath))
+	field(&b, "Output", Exact(r.Output))
+	field(&b, "Content", Exact(r.ContentPath))
 	fmt.Fprintf(&b, "Transferred: %d bytes\n", r.Transfer.Bytes)
 	field(&b, "SHA-256", Line(r.Transfer.SHA256))
 	antivirus := words(r.Antivirus)
@@ -53,7 +53,7 @@ func Acquisition(r acquisition.Result) string {
 	}
 	switch r.Status {
 	case "detected_quarantined":
-		fmt.Fprintf(&b, "Detection: the scanner flagged this download. It was moved to %s and will not be imported.\n", Line(r.QuarantinedPath))
+		fmt.Fprintf(&b, "Detection: the scanner flagged this download. It was moved to %s and will not be imported.\n", Exact(r.QuarantinedPath))
 	case "detected_deleted":
 		b.WriteString("Detection: the scanner flagged this download. It was deleted and will not be imported.\n")
 	case "detected_retained":
@@ -115,12 +115,12 @@ func Recording(r acquisition.RecordingResult) string {
 		format += ", in order from " + words(r.OrderSource)
 	}
 	field(&b, "Format", format)
-	field(&b, "Output", Line(r.Output))
+	field(&b, "Output", Exact(r.Output))
 	fmt.Fprintf(&b, "Tracks: %d | Declared bytes: %d\n", len(r.Tracks), r.DeclaredBytes)
 	for _, t := range r.Tracks {
-		fmt.Fprintf(&b, "%d. %s %s", t.Position, Line(t.File), words(t.Status))
+		fmt.Fprintf(&b, "%d. %s %s", t.Position, Exact(t.File), words(t.Status))
 		if t.Packet != "" {
-			fmt.Fprintf(&b, " in %s", Line(t.Packet))
+			fmt.Fprintf(&b, " in %s", Exact(t.Packet))
 		}
 		if t.Antivirus != "" {
 			fmt.Fprintf(&b, " | antivirus %s", words(t.Antivirus))

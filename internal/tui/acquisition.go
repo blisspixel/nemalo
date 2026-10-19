@@ -10,6 +10,7 @@ import (
 	tea "charm.land/bubbletea/v2"
 	"github.com/blisspixel/nemalo/internal/acquisition"
 	"github.com/blisspixel/nemalo/internal/discovery"
+	"github.com/blisspixel/nemalo/internal/present"
 )
 
 func (m *model) requestDownload() tea.Cmd {
@@ -43,13 +44,13 @@ func (m *model) requestDownload() tea.Cmd {
 	}
 	request := acquisition.Request{SourceID: sourceID, File: m.entries[m.selected].sourceID, Output: m.secondary.Value(), MaxBytes: 256 << 20}
 	if err := request.Validate(); err != nil {
-		m.status = fmt.Sprintf("Acquisition error: %q", err.Error())
+		m.status = fmt.Sprintf("Acquisition error: %s", present.Error(err))
 		m.resize()
 		return nil
 	}
 	abs, err := filepath.Abs(request.Output)
 	if err != nil {
-		m.status = fmt.Sprintf("Acquisition error: %q", err.Error())
+		m.status = fmt.Sprintf("Acquisition error: %s", present.Error(err))
 		return nil
 	}
 	request.Output = abs
@@ -63,18 +64,18 @@ func (m *model) requestDownload() tea.Cmd {
 	m.status = "Review acquisition. Enter confirms; Escape returns without downloading."
 	if request.Resume {
 		if discovery.ValidGutenbergID(request.SourceID) {
-			m.setReport(fmt.Sprintf("Resume an interrupted Gutenberg transfer\n\nSource: %q\nSelected file: %q\nIntake packet: %q\n\nRequests the bibliographic record again, then only the missing bytes, on condition that the source still serves the same file (If-Range with the strong validator recorded before the first transfer). A different reply, a missing validator, or changed declarations leave the packet untouched.\n\nThe whole file is then verified against the recorded response length, inspected, scanned, and receipted as one transfer. The record has no checksum.\n\nEnter resumes. Escape returns without downloading.\n", request.SourceID, request.File, request.Output))
+			m.setReport(fmt.Sprintf("Resume an interrupted Gutenberg transfer\n\nSource: %s\nSelected file: %s\nIntake packet: %s\n\nRequests the bibliographic record again, then only the missing bytes, on condition that the source still serves the same file (If-Range with the strong validator recorded before the first transfer). A different reply, a missing validator, or changed declarations leave the packet untouched.\n\nThe whole file is then verified against the recorded response length, inspected, scanned, and receipted as one transfer. The record has no checksum.\n\nEnter resumes. Escape returns without downloading.\n", request.SourceID, request.File, request.Output))
 		} else {
-			m.setReport(fmt.Sprintf("Resume an interrupted transfer\n\nSource: %q\nSelected file: %q\nIntake packet: %q\n\nRequests fresh Archive metadata, then only the missing bytes, on condition that the source still serves the same file (If-Range with the strong validator recorded before the first transfer). A different reply, a weak validator, or changed declarations leave the packet untouched.\n\nThe whole file is then verified against the declared size and checksums, inspected, scanned, and receipted as one transfer.\n\nEnter resumes. Escape returns without downloading.\n", request.SourceID, request.File, request.Output))
+			m.setReport(fmt.Sprintf("Resume an interrupted transfer\n\nSource: %s\nSelected file: %s\nIntake packet: %s\n\nRequests fresh Archive metadata, then only the missing bytes, on condition that the source still serves the same file (If-Range with the strong validator recorded before the first transfer). A different reply, a weak validator, or changed declarations leave the packet untouched.\n\nThe whole file is then verified against the declared size and checksums, inspected, scanned, and receipted as one transfer.\n\nEnter resumes. Escape returns without downloading.\n", request.SourceID, request.File, request.Output))
 		}
 		m.viewport.GotoTop()
 		m.resize()
 		return nil
 	}
 	if discovery.ValidGutenbergID(request.SourceID) {
-		m.setReport(fmt.Sprintf("Acquire one Gutenberg EPUB\n\nSource: %q\nSelected file: %q\nNew intake directory: %q\nMaximum transfer: %d bytes\n\nRequests the bibliographic record again from gutenberg.pglaf.org, then one EPUB that record names. The record has no checksum. The declared extent may differ from the response length; the transfer checks the response length and stays inside the byte budget. A response without a strong validator cannot be resumed.\n\nCreates intent.json, transfer.json, content.epub, and receipt.json on success. Existing output is refused. An interrupted packet is kept.\n\nRuns local structure checks without rendering or execution, then scans the downloaded bytes once with the installed scanner, if one is installed. A detection moves the file to the Nemalo quarantine instead of intake. This is untrusted intake, not checked publication. The rights sentence is the record's statement.\n\nEnter acquires this exact selection. Escape returns without writing.\n", request.SourceID, request.File, request.Output, request.MaxBytes))
+		m.setReport(fmt.Sprintf("Acquire one Gutenberg EPUB\n\nSource: %s\nSelected file: %s\nNew intake directory: %s\nMaximum transfer: %d bytes\n\nRequests the bibliographic record again from gutenberg.pglaf.org, then one EPUB that record names. The record has no checksum. The declared extent may differ from the response length; the transfer checks the response length and stays inside the byte budget. A response without a strong validator cannot be resumed.\n\nCreates intent.json, transfer.json, content.epub, and receipt.json on success. Existing output is refused. An interrupted packet is kept.\n\nRuns local structure checks without rendering or execution, then scans the downloaded bytes once with the installed scanner, if one is installed. A detection moves the file to the Nemalo quarantine instead of intake. This is untrusted intake, not checked publication. The rights sentence is the record's statement.\n\nEnter acquires this exact selection. Escape returns without writing.\n", request.SourceID, request.File, request.Output, request.MaxBytes))
 	} else {
-		m.setReport(fmt.Sprintf("Acquire one source file\n\nSource: %q\nSelected file: %q\nNew intake directory: %q\nMaximum transfer: %d bytes\n\nRequests fresh Archive metadata and one permitted file, with checked HTTPS delivery destinations. Requires declared size and checksum. The selected source statements remain unverified rights evidence.\n\nCreates intent.json, transfer.json, content with its format suffix, and receipt.json on success. Existing output is refused. An interrupted packet is kept; choosing it again with d reviews resuming it.\n\nRuns local structure checks without rendering or execution, then scans the downloaded bytes once with the installed scanner, if one is installed. A detection moves the file to the Nemalo quarantine instead of intake and offers the item's other files. This is untrusted intake, not checked publication.\n\nEnter acquires this exact selection. Escape returns without writing.\n", request.SourceID, request.File, request.Output, request.MaxBytes))
+		m.setReport(fmt.Sprintf("Acquire one source file\n\nSource: %s\nSelected file: %s\nNew intake directory: %s\nMaximum transfer: %d bytes\n\nRequests fresh Archive metadata and one permitted file, with checked HTTPS delivery destinations. Requires declared size and checksum. The selected source statements remain unverified rights evidence.\n\nCreates intent.json, transfer.json, content with its format suffix, and receipt.json on success. Existing output is refused. An interrupted packet is kept; choosing it again with d reviews resuming it.\n\nRuns local structure checks without rendering or execution, then scans the downloaded bytes once with the installed scanner, if one is installed. A detection moves the file to the Nemalo quarantine instead of intake and offers the item's other files. This is untrusted intake, not checked publication.\n\nEnter acquires this exact selection. Escape returns without writing.\n", request.SourceID, request.File, request.Output, request.MaxBytes))
 	}
 	m.viewport.GotoTop()
 	m.resize()
@@ -158,13 +159,13 @@ func (m *model) requestRecording() {
 	// a recording over the 16 GiB maximum is refused here, before review.
 	request := acquisition.RecordingRequest{SourceID: m.submittedInput, Format: recording.Format, Output: m.secondary.Value(), MaxBytes: recording.Bytes}
 	if err := request.Validate(); err != nil {
-		m.status = fmt.Sprintf("Acquisition error: %q", err.Error())
+		m.status = fmt.Sprintf("Acquisition error: %s", present.Error(err))
 		m.resize()
 		return
 	}
 	abs, err := filepath.Abs(request.Output)
 	if err != nil {
-		m.status = fmt.Sprintf("Acquisition error: %q", err.Error())
+		m.status = fmt.Sprintf("Acquisition error: %s", present.Error(err))
 		return
 	}
 	request.Output = abs
@@ -173,7 +174,7 @@ func (m *model) requestRecording() {
 	m.secondary.Blur()
 	m.evidence = true
 	m.status = "Review acquisition. Enter confirms; Escape returns without downloading."
-	m.setReport(fmt.Sprintf("Acquire every track of one recording\n\nSource: %q\nRecording: %q, %d track(s), %d declared bytes\nTrack order from: %q\nNew recording directory: %q\nBudget: the declared total, at most 16 GiB\n\nRequests fresh Archive metadata, then each track in declared order as its own intake packet (0001, 0002, ...), with the same checks, scan, and quarantine as a single file. A detection stops the recording. recording.json is written only when every track has a receipt.\n\nAn interrupted recording is retained; acquire --recording with --resume keeps completed tracks. Track order and titles are source declarations. This is untrusted intake, not checked publication.\n\nEnter acquires this recording. Escape returns without writing.\n", request.SourceID, recording.Format, len(recording.Tracks), recording.Bytes, recording.OrderSource, request.Output))
+	m.setReport(fmt.Sprintf("Acquire every track of one recording\n\nSource: %s\nRecording: %s, %d track(s), %d declared bytes\nTrack order from: %s\nNew recording directory: %s\nBudget: the declared total, at most 16 GiB\n\nRequests fresh Archive metadata, then each track in declared order as its own intake packet (0001, 0002, ...), with the same checks, scan, and quarantine as a single file. A detection stops the recording. recording.json is written only when every track has a receipt.\n\nAn interrupted recording is retained; acquire --recording with --resume keeps completed tracks. Track order and titles are source declarations. This is untrusted intake, not checked publication.\n\nEnter acquires this recording. Escape returns without writing.\n", present.Exact(request.SourceID), present.Exact(recording.Format), len(recording.Tracks), recording.Bytes, present.Words(recording.OrderSource), present.Exact(request.Output)))
 	m.viewport.GotoTop()
 	m.resize()
 }

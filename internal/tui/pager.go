@@ -13,6 +13,7 @@ import (
 	"charm.land/lipgloss/v2"
 	"github.com/blisspixel/nemalo/internal/app"
 	"github.com/blisspixel/nemalo/internal/content"
+	"github.com/blisspixel/nemalo/internal/present"
 	"github.com/blisspixel/nemalo/internal/reader"
 )
 
@@ -243,7 +244,7 @@ func (m *model) pagerChunk(msg pagerChunk) tea.Cmd {
 		p.doc.Finish()
 		m.pagerLayout()
 		p.blocked, p.playing, p.waiting, p.failed = true, false, false, p.doc.Expect().Unit
-		p.failure = fmt.Sprintf("Stopped: %q. Nothing was skipped; ] opens the next unit.", err.Error())
+		p.failure = fmt.Sprintf("Stopped: %s. Nothing was skipped; ] opens the next unit.", present.Error(err))
 		return nil
 	}
 	if strings.HasPrefix(p.notice, "Retrieving") {
@@ -285,12 +286,12 @@ func (m *model) pagerFailed(msg pagerChunk) tea.Cmd {
 		p.notice = ""
 	}
 	if msg.units {
-		p.failure = fmt.Sprintf("No text representation could list this source: %q. Close with q.", msg.err.Error())
+		p.failure = fmt.Sprintf("No text representation could list this source: %s. Close with q.", present.Error(msg.err))
 		return nil
 	}
-	reason := fmt.Sprintf("could not be read: %q", msg.err.Error())
+	reason := fmt.Sprintf("could not be read: %s", present.Error(msg.err))
 	if at.Offset > 0 {
-		reason = fmt.Sprintf("could not be read from byte %d: %q", at.Offset, msg.err.Error())
+		reason = fmt.Sprintf("could not be read from byte %d: %s", at.Offset, present.Error(msg.err))
 	}
 	if msg.data.Status == "unsupported_extraction" {
 		reason = "has no supported text"

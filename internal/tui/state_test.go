@@ -8,7 +8,6 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
-	"strconv"
 	"strings"
 	"testing"
 
@@ -40,7 +39,7 @@ func TestStateInitializationReviewAndDispatch(t *testing.T) {
 	}
 	previous := m.report
 	m.Update(key(tea.KeyF7))
-	if m.confirmRoot != root || !strings.Contains(m.report, strconv.Quote(root)) || !strings.Contains(m.report, "journal.jsonl") {
+	if m.confirmRoot != root || !strings.Contains(m.report, "Explicit root: "+root+"\n") || !strings.Contains(m.report, "journal.jsonl") {
 		t.Fatal("review lost explicit scope", m.report)
 	}
 	for _, keyMsg := range []tea.KeyPressMsg{{Code: 'x', Text: "x"}, {Code: '1', Mod: tea.ModAlt}, {Code: tea.KeyTab}, {Code: tea.KeyF6}} {
@@ -129,7 +128,7 @@ func TestStateImportReviewCancelAndApply(t *testing.T) {
 	}
 	m.secondary.SetValue(source)
 	m.Update(key(tea.KeyF8))
-	if m.confirmKind != "import" || m.confirmRoot != root || !strings.Contains(m.report, strconv.Quote(source)) {
+	if m.confirmKind != "import" || m.confirmRoot != root || !strings.Contains(m.report, "Source: "+source+"\n") {
 		t.Fatal("import review lost scope", m.report)
 	}
 	for _, size := range [][2]int{{40, 20}, {80, 24}} {

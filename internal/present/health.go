@@ -9,7 +9,7 @@ import (
 
 func Health(r assessment.Report) string {
 	var b strings.Builder
-	field(&b, "File", Line(r.File))
+	field(&b, "File", Exact(r.File))
 	field(&b, "Status", words(r.Status))
 	field(&b, "Detected format", words(r.DetectedFormat))
 	fmt.Fprintf(&b, "Bytes: %d\n", r.Bytes)

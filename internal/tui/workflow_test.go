@@ -191,7 +191,7 @@ func TestResponsiveFramesAndLongErrors(t *testing.T) {
 	m.Update(tea.WindowSizeMsg{Width: 80, Height: 24})
 	err := fmt.Errorf("unavailable %s", strings.Repeat("detail ", 200))
 	m.Update(result{id: m.id, data: discovery.Page{}, err: err})
-	if lipgloss.Height(m.View().Content) > 24 || !strings.Contains(m.report, err.Error()) {
+	if lipgloss.Height(m.View().Content) > 24 || !strings.Contains(m.report, strings.TrimSpace(err.Error())) {
 		t.Fatal("long error breaks layout or loses evidence")
 	}
 	for _, size := range [][2]int{{1, 1}, {30, 8}} {

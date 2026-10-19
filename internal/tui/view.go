@@ -8,6 +8,7 @@ import (
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 	"github.com/blisspixel/nemalo/internal/discovery"
+	"github.com/blisspixel/nemalo/internal/present"
 )
 
 const (
@@ -87,7 +88,7 @@ func (m *model) contextLine() string {
 		if m.reader.asset == "" {
 			return "Local source access | Select an asset in Holdings, then r"
 		}
-		return fmt.Sprintf("Offline | Bookmark only on m | Asset %q", m.reader.asset)
+		return fmt.Sprintf("Offline | Bookmark only on m | Asset %s", present.Exact(m.reader.asset))
 	}
 	if m.mode == "state" {
 		return "Enter status | F7 init | F8 import | F9 cleanup | Ctrl+R rescan"

@@ -195,7 +195,7 @@ func (m *model) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 		if value, ok := msg.data.(library.RecordingsResult); ok {
 			m.status = "Recording manifest. Track order is declared by the source; no listening is recorded."
 			if msg.err != nil {
-				m.status = fmt.Sprintf("Recording manifest failed: %q", msg.err.Error())
+				m.status = fmt.Sprintf("Recording manifest failed: %s", present.Error(msg.err))
 			} else {
 				m.setReport(present.Recordings(value))
 				m.evidence = true
@@ -237,9 +237,9 @@ func (m *model) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		// Opening a copy leaves the holdings list and report in place.
 		if value, ok := msg.data.(library.ExportResult); ok {
-			m.status = fmt.Sprintf("Opened a verified read-only copy: %q", value.Path)
+			m.status = fmt.Sprintf("Opened a verified read-only copy: %s", present.Exact(value.Path))
 			if msg.err != nil {
-				m.status = fmt.Sprintf("Open failed: %q", msg.err.Error())
+				m.status = fmt.Sprintf("Open failed: %s", present.Error(msg.err))
 			}
 			m.resize()
 			return m, nil
@@ -302,7 +302,7 @@ func (m *model) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		}
 		if msg.err != nil {
-			m.bookmarkStatus(fmt.Sprintf("Incomplete: %q", msg.err.Error()))
+			m.bookmarkStatus(fmt.Sprintf("Incomplete: %s", present.Error(msg.err)))
 		}
 		m.populate(msg.data)
 		if msg.err != nil {
@@ -318,11 +318,11 @@ func (m *model) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 			m.evidence = true
 			switch {
 			case value.TransferRecorded && value.Transfer.Bytes > 0 && value.StrongValidator:
-				m.status = fmt.Sprintf("Transfer stopped: %q. The packet was kept; select the same file and press d to review resuming it.", msg.err.Error())
+				m.status = fmt.Sprintf("Transfer stopped: %s. The packet was kept; select the same file and press d to review resuming it.", present.Error(msg.err))
 			case value.TransferRecorded && value.Transfer.Bytes > 0:
-				m.status = fmt.Sprintf("Transfer stopped: %q. The packet was kept. The source sent no strong validator, so it cannot be resumed. Start a new output.", msg.err.Error())
+				m.status = fmt.Sprintf("Transfer stopped: %s. The packet was kept. The source sent no strong validator, so it cannot be resumed. Start a new output.", present.Error(msg.err))
 			default:
-				m.status = fmt.Sprintf("Transfer stopped: %q. The packet was kept and has no transfer record. Start a new output.", msg.err.Error())
+				m.status = fmt.Sprintf("Transfer stopped: %s. The packet was kept and has no transfer record. Start a new output.", present.Error(msg.err))
 			}
 		}
 		data, err := textsafe.MarshalJSON(msg.data, true)
@@ -373,11 +373,11 @@ func (m *model) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 			data = []byte(present.Content(value))
 		}
 		if err != nil {
-			m.status = fmt.Sprintf("Output error: %q", err.Error())
+			m.status = fmt.Sprintf("Output error: %s", present.Error(err))
 			m.setReport("")
 		} else {
 			if msg.err != nil {
-				data = append([]byte(fmt.Sprintf("Operation error: %q\n\n", msg.err.Error())), data...)
+				data = append([]byte(fmt.Sprintf("Operation error: %s\n\n", present.Error(msg.err))), data...)
 			}
 			m.setReport(string(data))
 			m.viewport.GotoTop()

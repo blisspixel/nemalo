@@ -214,3 +214,25 @@ func TestBrowserEscapingEvidenceAndResponsiveLayouts(t *testing.T) {
 		}
 	}
 }
+
+// The Evaluate details pane shows file names and status words without Go
+// quotes, and leaves out empty lists (issue 30).
+func TestEvaluateDetailsReadAsWords(t *testing.T) {
+	m := newModel(context.Background(), app.Service{})
+	n := int64(10 << 20)
+	m.populate(discovery.Evaluation{ID: "archive:ozymandias_librivox", Source: "archive", Files: []discovery.OfferedFile{{Name: "OzymandiasOfEgypt_librivox.m4b", Bytes: &n, Access: "public_file_candidate", RightsStatus: "not_resolved_at_file_level", Findings: []string{}}}, Rights: []string{}})
+	e := m.entries[0]
+	if e.title != "OzymandiasOfEgypt_librivox.m4b" || e.summary != "10.0 MiB | public file candidate" {
+		t.Fatalf("%q %q", e.title, e.summary)
+	}
+	for _, want := range []string{"File: OzymandiasOfEgypt_librivox.m4b\n", "Access: public file candidate\n", "Rights: not resolved at file level\n"} {
+		if !strings.Contains(e.detail, want) {
+			t.Fatalf("missing %q in\n%s", want, e.detail)
+		}
+	}
+	for _, absent := range []string{`"`, "[]", "Findings", "Item rights", "DRM:"} {
+		if strings.Contains(e.detail, absent) {
+			t.Fatalf("%q in\n%s", absent, e.detail)
+		}
+	}
+}

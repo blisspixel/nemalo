@@ -80,3 +80,9 @@ func notes(b *strings.Builder, label string, values []string) {
 		field(b, label, words(v))
 	}
 }
+
+// Words shows fixed status tokens as words for the terminal interface; see words.
+func Words(text string) string { return words(text) }
+
+// List joins source values on one safe row for the terminal interface; see list.
+func List(values []string) string { return list(values) }

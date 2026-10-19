@@ -32,26 +32,30 @@ type entry struct {
 }
 
 // Browsing is a presentation of shared service results, not another catalog.
+// Source text is shown without Go quoting on one safe row, status tokens read
+// as words, and empty values are left out, as in the command-line output.
 func (m *model) populate(data any) {
 	m.entries, m.selected, m.details, m.evidence = nil, 0, false, false
+	line, words, list := present.Line, present.Words, present.List
 	switch p := data.(type) {
 	case discovery.Evaluation:
 		if p.Access == discovery.OpenLibraryEditionList {
 			for _, edition := range p.Editions {
 				archive := "no Archive item named"
 				if edition.ArchiveID != "" {
-					archive = edition.ArchiveID
+					archive = line(edition.ArchiveID)
 				}
 				m.entries = append(m.entries, entry{
-					title:    fmt.Sprintf("%q", edition.Title),
-					summary:  fmt.Sprintf("%q | %s", edition.Languages, archive),
-					detail:   fmt.Sprintf("%q\n\nID: %q\nLanguages: %q\nPublishers: %q\nDates: %q\nISBNs: %q\nArchive item: %s\nPage: %q\n\nFindings: %q\n\nPress e, then Enter, to read this edition. An ocaid then requests that Archive item. A different identifier in the edition's source records is not selected.\n", edition.Title, edition.ID, edition.Languages, edition.Publishers, edition.Dates, edition.ISBNs, archive, edition.LandingPage, edition.Findings),
+					title:   line(edition.Title),
+					summary: joinParts(list(edition.Languages), archive),
+					detail: line(edition.Title) + "\n\n" + rows("ID", line(edition.ID), "Language", list(edition.Languages), "Publisher", list(edition.Publishers), "Date", list(edition.Dates), "ISBN", list(edition.ISBNs), "Archive item", archive, "Page", line(edition.LandingPage)) +
+						findings(edition.Findings) + "\nPress e, then Enter, to read this edition. An ocaid then requests that Archive item. A different identifier in the edition's source records is not selected.\n",
 					sourceID: edition.ID,
 				})
 			}
 			if len(p.Editions) == 0 {
 				m.entries = append(m.entries, entry{
-					title:    `"No editions on this page"`,
+					title:    "No editions on this page",
 					summary:  "This page did not list an edition",
 					detail:   "This page has no edition rows.\n\nAnother offset may. A work-level Archive identifier is not used.\n",
 					sourceID: p.ID,
@@ -65,11 +69,16 @@ func (m *model) populate(data any) {
 			if f.Bytes != nil {
 				size = byteSize(*f.Bytes)
 			}
-			m.entries = append(m.entries, entry{title: fmt.Sprintf("%q", f.Name), summary: fmt.Sprintf("%s | %q", size, f.Access), detail: fmt.Sprintf("File: %q\nSource format: %q\nSize: %s\nAccess: %q\nRights: %q\nDRM: %q\n\nFindings: %q\n\nItem rights: %q\nLicense declarations: %q\n\nUse d to review an explicit intake download. Availability is resolved again before transfer; restricted, uncertain, unsupported, or unbounded files are refused.\n", f.Name, f.Format, size, f.Access, f.RightsStatus, f.DRMStatus, f.Findings, p.Rights, p.LicenseURLs), sourceID: f.Name})
+			detail := rows("File", line(f.Name), "Source format", line(f.Format), "Size", size, "Access", words(f.Access), "Rights", words(f.RightsStatus), "DRM", words(f.DRMStatus)) + findings(f.Findings)
+			if item := rows("Item rights", list(p.Rights), "License declarations", list(p.LicenseURLs)); item != "" {
+				detail += "\n" + item
+			}
+			detail += "\nUse d to review an explicit intake download. Availability is resolved again before transfer; restricted, uncertain, unsupported, or unbounded files are refused.\n"
+			m.entries = append(m.entries, entry{title: line(f.Name), summary: joinParts(size, words(f.Access)), detail: detail, sourceID: f.Name})
 		}
 		if len(p.Files) == 0 && p.Source == "gutenberg" && p.Access == "local_catalog" {
 			m.entries = append(m.entries, entry{
-				title:    `"No files in the catalog row"`,
+				title:    "No files in the catalog row",
 				summary:  "d requests the bibliographic record",
 				detail:   "No files are listed in this catalog row.\n\nSet an intake folder (Ctrl+N), then press d. That requests one bibliographic record from the pinned mirror and lists EPUB offers. It does not download an ebook.\n\nSelect one EPUB and press d again to review the download.\n",
 				sourceID: p.ID,
@@ -81,15 +90,13 @@ func (m *model) populate(data any) {
 			if r.Access == "local_catalog" {
 				note = "Local catalog row. The Gutenberg website was not queried.\nNo file or download URL is listed.\n"
 			}
-			summary, claimed := fmt.Sprintf("%q | %q", r.Authors, r.Languages), ""
-			if claim := present.CatalogClaim(r); claim != "" {
-				summary += " | " + claim
-				claimed = "Catalog: " + claim + "\n"
-			}
+			claim := present.CatalogClaim(r)
 			m.entries = append(m.entries, entry{
-				title:   fmt.Sprintf("%q", r.Title),
-				summary: summary,
-				detail:  fmt.Sprintf("%q\n\nAuthors: %q\nLanguages: %q\n%s\n%s\nID: %q\nSource page: %q\nDeclared access: %q\n", r.Title, r.Authors, r.Languages, claimed, note, r.ID, r.LandingPage, r.Access), sourceID: r.ID,
+				title:   line(r.Title),
+				summary: joinParts(list(r.Authors), list(r.Languages), claim),
+				detail: line(r.Title) + "\n\n" + rows("Author", list(r.Authors), "Language", list(r.Languages), "Catalog", claim) + "\n" + note + "\n" +
+					rows("ID", line(r.ID), "Source page", line(r.LandingPage), "Declared access", words(r.Access)),
+				sourceID: r.ID,
 			})
 		}
 	case library.Page:
@@ -105,23 +112,23 @@ func (m *model) populate(data any) {
 					title = e.Titles[0]
 				}
 			}
-			detail := fmt.Sprintf("%q\n\nLanguages: %q\nSize: %s (%d bytes)\n\n", title, languages, byteSize(a.Bytes), a.Bytes)
+			detail := line(title) + "\n\n" + rows("Language", list(languages), "Size", fmt.Sprintf("%s (%d bytes)", byteSize(a.Bytes), a.Bytes)) + "\n"
 			if a.Health != nil {
-				detail += fmt.Sprintf("Recorded health: %q\nAntivirus: %q\n", strings.ReplaceAll(a.Health.Status, "_", " "), strings.ReplaceAll(a.Health.Antivirus.Status, "_", " "))
+				detail += rows("Recorded health", words(a.Health.Status), "Antivirus", words(a.Health.Antivirus.Status))
 			} else {
 				detail += "No recorded assessment.\nAntivirus: not recorded\n"
 			}
 			detail += "Historical catalog evidence.\nAudit to check current bytes.\n\nLocations (filename candidates):\n"
 			for _, l := range a.Locations {
-				detail += fmt.Sprintf("  %q [%q]\n", l.Path, l.CandidateKind)
+				detail += fmt.Sprintf("  %s (%s)\n", line(l.Path), words(l.CandidateKind))
 			}
-			detail += fmt.Sprintf("\nID: %q\n", a.ID)
+			detail += "\nID: " + line(a.ID) + "\n"
 			if a.Health != nil {
 				detail += "\nRecorded assessment (historical):\n" + present.Health(*a.Health)
 			}
 			m.entries = append(m.entries, entry{
-				title:    fmt.Sprintf("%q", title),
-				summary:  fmt.Sprintf("%s | %q | %d location(s)", byteSize(a.Bytes), languages, len(a.Locations)),
+				title:    line(title),
+				summary:  joinParts(byteSize(a.Bytes), list(languages), fmt.Sprintf("%d location(s)", len(a.Locations))),
 				detail:   detail,
 				sourceID: a.ID,
 				audio:    len(a.Locations) > 0 && strings.HasSuffix(strings.ToLower(a.Locations[0].Path), ".mp3"),
@@ -134,31 +141,40 @@ func (m *model) populate(data any) {
 			if len(h.Titles) > 0 {
 				title = h.Titles[0]
 			}
-			detail := fmt.Sprintf("%q\n\nFormat: %s\nStatus: %s (%s)\nLanguages: %q\nSize: %s (%d bytes)\nStored at: %q\n\n", title, h.Format, h.Status, h.Reason, h.Languages, byteSize(h.Bytes), h.Bytes, h.Path)
+			status := words(h.Status)
+			if h.Reason != "" && h.Reason != h.Status {
+				status += " (" + words(h.Reason) + ")"
+			}
+			detail := line(title) + "\n\n" + rows("Format", words(h.Format), "Status", status, "Language", list(h.Languages), "Size", fmt.Sprintf("%s (%d bytes)", byteSize(h.Bytes), h.Bytes), "Stored at", line(h.Path)) + "\n"
 			for _, id := range h.Identities {
-				detail += fmt.Sprintf("Identity: %s %q\n", id.Role, id.ID)
+				detail += fmt.Sprintf("Identifier: %s (%s)\n", line(id.ID), words(id.Role))
 			}
 			recording := ""
 			for _, src := range h.Sources {
-				detail += fmt.Sprintf("Source: %q %q %q\n", src.Path, src.SourceID, src.SourceFile)
+				source := line(src.Path)
+				if src.SourceID != "" {
+					source = joinParts(line(src.SourceID), line(src.SourceFile), source)
+				}
+				detail += "Source: " + source + "\n"
 				if src.Recording != nil && src.SourceID != "" {
-					detail += fmt.Sprintf("Track %d of %d in %q (declared order)\n", src.Recording.Position, src.Recording.Tracks, src.Recording.Format)
+					detail += fmt.Sprintf("Track %d of %d in %s (declared order)\n", src.Recording.Position, src.Recording.Tracks, line(src.Recording.Format))
 					recording = firstOf(recording, src.SourceID)
 				}
 			}
-			detail += fmt.Sprintf("\nID: %q\n\nRecorded journal facts. Audit rechecks stored bytes.\nr stages Read for this holding.\no opens a verified read-only copy in the default application.\n", h.ID)
+			detail += "\nID: " + line(h.ID) + "\n\nRecorded journal facts. Audit rechecks stored bytes.\nr stages Read for this holding.\no opens a verified read-only copy in the default application.\n"
 			if recording != "" {
 				detail += "t shows the whole recording: declared order, missing tracks, and indexed timing.\n"
 			}
-			m.entries = append(m.entries, entry{title: fmt.Sprintf("%q", title), summary: fmt.Sprintf("%s | %s | %s | %q", h.Format, h.Status, byteSize(h.Bytes), h.Languages), detail: detail, sourceID: h.ID, audio: h.Format == "mp3", pdf: h.Format == "pdf", managed: true, recording: recording})
+			m.entries = append(m.entries, entry{title: line(title), summary: joinParts(words(h.Format), words(h.Status), byteSize(h.Bytes), list(h.Languages)), detail: detail, sourceID: h.ID, audio: h.Format == "mp3", pdf: h.Format == "pdf", managed: true, recording: recording})
 		}
 	case content.Result:
 		if p.Status == "units_available" && p.Audio != nil {
 			a := p.Audio
-			m.entries = append(m.entries, entry{title: fmt.Sprintf("MP3 track: %s", a.Format), summary: fmt.Sprintf("%d Hz | %d ch | %d frames | %d ms encoded", a.SampleRate, a.Channels, a.Frames, a.EncodedDurationMs), detail: fmt.Sprintf("MP3 track\n\nFormat: %s\nSample rate: %d Hz\nChannels: %d\nIndexed frames: %d\nEncoded duration: %d ms\nDeclared chapters: %d\nUnindexed regions: %d\n\nEnter retrieves a frame range from the start; n continues.\nAudio bytes are not shown or played here.\nNo listening progress is recorded.", a.Format, a.SampleRate, a.Channels, a.Frames, a.EncodedDurationMs, len(a.Chapters), len(a.Gaps))})
+			m.entries = append(m.entries, entry{title: "MP3 track: " + line(a.Format), summary: fmt.Sprintf("%d Hz | %d ch | %d frames | %d ms encoded", a.SampleRate, a.Channels, a.Frames, a.EncodedDurationMs), detail: fmt.Sprintf("MP3 track\n\nFormat: %s\nSample rate: %d Hz\nChannels: %d\nIndexed frames: %d\nEncoded duration: %d ms\nDeclared chapters: %d\nUnindexed regions: %d\n\nEnter retrieves a frame range from the start; n continues.\nAudio bytes are not shown or played here.\nNo listening progress is recorded.", line(a.Format), a.SampleRate, a.Channels, a.Frames, a.EncodedDurationMs, len(a.Chapters), len(a.Gaps))})
 		} else if p.Status == "units_available" && p.Representation == "pdf-text/1" {
 			for _, u := range p.Units {
-				m.entries = append(m.entries, entry{title: fmt.Sprintf("Page %d, label %q", u.Index, u.PageLabel), summary: fmt.Sprintf("%s | %d text bytes | %d gaps", u.Extraction, u.TextBytes, u.KnownGaps), detail: fmt.Sprintf("PDF page\n\nPhysical index: %d (zero-based)\nPrinted label: %q\nExtraction: %s\nText bytes: %d; located gaps: %d\n\nText is in content-stream order; columns are not reconstructed and there is no OCR.\nEnter retrieves a bounded range of this page.\nNo reading progress is recorded.", u.Index, u.PageLabel, u.Extraction, u.TextBytes, u.KnownGaps)})
+				label := pageLabel(u.PageLabel)
+				m.entries = append(m.entries, entry{title: fmt.Sprintf("Page %d, label %s", u.Index, label), summary: fmt.Sprintf("%s | %d text bytes | %d gaps", words(u.Extraction), u.TextBytes, u.KnownGaps), detail: fmt.Sprintf("PDF page\n\nPhysical index: %d (zero-based)\nPrinted label: %s\nExtraction: %s\nText bytes: %d; located gaps: %d\n\nText is in content-stream order; columns are not reconstructed and there is no OCR.\nEnter retrieves a bounded range of this page.\nNo reading progress is recorded.", u.Index, label, words(u.Extraction), u.TextBytes, u.KnownGaps)})
 			}
 		} else if p.Status == "units_available" && p.Representation == "epub-nav/1" {
 			if len(p.Navigation) == 0 {
@@ -166,11 +182,11 @@ func (m *model) populate(data any) {
 			}
 			for _, doc := range p.Navigation {
 				if doc.Problem != "" {
-					m.entries = append(m.entries, entry{title: fmt.Sprintf("%s: %q", doc.Evidence, doc.Problem), summary: "This navigation source was not used", detail: fmt.Sprintf("Evidence: %s\nPath: %q\nProblem: %q\n\nThe source was recorded and not fetched or repaired.\n", doc.Evidence, doc.Path, doc.Problem)})
+					m.entries = append(m.entries, entry{title: words(doc.Evidence) + ": " + words(doc.Problem), summary: "This navigation source was not used", detail: rows("Evidence", words(doc.Evidence), "Path", line(doc.Path), "Problem", words(doc.Problem)) + "\nThe source was recorded and not fetched or repaired.\n"})
 					continue
 				}
 				for _, e := range doc.Entries {
-					where := e.Status
+					where := words(e.Status)
 					if e.Unit != nil && e.Offset != nil {
 						where = fmt.Sprintf("unit %d, byte %d", *e.Unit, *e.Offset)
 					}
@@ -179,8 +195,8 @@ func (m *model) populate(data any) {
 						parent = fmt.Sprintf("%d", *e.Parent)
 					}
 					indent := strings.Repeat("  ", max(0, e.Level-1))
-					detail := fmt.Sprintf("Declared entry %d\n\nLabel: %q\nEvidence: %s\nLevel: %d\nParent: %s\nStatus: %s\nTarget: %s\nHref: %q\n\nEnter reads this entry and stops at its declared end.\np pages it. Neither records reading progress.\n", e.Order, e.Label, doc.Evidence, e.Level, parent, e.Status, where, e.Href)
-					item := entry{title: indent + fmt.Sprintf("%q", e.Label), summary: fmt.Sprintf("%s | L%d | %s", doc.Evidence, e.Level, where), detail: detail, nav: true, navEvidence: doc.Evidence, navOrder: e.Order}
+					detail := fmt.Sprintf("Declared entry %d\n\n", e.Order) + rows("Label", line(e.Label), "Evidence", words(doc.Evidence), "Level", fmt.Sprint(e.Level), "Parent", parent, "Status", words(e.Status), "Target", where, "Href", line(e.Href)) + "\nEnter reads this entry and stops at its declared end.\np pages it. Neither records reading progress.\n"
+					item := entry{title: indent + line(e.Label), summary: joinParts(words(doc.Evidence), fmt.Sprintf("L%d", e.Level), where), detail: detail, nav: true, navEvidence: doc.Evidence, navOrder: e.Order}
 					if e.Status == "resolved" && e.Unit != nil && e.Offset != nil {
 						item.navResolved, item.navUnit, item.navOffset = true, *e.Unit, *e.Offset
 					}
@@ -189,11 +205,56 @@ func (m *model) populate(data any) {
 			}
 		} else if p.Status == "units_available" {
 			for _, u := range p.Units {
-				m.entries = append(m.entries, entry{title: fmt.Sprintf("Unit %d: %q", u.Index, u.Member), summary: fmt.Sprintf("%d text bytes | %d gaps | %q", u.TextBytes, u.KnownGaps, u.Language), detail: fmt.Sprintf("Source unit %d\n\nMember: %q\nLanguage: %q\nDirection: %q\nLinear: %q\nParts: %d; known text gaps: %d\n\nEnter retrieves a bounded structured-text range.\nNo reading progress is recorded.", u.Index, u.Member, u.Language, u.Direction, u.Linear, u.Parts, u.KnownGaps)})
+				m.entries = append(m.entries, entry{title: fmt.Sprintf("Unit %d: %s", u.Index, line(u.Member)), summary: joinParts(fmt.Sprintf("%d text bytes", u.TextBytes), fmt.Sprintf("%d gaps", u.KnownGaps), line(u.Language)), detail: fmt.Sprintf("Source unit %d\n\n", u.Index) + rows("Member", line(u.Member), "Language", line(u.Language), "Direction", line(u.Direction), "Linear", words(u.Linear)) + fmt.Sprintf("Parts: %d; known text gaps: %d\n\nEnter retrieves a bounded structured-text range.\nNo reading progress is recorded.", u.Parts, u.KnownGaps)})
 			}
 		}
 	}
 	m.selectEntry(0)
+}
+
+// rows writes "label: value" rows for label and value pairs, leaving out
+// empty values. Values must already be safe for one row.
+func rows(pairs ...string) string {
+	var b strings.Builder
+	for i := 0; i+1 < len(pairs); i += 2 {
+		if pairs[i+1] != "" {
+			b.WriteString(pairs[i] + ": " + pairs[i+1] + "\n")
+		}
+	}
+	return b.String()
+}
+
+// findings lists source findings, one per row, after a blank row.
+func findings(values []string) string {
+	var b strings.Builder
+	for _, f := range values {
+		if f = present.Words(f); f != "" {
+			b.WriteString("Finding: " + f + "\n")
+		}
+	}
+	if b.Len() == 0 {
+		return ""
+	}
+	return "\n" + b.String()
+}
+
+// joinParts joins the non-empty summary parts with " | ".
+func joinParts(parts ...string) string {
+	shown := parts[:0:0]
+	for _, p := range parts {
+		if p != "" {
+			shown = append(shown, p)
+		}
+	}
+	return strings.Join(shown, " | ")
+}
+
+// pageLabel is a printed PDF page label, or "none".
+func pageLabel(label string) string {
+	if label = present.Line(label); label != "" {
+		return label
+	}
+	return "none"
 }
 
 func byteSize(n int64) string {

@@ -18,7 +18,7 @@ func Snapshot(s library.Snapshot) string {
 	field(&b, "Root hint", Line(s.Catalog.RootHint))
 	fmt.Fprintf(&b, "Inventory: %s\n", map[bool]string{true: "complete", false: "incomplete"}[s.Catalog.Complete])
 	fmt.Fprintf(&b, "Unique byte assets: %d | File locations: %d | Excluded links and special files: %d\nSource bytes read: %d\n", len(s.Catalog.Assets), locations, len(s.Catalog.Excluded), s.BytesRead)
-	field(&b, "Saved", Line(s.Output))
+	field(&b, "Saved", Exact(s.Output))
 	field(&b, "Durability", words(s.Durability))
 	b.WriteString("No publication, source cleanup, or antivirus scan performed.\n")
 	return b.String()
@@ -41,7 +41,7 @@ func Holdings(p library.Page) string {
 		}
 		fmt.Fprintf(&b, "\n%s\n  %d bytes | ID: %s\n", Line(title), a.Bytes, Line(a.ID))
 		for _, l := range a.Locations {
-			fmt.Fprintf(&b, "  %s (%s)\n", Line(l.Path), words(l.CandidateKind))
+			fmt.Fprintf(&b, "  %s (%s)\n", Exact(l.Path), words(l.CandidateKind))
 		}
 		if h := a.Health; h != nil {
 			fmt.Fprintf(&b, "  Recorded health: %s | format: %s | antivirus: %s\n", words(h.Status), words(h.DetectedFormat), words(h.Antivirus.Status))
@@ -62,7 +62,7 @@ func Holdings(p library.Page) string {
 func Audit(a library.Audit) string {
 	var b strings.Builder
 	field(&b, "Snapshot", Line(a.SnapshotID))
-	field(&b, "Root", Line(a.Root))
+	field(&b, "Root", Exact(a.Root))
 	fmt.Fprintf(&b, "Inventory: %s\nUnchanged file locations: %d\nSource bytes read: %d\nAntivirus: not scanned\n", map[bool]string{true: "complete", false: "incomplete"}[a.Complete], a.Unchanged, a.BytesRead)
 	for _, f := range a.Findings {
 		writeReview(&b, f.Path, f.Status, f.Detail)
@@ -94,8 +94,8 @@ func Import(r library.ImportResult) string {
 		state += "; the library already holds these bytes"
 	}
 	b.WriteString(state + "\n")
-	field(&b, "Library", Line(r.Library))
-	field(&b, "Source", Line(r.Source))
+	field(&b, "Library", Exact(r.Library))
+	field(&b, "Source", Exact(r.Source))
 	field(&b, "Kind", words(r.SourceKind))
 	field(&b, "Asset", Line(r.AssetID))
 	if r.Format != "" {
@@ -103,7 +103,7 @@ func Import(r library.ImportResult) string {
 	}
 	field(&b, "SHA-256", Line(r.SHA256))
 	field(&b, "Status", statusWithReason(r.Status, r.Reason))
-	field(&b, "Path", Line(r.Path))
+	field(&b, "Path", Exact(r.Path))
 	field(&b, "Title", list(r.Titles))
 	field(&b, "Language", list(r.Languages))
 	if r.IdentitiesRecorded {
@@ -129,7 +129,7 @@ func Import(r library.ImportResult) string {
 func ManagedAudit(a library.ManagedAudit) string {
 	var b strings.Builder
 	field(&b, "Library", Line(a.LibraryID))
-	field(&b, "Root", Line(a.Root))
+	field(&b, "Root", Exact(a.Root))
 	fmt.Fprintf(&b, "Assets: %d | Checked matches: %d\n", a.Assets, a.Matching)
 	field(&b, "Antivirus", words(a.Security))
 	for _, finding := range a.Findings {
@@ -141,7 +141,7 @@ func ManagedAudit(a library.ManagedAudit) string {
 
 func LibraryState(s library.State) string {
 	var b strings.Builder
-	field(&b, "Library root", Line(s.Root))
+	field(&b, "Library root", Exact(s.Root))
 	state := words(s.Status)
 	switch {
 	case s.Created:
@@ -162,7 +162,7 @@ func LibraryState(s library.State) string {
 
 func Rescan(r library.RescanResult) string {
 	var b strings.Builder
-	field(&b, "Library", Line(r.Library))
+	field(&b, "Library", Exact(r.Library))
 	field(&b, "Library ID", Line(r.LibraryID))
 	fmt.Fprintf(&b, "Scanned: %d | Promoted to checked: %d | Detections: %d | Incomplete: %d\n", len(r.Scanned), r.Promoted, r.Detections, r.Incomplete)
 	for _, item := range r.Scanned {
@@ -170,7 +170,7 @@ func Rescan(r library.RescanResult) string {
 		if item.After == "" {
 			after = "no status recorded"
 		}
-		fmt.Fprintf(&b, "\n%s\n  %s -> %s", Line(item.Path), statusWithReason(item.Before, item.BeforeReason), after)
+		fmt.Fprintf(&b, "\n%s\n  %s -> %s", Exact(item.Path), statusWithReason(item.Before, item.BeforeReason), after)
 		if item.Antivirus != "" {
 			fmt.Fprintf(&b, " | antivirus %s", words(item.Antivirus))
 		}
@@ -182,7 +182,7 @@ func Rescan(r library.RescanResult) string {
 	if len(r.Skipped) > 0 {
 		fmt.Fprintf(&b, "\nNot rescanned: %d\n", len(r.Skipped))
 		for _, item := range r.Skipped {
-			fmt.Fprintf(&b, "  %s (%s): %s\n", Line(item.Path), words(item.BeforeReason), words(item.Detail))
+			fmt.Fprintf(&b, "  %s (%s): %s\n", Exact(item.Path), words(item.BeforeReason), words(item.Detail))
 		}
 	}
 	notes(&b, "Limitation", r.Limitations)
@@ -228,7 +228,7 @@ func ManagedHoldings(p library.ManagedPage) string {
 					fmt.Fprintf(&b, "  Track %d of %d in %s (declared order)\n", src.Recording.Position, src.Recording.Tracks, Line(src.Recording.Format))
 				}
 			} else {
-				fmt.Fprintf(&b, "  Source: %s\n", Line(src.Path))
+				fmt.Fprintf(&b, "  Source: %s\n", Exact(src.Path))
 			}
 		}
 	}
@@ -240,7 +240,7 @@ func Export(r library.ExportResult) string {
 	var b strings.Builder
 	field(&b, "Holding", Line(r.AssetID))
 	field(&b, "Title", Line(r.Title))
-	field(&b, "Copy", Line(r.Path))
+	field(&b, "Copy", Exact(r.Path))
 	fmt.Fprintf(&b, "Verified SHA-256: %s (%d bytes)\n", Line(r.SHA256), r.Bytes)
 	field(&b, "Copy state", joinSet(yes(r.ReadOnly, "read-only"), yes(r.Reused, "reused an identical earlier copy")))
 	field(&b, "Opened with", Line(r.Launched))
@@ -250,8 +250,8 @@ func Export(r library.ExportResult) string {
 
 func Ingest(r library.IngestResult) string {
 	var b strings.Builder
-	field(&b, "Library", Line(r.Library))
-	field(&b, "Folder", Line(r.Folder))
+	field(&b, "Library", Exact(r.Library))
+	field(&b, "Folder", Exact(r.Folder))
 	state := "complete"
 	if !r.Complete {
 		state = "incomplete"
@@ -261,7 +261,7 @@ func Ingest(r library.IngestResult) string {
 	}
 	fmt.Fprintf(&b, "Ingest: %s\nImported: %d (checked %d, review %d) | Not imported: %d | Failed: %d\n", state, r.Imported, r.Checked, r.Review, r.NotImported, r.Failed)
 	for _, it := range r.Items {
-		line := fmt.Sprintf("\n%s %s (%s)", words(it.Outcome), Line(it.Source), words(it.Kind))
+		line := fmt.Sprintf("\n%s %s (%s)", words(it.Outcome), Exact(it.Source), words(it.Kind))
 		if it.Import != nil && it.Import.Status != "" {
 			line += ": " + statusWithReason(it.Import.Status, it.Import.Reason)
 			if it.Import.AlreadyHeld {
@@ -348,18 +348,18 @@ func Cleanup(r library.CleanupResult) string {
 		return ""
 	}
 	var b strings.Builder
-	field(&b, "Library", Line(r.Library))
-	field(&b, "Folder", Line(r.Folder))
+	field(&b, "Library", Exact(r.Library))
+	field(&b, "Folder", Exact(r.Folder))
 	fmt.Fprintf(&b, "Move: %d (%s) | Keep: %d\nPlan digest: %s\n", r.Move, byteCount(r.MoveBytes), r.Keep, Line(r.Digest))
 	if r.Applied {
 		fmt.Fprintf(&b, "Applied: moved %d, not moved %d | Cleanup ID: %s\n", r.Moved, r.NotMoved, Line(r.CleanupID))
-		field(&b, "Holding area", Line(r.HoldingArea))
+		field(&b, "Holding area", Exact(r.HoldingArea))
 		if r.Resumed {
 			b.WriteString("Resumed an interrupted cleanup.\n")
 		}
 	}
 	for _, e := range r.Entries {
-		line := fmt.Sprintf("\n%s %s (%s)", words(e.Disposition), Line(e.Path), words(e.Kind))
+		line := fmt.Sprintf("\n%s %s (%s)", words(e.Disposition), Exact(e.Path), words(e.Kind))
 		if e.Outcome != "" {
 			line += " -> " + words(e.Outcome)
 		}
@@ -385,12 +385,12 @@ func Cleanup(r library.CleanupResult) string {
 // Restore shows each held file and what restoring it does or did.
 func Restore(r library.RestoreResult) string {
 	var b strings.Builder
-	field(&b, "Library", Line(r.Library))
+	field(&b, "Library", Exact(r.Library))
 	field(&b, "Cleanup", Line(r.CleanupID))
-	field(&b, "Folder", Line(r.Folder))
+	field(&b, "Folder", Exact(r.Folder))
 	fmt.Fprintf(&b, "Restore: %d | Already present: %d | Conflicts: %d | Not held: %d | Held copy changed: %d\n", r.Restore, r.Present, r.Conflicts, r.NotHeld, r.Changed)
 	for _, f := range r.Files {
-		line := words(f.Disposition) + " " + Line(f.Path)
+		line := words(f.Disposition) + " " + Exact(f.Path)
 		if f.Outcome != "" {
 			line += " -> " + words(f.Outcome)
 		}

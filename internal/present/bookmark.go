@@ -15,7 +15,7 @@ func Bookmarks(s library.BookmarkState) string {
 	if s.Enabled {
 		state = "enabled"
 	}
-	field(&b, "Library", Line(s.Library))
+	field(&b, "Library", Exact(s.Library))
 	field(&b, "Library ID", Line(s.LibraryID))
 	fmt.Fprintf(&b, "Bookmarks: %s\nSaved locations: %d\n", state, len(s.Bookmarks))
 	if len(s.Bookmarks) == 0 {
@@ -27,7 +27,7 @@ func Bookmarks(s library.BookmarkState) string {
 			fmt.Fprintf(&b, "  note: %s\n", Line(mark.Note))
 		}
 	}
-	field(&b, "Wrote", Line(s.Output))
+	field(&b, "Wrote", Exact(s.Output))
 	field(&b, "Durability", words(s.Durability))
 	b.WriteString("Notes are not part of the book. A bookmark changes only when you save, note, delete, or import one.\n")
 	return b.String()

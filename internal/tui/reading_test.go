@@ -290,7 +290,7 @@ func TestHoldingsReadsAPDFByPageAndLabel(t *testing.T) {
 		t.Fatal("PDF holding not staged as pdf-text/1", m.reader)
 	}
 	m.Update(m.start(true)())
-	if len(m.entries) != 1 || !strings.Contains(m.entries[0].title, `label "IV"`) {
+	if len(m.entries) != 1 || !strings.HasSuffix(m.entries[0].title, "label IV") {
 		t.Fatal("pages", m.status, m.entries)
 	}
 	m.Update(key(tea.KeyF6))

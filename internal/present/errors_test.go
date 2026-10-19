@@ -49,3 +49,19 @@ func TestErrorIsOnePlainSentence(t *testing.T) {
 		t.Fatal("nil")
 	}
 }
+
+func TestExactShowsPathsUnambiguously(t *testing.T) {
+	for in, want := range map[string]string{
+		"/srv/My Books/a.epub": "/srv/My Books/a.epub",
+		"/srv/two  spaces":     `"/srv/two  spaces"`,
+		" lead":                `" lead"`,
+		"line\nbreak":          `"line\nbreak"`,
+		"esc\x1b":              `"esc\x1b"`,
+		"第一章.epub":             "第一章.epub",
+		"":                     "",
+	} {
+		if got := Exact(in); got != want {
+			t.Fatalf("Exact(%q) = %s, want %s", in, got, want)
+		}
+	}
+}

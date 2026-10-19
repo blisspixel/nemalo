@@ -102,7 +102,7 @@ func Evaluation(e discovery.Evaluation) string {
 		}
 		fmt.Fprintf(&b, "\nRecording %s: %d track(s), %d declared bytes, order from %s, %s\n", Line(r.Format), len(r.Tracks), r.Bytes, words(r.OrderSource), acquirable)
 		for _, t := range r.Tracks {
-			fmt.Fprintf(&b, "   %d. %s", t.Position, Line(t.File))
+			fmt.Fprintf(&b, "   %d. %s", t.Position, Exact(t.File))
 			if title := Line(t.Title); title != "" {
 				fmt.Fprintf(&b, " (%s)", title)
 			}

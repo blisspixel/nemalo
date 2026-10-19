@@ -80,7 +80,7 @@ func sourceName(source string) string {
 
 func Catalog(file discovery.CatalogFile) string {
 	var b strings.Builder
-	fmt.Fprintf(&b, "Catalog written: %s\nBytes: %d\nSHA-256: %s\n", Line(file.Path), file.Bytes, Line(file.SHA256))
+	fmt.Fprintf(&b, "Catalog written: %s\nBytes: %d\nSHA-256: %s\n", Exact(file.Path), file.Bytes, Line(file.SHA256))
 	if c := command("nemalo", "search", "QUERY", "--source", "gutenberg", "--catalog", file.Path); c != "" {
 		fmt.Fprintf(&b, "Next: %s\n", c)
 	}
@@ -90,10 +90,10 @@ func Catalog(file discovery.CatalogFile) string {
 
 func Inventory(r inventory.Report) string {
 	var b strings.Builder
-	field(&b, "Folder", Line(r.Root))
+	field(&b, "Folder", Exact(r.Root))
 	fmt.Fprintf(&b, "Inventory: %s | Entries: %d | Bytes read: %d\nSecurity: not scanned. Formats below are filename candidates.\n", map[bool]string{true: "complete", false: "incomplete"}[r.Complete], len(r.Entries), r.BytesRead)
 	for _, e := range r.Entries {
-		fmt.Fprintf(&b, "\n%-16s %s (%d bytes)\n", words(e.Kind), Line(e.Path), e.Bytes)
+		fmt.Fprintf(&b, "\n%-16s %s (%d bytes)\n", words(e.Kind), Exact(e.Path), e.Bytes)
 		if e.SHA256 != "" {
 			fmt.Fprintf(&b, "  SHA-256: %s\n", Line(e.SHA256))
 		}
