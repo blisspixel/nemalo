@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+## 0.1.0-alpha.16
+
+Sixteenth native prerelease. This remains an early library, not 1.0. One explicit arXiv paper version can be evaluated and acquired, MCP servers run long work as durable jobs that a terminal can read and cancel, split 7z and RAR volume sets are read whole, and recordings of one reading are related by narration.
+
+- The volume sets, jobs, and arXiv provider were reviewed adversarially before release. A RAR comment can no longer stand in for 7-Zip's volume count, a split 7z must end exactly where its volumes end, and a set in a folder holding `!/` is reported as failed with every volume. A job cancelled from another process while queued does not start. A `Retry-After` from arXiv only delays later requests, one shared client holds one connection per host, and a versioned arXiv answer naming another version is refused.
 - `evaluate arxiv:ID[vN]` resolves one arXiv paper version (an unversioned identifier to the latest), with its title, authors, dates, DOI, category, and a PDF length the host declares; the license arXiv records for the latest version is applied only to that version. `acquire arxiv:IDvN --file IDvN.pdf` downloads that PDF from export.arxiv.org, checked against the declared length, then assessed, scanned, and imported like any PDF. Every arXiv request keeps arXiv's pace of one every three seconds ([decision 0047](docs/decisions/0047-arxiv-selected-versions.md); issue 19).
 - `nemalo jobs list`, `jobs get ID`, and `jobs cancel ID` read and cancel the durable jobs MCP servers started, from the same journals.
 - `library ingest` reads split 7z sets (`NAME.7z.001`, ...) and RAR volume sets (`NAME.part1.rar`, ...) whole through their first volume. A split 7z is joined in order; a RAR set is read only when 7-Zip names it multi-volume with exactly the volumes found. The other volumes are reported as parts of the set, and a set with a missing volume is preserved ([decision 0046](docs/decisions/0046-archive-volume-sets.md)).
