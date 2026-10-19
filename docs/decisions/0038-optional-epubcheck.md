@@ -53,5 +53,12 @@ an error counted but not listed, errors listed but not counted, a negative
 count, and an unknown severity are each `incomplete`. A checker that never
 exits stops at the deadline, 205 messages keep 200, and a missing checker is
 `unavailable`. Assessment turns a clean EPUB with an unavailable EPUBCheck into
-`needs_review` and leaves an MP3 unaffected. Not yet run against an installed
-EPUBCheck.
+`needs_review` and leaves an MP3 unaffected.
+
+Live, on Linux amd64, against the official EPUBCheck 5.4.0 release run by an
+Eclipse Temurin 21 JRE through an `epubcheck` wrapper on `PATH`: three Project
+Gutenberg EPUBs held in an earlier validation passed with 0 fatal, 0 errors,
+and 0 warnings in about six seconds each, and their status stayed `limited
+checks passed`. A copy of one with an unknown element and an undeclared
+attribute added to one document reported 2 errors, both `RSC-005` with the
+member path and line, and `check` held it in review and exited 1.
