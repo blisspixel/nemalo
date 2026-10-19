@@ -299,8 +299,10 @@ Acceptance:
 
 Status: partial. Plan-based source cleanup into a recoverable holding area,
 journaled crash recovery, and restore are implemented in CLI, JSON, and TUI
-([decision 0022](docs/decisions/0022-recoverable-source-cleanup.md)); held
-sources are retained, with no purge. `library check` reports missing, changed,
+([decision 0022](docs/decisions/0022-recoverable-source-cleanup.md)). `library
+purge` removes a completed cleanup's held copies whose bytes the library holds
+and verifies, after its own preview and plan, and resumes from its manifest
+([decision 0041](docs/decisions/0041-purge-held-sources.md)). `library check` reports missing, changed,
 untracked, and unscanned entries, unfinished operations, and held copies without
 changing anything ([decision 0024](docs/decisions/0024-library-check.md)).
 Disk-full and scanner-failure faults are injected in tests: a full disk
@@ -749,8 +751,9 @@ also builds and smokes the executable with cgo disabled. Race checks require cgo
 1. Settle Linux environments: Ubuntu is the hosted native CI runner; Omarchy 4
    (Arch Linux x86_64) was reviewed for desktop terminal and descriptor bridge
    compatibility.
-2. Holding-area retention: held sources are kept until the user removes them;
-   any purge needs its own preview and decision (decision 0022).
+2. Holding-area retention: held sources are kept until `library purge`
+   removes the copies the library holds, after its own preview
+   ([decision 0041](docs/decisions/0041-purge-held-sources.md)).
 3. EPUBCheck conformance is an optional assessment, not part of the checked
    policy ([decision 0038](docs/decisions/0038-optional-epubcheck.md)).
 

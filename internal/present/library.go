@@ -406,7 +406,7 @@ func Restore(r library.RestoreResult) string {
 	field(&b, "Library", Exact(r.Library))
 	field(&b, "Cleanup", Line(r.CleanupID))
 	field(&b, "Folder", Exact(r.Folder))
-	fmt.Fprintf(&b, "Restore: %d | Already present: %d | Conflicts: %d | Not held: %d | Held copy changed: %d\n", r.Restore, r.Present, r.Conflicts, r.NotHeld, r.Changed)
+	fmt.Fprintf(&b, "Restore: %d | Already present: %d | Conflicts: %d | Not held: %d | Purged: %d | Held copy changed: %d\n", r.Restore, r.Present, r.Conflicts, r.NotHeld, r.Purged, r.Changed)
 	for _, f := range r.Files {
 		line := words(f.Disposition) + " " + Exact(f.Path)
 		if f.Outcome != "" {
@@ -417,6 +417,41 @@ func Restore(r library.RestoreResult) string {
 	notes(&b, "Limitation", r.Limitations)
 	if !r.Applied {
 		b.WriteString("Preview only. Nothing was written. Apply with --apply.\n")
+	}
+	return b.String()
+}
+
+// Purge lists every held file of the cleanup with what a purge does to it,
+// and the plan digest --apply --plan must repeat.
+func Purge(r library.PurgeResult) string {
+	var b strings.Builder
+	field(&b, "Library", Exact(r.Library))
+	field(&b, "Cleanup", Line(r.CleanupID))
+	field(&b, "Folder", Exact(r.Folder))
+	if r.Applied && len(r.Files) == 0 {
+		fmt.Fprintf(&b, "Purge closed. Purged before it stopped: %d. Other held copies stay.\n", r.Purged)
+	} else if r.Applied {
+		fmt.Fprintf(&b, "Purged: %d (%s) | Kept: %d\n", r.Purged, byteCount(r.PurgedBytes), r.Keep)
+	} else {
+		fmt.Fprintf(&b, "Purge: %d (%s) | Keep: %d\n", r.Purge, byteCount(r.PurgeBytes), r.Keep)
+	}
+	for _, f := range r.Files {
+		line := words(f.Disposition) + " " + Exact(f.Path)
+		if f.Outcome != "" {
+			line += " -> " + words(f.Outcome)
+		}
+		b.WriteString(line + "\n")
+	}
+	notes(&b, "Limitation", r.Limitations)
+	if !r.Applied && r.Digest != "" {
+		fmt.Fprintf(&b, "Plan: %s\n", r.Digest)
+		if r.Purge > 0 {
+			if c := command("nemalo", "library", "purge", r.Library, "--cleanup", r.CleanupID, "--apply", "--plan", r.Digest); c != "" {
+				b.WriteString("Preview only. Nothing was removed.\nNext: " + c + "\n")
+			}
+		} else {
+			b.WriteString("Nothing to purge. Nothing was removed.\n")
+		}
 	}
 	return b.String()
 }

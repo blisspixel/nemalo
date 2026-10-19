@@ -406,6 +406,11 @@ func (s Service) Cleanup(ctx context.Context, request library.CleanupRequest) (l
 	return library.Cleanup(ctx, request)
 }
 
+// Purge removes a completed cleanup's held copies that the library holds.
+func (s Service) Purge(ctx context.Context, request library.PurgeRequest) (library.PurgeResult, error) {
+	return library.Purge(ctx, request)
+}
+
 // Restore returns a cleanup's held files to their folder without replacing anything.
 func (s Service) Restore(ctx context.Context, request library.RestoreRequest) (library.RestoreResult, error) {
 	return library.Restore(ctx, request)

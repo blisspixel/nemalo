@@ -27,8 +27,9 @@ type RestoreRequest struct {
 // RestoreFile is one planned file of the cleanup. Disposition before applying
 // is restore, already_present (the folder has the same bytes), conflict (the
 // folder has different bytes and a held copy exists), not_held (no held copy:
-// the file was not moved), or held_copy_changed (the held copy no longer has
-// the planned bytes). Outcome after applying is restored or the same values.
+// the file was not moved), purged (library purge removed the held copy), or
+// held_copy_changed (the held copy no longer has the planned bytes). Outcome
+// after applying is restored or the same values.
 type RestoreFile struct {
 	Path        string `json:"path"`
 	Bytes       int64  `json:"bytes"`
@@ -49,6 +50,7 @@ type RestoreResult struct {
 	Present       int           `json:"already_present"`
 	Conflicts     int           `json:"conflicts"`
 	NotHeld       int           `json:"not_held"`
+	Purged        int           `json:"purged"`
 	Changed       int           `json:"held_copy_changed"`
 	Blocked       int           `json:"blocked"`
 	Limitations   []string      `json:"limitations"`
@@ -117,7 +119,7 @@ func Restore(ctx context.Context, request RestoreRequest) (result RestoreResult,
 	}
 	open := openCleanup(records)
 	if open != nil && (open.Event != "restore_started" || open.CleanupID != request.CleanupID) {
-		return result, fmt.Errorf("%s %s is pending; finish it first", strings.ReplaceAll(open.Event, "_", " "), open.CleanupID)
+		return result, cleanupPendingError(open)
 	}
 	if request.Stop && (open == nil || open.Event != "restore_started") {
 		return result, errors.New("no restore of that cleanup is pending")
@@ -134,6 +136,13 @@ func Restore(ctx context.Context, request RestoreRequest) (result RestoreResult,
 					}
 				}
 			}
+		}
+	}
+	// Held copies a purge removed are reported as purged, not as never held.
+	purged := map[int]bool{}
+	for _, r := range records {
+		if r.CleanupID == request.CleanupID && r.Event == "purge_entry" && (r.Outcome == "purged" || r.Outcome == "already_absent") {
+			purged[r.Index] = true
 		}
 	}
 	store, err := safeio.OpenRoot(libraryRoot)
@@ -193,6 +202,9 @@ func Restore(ctx context.Context, request RestoreRequest) (result RestoreResult,
 			if d, err = restoreDisposition(ctx, store, src, path.Join(holding, "files", f.Path), f); err != nil {
 				return result, err
 			}
+			if d == "not_held" && purged[i] {
+				d = "purged"
+			}
 		}
 		result.Files = append(result.Files, RestoreFile{Path: f.Path, Bytes: f.Bytes, Disposition: d})
 		countRestore(&result, d)
@@ -219,6 +231,9 @@ func Restore(ctx context.Context, request RestoreRequest) (result RestoreResult,
 		if err != nil {
 			return result, err
 		}
+		if outcome == "not_held" && purged[i] {
+			outcome = "purged"
+		}
 		if err := cleanupStep("restored"); err != nil {
 			return result, err
 		}
@@ -230,7 +245,7 @@ func Restore(ctx context.Context, request RestoreRequest) (result RestoreResult,
 		result.Files[i].Outcome = outcome
 	}
 	// After applying, the counts describe what happened, not the preview.
-	result.Restore, result.Present, result.Conflicts, result.NotHeld, result.Changed, result.Blocked = 0, 0, 0, 0, 0, 0
+	result.Restore, result.Present, result.Conflicts, result.NotHeld, result.Changed, result.Blocked, result.Purged = 0, 0, 0, 0, 0, 0, 0
 	for _, f := range result.Files {
 		countRestore(&result, f.Outcome)
 	}
@@ -254,6 +269,8 @@ func countRestore(r *RestoreResult, d string) {
 		r.Changed++
 	case "blocked", "stopped":
 		r.Blocked++
+	case "purged":
+		r.Purged++
 	default:
 		r.NotHeld++
 	}
@@ -272,7 +289,12 @@ func heldState(ctx context.Context, store *os.Root, held string, f CleanupFile) 
 	if !ok {
 		return "absent", nil, nil
 	}
-	info, err := store.Lstat(filepath.FromSlash(held))
+	parent, base, err := heldParent(store, held)
+	if err != nil {
+		return "", nil, err
+	}
+	defer parent.Close()
+	info, err := parent.Lstat(base)
 	return "same", info, err
 }
 
@@ -366,7 +388,7 @@ func restoreFile(ctx context.Context, store, src *os.Root, held string, f Cleanu
 			return "blocked", nil
 		}
 		partial := filepath.FromSlash(f.Path + ".nemalo-restore-" + newStateID("r")[len("r:"):])
-		in, err := safeio.OpenRegular(store, filepath.FromSlash(held), heldInfo, os.O_RDONLY)
+		in, err := openHeld(store, held, heldInfo)
 		if err != nil {
 			return "", err
 		}
@@ -402,7 +424,7 @@ func restoreFile(ctx context.Context, store, src *os.Root, held string, f Cleanu
 		if heldInfo == nil || targetInfo == nil || os.SameFile(heldInfo, targetInfo) {
 			return "already_present_held_kept", nil
 		}
-		if err := store.Remove(filepath.FromSlash(held)); err != nil {
+		if err := removeHeld(store, held, heldInfo); err != nil {
 			return "", err
 		}
 	}

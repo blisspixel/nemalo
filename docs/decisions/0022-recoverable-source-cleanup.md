@@ -2,9 +2,9 @@
 
 Status: accepted and implemented, 2026-10-11. The first increment of milestone 4,
 over folder ingest ([decision 0017](0017-folder-and-zip-ingest.md)) and managed
-holdings ([decision 0009](0009-managed-epub-import.md)). Settles remaining
-implementation choice 2: held sources are retained until the user removes them;
-there is no purge.
+holdings ([decision 0009](0009-managed-epub-import.md)). Held sources are
+retained until removed; [decision 0041](0041-purge-held-sources.md) adds the
+explicit purge of copies the library holds.
 
 ## Decision
 
@@ -75,8 +75,8 @@ cleanup moves a source into `<library>/cleanup/<id>/files/<folder-relative path>
 
 A downloads folder can be emptied of everything the library holds and returned
 exactly. Uncertain, unsupported, unheld, and partly held material is never
-moved. Holding areas grow until removed by hand; a later explicit purge needs its
-own preview and decision. Libraries with a cleanup journal cannot be opened by
+moved. Holding areas grow until purged
+([decision 0041](0041-purge-held-sources.md)) or removed by hand. Libraries with a cleanup journal cannot be opened by
 earlier prereleases. Hard links are required in the library and in the folder
 for restore, as for acquisition receipts. Directory-entry durability across power
 loss depends on the filesystem.

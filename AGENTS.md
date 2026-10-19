@@ -134,7 +134,9 @@ member and every entry beside a packet; ingest reuses Import.
 `library check` (decision 0024) is the read-only whole-library report; it never repairs.
 Source cleanup is `library/cleanup.go` and `restore.go` (decision 0022): move only held,
 verified bytes into the holding area via verified copy, hard-link publish, then source
-removal; resume from the manifest, never a new plan; never replace on restore; no purge.
+removal; resume from the manifest, never a new plan; never replace on restore.
+`library/purge.go` (decision 0041) removes only held copies a current, verified holding
+also has, through its own previewed plan and manifest; receipts and intents stay.
 Readers and players get verified copies (`library open`/`export`), never stored
 files; launch only through `internal/launch` argument arrays (decision 0016).
 Never remove a lock file to release an active writer or treat initialization as

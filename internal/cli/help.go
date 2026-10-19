@@ -156,6 +156,10 @@ nemalo library cleanup LIBRARY --stop
   Close a pending cleanup that cannot finish, so it can be restored.
 nemalo library restore LIBRARY --cleanup ID [--apply | --stop]
   Return a cleanup's files to their folder, never replacing.
+nemalo library purge LIBRARY --cleanup ID [--apply --plan DIGEST | --stop]
+  Remove a completed cleanup's held copies whose bytes the library holds and
+  verifies; receipts, intents, and anything else stay. A purged copy cannot
+  be restored. --stop closes a purge that cannot finish.
 nemalo library rescan LIBRARY [--apply]
   Scan review holdings that lack scan evidence; --apply records results.
 nemalo library open LIBRARY --asset sha256:HASH [--app APPLICATION]

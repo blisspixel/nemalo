@@ -122,7 +122,7 @@ type cleanupRecord struct {
 func cleanupLimitations() []string {
 	return []string{
 		"Only files whose exact bytes the library holds, with stored bytes verified, move. Everything else stays, with its reason.",
-		"Moved sources go to the library's cleanup holding area and can be restored. Nothing is purged; remove a holding area yourself only when you no longer need it.",
+		"Moved sources go to the library's cleanup holding area and can be restored. library purge removes held copies the library holds, after its own preview.",
 		"An archive moves only when every member is a directory or a held file. Intake packets move as their receipt, intent, and content.",
 		"Directory-entry durability across power loss depends on the filesystem.",
 	}
@@ -193,8 +193,8 @@ func Cleanup(ctx context.Context, request CleanupRequest) (result CleanupResult,
 		return stopCleanup(ctx, control, records, manifest, result)
 	}
 	if open != nil {
-		if open.Event == "restore_started" {
-			return result, fmt.Errorf("restore of %s is pending; finish it first with library restore --cleanup %s --apply", open.CleanupID, open.CleanupID)
+		if open.Event != "cleanup_started" {
+			return result, cleanupPendingError(open)
 		}
 		if !samePath(open.Folder, folder) || (request.Apply != "" && open.Digest != request.Apply) {
 			return result, fmt.Errorf("cleanup %s is pending for %s; finish it with the same folder and --apply %s, or close it with --stop", open.CleanupID, open.Folder, open.Digest)
@@ -602,8 +602,16 @@ func moveFile(ctx context.Context, store, src *os.Root, final string, f CleanupF
 // heldCopy reports whether final holds exactly f. A different file there means
 // the holding area was changed outside Nemalo, which needs review.
 func heldCopy(ctx context.Context, store *os.Root, final string, f CleanupFile) (bool, error) {
-	name := filepath.FromSlash(final)
-	info, err := store.Lstat(name)
+	// Every folder on the way is opened without following links.
+	parent, name, err := heldParent(store, final)
+	if errors.Is(err, os.ErrNotExist) {
+		return false, nil
+	}
+	if err != nil {
+		return false, err
+	}
+	defer parent.Close()
+	info, err := parent.Lstat(name)
 	if errors.Is(err, os.ErrNotExist) {
 		return false, nil
 	}
@@ -613,7 +621,7 @@ func heldCopy(ctx context.Context, store *os.Root, final string, f CleanupFile) 
 	if !info.Mode().IsRegular() || info.Size() != f.Bytes {
 		return false, fmt.Errorf("%w: holding copy %s is not the planned file", ErrStateReview, final)
 	}
-	h, err := safeio.OpenRegular(store, name, info, os.O_RDONLY)
+	h, err := safeio.OpenRegular(parent, name, info, os.O_RDONLY)
 	if err != nil {
 		return false, err
 	}
@@ -1061,12 +1069,16 @@ func readCleanup(control *control, libraryID string) ([]cleanupRecord, error) {
 			if open != nil || !completed[r.CleanupID] {
 				return nil, ErrStateReview
 			}
-		case "cleanup_entry", "restore_entry":
+		case "purge_started":
+			if open != nil || !completed[r.CleanupID] || !validHash(r.Digest) || !validHash(r.Manifest) || r.Count < 1 {
+				return nil, ErrStateReview
+			}
+		case "cleanup_entry", "restore_entry", "purge_entry":
 			if open == nil || open.CleanupID != r.CleanupID || strings.TrimSuffix(open.Event, "_started") != strings.TrimSuffix(r.Event, "_entry") || r.Index < 0 || r.Index >= open.Count || indices[r.Index] || r.Outcome == "" || len(r.Outcome) > 64 {
 				return nil, ErrStateReview
 			}
 			indices[r.Index] = true
-		case "cleanup_completed", "restore_completed":
+		case "cleanup_completed", "restore_completed", "purge_completed":
 			if open == nil || open.CleanupID != r.CleanupID || strings.TrimSuffix(open.Event, "_started") != strings.TrimSuffix(r.Event, "_completed") {
 				return nil, ErrStateReview
 			}
@@ -1078,13 +1090,25 @@ func readCleanup(control *control, libraryID string) ([]cleanupRecord, error) {
 		}
 		records = append(records, r)
 		switch r.Event {
-		case "cleanup_started", "restore_started":
+		case "cleanup_started", "restore_started", "purge_started":
 			open, indices = &records[len(records)-1], map[int]bool{}
-		case "cleanup_completed", "restore_completed":
+		case "cleanup_completed", "restore_completed", "purge_completed":
 			open = nil
 		}
 	}
 	return records, nil
+}
+
+// cleanupPendingError names an unfinished cleanup, restore, or purge and the commands
+// that finish or close it.
+func cleanupPendingError(open *cleanupRecord) error {
+	switch open.Event {
+	case "restore_started":
+		return fmt.Errorf("restore of %s is pending; finish it with library restore --cleanup %s --apply, or close it with --stop", open.CleanupID, open.CleanupID)
+	case "purge_started":
+		return fmt.Errorf("purge of %s is pending; finish it with library purge --cleanup %s --apply --plan %s, or close it with --stop", open.CleanupID, open.CleanupID, open.Digest)
+	}
+	return fmt.Errorf("cleanup %s is pending for %s; finish it with the same folder and --apply --plan %s, or close it with --stop", open.CleanupID, open.Folder, open.Digest)
 }
 
 // openCleanup returns the started record of an unfinished operation, if any.
@@ -1092,9 +1116,9 @@ func openCleanup(records []cleanupRecord) *cleanupRecord {
 	var open *cleanupRecord
 	for i := range records {
 		switch records[i].Event {
-		case "cleanup_started", "restore_started":
+		case "cleanup_started", "restore_started", "purge_started":
 			open = &records[i]
-		case "cleanup_completed", "restore_completed":
+		case "cleanup_completed", "restore_completed", "purge_completed":
 			open = nil
 		}
 	}

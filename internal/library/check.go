@@ -207,7 +207,7 @@ func CheckLibrary(ctx context.Context, directory string) (r LibraryCheck, err er
 		r.Next = append(r.Next, fmt.Sprintf("%d holding(s) lack usable scan evidence: run library rescan --apply.", scans))
 	}
 	if r.Cleanups > 0 && r.HeldFiles > 0 {
-		r.Next = append(r.Next, "Held cleanup sources can be returned with library restore, or removed by hand once no longer needed.")
+		r.Next = append(r.Next, "Held cleanup sources can be returned with library restore, or removed with library purge once the library holds them.")
 	}
 	r.Healthy = len(r.Issues) == 0
 	if !r.Healthy {

@@ -48,7 +48,8 @@ AI service. The agent interface (MCP) uses the same application services.
   `library ingest` imports a whole folder, including intake packets and ZIP
   members, and preserves the folder. `library cleanup` then moves sources whose
   books the library holds into a recoverable holding area, and `library restore`
-  undoes it. `library rescan` scans review holdings in
+  undoes it. `library purge` frees that space once the library holds the
+  same verified bytes, after its own preview. `library rescan` scans review holdings in
   one batched command.
 - Retrieve bounded EPUB text in CLI/JSON/TUI, with exact continuation, source parts,
   note references, local image bytes, and explicit extraction gaps. Illustrated
@@ -82,7 +83,7 @@ AI service. The agent interface (MCP) uses the same application services.
   as a Claude Code plugin and an Agent Plugins package. `--allow-write` adds
   import tools that store only the plan a preview returned.
 
-RAR and 7z intake, a purge for held sources,
+RAR and 7z intake,
 recording identity across holdings, and further MCP write tools are planned. Single-file import is not
 a full checked-library policy.
 File checks report limited evidence, never a safety or completeness guarantee.

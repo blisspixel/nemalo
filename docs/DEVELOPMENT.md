@@ -8,7 +8,7 @@ needed for the application, tests, or first-party tooling.
 ## Current operations
 
 `help`, `version`, `doctor`, `search`, `evaluate`, `catalog fetch`, `acquire`, `inspect`, `check`, `library snapshot`,
-`library list`, `library audit`, `library check`, `library import`, `library ingest`, `library cleanup`, `library restore`,
+`library list`, `library audit`, `library check`, `library import`, `library ingest`, `library cleanup`, `library restore`, `library purge`,
 `library rescan`, `library recordings`,
 `library open`, `library export`, `library init`, `library status`, `bookmark`,
 `content units`, `content navigation`,
@@ -283,6 +283,8 @@ nemalo library export /path/to/library --asset sha256:HASH --output /path/to/fol
 nemalo library cleanup /path/to/library /path/to/downloads
 nemalo library cleanup /path/to/library /path/to/downloads --apply --plan DIGEST
 nemalo library restore /path/to/library --cleanup cleanup:ID --apply
+nemalo library purge /path/to/library --cleanup cleanup:ID
+nemalo library purge /path/to/library --cleanup cleanup:ID --apply --plan DIGEST
 nemalo content read /path/to/library --root /path/to/library --asset sha256:HASH
 nemalo content read /path/to/library --root /path/to/library --asset sha256:HASH \
   --representation pdf-text/1 --unit 3
@@ -343,6 +345,13 @@ copy in `<state>/handoff`, never the stored file, because some readers write
 annotations into the files they open. `library export` makes the same verified
 copy in an explicit directory and never overwrites; see
 [decision 0016](decisions/0016-reader-handoff-copies.md).
+`library cleanup` moves a folder's sources whose bytes the library holds into
+the library's holding area, and `library restore` returns them
+([decision 0022](decisions/0022-recoverable-source-cleanup.md)). `library purge`
+then removes held copies of a completed cleanup whose bytes are a current
+holding with verified stored bytes, after its own preview and plan digest;
+receipts, intents, and anything else stay, and restore reports a purged file
+as purged ([decision 0041](decisions/0041-purge-held-sources.md)).
 `library audit` on the library directory reports missing, changed, and review
 holdings and does not repair them. Snapshot audit still requires `--root`.
 An EPUB package identifier is recorded when it is an explicit ISBN, DOI, or
@@ -467,8 +476,8 @@ by a `CGO_ENABLED=0` binary smoke. Review actual runs before claiming platform s
 
 ## Next bounded work
 
-Import, ingest, scanned acquisition, recording manifests, cleanup, and restore
-are in place. Interrupted downloads resume against a strong validator
+Import, ingest, scanned acquisition, recording manifests, cleanup, restore,
+and purge are in place. Interrupted downloads resume against a strong validator
 (decision 0023). Gutenberg catalog search stays local (decision 0028). One
 selected Gutenberg EPUB can be acquired from gutenberg.pglaf.org
 (decision 0029). An Open Library work lists editions, and one chosen edition

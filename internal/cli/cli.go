@@ -466,6 +466,16 @@ func Execute(ctx context.Context, args []string, out, errOut io.Writer, service 
 			}
 			return write(data, nil, 0)
 		}
+		if action == "purge" {
+			if flags.NArg() != 1 || *cleanupID == "" || *apply != (*planDigest != "") || (*stop && *apply) {
+				return write(nil, errors.New("use library purge LIBRARY --cleanup ID to preview, then add --apply --plan DIGEST; --stop closes a pending purge"), 2)
+			}
+			data, err := service.Purge(ctx, library.PurgeRequest{Library: flags.Arg(0), CleanupID: *cleanupID, Apply: *planDigest, Stop: *stop})
+			if err != nil {
+				return write(data, err, 1)
+			}
+			return write(data, nil, 0)
+		}
 		if action == "restore" {
 			if flags.NArg() != 1 || *cleanupID == "" {
 				return write(nil, errors.New("use library restore LIBRARY --cleanup ID [--apply]"), 2)
@@ -903,6 +913,8 @@ func flagApplies(command, action, name string) bool {
 			return name == "apply" || name == "plan" || name == "stop"
 		case "restore":
 			return name == "apply" || name == "cleanup" || name == "stop"
+		case "purge":
+			return name == "apply" || name == "cleanup" || name == "plan" || name == "stop"
 		case "open":
 			return name == "asset" || name == "app"
 		case "export":
@@ -1014,6 +1026,9 @@ func printData(out io.Writer, data any) error {
 		return err
 	case library.LibraryCheck:
 		_, err := io.WriteString(out, present.LibraryCheck(value))
+		return err
+	case library.PurgeResult:
+		_, err := io.WriteString(out, present.Purge(value))
 		return err
 	case library.RestoreResult:
 		_, err := io.WriteString(out, present.Restore(value))

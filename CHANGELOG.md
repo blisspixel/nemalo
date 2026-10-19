@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- `library purge LIBRARY --cleanup ID` previews, and with `--apply --plan DIGEST` removes, a completed cleanup's held copies whose bytes are a current holding with verified stored bytes, and held ZIPs whose every member is. A packet's receipt and intent, copies that changed, and copies the library cannot vouch for stay. The purge is journaled with a manifest and resumes after an interruption; restore reports a purged file as purged. `--stop` closes a purge that cannot finish. A library with a purge record needs this version or newer ([decision 0041](docs/decisions/0041-purge-held-sources.md)).
+- Restore, cleanup, and check open every folder of a held copy without following links. Before, a link planted in a cleanup's holding area that led into `assets/` let restore remove a stored asset after returning its bytes.
+
 ## 0.1.0-alpha.14
 
 Fourteenth native prerelease. This remains an early library, not 1.0. M4B audiobooks and M4A tracks join the checked formats, single-file audiobooks up to 2 GiB can be acquired and held, a ClamAV limit is no longer mistaken for a detection, and EPUBs with only font obfuscation are readable.
