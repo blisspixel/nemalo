@@ -354,8 +354,10 @@ Gutenberg search and evaluation read a local copy of the official CSV, and
 `acquire gutenberg:NUMBER --file NAME` fetch one bibliographic record from
 gutenberg.pglaf.org and can download one named EPUB into the existing intake
 packet ([decision 0029](docs/decisions/0029-gutenberg-selected-epub.md)).
-Website search, formats other than those three EPUBs, and broader provider
-contracts remain planned. Transfers and checked publication use milestones 2
+`search --source all` searches every source at once, each with its own
+status, so one provider's failure does not hide another's results. Website
+search, formats other than those three EPUBs, and broader provider contracts
+remain planned. Transfers and checked publication use milestones 2
 and 3. Source cleanup is independent and requires 4.
 
 An Open Library work lists editions, and one chosen edition can name an

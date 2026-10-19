@@ -10,6 +10,7 @@ import (
 	"os/exec"
 	"runtime"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/blisspixel/nemalo/internal/assessment"
@@ -234,6 +235,64 @@ func (s Service) EvaluateGutenbergFiles(ctx context.Context, id string) (discove
 		return discovery.Evaluation{}, errors.New("gutenberg evaluation is unavailable")
 	}
 	return g.EvaluateFiles(ctx, id)
+}
+
+// SourcePage is one source's part of a search across sources. Status is
+// complete, failed, or not_configured (Gutenberg without a local catalog).
+type SourcePage struct {
+	Source string          `json:"source"`
+	Status string          `json:"status"`
+	Detail string          `json:"detail,omitempty"`
+	Page   *discovery.Page `json:"page,omitempty"`
+}
+
+// MultiPage is one search of every source. Each source keeps its own order
+// and total; results are never merged into one ranking, since providers'
+// relevance scores are not comparable.
+type MultiPage struct {
+	Query   string       `json:"query"`
+	Limit   int          `json:"limit"`
+	Sources []SourcePage `json:"sources"`
+}
+
+// SearchSources are searched by SearchAll, in this order.
+var SearchSources = []string{"openlibrary", "archive", "gutenberg"}
+
+// SearchAll searches every source at once, each in its own relevance order,
+// and reports each source's outcome, so one source's failure never hides
+// another's results. Gutenberg reads only its local catalog; without one it
+// is not configured and the website is not queried. It fails only when no
+// source completed.
+func (s Service) SearchAll(ctx context.Context, query string, limit int) (MultiPage, error) {
+	out := MultiPage{Query: query, Limit: limit, Sources: make([]SourcePage, len(SearchSources))}
+	var wg sync.WaitGroup
+	for i, source := range SearchSources {
+		out.Sources[i] = SourcePage{Source: source, Status: "failed"}
+		if g, ok := s.Providers[source].(*discovery.Gutenberg); ok && g.Catalog == "" {
+			out.Sources[i].Status, out.Sources[i].Detail = "not_configured", "No local Gutenberg catalog is configured; fetch one with catalog fetch gutenberg."
+			continue
+		}
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			page, err := s.SearchSourceOrdered(ctx, source, query, discovery.OrderRelevance, limit, 0)
+			if err != nil {
+				out.Sources[i].Detail = err.Error()
+				return
+			}
+			out.Sources[i].Status, out.Sources[i].Page = "complete", &page
+		}()
+	}
+	wg.Wait()
+	for _, p := range out.Sources {
+		if p.Status == "complete" {
+			return out, nil
+		}
+	}
+	if err := ctx.Err(); err != nil {
+		return out, err
+	}
+	return out, errors.New("no source completed the search; see each source's detail")
 }
 
 func (s Service) Search(ctx context.Context, query string, limit, offset int) (discovery.Page, error) {

@@ -333,3 +333,31 @@ func TestOpenHandsAReaderOnlyAVerifiedCopy(t *testing.T) {
 		t.Fatal("open without a handoff directory accepted")
 	}
 }
+
+type failing struct{}
+
+func (failing) Search(context.Context, string, int, int) (discovery.Page, error) {
+	return discovery.Page{}, errors.New("provider unavailable")
+}
+
+// A search of every source reports each source's outcome: one failure does
+// not hide another's results, Gutenberg without a catalog is not configured,
+// and only a search where nothing completed is an error.
+func TestSearchAllKeepsEachSourcesOutcome(t *testing.T) {
+	s := Service{Providers: map[string]Searcher{"openlibrary": catalog{}, "archive": failing{}, "gutenberg": discovery.NewGutenberg()}}
+	m, err := s.SearchAll(context.Background(), "books", 3)
+	if err != nil || len(m.Sources) != 3 {
+		t.Fatal(m, err)
+	}
+	got := map[string]string{}
+	for _, p := range m.Sources {
+		got[p.Source] = p.Status
+	}
+	if got["openlibrary"] != "complete" || got["archive"] != "failed" || got["gutenberg"] != "not_configured" || m.Sources[0].Page.Total != 3 || !strings.Contains(m.Sources[1].Detail, "unavailable") {
+		t.Fatalf("%+v", m)
+	}
+	s = Service{Providers: map[string]Searcher{"openlibrary": failing{}, "archive": failing{}}}
+	if _, err := s.SearchAll(context.Background(), "books", 3); err == nil {
+		t.Fatal("a search where nothing completed succeeded")
+	}
+}

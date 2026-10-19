@@ -51,8 +51,13 @@ var commandHelp = map[string]string{
   website.
 
 Options:
-  --source openlibrary|archive|gutenberg (default openlibrary)
+  --source openlibrary|archive|gutenberg|all (default openlibrary)
   --limit 10, --offset 0
+
+--source all searches every source at once by relevance, each in its own
+section; one source's failure does not hide the others', and Gutenberg is
+searched only when a local catalog is configured. Results are not ranked
+against each other. Sort and page one source at a time.
   --sort relevance|identifier|downloads (identifier and downloads are Archive
          only; Gutenberg also accepts identifier)
   --catalog FILE   absolute pg_catalog.csv for Gutenberg search, evaluate,

@@ -25,7 +25,11 @@ not download an ebook. `acquire gutenberg:NUMBER --file NAME --output DIRECTORY`
 downloads one EPUB that record names (`N.epub.noimages`, `N.epub.images`, or
 `N.epub3.images`) from the same host. The record has no checksum. The transfer
 checks the response length. Other formats are listed and refused. Neither
-search nor a catalog row resolves a download.
+search nor a catalog row resolves a download. `--source all` searches Open
+Library and Archive at once, and Gutenberg's local catalog when one is
+configured, each by relevance in its own section with its own status; one
+source's failure does not hide another's results, results are not ranked
+against each other, and the command fails only when no source completed.
 
 Results keep the provider's relevance ranking, and the result names its order.
 For Archive, `--sort identifier` pages repeatably and `--sort downloads` ranks by

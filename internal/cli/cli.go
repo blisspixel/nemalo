@@ -723,8 +723,22 @@ func Execute(ctx context.Context, args []string, out, errOut io.Writer, service 
 		return write(data, nil, 0)
 	case "search":
 		query := strings.Join(flags.Args(), " ")
+		if *source == "all" {
+			// Every source at once, each in its own relevance order.
+			if *sortOrder != discovery.OrderRelevance || *offset != 0 {
+				return write(nil, errors.New("--source all searches each source by relevance from its first result; use one source to sort or page"), 2)
+			}
+			if strings.TrimSpace(query) == "" || len(query) > 1000 || *limit < 1 || *limit > 50 {
+				return write(nil, errors.New("search requires QUERY and limit 1-50"), 2)
+			}
+			data, err := service.SearchAll(ctx, query, *limit)
+			if err != nil {
+				return write(data, err, 1)
+			}
+			return write(data, nil, 0)
+		}
 		if *source != "openlibrary" && *source != "archive" && *source != "gutenberg" {
-			return write(nil, errors.New("search source must be openlibrary, archive, or gutenberg"), 2)
+			return write(nil, errors.New("search source must be openlibrary, archive, gutenberg, or all"), 2)
 		}
 		if *source == "gutenberg" {
 			if *sortOrder != discovery.OrderRelevance && *sortOrder != discovery.OrderIdentifier {
@@ -1069,6 +1083,9 @@ func printData(out io.Writer, data any) error {
 		return err
 	case assessment.Report:
 		_, err := io.WriteString(out, present.Health(value))
+		return err
+	case app.MultiPage:
+		_, err := io.WriteString(out, present.MultiSearch(value))
 		return err
 	case discovery.Page:
 		_, err := io.WriteString(out, present.Search(value))

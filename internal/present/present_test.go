@@ -4,6 +4,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/blisspixel/nemalo/internal/app"
 	"github.com/blisspixel/nemalo/internal/discovery"
 	"github.com/blisspixel/nemalo/internal/inventory"
 )
@@ -38,5 +39,22 @@ func TestSearchShowsCatalogTypeAndIssued(t *testing.T) {
 	}
 	if CatalogClaim(discovery.Result{Issued: "2007-02-03"}) != "issued 2007-02-03" || CatalogClaim(discovery.Result{}) != "" {
 		t.Fatal("claim forms")
+	}
+}
+
+func TestMultiSearchShowsEverySourceSeparately(t *testing.T) {
+	page := discovery.Page{Source: "openlibrary", Query: "q", Order: discovery.OrderRelevance, Total: 1, Results: []discovery.Result{{Title: "Found", ID: "openlibrary:OL1W"}}}
+	out := MultiSearch(app.MultiPage{Query: "q\x1b", Limit: 5, Sources: []app.SourcePage{
+		{Source: "openlibrary", Status: "complete", Page: &page},
+		{Source: "archive", Status: "failed", Detail: "timeout\x00"},
+		{Source: "gutenberg", Status: "not_configured", Detail: "no local Gutenberg catalog"},
+	}})
+	for _, want := range []string{"not ranked against each other", "1. Found", "Internet Archive: search failed: timeout", "Project Gutenberg: not configured"} {
+		if !strings.Contains(out, want) {
+			t.Fatalf("missing %q in\n%s", want, out)
+		}
+	}
+	if strings.ContainsAny(out, "\x1b\x00") {
+		t.Fatal("control bytes reached the terminal")
 	}
 }

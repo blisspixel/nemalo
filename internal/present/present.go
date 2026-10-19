@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/blisspixel/nemalo/internal/app"
 	"github.com/blisspixel/nemalo/internal/discovery"
 	"github.com/blisspixel/nemalo/internal/inventory"
 )
@@ -48,6 +49,25 @@ func Search(page discovery.Page) string {
 	}
 	if len(page.Results) > 0 {
 		b.WriteString("Discovery metadata only; download availability is not resolved.\n")
+	}
+	return b.String()
+}
+
+// MultiSearch shows a search of every source, each in its own section and
+// order, with a source that failed or is not configured saying why.
+func MultiSearch(m app.MultiPage) string {
+	var b strings.Builder
+	fmt.Fprintf(&b, "Search of every source for %s, up to %d results each. Each source keeps its own order; results are not ranked against each other.\n", Line(m.Query), m.Limit)
+	for _, p := range m.Sources {
+		b.WriteString("\n")
+		switch {
+		case p.Status == "complete" && p.Page != nil:
+			b.WriteString(Search(*p.Page))
+		case p.Status == "not_configured":
+			fmt.Fprintf(&b, "%s: not configured. %s\n", sourceName(p.Source), Line(p.Detail))
+		default:
+			fmt.Fprintf(&b, "%s: search failed: %s\n", sourceName(p.Source), Line(p.Detail))
+		}
 	}
 	return b.String()
 }

@@ -16,7 +16,8 @@ AI service. The agent interface (MCP) uses the same application services.
 **Early development, not 1.0.** Available today:
 
 - Search Open Library and Internet Archive by provider relevance, or Archive by
-  download count or identifier; evaluate Archive item/file metadata.
+  download count or identifier, or every source at once with `--source all`,
+  each in its own section; evaluate Archive item/file metadata.
   An Open Library work lists editions. One chosen edition can name an Archive
   item through its `ocaid`. The first Archive identifier on the work is not used.
 - Search and evaluate a local Project Gutenberg catalog (`pg_catalog.csv`).
