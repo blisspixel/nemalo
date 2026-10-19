@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- The installers ask for the release list again, up to three times, when it names no release, since GitHub's list has briefly answered with none while releases existed.
+
 ## 0.1.0-alpha.15
 
 Fifteenth native prerelease. This remains an early library, not 1.0. Held cleanup copies can be purged once the library holds the same verified bytes, audio can be decoded in full by an installed FFmpeg, RAR and 7z archives are read through an installed 7-Zip, and every source can be searched at once.

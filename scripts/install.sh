@@ -134,6 +134,9 @@ if [ -z "$VERSION" ]; then
   # A GITHUB_TOKEN, when set, is sent only to api.github.com, to avoid the
   # unauthenticated rate limit on shared networks such as CI runners. The
   # header goes through stdin so the token never appears in process arguments.
+  # A list that names no release is asked for again, twice: the list API has
+  # briefly answered with none while releases existed.
+  for attempt in 1 2 3; do
   if [ -n "${GITHUB_TOKEN:-}" ] && have curl; then
     printf 'Authorization: Bearer %s\n' "$GITHUB_TOKEN" |
       curl -fsSL --proto '=https' --tlsv1.2 -H @- \
@@ -215,6 +218,9 @@ if [ -z "$VERSION" ]; then
     }
     END { if (too) print "TOO_MANY"; else if (best != "") print best }
   ' "$work/releases.json") || err "could not read the release list" "pass --version VERSION to skip the lookup"
+  [ -z "$VERSION" ] || break
+  [ "$attempt" = 3 ] || sleep "$((attempt * 2))"
+  done
   [ "$VERSION" != "TOO_MANY" ] || err "the release list is too long to choose a version" "pass --version VERSION"
   [ -n "$VERSION" ] || err "no published release found"
 fi

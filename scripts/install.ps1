@@ -145,23 +145,29 @@ if (-not $Version) {
     # unauthenticated rate limit on shared networks such as CI runners.
     $headers = @{}
     if ($env:GITHUB_TOKEN) { $headers["Authorization"] = "Bearer $($env:GITHUB_TOKEN)" }
-    try {
-        # PowerShell may return the JSON array as one value. Pipe it so each
-        # release is its own object; a nested array would hide every tag.
-        $releases = @(Invoke-RestMethod -UseBasicParsing -Headers $headers -Uri "https://api.github.com/repos/$Repo/releases?per_page=100" | ForEach-Object { $_ })
-    } catch {
-        Fail "could not query the release list" "pass -Version VERSION to skip the lookup"
-    }
-    if ($releases.Count -ge 100) {
-        Fail "the release list is too long to choose a version" "pass -Version VERSION"
-    }
+    # A list that names no release is asked for again, twice: the list API has
+    # briefly answered with none while releases existed.
     $best = ""
-    foreach ($release in $releases) {
-        if ($release.draft) { continue }
-        $tag = [string]$release.tag_name
-        if ($tag -notmatch '^v?([0-9]+\.[0-9]+\.[0-9]+(?:-[0-9A-Za-z.]+)?)$') { continue }
-        $candidate = $Matches[1]
-        if ($best -eq "" -or (Compare-NemaloVersion $candidate $best) -gt 0) { $best = $candidate }
+    foreach ($attempt in 1..3) {
+        try {
+            # PowerShell may return the JSON array as one value. Pipe it so each
+            # release is its own object; a nested array would hide every tag.
+            $releases = @(Invoke-RestMethod -UseBasicParsing -Headers $headers -Uri "https://api.github.com/repos/$Repo/releases?per_page=100" | ForEach-Object { $_ })
+        } catch {
+            Fail "could not query the release list" "pass -Version VERSION to skip the lookup"
+        }
+        if ($releases.Count -ge 100) {
+            Fail "the release list is too long to choose a version" "pass -Version VERSION"
+        }
+        foreach ($release in $releases) {
+            if ($release.draft) { continue }
+            $tag = [string]$release.tag_name
+            if ($tag -notmatch '^v?([0-9]+\.[0-9]+\.[0-9]+(?:-[0-9A-Za-z.]+)?)$') { continue }
+            $candidate = $Matches[1]
+            if ($best -eq "" -or (Compare-NemaloVersion $candidate $best) -gt 0) { $best = $candidate }
+        }
+        if ($best) { break }
+        if ($attempt -lt 3) { Start-Sleep -Seconds (2 * $attempt) }
     }
     if (-not $best) { Fail "no published release found" }
     $Version = $best
