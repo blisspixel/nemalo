@@ -81,6 +81,9 @@ func sourceName(source string) string {
 func Catalog(file discovery.CatalogFile) string {
 	var b strings.Builder
 	fmt.Fprintf(&b, "Catalog written: %s\nBytes: %d\nSHA-256: %s\n", Exact(file.Path), file.Bytes, Line(file.SHA256))
+	if file.Continuations > 0 {
+		fmt.Fprintf(&b, "Continued %d time(s) after a dropped connection; the whole file was checked.\n", file.Continuations)
+	}
 	if c := command("nemalo", "search", "QUERY", "--source", "gutenberg", "--catalog", file.Path); c != "" {
 		fmt.Fprintf(&b, "Next: %s\n", c)
 	}

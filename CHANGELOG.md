@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- `catalog fetch gutenberg` continues a download that gutenberg.org drops partway, up to three times, with a `Range` request bound to the first response's strong validator. It accepts only exactly the missing bytes of the same length, starts again when the catalog changed, and still checks the declared length and every row.
 - `acquire` continues its own transfer after a dropped connection, up to three times, when the source sent a strong validator. Each continuation is a checked resume of only the missing bytes, and the whole file is verified at the end. A refused resume, a mismatch, the budget, or cancellation stops at once and keeps the packet. Recording tracks continue in place the same way.
 - The installers retry a dropped connection, a timeout, or a server error up to three times, starting each try from an empty file. A missing release says so at once, and a failure to write the download says the temporary folder may be full instead of reporting a download failure. A temporary folder that cannot be created falls back to `~/.cache` or `%LOCALAPPDATA%`.
 ## 0.1.0-alpha.12

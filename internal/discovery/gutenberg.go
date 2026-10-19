@@ -18,6 +18,8 @@ import (
 	"strings"
 	"time"
 	"unicode/utf8"
+
+	"github.com/blisspixel/nemalo/internal/transfer"
 )
 
 // CatalogURL is the Project Gutenberg offline catalog. The website search
@@ -409,6 +411,9 @@ type CatalogFile struct {
 	Path   string `json:"path"`
 	Bytes  int64  `json:"bytes"`
 	SHA256 string `json:"sha256"`
+	// Continuations counts requests that continued the file after a
+	// dropped connection, or started it again when the source changed.
+	Continuations int `json:"continuations,omitempty"`
 }
 
 // FetchCatalog downloads the official CSV to a new file. It is the explicit
@@ -431,23 +436,6 @@ func fetchCatalog(ctx context.Context, output, rawURL string, client *http.Clien
 	if err != nil || !parent.IsDir() {
 		return result, errors.New("catalog output directory must exist")
 	}
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, rawURL, nil)
-	if err != nil {
-		return result, err
-	}
-	req.Header.Set("Accept", "text/csv")
-	req.Header.Set("User-Agent", "nemalo/0.1 (+https://github.com/blisspixel/nemalo)")
-	resp, err := client.Do(req)
-	if err != nil {
-		return result, err
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
-		return result, fmt.Errorf("catalog returned HTTP %d", resp.StatusCode)
-	}
-	if resp.ContentLength > maxCatalogBytes {
-		return result, errors.New("gutenberg catalog is larger than 64 MiB")
-	}
 	f, err := os.OpenFile(output, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0o600)
 	if err != nil {
 		return result, err
@@ -459,16 +447,9 @@ func fetchCatalog(ctx context.Context, output, rawURL string, client *http.Clien
 			os.Remove(output)
 		}
 	}()
-	hasher := sha256.New()
-	n, err := io.Copy(io.MultiWriter(f, hasher), io.LimitReader(resp.Body, maxCatalogBytes+1))
+	n, sum, continued, err := downloadCatalog(ctx, client, rawURL, f)
 	if err != nil {
-		if resp.ContentLength > 0 {
-			return result, fmt.Errorf("the catalog download stopped after %d of %d bytes, and nothing was kept; try again: %w", n, resp.ContentLength, err)
-		}
-		return result, fmt.Errorf("the catalog download stopped after %d bytes, and nothing was kept; try again: %w", n, err)
-	}
-	if n < 1 || n > maxCatalogBytes {
-		return result, errors.New("gutenberg catalog must be a non-empty file no larger than 64 MiB")
+		return result, err
 	}
 	if err := f.Sync(); err != nil {
 		return result, err
@@ -480,10 +461,135 @@ func fetchCatalog(ctx context.Context, output, rawURL string, client *http.Clien
 		return result, err
 	}
 	remove = false
-	result.Path = output
-	result.Bytes = n
-	result.SHA256 = hex.EncodeToString(hasher.Sum(nil))
+	result.Path, result.Bytes, result.SHA256, result.Continuations = output, n, hex.EncodeToString(sum), continued
 	return result, nil
+}
+
+// catalogAttempts bounds one catalog fetch: the first request and up to three
+// more after a dropped connection.
+const catalogAttempts = 4
+
+// catalogPause waits longer before each further request; tests shorten it.
+var catalogPause = func(attempt int) time.Duration { return time.Duration(attempt) * 2 * time.Second }
+
+// downloadCatalog writes the catalog to f. A connection that drops is
+// continued from the bytes already written, with a Range request conditional
+// on the first response's strong validator, and accepted only as HTTP 206 with
+// exactly the missing bytes of the same length. A source that answers with
+// the whole file instead has changed, so the file is started again. Without a
+// declared length or a strong validator, nothing is continued. The result is
+// the whole file's length and SHA-256; it must equal the declared length.
+func downloadCatalog(ctx context.Context, client *http.Client, rawURL string, f *os.File) (n int64, sum []byte, continued int, err error) {
+	hasher := sha256.New()
+	total, validator := int64(-1), ""
+	for attempt := 1; ; attempt++ {
+		req, err := http.NewRequestWithContext(ctx, http.MethodGet, rawURL, nil)
+		if err != nil {
+			return n, nil, continued, err
+		}
+		req.Header.Set("Accept", "text/csv")
+		req.Header.Set("User-Agent", "nemalo/0.1 (+https://github.com/blisspixel/nemalo)")
+		if n > 0 {
+			req.Header.Set("Range", "bytes="+strconv.FormatInt(n, 10)+"-")
+			req.Header.Set("If-Range", validator)
+		}
+		resp, err := client.Do(req)
+		if err != nil {
+			if retryCatalog(ctx, err, n, total, validator, attempt) {
+				continued++
+				continue
+			}
+			return n, nil, continued, catalogStopped(n, total, err)
+		}
+		switch {
+		case resp.StatusCode == http.StatusOK && n > 0:
+			// The whole file again: it changed since the first response, or
+			// the source does not continue. Start over.
+			if _, err := f.Seek(0, io.SeekStart); err != nil {
+				resp.Body.Close()
+				return 0, nil, continued, err
+			}
+			if err := f.Truncate(0); err != nil {
+				resp.Body.Close()
+				return 0, nil, continued, err
+			}
+			hasher.Reset()
+			n = 0
+			fallthrough
+		case resp.StatusCode == http.StatusOK:
+			total, validator = resp.ContentLength, catalogValidator(resp)
+		case resp.StatusCode == http.StatusPartialContent && n > 0:
+			want := "bytes " + strconv.FormatInt(n, 10) + "-" + strconv.FormatInt(total-1, 10) + "/" + strconv.FormatInt(total, 10)
+			if strings.TrimSpace(resp.Header.Get("Content-Range")) != want || (resp.ContentLength >= 0 && resp.ContentLength != total-n) {
+				resp.Body.Close()
+				return n, nil, continued, errors.New("the catalog source continued with a different range than " + want + "; nothing was kept")
+			}
+		default:
+			resp.Body.Close()
+			return n, nil, continued, fmt.Errorf("catalog returned HTTP %d", resp.StatusCode)
+		}
+		if total > maxCatalogBytes {
+			resp.Body.Close()
+			return n, nil, continued, errors.New("gutenberg catalog is larger than 64 MiB")
+		}
+		written, copyErr := io.Copy(io.MultiWriter(f, hasher), io.LimitReader(resp.Body, maxCatalogBytes+1-n))
+		resp.Body.Close()
+		n += written
+		if n > maxCatalogBytes {
+			return n, nil, continued, errors.New("gutenberg catalog must be a non-empty file no larger than 64 MiB")
+		}
+		if copyErr == nil {
+			if n < 1 || (total >= 0 && n != total) {
+				return n, nil, continued, catalogStopped(n, total, io.ErrUnexpectedEOF)
+			}
+			return n, hasher.Sum(nil), continued, nil
+		}
+		if !retryCatalog(ctx, copyErr, n, total, validator, attempt) {
+			return n, nil, continued, catalogStopped(n, total, copyErr)
+		}
+		continued++
+	}
+}
+
+// retryCatalog waits and reports whether a stopped fetch may be tried again:
+// a transport failure, attempts left, and, once bytes are kept, a declared
+// length and a strong validator to continue them by.
+func retryCatalog(ctx context.Context, err error, n, total int64, validator string, attempt int) bool {
+	if !transfer.Transient(err) || ctx.Err() != nil || attempt >= catalogAttempts {
+		return false
+	}
+	if n > 0 && (total < 1 || validator == "") {
+		return false
+	}
+	select {
+	case <-ctx.Done():
+		return false
+	case <-time.After(catalogPause(attempt)):
+		return true
+	}
+}
+
+func catalogStopped(n, total int64, err error) error {
+	if total > 0 {
+		return fmt.Errorf("the catalog download stopped after %d of %d bytes, and nothing was kept; try again: %w", n, total, err)
+	}
+	return fmt.Errorf("the catalog download stopped after %d bytes, and nothing was kept; try again: %w", n, err)
+}
+
+// catalogValidator is the response's strong validator for If-Range: a strong
+// ETag, or a Last-Modified date at least a second before the response Date,
+// which RFC 9110 section 8.8.2.2 treats as strong. Otherwise "".
+func catalogValidator(resp *http.Response) string {
+	if etag := resp.Header.Get("ETag"); StrongETag(etag) {
+		return etag
+	}
+	modified, date := resp.Header.Get("Last-Modified"), resp.Header.Get("Date")
+	lm, err1 := http.ParseTime(modified)
+	d, err2 := http.ParseTime(date)
+	if err1 == nil && err2 == nil && d.Sub(lm) >= time.Second && len(modified) <= 64 {
+		return modified
+	}
+	return ""
 }
 
 type hit struct {

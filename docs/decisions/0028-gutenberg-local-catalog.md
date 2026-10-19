@@ -19,6 +19,17 @@ absolute path, with the shared file client limited to `www.gutenberg.org`.
 A failed download or a catalog that does not parse is removed. Search never
 calls this command.
 
+The site publishes no checksum for the file, so the download is checked by
+its declared length, then by parsing every row. gutenberg.org sometimes
+closes the connection partway (twice in three tries on 2026-10-18). A
+dropped download is continued up to three times with a `Range` request
+conditional (`If-Range`) on the first response's strong validator: a strong
+`ETag`, or a `Last-Modified` at least a second before the response `Date`,
+as RFC 9110 section 8.8.2.2 allows. Only HTTP 206 with exactly the missing
+bytes of the same length is accepted. A whole-file reply means the catalog
+changed, and the file is started again. Without a declared length or a
+strong validator nothing is continued. The result counts continuations.
+
 The catalog path is `gutenberg_catalog` in config, `NEMALO_GUTENBERG_CATALOG`,
 or `--catalog` on `search`, `evaluate`, and `tui`. It must be absolute. An
 empty path is an error that names the setting and says the website is not

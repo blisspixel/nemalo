@@ -9,13 +9,11 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
-	"net"
 	"net/http"
 	"os"
 	"path"
 	"path/filepath"
 	"strings"
-	"syscall"
 	"time"
 	"unicode"
 
@@ -172,13 +170,9 @@ func continuable(ctx context.Context, r Result, err error) bool {
 	if ctx.Err() != nil || r.Output == "" || r.TransferComplete || !r.TransferRecorded || !r.StrongValidator || r.Transfer.Bytes < 1 {
 		return false
 	}
-	if errors.Is(err, ErrResumeRefused) || errors.Is(err, context.Canceled) {
-		return false
-	}
-	var netErr net.Error
 	// A transfer deadline that passed while the caller still waits is progress
 	// to continue, not a failure of the source.
-	return errors.Is(err, io.ErrUnexpectedEOF) || errors.Is(err, context.DeadlineExceeded) || errors.Is(err, syscall.ECONNRESET) || errors.As(err, &netErr) || strings.Contains(err.Error(), "stream error")
+	return !errors.Is(err, ErrResumeRefused) && transfer.Transient(err)
 }
 
 func acquireOnce(ctx context.Context, provider Provider, request Request) (result Result, err error) {
