@@ -251,15 +251,17 @@ Closing prints the unit and byte to return to. Nothing is recorded, and
 closing does not save a bookmark.
 `,
 	"mcp": `nemalo mcp serve --scope DIRECTORY [options]
-  Serve read-only MCP tools over stdio for an agent host.
+  Serve MCP tools over stdio for an agent host; read-only by default.
 
 Options:
   --scope DIRECTORY  repeatable; the configured library and review folders
                      are added
   --allow-network    catalog search and evaluation
+  --allow-write      library import preview and apply; apply stores only
+                     the plan a preview returned and never changes a source
   --transport stdio
 
-Tools are read-only; stdout carries protocol only.
+Without --allow-write, tools are read-only; stdout carries protocol only.
 `,
 	"version": `nemalo version, nemalo --version
   Show the version, and the commit when built from a source checkout.

@@ -34,7 +34,8 @@ All tools are read-only and annotated as such:
 No tool imports, initializes, acquires, rescans, snapshots, scans, deletes, or
 writes a bookmark. Local CLI and TUI bookmarks do not authorize an MCP write.
 Write tools need the plan, authorization, and durable job design in the agent
-integration document and are a later increment.
+integration document. The first, import bound to a previewed plan behind
+`--allow-write`, is [decision 0034](0034-mcp-import-tools.md).
 
 ## Scope
 

@@ -369,7 +369,9 @@ audits, file checks, and EPUB retrieval over the shared services, with catalog
 tools behind `--allow-network` and paths confined to configured scopes; see
 [decision 0014](docs/decisions/0014-read-only-mcp-server.md). Claude Code and
 Agent Plugins packages share one skill and were validated in Claude Code on
-Windows ([decision 0019](docs/decisions/0019-agent-plugin-packages.md)). Write
+Windows ([decision 0019](docs/decisions/0019-agent-plugin-packages.md)).
+`--allow-write` adds import tools that store only a previewed plan
+([decision 0034](docs/decisions/0034-mcp-import-tools.md)). Other write
 tools, durable jobs, and a broader host and platform matrix remain. Read-only tools depend on milestone 1 and the relevant provider
 slice from 5; inspection needs 2; import/acquisition need 3; source cleanup needs 4.
 

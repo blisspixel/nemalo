@@ -97,12 +97,13 @@ func Execute(ctx context.Context, args []string, out, errOut io.Writer, service 
 	var scopes multiFlag
 	flags.Var(&scopes, "scope", "directory MCP tools may read (repeatable)")
 	allowNetwork := flags.Bool("allow-network", false, "register MCP catalog tools that contact providers")
+	allowWrite := flags.Bool("allow-write", false, "register MCP library import tools")
 	transport := flags.String("transport", "stdio", "MCP transport")
 	application := flags.String("app", "", "application to open a library copy with")
 	onDetection := flags.String("on-detection", "quarantine", "quarantine or delete a detected download")
 	recordingFormat := flags.String("recording", "", "declared recording format to acquire as a whole")
 	findText := flags.String("text", "", "exact text to locate")
-	planDigest := flags.String("plan", "", "cleanup plan digest from the preview")
+	planDigest := flags.String("plan", "", "plan digest from an import or cleanup preview")
 	cleanupID := flags.String("cleanup", "", "cleanup ID to restore")
 	stop := flags.Bool("stop", false, "close a pending cleanup that cannot finish")
 	resume := flags.Bool("resume", false, "continue an existing recording directory")
@@ -405,7 +406,10 @@ func Execute(ctx context.Context, args []string, out, errOut io.Writer, service 
 			if flags.NArg() != 2 {
 				return write(nil, errors.New("use library import LIBRARY SOURCE"), 2)
 			}
-			data, err := service.Import(ctx, library.ImportRequest{Library: flags.Arg(0), Source: flags.Arg(1), Scan: checkOptions.Scan, Apply: *apply})
+			if *planDigest != "" && !*apply {
+				return write(nil, errors.New("--plan applies with --apply"), 2)
+			}
+			data, err := service.Import(ctx, library.ImportRequest{Library: flags.Arg(0), Source: flags.Arg(1), Scan: checkOptions.Scan, Apply: *apply, Plan: *planDigest})
 			if err != nil {
 				return write(data, err, 1)
 			}
@@ -751,7 +755,7 @@ func Execute(ctx context.Context, args []string, out, errOut io.Writer, service 
 			}
 			scopes = append(scopes, configured)
 		}
-		server, err := mcpserver.New(service, mcpserver.Options{Scopes: scopes, Network: *allowNetwork, Version: Version})
+		server, err := mcpserver.New(service, mcpserver.Options{Scopes: scopes, Network: *allowNetwork, Write: *allowWrite, Version: Version})
 		if err != nil {
 			return fail(err, 2)
 		}
@@ -802,7 +806,7 @@ func flagApplies(command, action, name string) bool {
 		return name == "root" || name == "asset" || name == "unit" || name == "text-offset" || name == "speed" || name == "rate"
 	}
 	if command == "mcp" {
-		return name == "scope" || name == "allow-network" || name == "transport" || name == "config" || name == "library" || name == "review"
+		return name == "scope" || name == "allow-network" || name == "allow-write" || name == "transport" || name == "config" || name == "library" || name == "review"
 	}
 	if command == "version" {
 		return false
@@ -865,7 +869,7 @@ func flagApplies(command, action, name string) bool {
 		case "list":
 			return name == "query" || name == "format" || name == "limit" || name == "offset" || name == "status"
 		case "import":
-			return name == "apply" || name == "scan"
+			return name == "apply" || name == "scan" || name == "plan"
 		case "rescan":
 			return name == "apply"
 		case "ingest":

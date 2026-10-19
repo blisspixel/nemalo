@@ -120,6 +120,7 @@ func Import(r library.ImportResult) string {
 	notes(&b, "Limitation", r.Limitations)
 	field(&b, "Durability", words(r.Durability))
 	if !r.Applied {
+		field(&b, "Plan", Line(r.Plan))
 		b.WriteString("Preview only. No library files were written.\n")
 	}
 	b.WriteString("The source was preserved. Review is not a safety guarantee.\n")

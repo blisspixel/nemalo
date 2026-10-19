@@ -725,3 +725,48 @@ func TestMP3CheckedPolicy(t *testing.T) {
 		t.Fatal(bad.Status, bad.Reason, bad.Findings, err)
 	}
 }
+
+// An apply that names a preview's plan writes only when the source and its
+// assessment still give that plan; otherwise nothing is written.
+func TestImportPlanBindsAnApplyToItsPreview(t *testing.T) {
+	ctx := context.Background()
+	root := t.TempDir()
+	if _, err := Initialize(ctx, root); err != nil {
+		t.Fatal(err)
+	}
+	source := writeEPUB(t, t.TempDir())
+	preview, err := Import(ctx, ImportRequest{Library: root, Source: source})
+	if err != nil || !validHash(preview.Plan) || preview.Applied {
+		t.Fatal(preview.Plan, err)
+	}
+	again, _ := Import(ctx, ImportRequest{Library: root, Source: source})
+	if again.Plan != preview.Plan {
+		t.Fatal("a repeated preview gave another plan")
+	}
+	ops := filepath.Join(root, ".nemalo", operationsName)
+	for name, req := range map[string]ImportRequest{
+		"forged plan":         {Library: root, Source: source, Apply: true, Plan: strings.Repeat("0", 64)},
+		"another scan choice": {Library: root, Source: source, Apply: true, Scan: true, Scanner: cleanScan{}, Plan: preview.Plan},
+	} {
+		if _, err := Import(ctx, req); !errors.Is(err, ErrPlanChanged) {
+			t.Fatal(name, err)
+		}
+		if _, err := os.Stat(ops); !os.IsNotExist(err) {
+			t.Fatal(name, "a refused plan wrote an operation")
+		}
+	}
+	// The source changes after the preview.
+	changed := writeEPUBMetadata(t, filepath.Dir(source), "Changed paragraph.", "")
+	if changed != source {
+		t.Fatal("fixture wrote another path", changed)
+	}
+	stale, err := Import(ctx, ImportRequest{Library: root, Source: source, Apply: true, Plan: preview.Plan})
+	if !errors.Is(err, ErrPlanChanged) || stale.Plan != "" {
+		t.Fatal("a changed source applied an old plan, or offered a new one", stale.Plan, err)
+	}
+	fresh, _ := Import(ctx, ImportRequest{Library: root, Source: source})
+	done, err := Import(ctx, ImportRequest{Library: root, Source: source, Apply: true, Plan: fresh.Plan})
+	if err != nil || !done.Applied || done.Plan != fresh.Plan {
+		t.Fatal(done, err)
+	}
+}

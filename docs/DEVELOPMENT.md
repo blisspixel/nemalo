@@ -341,7 +341,11 @@ nemalo mcp serve --scope /path/to/library
 `mcp serve` runs read-only MCP tools on stdio for an agent host: library status,
 holdings, audit, file checks without antivirus, and EPUB content retrieval, each
 over the same services and JSON data as the CLI. `--allow-network` adds catalog
-search and Archive evaluation. Tool paths must resolve inside a `--scope`
+search and Archive evaluation. `--allow-write` adds `library_import_preview`
+and `library_import_apply`; an apply stores only the plan digest its preview
+returned and refuses a changed source, assessment, or scan choice
+([decision 0034](decisions/0034-mcp-import-tools.md)). `library import
+--apply --plan DIGEST` gives the CLI the same check. Tool paths must resolve inside a `--scope`
 directory or the configured library and review folders. Stdout carries protocol
 messages only. See [agent integration](AGENT-INTEGRATION.md) and
 [decision 0014](decisions/0014-read-only-mcp-server.md).

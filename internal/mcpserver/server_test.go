@@ -399,3 +399,69 @@ func TestPageListThroughMCPMatchesTheService(t *testing.T) {
 		t.Fatal("duplicate label through MCP", env)
 	}
 }
+
+// Import tools exist only with Write. An apply stores exactly the plan a
+// preview returned; a missing, forged, or stale plan writes nothing, and the
+// source is never changed.
+func TestImportToolsApplyOnlyAPreviewedPlan(t *testing.T) {
+	root := t.TempDir()
+	if _, err := library.Initialize(context.Background(), root); err != nil {
+		t.Fatal(err)
+	}
+	intake := t.TempDir()
+	source := epub(t, intake, "<p>An imported page.</p>")
+	before, _ := os.ReadFile(source)
+	service := app.Service{Scanner: noScanner{t}}
+	plain := connect(t, service, Options{Scopes: []string{root, intake}, Version: "test"})
+	if names := toolNames(t, plain); slices.Contains(names, "library_import_apply") {
+		t.Fatal("write tools without Write", names)
+	}
+	s := connect(t, service, Options{Scopes: []string{root, intake}, Write: true, Version: "test"})
+	list, err := s.ListTools(context.Background(), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, tool := range list.Tools {
+		destructive := tool.Annotations.DestructiveHint
+		if tool.Name == "library_import_apply" && (tool.Annotations.ReadOnlyHint || destructive == nil || *destructive) {
+			t.Fatal("apply annotations", tool.Annotations)
+		}
+	}
+	_, env := call(t, s, "nemalo_capabilities", map[string]any{})
+	if env["data"].(map[string]any)["read_only"] != false {
+		t.Fatal("a write server reported read_only")
+	}
+	ops := filepath.Join(root, ".nemalo", "operations.jsonl")
+	for name, args := range map[string]map[string]any{
+		"no plan":       {"library": root, "source": source},
+		"forged plan":   {"library": root, "source": source, "plan": strings.Repeat("a", 64)},
+		"outside scope": {"library": root, "source": epub(t, t.TempDir(), "<p>x</p>"), "plan": strings.Repeat("a", 64)},
+	} {
+		if res, _ := call(t, s, "library_import_apply", args); !res.IsError {
+			t.Fatal(name, "applied")
+		}
+		if _, err := os.Stat(ops); !os.IsNotExist(err) {
+			t.Fatal(name, "a refused apply wrote an operation")
+		}
+	}
+	if res, _ := call(t, s, "library_import_preview", map[string]any{"library": root, "source": source, "plan": strings.Repeat("a", 64)}); !res.IsError {
+		t.Fatal("a preview accepted a plan")
+	}
+	res, env := call(t, s, "library_import_preview", map[string]any{"library": root, "source": source})
+	preview := env["data"].(map[string]any)
+	if res.IsError || preview["applied"] == true || len(preview["plan"].(string)) != 64 {
+		t.Fatal(env)
+	}
+	res, env = call(t, s, "library_import_apply", map[string]any{"library": root, "source": source, "plan": preview["plan"]})
+	done := env["data"].(map[string]any)
+	if res.IsError || done["applied"] != true || done["asset_id"] != preview["asset_id"] {
+		t.Fatal(env)
+	}
+	if after, _ := os.ReadFile(source); !bytes.Equal(after, before) {
+		t.Fatal("the source changed")
+	}
+	held, err := library.FindManaged(context.Background(), root, "", "all", "all", 10, 0)
+	if err != nil || held.Total != 1 {
+		t.Fatal(held, err)
+	}
+}

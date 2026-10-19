@@ -3,7 +3,9 @@
 Research checked 2026-10-08. A read-only stdio server is implemented
 ([decision 0014](decisions/0014-read-only-mcp-server.md)), with Claude Code and
 Agent Plugins packages ([decision 0019](decisions/0019-agent-plugin-packages.md));
-write tools and durable jobs remain design.
+`--allow-write` adds import tools that apply only a previewed plan
+([decision 0034](decisions/0034-mcp-import-tools.md)); other write tools and
+durable jobs remain design.
 Nemalo provides tools to an agent host; it does not need to embed an LLM or implement
 an agent runtime. All executable Nemalo components use Go.
 
@@ -91,6 +93,7 @@ transport/restart behavior still needs external integration evidence.
 | `content_get` | Bounded supported content with exact asset ID and location references | Local read; derived indexes separately controlled |
 | `intake_inspect` | Inventory configured roots and return a plan | Local read plus bounded staging/state |
 | `intake_apply` | Apply an inspected plan under enabled format policies | Library/state write; source retained |
+| `library_import_preview`, `library_import_apply` | Implemented with `--allow-write`: one file or packet, applied only by its preview's plan digest | Library/state write; source retained |
 | `acquisition_start` | Acquire selected provider asset IDs into staged intake | Network and library/state write |
 | `cleanup_preview` | Show exact recorded dispositions | Read-only |
 | `cleanup_apply` | Revalidate and apply an authorized plan digest | Source mutation, recoverable by default |

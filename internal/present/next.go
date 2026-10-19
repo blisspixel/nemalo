@@ -116,7 +116,16 @@ func NextAfterImport(r library.ImportResult) string {
 	held := r.AssetID != "" && (r.Applied || r.AlreadyHeld)
 	switch {
 	case !r.Applied && !r.AlreadyHeld && r.AssetID != "":
-		if c := command("nemalo", "library", "import", r.Library, r.Source, "--apply"); c != "" {
+		// The apply repeats the preview's scan choice and names its plan, so
+		// it writes only what this preview showed.
+		words := []string{"nemalo", "library", "import", r.Library, r.Source, "--apply"}
+		if r.ScanRequested {
+			words = append(words, "--scan")
+		}
+		if r.Plan != "" {
+			words = append(words, "--plan", r.Plan)
+		}
+		if c := command(words...); c != "" {
 			return "Next: " + c + "\n"
 		}
 	case held && (r.Format == "epub" || r.Format == "pdf"):

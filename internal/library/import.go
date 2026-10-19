@@ -11,6 +11,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
@@ -31,6 +32,26 @@ type ImportRequest struct {
 	// is then a private staging copy; the label is what provenance records and
 	// what an interrupted import is resumed by, because staging is temporary.
 	Label string
+	// Plan, when set, is the plan digest of a preview. Apply then writes only
+	// when the source, its assessment, and the library still give that plan.
+	Plan string
+}
+
+// ErrPlanChanged means an apply named a plan that the current source,
+// assessment, or library no longer give. Nothing was written.
+var ErrPlanChanged = errors.New("the source, its assessment, or the library changed since the preview; nothing was written; preview again")
+
+// importPlan is the digest of what an import would store: the library, the
+// source as named, the exact bytes, and the status its assessment gives. A
+// preview returns it, and an apply that names it must reproduce it.
+func importPlan(libraryID, source, kind, label, assetID string, bytes int64, format, status, reason string, scan bool) string {
+	h := sha256.New()
+	for _, part := range []string{"nemalo-import-plan/1", libraryID, source, kind, label, assetID, strconv.FormatInt(bytes, 10), format, status, reason, strconv.FormatBool(scan)} {
+		h.Write([]byte(strconv.Itoa(len(part))))
+		h.Write([]byte{':'})
+		h.Write([]byte(part))
+	}
+	return hex.EncodeToString(h.Sum(nil))
 }
 
 // provenance is the stable name of the import source: the label for an
@@ -68,6 +89,11 @@ type ImportResult struct {
 	Findings           []string   `json:"findings"`
 	Limitations        []string   `json:"limitations"`
 	Durability         string     `json:"durability"`
+	// Plan is this import's plan digest; pass it back to apply exactly this.
+	// ScanRequested is whether this import asked for a scan, which the plan
+	// includes, so an apply must repeat the choice.
+	Plan          string `json:"plan,omitempty"`
+	ScanRequested bool   `json:"scan_requested,omitempty"`
 }
 
 type selected struct {
@@ -213,6 +239,7 @@ func assessPlan(ctx context.Context, result ImportResult, source selected, reque
 		return result, classErr
 	}
 	result.Status, result.Reason = status, reason
+	result.Plan, result.ScanRequested = importPlan(result.LibraryID, result.Source, result.SourceKind, request.Label, result.AssetID, result.Bytes, result.Format, status, reason, request.Scan), request.Scan
 	result.Path = assetRel(result.SHA256, result.Format)
 	result.Titles = metaList(report)
 	result.Languages = languageList(report)
@@ -233,6 +260,7 @@ func finish(ctx context.Context, control *control, store *os.Root, libraryID str
 	if err != nil {
 		return result, err
 	}
+	sourceAbs := userSource
 	if request.Label != "" {
 		if len(request.Label) > 4096 || strings.ContainsAny(request.Label, "\x00\r\n") {
 			return result, errors.New("archive member label is outside the record limits")
@@ -261,6 +289,13 @@ func finish(ctx context.Context, control *control, store *os.Root, libraryID str
 	status, reason, err := classify(report, scanned)
 	if err != nil {
 		return result, err
+	}
+	result.Plan, result.ScanRequested = importPlan(libraryID, sourceAbs, source.kind, request.Label, result.AssetID, result.Bytes, result.Format, status, reason, request.Scan), request.Scan
+	if request.Plan != "" && request.Plan != result.Plan {
+		// The new plan is withheld: a refused apply must not hand back a
+		// plan that could be applied without its own preview.
+		result.Plan = ""
+		return result, ErrPlanChanged
 	}
 	if resume {
 		if result.SHA256 != intent.AssetID[7:] || result.Bytes != intent.Bytes || result.Format != intent.Format {
@@ -1105,7 +1140,7 @@ func runStage(stage importStage, name string) error {
 func importLimitations() []string {
 	return []string{
 		"Import copies the assessed bytes and preserves the source. Nothing is deleted.",
-		"checked requires an EPUB, or a PDF whose page tree was walked and whose active content was fully examined and empty, with limited checks passed and a scan that reported no detections. Other results stay in review.",
+		"checked requires an EPUB, a PDF whose page tree was walked and whose active content was fully examined and empty, or an MP3 whose frames were indexed without damage or truncation, with limited checks passed and a scan that reported no detections. Other results stay in review.",
 		"Review is not a safety guarantee. PDF page content, audio decoding, archive extraction, and cleanup are not part of this operation.",
 		"An EPUB package identifier is recorded evidence. It does not merge files or assign a recording or track.",
 		"File sync is required. Directory-entry durability across power loss depends on the filesystem.",
