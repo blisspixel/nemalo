@@ -451,6 +451,13 @@ func quarantine(ctx context.Context, f *os.File, name, directory string, transfe
 	return filepath.Join(directory, entry, quarantined), nil
 }
 
+// Eligible lists the files acquire would accept from this evaluation, in
+// source order, at most ten, within limit bytes. It is the same check as
+// selection; acquire still evaluates the source again before any transfer.
+func Eligible(e discovery.Evaluation, limit int64) []Alternative {
+	return alternativesFor(e, discovery.OfferedFile{}, limit)
+}
+
 // alternativesFor lists other eligible files from the same evaluation, in
 // source order. It applies the same eligibility as selectFile.
 func alternativesFor(e discovery.Evaluation, selected discovery.OfferedFile, limit int64) []Alternative {

@@ -62,8 +62,9 @@ func Acquisition(r acquisition.Result) string {
 	return b.String()
 }
 
-// writeAlternatives prints ready-to-run commands. Values are quoted for display;
-// nothing is fetched until the user runs one.
+// writeAlternatives prints ready-to-run commands. Values are quoted for the
+// shell, and a name a terminal cannot show is left out; nothing is fetched
+// until the user runs one.
 func writeAlternatives(b *strings.Builder, r acquisition.Result) {
 	source := ""
 	if r.Intent != nil {
@@ -72,11 +73,13 @@ func writeAlternatives(b *strings.Builder, r acquisition.Result) {
 	if len(r.Alternatives) > 0 {
 		b.WriteString("Other files in the same item (source declarations, not verified):\n")
 		for _, a := range r.Alternatives {
-			fmt.Fprintf(b, "  nemalo acquire %s --file %q --output NEW_DIRECTORY   (%s, %d bytes)\n", source, a.File, a.Format, a.Bytes)
+			if c := command("nemalo", "acquire", source, "--file", a.File, "--output", "NEW_DIRECTORY"); c != "" {
+				fmt.Fprintf(b, "  %s   (%s, %d bytes)\n", c, a.Format, a.Bytes)
+			}
 		}
 	}
-	if r.SearchSuggestion != "" {
-		fmt.Fprintf(b, "Search for another source:\n  nemalo search %q --source archive\n", r.SearchSuggestion)
+	if c := command("nemalo", "search", r.SearchSuggestion, "--source", "archive"); r.SearchSuggestion != "" && c != "" {
+		fmt.Fprintf(b, "Search for another source:\n  %s\n", c)
 	}
 }
 
@@ -105,11 +108,17 @@ func Recording(r acquisition.RecordingResult) string {
 	}
 	switch {
 	case r.Complete:
-		fmt.Fprintf(&b, "Next: nemalo library ingest LIBRARY %q --apply\n", r.Output)
+		if c := command("nemalo", "library", "ingest", "LIBRARY", r.Output, "--apply"); c != "" {
+			fmt.Fprintf(&b, "Next: %s\n", c)
+		}
 	case r.Status == "stopped_on_detection":
 		b.WriteString("A scanner flagged a track, so the recording stopped. Review that track before resuming. A detection can be a false positive.\n")
 	case r.Output != "":
-		fmt.Fprintf(&b, "Retained for review. Continue with: nemalo acquire %s --recording %q --output %q --resume\n", r.SourceID, r.Format, r.Output)
+		b.WriteString("Retained for review.")
+		if c := command("nemalo", "acquire", r.SourceID, "--recording", r.Format, "--output", r.Output, "--resume"); c != "" {
+			fmt.Fprintf(&b, " Continue with: %s", c)
+		}
+		b.WriteString("\n")
 	}
 	return b.String()
 }

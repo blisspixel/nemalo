@@ -158,7 +158,7 @@ invokes installed Defender on Windows, otherwise ClamAV. `doctor` names that
 default and, without executing a scanner, reports definition age from the
 ClamAV daily database header or Defender's registry values; definitions older
 than seven days are `stale`. Without usable scan evidence, the human output of
-`check`, `library import`, and `acquire` ends with one `Next:` line: `--scan`
+`check`, `library import`, and `acquire` ends with a `Next:` line: `--scan`
 when a scanner is installed, otherwise the platform install command (pacman,
 apt, dnf, zypper, apk, Homebrew, or Windows Security). Nothing is installed or
 updated. On Linux and macOS, install the
@@ -172,6 +172,16 @@ Defender output in unsupported languages may be incomplete. No-detection output
 does not independently establish signatures are current or every internal member
 was inspected. Scanner cloud/sample-submission settings apply, without Nemalo
 changing host preferences. Pure local checks make no network request.
+
+Human output also names the command that continues the first-book path, before
+any scan line. A local Gutenberg evaluation names `evaluate gutenberg:N --files`;
+an evaluation with an eligible file names `acquire` for the first EPUB, else the
+first PDF, by the same check acquire applies; a complete, undetected acquisition
+names `library import` (the configured library, or `LIBRARY`); an import preview
+names `--apply`; and a held EPUB or PDF names `read`, an MP3 `library open`.
+Arguments are quoted for a POSIX shell, or PowerShell on Windows, so a pasted
+command interprets nothing from a source name, and a name holding a control or
+format character is left out. `--json` output carries no `Next:` lines.
 
 ## Catalog snapshots and preservation
 

@@ -69,9 +69,9 @@ func TestAcquireCommandAndSubsequentLocalWorkflow(t *testing.T) {
 		if code != 0 || !strings.Contains(out, "untrusted_intake") || !strings.Contains(out, "unavailable") {
 			t.Fatal(code, out)
 		}
-		// Human output names the install step once; JSON stays a single value.
-		if strings.Contains(out, "Next: ") == jsonMode {
-			t.Fatal("scanner setup guidance", jsonMode, out)
+		// Human output names the import, then the install step; JSON stays a single value.
+		if strings.Contains(out, "Next: nemalo library import LIBRARY ") == jsonMode || strings.Count(out, "Next: ") != map[bool]int{false: 2}[jsonMode] {
+			t.Fatal("next steps", jsonMode, out)
 		}
 		if code, _ := run(args); code != 1 {
 			t.Fatal("repeat overwrote output")
@@ -87,7 +87,7 @@ func TestAcquireCommandAndSubsequentLocalWorkflow(t *testing.T) {
 			}
 		}
 	}
-	if code, out := run([]string{"acquire", "archive:demo", "--file", "book.pdf", "--output", filepath.Join(t.TempDir(), "a", "b", "packet"), "--no-scan"}); code != 0 || !strings.Contains(out, "not_scanned") || strings.Contains(out, "Next: ") {
+	if code, out := run([]string{"acquire", "archive:demo", "--file", "book.pdf", "--output", filepath.Join(t.TempDir(), "a", "b", "packet"), "--no-scan"}); code != 0 || !strings.Contains(out, "not_scanned") || strings.Count(out, "Next: ") != 1 || !strings.Contains(out, "Next: nemalo library import LIBRARY ") {
 		t.Fatal("missing parents or --no-scan", code, out)
 	}
 	s.Scanner = fakeScanner("findings")

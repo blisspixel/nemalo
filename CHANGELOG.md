@@ -4,6 +4,8 @@
 
 - The reader flows a hard-wrapped EPUB paragraph, such as every Project Gutenberg paragraph, as one paragraph. Only a block end gets a blank row and the paragraph hold in word mode. An explicit line break, as in verse, keeps its line. `epub-text/2` and `epub-nav/1` ranges now list these structural line feeds in `breaks`; the text, its offsets, and representation identities are unchanged. Closes issue 23.
 - Gutenberg search results show the catalog's Type and Issued date, such as `Text, issued 1998-06-01` or `Sound, issued 2007-02-03`, in the CLI and TUI, and as `media_type` and `issued` in JSON. A text and its recordings no longer look identical. Closes issue 24.
+- Each step of the first-book path names the next command: a local Gutenberg evaluation names `evaluate --files`, an evaluation names `acquire` for the first eligible EPUB or PDF, an acquisition names `library import`, a preview names `--apply`, and an import names `read`. Scan guidance follows these lines instead of replacing them. The README quick start goes from the catalog to the reader. Closes issue 25.
+- Suggested commands quote source file names and paths for the shell. They were Go-quoted before, and a shell expands `$(...)` inside double quotes. A name with a control or format character is not offered.
 
 ## 0.1.0-alpha.11
 

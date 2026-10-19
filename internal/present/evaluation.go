@@ -74,8 +74,8 @@ func Evaluation(e discovery.Evaluation) string {
 		for _, finding := range r.Findings {
 			fmt.Fprintf(&b, "   Finding: %q\n", finding)
 		}
-		if r.Acquirable {
-			fmt.Fprintf(&b, "   Acquire all: nemalo acquire %s --recording %q --output NEW_DIRECTORY\n", e.ID, r.Format)
+		if c := command("nemalo", "acquire", e.ID, "--recording", r.Format, "--output", "NEW_DIRECTORY"); r.Acquirable && c != "" {
+			fmt.Fprintf(&b, "   Acquire all: %s\n", c)
 		}
 	}
 	for _, limitation := range e.Limitations {

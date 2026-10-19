@@ -384,6 +384,13 @@ func Execute(ctx context.Context, args []string, out, errOut io.Writer, service 
 		service.Handoff = filepath.Join(p.State, "handoff")
 	}
 	service.UseGutenbergCatalog(c.GutenbergCatalog)
+	// next prints the command that continues the first-book path after human output.
+	next := func(code int, step string) int {
+		if step != "" && !*jsonMode {
+			_, _ = io.WriteString(out, step)
+		}
+		return code
+	}
 	// guide prints one next step after human output when scan evidence is missing.
 	guide := func(code int, antivirus string, scanRequested bool) int {
 		if hint := service.ScanGuidance(antivirus, scanRequested); hint != "" && !*jsonMode {
@@ -429,7 +436,7 @@ func Execute(ctx context.Context, args []string, out, errOut io.Writer, service 
 		if err != nil {
 			return write(data, err, 1)
 		}
-		return guide(write(data, nil, 0), data.Antivirus, true)
+		return guide(next(write(data, nil, 0), present.NextAfterAcquisition(data, c.Library)), data.Antivirus, true)
 	case "content":
 		if flags.NArg() != 1 || (action != "units" && action != "read" && action != "source" && action != "resource" && action != "locate" && action != "navigation") {
 			return write(nil, errors.New("use content units/navigation/read/locate/source/resource CATALOG --root DIRECTORY --asset sha256:HASH"), 2)
@@ -544,13 +551,13 @@ func Execute(ctx context.Context, args []string, out, errOut io.Writer, service 
 			if err != nil {
 				return write(data, err, 1)
 			}
-			return write(data, nil, 0)
+			return next(write(data, nil, 0), present.NextAfterEvaluation(data, acquisition.Eligible(data, limits.FileBytes)))
 		}
 		data, err := service.Evaluate(ctx, id)
 		if err != nil {
 			return write(data, err, 1)
 		}
-		return write(data, nil, 0)
+		return next(write(data, nil, 0), present.NextAfterEvaluation(data, acquisition.Eligible(data, limits.FileBytes)))
 	case "library":
 		if action == "import" {
 			if flags.NArg() != 2 {
@@ -560,7 +567,7 @@ func Execute(ctx context.Context, args []string, out, errOut io.Writer, service 
 			if err != nil {
 				return write(data, err, 1)
 			}
-			return guide(write(data, nil, 0), data.Antivirus, checkOptions.Scan)
+			return guide(next(write(data, nil, 0), present.NextAfterImport(data)), data.Antivirus, checkOptions.Scan)
 		}
 		if action == "ingest" {
 			if flags.NArg() != 2 {

@@ -111,12 +111,21 @@ See [agent integration](docs/AGENT-INTEGRATION.md#plugin-packages).
 
 ## Quick start
 
+Get one public-domain book and read it. Each command prints the next one.
+
 ```sh
-nemalo doctor
-nemalo tui
-nemalo search "librivox frankenstein" --source archive --sort downloads --limit 5
-nemalo check /path/to/book.epub --scan
+nemalo catalog fetch gutenberg --output ~/pg_catalog.csv
+nemalo search pride and prejudice --source gutenberg --catalog ~/pg_catalog.csv
+nemalo evaluate gutenberg:1342 --files
+nemalo acquire gutenberg:1342 --file 1342.epub.noimages --output ~/intake/pride
+mkdir ~/books && nemalo library init ~/books
+nemalo library import ~/books ~/intake/pride --apply
+nemalo read ~/books --root ~/books --asset sha256:HASH
 ```
+
+`import` prints the `read` command with the book's real hash. `nemalo doctor`
+reports scanner setup, `nemalo tui` opens the terminal interface, and
+`nemalo check FILE --scan` checks a file you already have.
 
 To build from source instead, with Go 1.27.2 or a compatible supported toolchain,
 run `go build -trimpath -o bin/ ./cmd/nemalo`; the binary is `bin/nemalo`
