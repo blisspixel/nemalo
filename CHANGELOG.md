@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+## 0.1.0-alpha.15
+
+Fifteenth native prerelease. This remains an early library, not 1.0. Held cleanup copies can be purged once the library holds the same verified bytes, audio can be decoded in full by an installed FFmpeg, RAR and 7z archives are read through an installed 7-Zip, and every source can be searched at once.
+
 - The RAR and 7z reader was reviewed adversarially before release. 7-Zip is now held to the handler the file's signature names, so a tar or cpio renamed `.rar` is refused; links stated by a `Mode` or link key, members without a CRC, and names that are also folders are not extracted; a hex attribute word no longer makes a book look like a folder; and one archive has a single extraction deadline and at most 1,000 runs. A `--decode` or `--epubcheck` that does not apply is named in the report.
 - `search QUERY --source all` searches Open Library and Internet Archive at once, and the local Gutenberg catalog when one is configured, each by relevance in its own section with its own status. A source that fails or is not configured says why without hiding the others, results are not ranked against each other, and the search fails only when no source completed.
 - `library ingest` imports the supported members of RAR and 7z archives when 7-Zip (`7zz`, `7z`, or `7za`) is installed. The archive is copied to a private snapshot and listed; every member is accounted for as in a ZIP, and each eligible member is extracted alone, by exact name with wildcards off, to standard output into a flat staging name, and must match its listed size and CRC. No member name is ever a path on disk, and 7-Zip never waits for a password. Without 7-Zip the archive is preserved as before ([decision 0043](docs/decisions/0043-rar-and-7z-through-7-zip.md)).
