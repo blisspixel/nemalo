@@ -201,7 +201,7 @@ func TestSnapshotScannerAndCleanup(t *testing.T) {
 }
 
 func TestInputBoundariesAndCancellation(t *testing.T) {
-	for _, o := range []Options{{ExpectedBytes: -1}, {ExpectedBytes: 256<<20 + 1}, {ExpectedSHA256: "xx"}, {ExpectedSHA256: "ff"}} {
+	for _, o := range []Options{{ExpectedBytes: -1}, {ExpectedBytes: MaxMP4Bytes + 1}, {ExpectedSHA256: "xx"}, {ExpectedSHA256: "ff"}} {
 		if o.Validate() == nil {
 			t.Fatal("invalid option accepted", o)
 		}
@@ -239,6 +239,17 @@ func TestInputBoundariesAndCancellation(t *testing.T) {
 	}
 	if _, err := Check(context.Background(), large, Options{}, nil); err == nil {
 		t.Fatal("large file accepted")
+	}
+	// An M4B may be larger, up to its own limit.
+	book := write(t, "large.m4b", []byte("x"))
+	if err := os.Truncate(book, MaxMP4Bytes+1); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := Check(context.Background(), book, Options{}, nil); err == nil || !strings.Contains(err.Error(), "2 GiB") {
+		t.Fatal("oversized M4B accepted", err)
+	}
+	if MaxFileBytes("m4b") != MaxMP4Bytes || MaxFileBytes("m4a") != MaxMP4Bytes || MaxFileBytes("epub") != MaxParsedBytes || MaxFileBytes("bin") != MaxParsedBytes {
+		t.Fatal("format limits")
 	}
 }
 

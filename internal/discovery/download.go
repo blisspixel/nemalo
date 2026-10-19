@@ -10,6 +10,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"github.com/blisspixel/nemalo/internal/transfer"
@@ -43,7 +44,10 @@ func NewFileClient(allowedHost func(string) bool) *http.Client {
 	valid := func(u *url.URL) bool {
 		return u.Scheme == "https" && u.User == nil && u.Port() == "" && u.Fragment == "" && allowedHost(u.Host)
 	}
-	return &http.Client{Timeout: 5 * time.Minute, Transport: fileTransport{transport, valid}, CheckRedirect: func(req *http.Request, via []*http.Request) error {
+	// A large file takes long at a slow but steady rate, so the total bound is
+	// wide and callers set their own deadlines; a body that stops sending is
+	// ended by the stall timeout instead.
+	return &http.Client{Timeout: 2 * time.Hour, Transport: fileTransport{transport, valid}, CheckRedirect: func(req *http.Request, via []*http.Request) error {
 		if len(via) >= 5 || !valid(req.URL) {
 			return errors.New("download redirect outside approved source")
 		}
@@ -60,7 +64,57 @@ func (t fileTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 	if !t.valid(req.URL) {
 		return nil, errors.New("download request outside approved source")
 	}
-	return t.base.RoundTrip(req)
+	resp, err := t.base.RoundTrip(req)
+	if err == nil && resp.Body != nil {
+		resp.Body = newStallBody(resp.Body, stallTimeout)
+	}
+	return resp, err
+}
+
+// stallTimeout ends a response body that delivers no bytes for this long.
+// Tests shorten it.
+var stallTimeout = 60 * time.Second
+
+// stallError is a timeout, so a transfer treats it as transient and may
+// continue from the bytes it has.
+type stallError struct{}
+
+func (stallError) Error() string   { return "download stalled: no bytes arrived for the stall timeout" }
+func (stallError) Timeout() bool   { return true }
+func (stallError) Temporary() bool { return true }
+
+// stallBody closes its body when no Read returns bytes within the timeout,
+// which ends a Read blocked on a silent connection.
+type stallBody struct {
+	body    io.ReadCloser
+	timeout time.Duration
+	timer   *time.Timer
+	stalled atomic.Bool
+}
+
+func newStallBody(body io.ReadCloser, timeout time.Duration) *stallBody {
+	s := &stallBody{body: body, timeout: timeout}
+	s.timer = time.AfterFunc(timeout, func() {
+		s.stalled.Store(true)
+		_ = body.Close()
+	})
+	return s
+}
+
+func (s *stallBody) Read(p []byte) (int, error) {
+	n, err := s.body.Read(p)
+	if s.stalled.Load() {
+		return n, stallError{}
+	}
+	if n > 0 {
+		s.timer.Reset(s.timeout)
+	}
+	return n, err
+}
+
+func (s *stallBody) Close() error {
+	s.timer.Stop()
+	return s.body.Close()
 }
 
 // Download opens only the canonical URL constructed by a fresh Archive

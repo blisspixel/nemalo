@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"context"
 	"encoding/binary"
+	"errors"
+	"io"
 	"os"
 	"path/filepath"
 	"slices"
@@ -17,9 +19,10 @@ func mp4Box(typ string, parts ...[]byte) []byte {
 
 func be32(v uint32) []byte { return binary.BigEndian.AppendUint32(nil, v) }
 
-// mp4Audio returns an MP4 audio file of n AAC samples of 200 bytes, each 1024
-// units at 44,100 Hz, with the movie box before the media data.
-func mp4Audio(n int) []byte {
+// mp4Head returns the boxes of an MP4 audio file of n AAC samples of 200
+// bytes, each 1024 units at 44,100 Hz, up to its media data: the movie box,
+// then the media data box header. mp4Audio adds the samples.
+func mp4Head(n int) []byte {
 	ftyp := mp4Box("ftyp", []byte("M4B "), be32(0), []byte("M4B isom"))
 	entry := mp4Box("mp4a", make([]byte, 6), []byte{0, 1}, make([]byte, 8), []byte{0, 1, 0, 16}, make([]byte, 4), be32(44100<<16),
 		mp4Box("esds", make([]byte, 4), []byte{0x03, 22, 0, 1, 0, 0x04, 17, 0x40, 0x15}, make([]byte, 11), []byte{0x05, 2, 0x12, 0x08}))
@@ -38,7 +41,11 @@ func mp4Audio(n int) []byte {
 					mp4Box("stco", make([]byte, 4), be32(1), be32(offset)))))))
 	}
 	offset := uint32(len(ftyp) + len(moov(0)) + 8)
-	return slices.Concat(ftyp, moov(offset), mp4Box("mdat", bytes.Repeat([]byte{0x5a}, 200*n)))
+	return slices.Concat(ftyp, moov(offset), be32(uint32(8+200*n)), []byte("mdat"))
+}
+
+func mp4Audio(n int) []byte {
+	return append(mp4Head(n), bytes.Repeat([]byte{0x5a}, 200*n)...)
 }
 
 func TestMP4ChecksLocateSamplesAndFindTruncation(t *testing.T) {
@@ -71,6 +78,47 @@ func TestMP4ChecksLocateSamplesAndFindTruncation(t *testing.T) {
 	}
 	if _, err := InspectContext(ctx, bytes.NewReader(mp3Frames(4)), 417*4, "m4b"); err == nil {
 		t.Fatal("an MP3 was inspected as MP4")
+	}
+}
+
+// sparse serves real bytes for a prefix and zeros after it, so a file larger
+// than memory budgets can be inspected without existing.
+type sparse struct {
+	prefix []byte
+	size   int64
+}
+
+func (s sparse) ReadAt(p []byte, off int64) (int, error) {
+	if off >= s.size {
+		return 0, io.EOF
+	}
+	n := int(min(int64(len(p)), s.size-off))
+	for i := range n {
+		p[i] = 0
+		if at := off + int64(i); at < int64(len(s.prefix)) {
+			p[i] = s.prefix[at]
+		}
+	}
+	if n < len(p) {
+		return n, io.EOF
+	}
+	return n, nil
+}
+
+// An M4B over the parsed-format limit is inspected through its tables without
+// reading its media data; an EPUB of that size is refused.
+func TestLargeMP4IsInspectedAtOffsets(t *testing.T) {
+	const n = 1 << 20 // 200 MiB of samples
+	head := mp4Head(n)
+	size := int64(len(head)) + 300<<20
+	// Grow the media data box past the parsed-format limit; its samples fit.
+	binary.BigEndian.PutUint32(head[len(head)-8:], uint32(size-int64(len(head))+8))
+	c, err := InspectContext(context.Background(), sparse{head, size}, size, "m4b")
+	if err != nil || c.MP4 == nil || c.MP4.Samples != n || len(c.Warnings) != 0 || size <= MaxParsedBytes {
+		t.Fatal(c.Warnings, c.MP4, err)
+	}
+	if _, err := InspectContext(context.Background(), sparse{head, size}, size, "epub"); !errors.Is(err, ErrLimit) {
+		t.Fatal("an oversized EPUB was inspected", err)
 	}
 }
 

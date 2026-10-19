@@ -31,7 +31,8 @@ Optional antivirus uses installed
 [Defender](https://learn.microsoft.com/en-us/defender-endpoint/command-line-arguments-microsoft-defender-antivirus).
 These are specialized external capabilities, not first-party application runtimes.
 Do not implement a malware engine in Go or automatically install/update software.
-Use argument arrays, no remediation options, a two-minute deadline, 64 KiB process
+Use argument arrays, no remediation options, a two-minute deadline (growing with
+file size since [decision 0040](0040-large-mp4-audio-and-scan-limits.md)), 64 KiB process
 output, and a private snapshot whose hash is checked again after scanning.
 ClamAV requests alerts for encrypted content and exceeded scan limits. Unknown
 output, errors, truncation, missing tools, and cancellation cannot mean clean.

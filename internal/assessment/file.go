@@ -46,9 +46,25 @@ type Report struct {
 	Limitations    []string            `json:"limitations"`
 }
 
+// Size limits. EPUB, PDF, and MP3 are parsed in memory and stay at 256 MiB;
+// M4B and M4A are read at offsets without loading media data, up to 2 GiB.
+const (
+	MaxParsedBytes = 256 << 20
+	MaxMP4Bytes    = 2 << 30
+)
+
+// MaxFileBytes is the largest file of a format, named by its extension
+// without the dot, that Nemalo checks, holds, and acquires.
+func MaxFileBytes(format string) int64 {
+	if format == "m4b" || format == "m4a" {
+		return MaxMP4Bytes
+	}
+	return MaxParsedBytes
+}
+
 func (o Options) Validate() error {
-	if o.ExpectedBytes < 0 || o.ExpectedBytes > 256<<20 {
-		return errors.New("expected bytes must be 0 (unspecified) through 268435456")
+	if o.ExpectedBytes < 0 || o.ExpectedBytes > MaxMP4Bytes {
+		return errors.New("expected bytes must be 0 (unspecified) through 2147483648")
 	}
 	if o.ExpectedSHA256 != "" {
 		decoded, err := hex.DecodeString(o.ExpectedSHA256)
@@ -143,8 +159,9 @@ func prepare(ctx context.Context, root *os.Root, name string, options Options) (
 	if err != nil {
 		return nil, err
 	}
-	if !before.Mode().IsRegular() || before.Size() <= 0 || before.Size() > 256<<20 {
-		return nil, errors.New("check requires a regular, nonempty, non-symlink file at most 256 MiB")
+	limit := MaxFileBytes(strings.TrimPrefix(safeExtension(name), "."))
+	if !before.Mode().IsRegular() || before.Size() <= 0 || before.Size() > limit {
+		return nil, errors.New("check requires a regular, nonempty, non-symlink file at most 256 MiB, or 2 GiB for an M4B or M4A")
 	}
 	source, err := safeio.OpenRegular(root, name, before, os.O_RDONLY)
 	if err != nil {
@@ -164,12 +181,15 @@ func prepare(ctx context.Context, root *os.Root, name string, options Options) (
 	}
 	// Controlled basename prevents a scanner treating a source name as an option.
 	p := &prepared{report: report, dir: dir, snapshot: filepath.Join(dir, "asset"+safeExtension(name))}
+	if err := safeio.EnsureSpace(dir, before.Size()); err != nil {
+		return p, err
+	}
 	p.f, err = os.OpenFile(p.snapshot, os.O_CREATE|os.O_EXCL|os.O_RDWR, 0600)
 	if err != nil {
 		return p, err
 	}
 	h := sha256.New()
-	n, err := io.Copy(io.MultiWriter(p.f, h), io.LimitReader(contextReader{ctx, source}, 256<<20+1))
+	n, err := io.Copy(io.MultiWriter(p.f, h), io.LimitReader(contextReader{ctx, source}, limit+1))
 	if err != nil {
 		return p, err
 	}

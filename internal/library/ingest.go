@@ -436,7 +436,7 @@ func fileSHA256(name string) (string, error) {
 	}
 	defer f.Close()
 	h := sha256.New()
-	if _, err := io.Copy(h, io.LimitReader(f, 256<<20+1)); err != nil {
+	if _, err := io.Copy(h, io.LimitReader(f, assessment.MaxMP4Bytes+1)); err != nil {
 		return "", err
 	}
 	return hex.EncodeToString(h.Sum(nil)), nil

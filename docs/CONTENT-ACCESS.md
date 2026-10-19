@@ -57,7 +57,8 @@ nemalo content read /path/library --root /path/library --asset sha256:HASH --jso
 The asset ID comes from `library import`. This reads that one managed holding
 and rechecks its size and SHA-256. It does not search the library, and review
 status does not become checked because the text was read. A managed holding may
-be read up to the 256 MiB import cap. A different root is refused. Snapshot
+be read up to its format's import limit: 256 MiB, or 2 GiB for an M4B or M4A,
+whose `mp4-audio/1` reads at offsets and then hashes the whole file. A different root is refused. Snapshot
 catalogs remain files with their own `--root` and keep the 32 MiB source cap.
 
 The first recorded location is selected deterministically and reported. Missing
@@ -247,7 +248,8 @@ verified copy. See [decision 0039](decisions/0039-mp4-audio-samples.md).
 
 - Catalog: existing strict 16 MiB snapshot loader; explicit paths at most 4096 bytes.
 - Source: nonempty regular asset, at most 32 MiB for a snapshot and 256 MiB for
-  a managed holding; exact size/hash required.
+  a managed holding, or 2 GiB for `mp4-audio/1`, which reads at offsets; exact
+  size/hash required, and checked after an offset read.
 - Container: shared assessment parser, 2 MiB ZIP metadata-read budget, 10,000
   members, 32 MiB/member, 128 MiB declared expansion, CRC/length checks.
 - Extraction: at most 512 units, 8 MiB total extracted text, UTF-8 XHTML with XML

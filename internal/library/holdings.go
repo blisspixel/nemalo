@@ -290,7 +290,7 @@ func parseOperations(b []byte, libraryID string) ([]operation, error) {
 		if err := canonical(line, &event); err != nil || event.SchemaVersion != 1 || event.Sequence != i+1 || event.LibraryID != libraryID || !validStateID(event.OperationID, "operation") || event.At == "" {
 			return nil, ErrStateReview
 		}
-		if !validAssetID(event.AssetID) || !validFormat(event.Format) || event.Bytes < 1 || event.Bytes > 256<<20 || event.Source == "" || len(event.Source) > 4096 || strings.ContainsAny(event.Source, "\x00\r\n") {
+		if !validAssetID(event.AssetID) || !validFormat(event.Format) || event.Bytes < 1 || event.Bytes > assessment.MaxFileBytes(event.Format) || event.Source == "" || len(event.Source) > 4096 || strings.ContainsAny(event.Source, "\x00\r\n") {
 			return nil, ErrStateReview
 		}
 		if event.Status != "review" && event.Status != "checked" {
@@ -364,7 +364,7 @@ func validFormat(format string) bool {
 }
 
 func validHolding(h Holding, libraryID string) bool {
-	if h.SchemaVersion != 1 || h.LibraryID != libraryID || h.ID != "sha256:"+h.SHA256 || !validAssetID(h.ID) || !validFormat(h.Format) || h.Bytes < 1 || h.Bytes > 256<<20 {
+	if h.SchemaVersion != 1 || h.LibraryID != libraryID || h.ID != "sha256:"+h.SHA256 || !validAssetID(h.ID) || !validFormat(h.Format) || h.Bytes < 1 || h.Bytes > assessment.MaxFileBytes(h.Format) {
 		return false
 	}
 	if h.Path != assetRel(h.SHA256, h.Format) || (h.Status != "review" && h.Status != "checked") || !validNote(h.Reason, 200) {

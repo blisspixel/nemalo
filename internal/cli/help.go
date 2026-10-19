@@ -85,7 +85,7 @@ nemalo acquire archive:ITEM --recording FORMAT --output NEW_DIRECTORY [--resume]
 Options:
   --file NAME             exact source file name
   --output NEW_DIRECTORY  a new folder; missing parents are created
-  --max-file-bytes 268435456 (maximum 256 MiB)
+  --max-file-bytes N      default and maximum 256 MiB, or 2 GiB for M4B/M4A
   --no-scan, --on-detection quarantine|delete
   --recording "64Kbps MP3"  a format listed under recordings by evaluate
   --max-recording-bytes 4294967296 (maximum 16 GiB)
@@ -119,9 +119,10 @@ Options:
 reports, or a check that could not run, are review findings; warnings are
 listed. Nemalo never installs or downloads EPUBCheck.
 
-Check uses a private temporary snapshot (up to 256 MiB). EPUB text and
-document counts are measured; fixed pages, PDF page counts, and audio
-duration are not inferred. --scan invokes installed antivirus without
+Check uses a private temporary snapshot (up to 256 MiB, or 2 GiB for an M4B
+or M4A) and needs that much free temporary space. EPUB text and document
+counts, PDF page trees, MP3 frames, and MP4 samples are measured; fixed pages
+are not inferred and audio is not decoded. --scan invokes installed antivirus without
 remediation. It is recommended for a file you did not produce. Windows uses
 Microsoft Defender. Linux and macOS use ClamAV (clamscan) after you install
 it and update signatures with freshclam. External scanner cloud and

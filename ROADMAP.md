@@ -522,8 +522,11 @@ and credited per track only when sections match tracks by count and length
 files are assessed from their sample tables without decoding: truncation,
 misplaced samples, fragments, and protected audio are findings, chapters come
 from the QuickTime chapter track or a Nero list, and `mp4-audio/1` lists them
-([decision 0039](docs/decisions/0039-mp4-audio-samples.md)). Decoded timing,
-M4B byte ranges, and files above the 256 MiB limit remain. Depends on shared assessment/publication and recovery milestones.
+([decision 0039](docs/decisions/0039-mp4-audio-samples.md)). An M4B or M4A may
+be 2 GiB; scans and transfers allow time by size, a stalled download continues
+like a dropped one, and a ClamAV limit alert is an incomplete scan
+([decision 0040](docs/decisions/0040-large-mp4-audio-and-scan-limits.md)).
+Decoded timing and M4B byte ranges remain. Depends on shared assessment/publication and recovery milestones.
 Can follow milestone 5 independently of paper-provider expansion.
 
 Deliver local MP3/M4B intake and LibriVox acquisition, permitted Archive audio

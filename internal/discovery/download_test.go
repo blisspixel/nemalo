@@ -10,6 +10,8 @@ import (
 	"syscall"
 	"testing"
 	"time"
+
+	"github.com/blisspixel/nemalo/internal/transfer"
 )
 
 type downloadRoundTrip func(*http.Request) (*http.Response, error)
@@ -39,7 +41,7 @@ func TestFileClientBoundaries(t *testing.T) {
 		t.Fatal("redirect limit absent")
 	}
 	transport := client.Transport.(fileTransport).base.(*http.Transport)
-	if transport.Proxy != nil || !transport.DisableCompression || client.Timeout != 5*time.Minute || transport.ResponseHeaderTimeout == 0 {
+	if transport.Proxy != nil || !transport.DisableCompression || client.Timeout != 2*time.Hour || stallTimeout != time.Minute || transport.ResponseHeaderTimeout == 0 {
 		t.Fatal("unbounded or proxy/decompression policy")
 	}
 	for _, address := range []string{"evil.invalid:443", "archive.org:80", "bad"} {
@@ -152,5 +154,46 @@ func TestFileRequestsRepeatOnlyFailuresBeforeTheBody(t *testing.T) {
 	})}
 	if _, err := p.Download(ctx, file); !errors.Is(err, context.Canceled) {
 		t.Fatal(err)
+	}
+}
+
+type bodyTrip struct{ body io.ReadCloser }
+
+func (b bodyTrip) RoundTrip(*http.Request) (*http.Response, error) {
+	return &http.Response{StatusCode: 200, Body: b.body}, nil
+}
+
+// A body that stops sending ends with a transient timeout once no bytes have
+// arrived for the stall timeout; a steady body is never cut.
+func TestFileBodiesThatStallEndAsTransientTimeouts(t *testing.T) {
+	old := stallTimeout
+	stallTimeout = 150 * time.Millisecond
+	t.Cleanup(func() { stallTimeout = old })
+	r, w := io.Pipe()
+	trip := fileTransport{bodyTrip{r}, func(*url.URL) bool { return true }}
+	req, _ := http.NewRequest("GET", "https://archive.org/download/x/y", nil)
+	resp, err := trip.RoundTrip(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	go func() {
+		// Steady bytes for longer than the timeout, then silence.
+		for range 6 {
+			_, _ = w.Write([]byte("abcd"))
+			time.Sleep(50 * time.Millisecond)
+		}
+	}()
+	got, err := io.ReadAll(resp.Body)
+	var timeout interface{ Timeout() bool }
+	if string(got) != strings.Repeat("abcd", 6) || !errors.As(err, &timeout) || !timeout.Timeout() || !transfer.Transient(err) {
+		t.Fatal(len(got), err)
+	}
+	_ = resp.Body.Close()
+	_ = w.Close()
+	// A body read to its end closes without a stall.
+	trip = fileTransport{bodyTrip{io.NopCloser(strings.NewReader("whole"))}, func(*url.URL) bool { return true }}
+	resp, _ = trip.RoundTrip(req)
+	if b, err := io.ReadAll(resp.Body); err != nil || string(b) != "whole" || resp.Body.Close() != nil {
+		t.Fatal(string(b), err)
 	}
 }

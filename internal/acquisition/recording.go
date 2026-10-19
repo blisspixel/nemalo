@@ -274,7 +274,7 @@ func AcquireRecording(ctx context.Context, provider Provider, request RecordingR
 				groupErr = err
 				break
 			}
-			trackCtx, cancel := context.WithTimeout(ctx, transferDeadline)
+			trackCtx, cancel := context.WithTimeout(ctx, transferBudget(*p.file.Bytes))
 			req := Request{SourceID: request.SourceID, File: p.file.Name, Output: filepath.Join(abs, p.packet), MaxBytes: *p.file.Bytes, NoScan: request.NoScan, OnDetection: request.OnDetection, Quarantine: request.Quarantine, Scanner: request.Scanner,
 				Recording: &p.position}
 			initial := Result{SchemaVersion: 1, Status: "not_started", Antivirus: "not_scanned", Durability: "files_synced_directory_entries_filesystem_dependent"}
@@ -316,7 +316,7 @@ func AcquireRecording(ctx context.Context, provider Provider, request RecordingR
 				if err != nil {
 					break
 				}
-				retryCtx, retryCancel := context.WithTimeout(ctx, transferDeadline)
+				retryCtx, retryCancel := context.WithTimeout(ctx, transferBudget(*p.file.Bytes))
 				var next Result
 				state, next, transferErr = resumeTransfer(retryCtx, ranged, packetRoot, req.Output, evaluation, p.file, req, initial)
 				retryCancel()

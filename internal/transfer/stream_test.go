@@ -27,7 +27,7 @@ func TestCopyIntegrityAndLimits(t *testing.T) {
 		{"checksums", string(body), 100, good, true},
 		{"unknown size", string(body), int64(len(body)), Expectation{Bytes: -1}, true},
 		{"zero budget", string(body), 0, good, false},
-		{"huge budget", string(body), 256<<20 + 1, good, false},
+		{"huge budget", string(body), MaxLimit + 1, good, false},
 		{"invalid size", string(body), 100, Expectation{Bytes: -2}, false},
 		{"declared over budget", string(body), 1, good, false},
 		{"over body limit", string(body), 1, Expectation{Bytes: -1}, false},

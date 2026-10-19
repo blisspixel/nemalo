@@ -21,7 +21,36 @@ var scanLimitations = []string{"No antivirus guarantees safety; signature freshn
 
 // clamArgs keep limits, encryption, and exceeded-size cases visible as alerts.
 // Without them ClamAV may stop scanning part of a file and still report OK.
-var clamArgs = []string{"--alert-exceeds-max=yes", "--alert-encrypted=yes", "--max-filesize=256M", "--max-scansize=512M", "--max-recursion=32", "--"}
+// The scan size counts the file's own bytes, so both limits cover the largest
+// file Nemalo holds, 2 GiB.
+var clamArgs = []string{"--alert-exceeds-max=yes", "--alert-encrypted=yes", "--max-filesize=2048M", "--max-scansize=2048M", "--max-recursion=32", "--"}
+
+// limitAlert is the signature prefix of a ClamAV limit alert. Such a FOUND
+// line names bytes that were not scanned: a coverage gap, which is never a
+// detection and never clean.
+const limitAlert = "Heuristics.Limits.Exceeded"
+
+// limitOnly reports a FOUND line that is a limit alert.
+func limitOnly(found string) bool {
+	return strings.HasPrefix(strings.TrimSpace(found), limitAlert)
+}
+
+// scanDeadline allows a scan two minutes, thirty seconds per further file in a
+// batch, and a minute per 256 MiB, at most thirty minutes. ClamAV read about
+// 9 MiB a second from a large audio file on a desktop computer.
+func scanDeadline(files int, bytes int64) time.Duration {
+	return min(2*time.Minute+time.Duration(max(files-1, 0))*30*time.Second+time.Duration(bytes>>28)*time.Minute, 30*time.Minute)
+}
+
+func fileBytes(files ...string) int64 {
+	var n int64
+	for _, f := range files {
+		if info, err := os.Stat(f); err == nil {
+			n += info.Size()
+		}
+	}
+	return n
+}
 
 type Result struct {
 	Status          string    `json:"status"`
@@ -93,7 +122,7 @@ func (a Adapter) Scan(ctx context.Context, file string) Result {
 	if kind == "defender" {
 		args = []string{"-Scan", "-ScanType", "3", "-File", file, "-DisableRemediation"}
 	}
-	ctx, cancel := context.WithTimeout(ctx, 2*time.Minute)
+	ctx, cancel := context.WithTimeout(ctx, scanDeadline(1, fileBytes(file)))
 	defer cancel()
 	output, code, truncated, err := a.Run(ctx, exe, args)
 	r.Output, r.ExitCode, r.Status = output, code, "incomplete"
@@ -108,6 +137,21 @@ func (a Adapter) Scan(ctx context.Context, file string) Result {
 		return r
 	}
 	if kind == "clamav" && code == 1 {
+		detected, limited := false, false
+		for _, line := range strings.Split(strings.ReplaceAll(output, "\r\n", "\n"), "\n") {
+			if before, ok := strings.CutSuffix(line, " FOUND"); ok {
+				_, signature, _ := strings.Cut(before, ": ")
+				if limitOnly(signature) {
+					limited = true
+				} else {
+					detected = true
+				}
+			}
+		}
+		if limited && !detected {
+			r.Error = "ClamAV stopped at a scan limit; part of the file was not scanned"
+			return r
+		}
 		r.Status = "findings"
 		return r
 	}
@@ -163,7 +207,7 @@ func (a Adapter) ScanMany(ctx context.Context, files []string) []Result {
 	}
 	started := time.Now().UTC()
 	// One database load plus bounded per-file work; the cap keeps a batch finite.
-	ctx, cancel := context.WithTimeout(ctx, min(2*time.Minute+time.Duration(len(files))*30*time.Second, 20*time.Minute))
+	ctx, cancel := context.WithTimeout(ctx, scanDeadline(len(files), fileBytes(files...)))
 	defer cancel()
 	output, code, truncated, runErr := a.Run(ctx, exe, append(append([]string{}, clamArgs...), files...))
 	statuses := clamBatchStatuses(output, files, code)
@@ -197,15 +241,22 @@ func clamBatchStatuses(output string, files []string, code int) []string {
 	// attributed, so no file in this batch is reported clean.
 	inconsistent := false
 	for i, file := range files {
-		matches := 0
+		matches, limited := 0, false
 		for _, line := range lines {
 			rest, ok := strings.CutPrefix(line, file+": ")
 			if !ok {
 				continue
 			}
 			matches++
+			signature, isFound := strings.CutSuffix(rest, " FOUND")
 			switch {
-			case strings.HasSuffix(rest, " FOUND"):
+			case isFound && limitOnly(signature):
+				// ClamAV counts a limit alert as an infected file.
+				limited = true
+				if statuses[i] != "findings" {
+					statuses[i] = "incomplete"
+				}
+			case isFound:
 				statuses[i] = "findings"
 			case rest == "OK" && statuses[i] == "":
 				statuses[i] = "no_detections_reported"
@@ -217,7 +268,7 @@ func clamBatchStatuses(output string, files []string, code int) []string {
 			statuses[i] = "incomplete"
 			inconsistent = true
 		}
-		if statuses[i] == "findings" {
+		if statuses[i] == "findings" || limited {
 			found++
 		}
 	}

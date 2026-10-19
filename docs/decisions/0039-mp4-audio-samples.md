@@ -78,9 +78,9 @@ container, so no byte ranges are served; a player gets a verified copy through
 ## Consequences
 
 Truncation, misplaced or overlapping samples, fragments, and protection are
-found without decoding or a new dependency. The 256 MiB file limit of import
-and acquisition still applies, so a long M4B at a high bitrate stays outside
-the library until that limit is revisited. Decoded timing, encoder priming,
+found without decoding or a new dependency. An M4B or M4A may be 2 GiB, beyond
+the 256 MiB limit of the formats parsed in memory
+([decision 0040](0040-large-mp4-audio-and-scan-limits.md)). Decoded timing, encoder priming,
 multi-file M4B recordings, and chapter-to-text alignment remain later work.
 
 ## Validation

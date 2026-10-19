@@ -160,9 +160,13 @@ checks of the audio. See
 
 ## Network and failure bounds
 
-- At most 256 MiB per selected file, configurable lower with `--max-file-bytes`.
+- At most 256 MiB per selected file, or 2 GiB for an M4B or M4A, configurable
+  lower with `--max-file-bytes`
+  ([decision 0040](decisions/0040-large-mp4-audio-and-scan-limits.md)).
   One extra byte detects an over-budget response. No automatic retry or bulk fetch.
-- Five-minute acquisition deadline, 30-second response-header timeout, and shared
+- A deadline of five minutes plus a second per 512 KiB of the byte budget, a
+  30-second response-header timeout, a 60-second stall timeout that ends a
+  silent body as a dropped connection, and shared
   provider pacing/`Retry-After`. Separate processes do not coordinate quotas.
 - HTTPS only, normal TLS validation, public-address DNS checks and pinned-IP direct
   dialing. Initial requests and up to four redirects have approved delivery hosts:

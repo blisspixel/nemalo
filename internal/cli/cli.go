@@ -267,7 +267,12 @@ func Execute(ctx context.Context, args []string, out, errOut io.Writer, service 
 			}
 			return guide(write(data, nil, 0), recordingAntivirus(data), true)
 		}
-		request := acquisition.Request{SourceID: flags.Arg(0), File: *sourceFile, Output: *output, MaxBytes: limits.FileBytes, NoScan: *noScan, OnDetection: detection, Resume: *resume}
+		// Without --max-file-bytes the budget is the largest the format allows.
+		budget := acquisition.DefaultMaxBytes(*sourceFile)
+		if fileLimit {
+			budget = limits.FileBytes
+		}
+		request := acquisition.Request{SourceID: flags.Arg(0), File: *sourceFile, Output: *output, MaxBytes: budget, NoScan: *noScan, OnDetection: detection, Resume: *resume}
 		if err := request.Validate(); err != nil {
 			return write(nil, err, 2)
 		}

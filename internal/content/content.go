@@ -434,17 +434,47 @@ func Get(ctx context.Context, req Request) (result Result, err error) {
 }
 
 func resolveSource(ctx context.Context, req Request, result *Result) ([]byte, error) {
+	directory, asset, err := findAsset(ctx, req, result)
+	if err != nil {
+		return nil, err
+	}
+	data, status, err := readAsset(ctx, directory, result.SourcePath, asset)
+	if err != nil {
+		result.Status = status
+	}
+	return data, err
+}
+
+// resolveFile is resolveSource for a parser that reads at offsets: use reads
+// the opened file, and the whole file is then hashed and its identity
+// rechecked, so a change while it was read is refused. Nothing is loaded into
+// memory, so an asset may be as large as its format allows.
+func resolveFile(ctx context.Context, req Request, result *Result, use func(io.ReaderAt, int64) error) error {
+	directory, asset, err := findAsset(ctx, req, result)
+	if err != nil {
+		return err
+	}
+	status, err := useAsset(ctx, directory, result.SourcePath, asset, use)
+	if err != nil && status != "" {
+		result.Status = status
+	}
+	return err
+}
+
+// findAsset finds the requested asset and the directory its path is relative to:
+// the explicit root for a snapshot catalog, or the library for a holding.
+func findAsset(ctx context.Context, req Request, result *Result) (string, library.Asset, error) {
 	result.Status = "unavailable"
 	info, err := os.Lstat(req.Catalog)
 	if err != nil {
-		return nil, err
+		return "", library.Asset{}, err
 	}
 	if info.IsDir() && info.Mode()&os.ModeSymlink == 0 {
-		return resolveManaged(ctx, req, result)
+		return findManaged(ctx, req, result)
 	}
 	catalog, err := library.Load(req.Catalog)
 	if err != nil {
-		return nil, err
+		return "", library.Asset{}, err
 	}
 	result.CatalogID = catalog.ID
 	for _, asset := range catalog.Assets {
@@ -453,47 +483,39 @@ func resolveSource(ctx context.Context, req Request, result *Result) ([]byte, er
 		}
 		if len(asset.Locations[0].Path) > 4096 {
 			result.Status = "budget_exceeded"
-			return nil, errBudget
+			return "", library.Asset{}, errBudget
 		}
 		// The selected catalog location is deterministic; hints and duplicate
 		// locations never authorize fallback filesystem searches.
 		result.SourcePath = asset.Locations[0].Path
-		data, status, err := readAsset(ctx, req.Root, result.SourcePath, asset)
-		if err != nil {
-			result.Status = status
-		}
-		return data, err
+		return req.Root, asset, nil
 	}
 	result.Status = "missing_asset"
-	return nil, errors.New("asset not present in catalog")
+	return "", library.Asset{}, errors.New("asset not present in catalog")
 }
 
-func resolveManaged(ctx context.Context, req Request, result *Result) ([]byte, error) {
+func findManaged(ctx context.Context, req Request, result *Result) (string, library.Asset, error) {
 	catalog, err := filepath.Abs(req.Catalog)
 	if err != nil {
-		return nil, err
+		return "", library.Asset{}, err
 	}
 	root, err := filepath.Abs(req.Root)
 	if err != nil {
-		return nil, err
+		return "", library.Asset{}, err
 	}
 	if catalog != root {
-		return nil, errors.New("managed content requires the library directory as both catalog and root")
+		return "", library.Asset{}, errors.New("managed content requires the library directory as both catalog and root")
 	}
 	asset, libraryID, err := library.ManagedAsset(ctx, catalog, req.AssetID)
 	if err != nil {
 		if strings.Contains(err.Error(), "not present") {
 			result.Status = "missing_asset"
 		}
-		return nil, err
+		return "", library.Asset{}, err
 	}
 	result.CatalogID = libraryID
 	result.SourcePath = asset.Locations[0].Path
-	data, status, err := readAsset(ctx, catalog, result.SourcePath, asset)
-	if err != nil {
-		result.Status = status
-	}
-	return data, err
+	return catalog, asset, nil
 }
 
 func sourceBudget(asset library.Asset) int64 {
@@ -557,6 +579,68 @@ func readAsset(ctx context.Context, directory, name string, asset library.Asset)
 		return nil, "changed_source", errors.New("source bytes or identity changed")
 	}
 	return b, "", nil
+}
+
+// useAsset opens an asset as readAsset does, lets use read it at offsets, and
+// then hashes the whole file and rechecks its identity. A file replaced or
+// changed while use read it is refused, and use's result is not kept.
+func useAsset(ctx context.Context, directory, name string, asset library.Asset, use func(io.ReaderAt, int64) error) (string, error) {
+	if asset.Bytes <= 0 || asset.Bytes > assessment.MaxMP4Bytes {
+		return "budget_exceeded", errBudget
+	}
+	root, err := safeio.OpenResolvedRoot(directory)
+	if err != nil {
+		return "unavailable", err
+	}
+	defer root.Close()
+	before, err := root.Lstat(name)
+	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return "missing_asset", err
+		}
+		return "unavailable", err
+	}
+	if !before.Mode().IsRegular() {
+		return "unsupported_extraction", errors.New("source must be a regular non-symlink file")
+	}
+	if before.Size() != asset.Bytes {
+		return "changed_source", errors.New("source size differs from asset")
+	}
+	f, err := safeio.OpenRegular(root, name, before, os.O_RDONLY)
+	if err != nil {
+		return "unavailable", err
+	}
+	defer f.Close()
+	opened, err := f.Stat()
+	if err != nil {
+		return "unavailable", err
+	}
+	if !os.SameFile(before, opened) {
+		return "changed_source", errors.New("source replaced while opening")
+	}
+	if err := use(f, asset.Bytes); err != nil {
+		return "", err
+	}
+	h := sha256.New()
+	n, err := io.Copy(h, io.LimitReader(contextReader{ctx, io.NewSectionReader(f, 0, asset.Bytes+1)}, asset.Bytes+1))
+	if err != nil {
+		if ctx.Err() != nil {
+			return "cancelled", ctx.Err()
+		}
+		return "unavailable", err
+	}
+	current, err := root.Lstat(name)
+	if err != nil {
+		return "changed_source", err
+	}
+	after, err := f.Stat()
+	if err != nil {
+		return "unavailable", err
+	}
+	if n != asset.Bytes || !os.SameFile(before, current) || !after.ModTime().Equal(before.ModTime()) || after.Size() != before.Size() || hex.EncodeToString(h.Sum(nil)) != asset.SHA256 {
+		return "changed_source", errors.New("source bytes or identity changed")
+	}
+	return "", nil
 }
 
 type contextReader struct {

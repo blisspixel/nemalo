@@ -193,7 +193,7 @@ func inspectContext(ctx context.Context, r io.ReaderAt, size int64, format strin
 	defer cancel()
 	r = contextAt{ctx, r}
 	c := Checks{Signature: "not_checked", ZIPCRC: "not_applicable", EPUBPackage: "not_applicable", Conformance: "not_checked", ContentReview: "not_checked"}
-	if size <= 0 || size > 256<<20 {
+	if size <= 0 || size > MaxFileBytes(format) {
 		return c, errors.Join(ErrLimit, errors.New("invalid asset size"))
 	}
 	header := make([]byte, min(size, int64(8)))

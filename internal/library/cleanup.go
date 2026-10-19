@@ -18,6 +18,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/blisspixel/nemalo/internal/assessment"
 	"github.com/blisspixel/nemalo/internal/inventory"
 	"github.com/blisspixel/nemalo/internal/safeio"
 	"github.com/blisspixel/nemalo/internal/staging"
@@ -783,7 +784,7 @@ func planCleanup(ctx context.Context, store, src *os.Root, lines []Holding) ([]C
 		}
 		content, err := hashFile(packets[dir][0])
 		if errors.Is(err, errTooLarge) {
-			e.Reason = "the packet content is over the 256 MiB file limit; preserved"
+			e.Reason = "the packet content is over the file limit; preserved"
 			entries = append(entries, e)
 			continue
 		}
@@ -835,7 +836,7 @@ func planCleanup(ctx context.Context, store, src *os.Root, lines []Holding) ([]C
 		case importFormat(ie.Path) != "":
 			f, err := hashFile(ie.Path)
 			if errors.Is(err, errTooLarge) {
-				e.Reason = "over the 256 MiB file limit; preserved"
+				e.Reason = "over the file limit; preserved"
 				break
 			}
 			if err != nil {
@@ -866,7 +867,7 @@ func planArchive(ctx context.Context, src *os.Root, rel string, held func(string
 	// after its members were checked.
 	before, err := hashFile(rel)
 	if errors.Is(err, errTooLarge) {
-		e.Reason = "over the 256 MiB file limit; preserved"
+		e.Reason = "over the file limit; preserved"
 		return nil
 	}
 	if err != nil {
@@ -942,7 +943,8 @@ func fileIdentity(ctx context.Context, root *os.Root, rel string) (CleanupFile, 
 	if !info.Mode().IsRegular() {
 		return CleanupFile{}, fmt.Errorf("%s is not a regular file", rel)
 	}
-	if info.Size() > 256<<20 {
+	// A ZIP or any other file is held to the parsed-format limit.
+	if info.Size() > assessment.MaxFileBytes(importFormat(rel)) {
 		return CleanupFile{Path: filepath.ToSlash(rel)}, errTooLarge
 	}
 	f, err := safeio.OpenRegular(root, name, info, os.O_RDONLY)
@@ -1020,7 +1022,7 @@ func readManifest(store *os.Root, started cleanupRecord, libraryID string) (clea
 	}
 	for _, e := range m.Entries {
 		for _, file := range e.Files {
-			if !validRelative(file.Path) || !validHash(file.SHA256) || file.Bytes < 0 || file.Bytes > 256<<20 {
+			if !validRelative(file.Path) || !validHash(file.SHA256) || file.Bytes < 0 || file.Bytes > assessment.MaxMP4Bytes {
 				return m, fmt.Errorf("%w: cleanup manifest entry is invalid", ErrStateReview)
 			}
 		}
@@ -1099,7 +1101,7 @@ func openCleanup(records []cleanupRecord) *cleanupRecord {
 	return open
 }
 
-var errTooLarge = errors.New("file over the 256 MiB limit")
+var errTooLarge = errors.New("file over the 256 MiB limit, or 2 GiB for an M4B or M4A")
 
 // zipAccounted requires a ZIP whose bytes are its entries: it starts with a
 // local file header and carries no archive comment.

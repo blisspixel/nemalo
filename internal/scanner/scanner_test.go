@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestScannerStatesAndArguments(t *testing.T) {
@@ -21,7 +22,12 @@ func TestScannerStatesAndArguments(t *testing.T) {
 		{"clamav", "Scanned files: 1\nInfected files: 0", 0, false, nil, "no_detections_reported"},
 		{"clamav", "Scanned files: 10\nInfected files: 0", 0, false, nil, "incomplete"},
 		{"clamav", "Scanned files: 1\nInfected files: 0\nWARNING skipped", 0, false, nil, "incomplete"},
-		{"clamav", "Heuristics.Limits.Exceeded FOUND", 1, false, errors.New("exit 1"), "findings"},
+		// A limit alert names bytes that were not scanned: incomplete, not a
+		// detection; a real detection beside it still is one.
+		{"clamav", "private-file: Heuristics.Limits.Exceeded.MaxScanSize FOUND\nScanned files: 1\nInfected files: 1", 1, false, errors.New("exit 1"), "incomplete"},
+		{"clamav", "private-file: Heuristics.Limits.Exceeded.MaxFileSize FOUND\nprivate-file: Virus(es) detected ERROR", 2, false, errors.New("exit 2"), "incomplete"},
+		{"clamav", "private-file: Heuristics.Limits.Exceeded.MaxScanSize FOUND\nprivate-file: Win.Test.EICAR_HDB-1 FOUND", 1, false, errors.New("exit 1"), "findings"},
+		{"clamav", "private-file: Win.Test.EICAR_HDB-1 FOUND", 1, false, errors.New("exit 1"), "findings"},
 		{"clamav", "error", 2, false, errors.New("exit 2"), "incomplete"},
 		{"defender", "Scanning file found no threats.", 0, false, nil, "no_detections_reported"},
 		{"defender", "Scan finished", 0, false, nil, "incomplete"},
@@ -103,6 +109,23 @@ func TestPlatformVersionOrdering(t *testing.T) {
 	}{{"4.18.26080.10-0", "4.18.26080.9-0", true}, {"4.18.26090.1-0", "4.18.26080.10-0", true}, {"4.18.26080.9-0", "4.18.26080.10-0", false}, {"4.18.1", "4.18", true}, {"4.18", "4.18", false}, {"bad", "alpha", true}} {
 		if got := newerPlatform(p(tc.a), p(tc.b)); got != tc.newer {
 			t.Fatal(tc, got)
+		}
+	}
+}
+
+func TestScanDeadlineGrowsWithFilesAndBytes(t *testing.T) {
+	for _, tc := range []struct {
+		files int
+		bytes int64
+		want  time.Duration
+	}{
+		{1, 1 << 20, 2 * time.Minute},
+		{1, 2 << 30, 10 * time.Minute},
+		{32, 1 << 30, 2*time.Minute + 31*30*time.Second + 4*time.Minute},
+		{1000, 2 << 30, 30 * time.Minute},
+	} {
+		if got := scanDeadline(tc.files, tc.bytes); got != tc.want {
+			t.Errorf("scanDeadline(%d, %d) = %v, want %v", tc.files, tc.bytes, got, tc.want)
 		}
 	}
 }

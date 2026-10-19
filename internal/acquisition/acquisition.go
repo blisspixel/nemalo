@@ -47,8 +47,8 @@ type Request struct {
 func (r Request) Validate() error {
 	archiveID := discovery.ValidArchiveID(r.SourceID)
 	gutenbergID := discovery.ValidGutenbergID(r.SourceID)
-	if (!archiveID && !gutenbergID) || r.File == "." || !fs.ValidPath(r.File) || len(r.File) > 1000 || strings.ContainsAny(r.File, "\\:\x00\r\n") || r.Output == "" || r.MaxBytes < 1 || r.MaxBytes > 256<<20 {
-		return errors.New("acquire requires archive:ITEM or gutenberg:NUMBER, an exact source filename, a new output directory, and a 1-268435456 byte budget")
+	if (!archiveID && !gutenbergID) || r.File == "." || !fs.ValidPath(r.File) || len(r.File) > 1000 || strings.ContainsAny(r.File, "\\:\x00\r\n") || r.Output == "" || r.MaxBytes < 1 || r.MaxBytes > DefaultMaxBytes(r.File) {
+		return errors.New("acquire requires archive:ITEM or gutenberg:NUMBER, an exact source filename, a new output directory, and a byte budget of 1 through 268435456, or 2147483648 for an M4B or M4A")
 	}
 	if archiveID && format(r.File) == "" {
 		return errors.New("acquisition currently supports selected EPUB, PDF, MP3, M4B, and M4A files")
@@ -185,7 +185,7 @@ func acquireOnce(ctx context.Context, provider Provider, request Request) (resul
 		return result, errors.New("scanning requires a quarantine directory for detected files")
 	}
 	outer := ctx
-	ctx, cancel := context.WithTimeout(ctx, transferDeadline)
+	ctx, cancel := context.WithTimeout(ctx, transferBudget(request.MaxBytes))
 	defer cancel()
 	if err := ctx.Err(); err != nil {
 		return result, err
@@ -590,6 +590,12 @@ func contentFormat(file discovery.OfferedFile) string {
 	return format(file.Name)
 }
 
+// DefaultMaxBytes is the largest budget, and the default, for a selected
+// file: 2 GiB for an M4B or M4A, which is read at offsets, else 256 MiB.
+func DefaultMaxBytes(file string) int64 {
+	return assessment.MaxFileBytes(format(file))
+}
+
 func format(name string) string {
 	switch ext := strings.ToLower(path.Ext(name)); ext {
 	case ".epub", ".pdf", ".mp3", ".m4b", ".m4a":
@@ -637,6 +643,17 @@ func sameContent(root *os.Root, name string, file *os.File) error {
 	return nil
 }
 
-// transferDeadline bounds metadata, transfer, and local checks; a scan runs
-// after it under the scanner's own deadline. Tests shorten it.
-var transferDeadline = 5 * time.Minute
+// transferDeadline bounds metadata, transfer, and local checks, with
+// transferRate's allowance for the bytes on top; a scan runs after it under
+// the scanner's own deadline. A transfer that stops sending ends sooner, at
+// the file client's stall timeout. Tests shorten both.
+var (
+	transferDeadline       = 5 * time.Minute
+	transferRate     int64 = 512 << 10
+)
+
+// transferBudget allows a transfer of up to bytes at transferRate a second.
+// A 2 GiB M4B gets about 73 minutes; a small EPUB about 5.
+func transferBudget(bytes int64) time.Duration {
+	return transferDeadline + time.Duration(max(bytes, 0)/transferRate)*time.Second
+}

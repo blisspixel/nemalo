@@ -48,8 +48,12 @@ func Copy(ctx context.Context, dst io.Writer, src io.Reader, limit int64, expect
 	return result, ctx.Err()
 }
 
+// MaxLimit is the largest transfer: a 2 GiB M4B or M4A. Callers pass the
+// limit for the format they fetch.
+const MaxLimit = 2 << 30
+
 func (expected Expectation) Validate(limit int64) error {
-	if limit < 1 || limit > 256<<20 || expected.Bytes < -1 || expected.Bytes > limit {
+	if limit < 1 || limit > MaxLimit || expected.Bytes < -1 || expected.Bytes > limit {
 		return errors.New("invalid transfer limit or declared size exceeds budget")
 	}
 	for _, checksum := range []struct {

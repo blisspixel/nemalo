@@ -191,8 +191,8 @@ func TestAcquireScanRequiresAQuarantineOrDelete(t *testing.T) {
 func TestCleanScanAfterTransferDeadlineKeepsTheReceipt(t *testing.T) {
 	// The deadline leaves a slow runner ample time for the local transfer; the
 	// scan then ends only after the deadline has certainly passed.
-	transferDeadline = 2 * time.Second
-	t.Cleanup(func() { transferDeadline = 5 * time.Minute })
+	transferDeadline, transferRate = 2*time.Second, 1<<40
+	t.Cleanup(func() { transferDeadline, transferRate = 5*time.Minute, 512<<10 })
 	p, r := fixture(), request(t)
 	r.Quarantine = filepath.Join(t.TempDir(), "q")
 	started := time.Now()
@@ -235,5 +235,11 @@ func TestDetectionSurvivesHostAntivirusActing(t *testing.T) {
 	}
 	if got := readReceipt(t, r.Output); got.Status != "detected_changed_during_scan" || got.Antivirus != "findings" {
 		t.Fatal("detection not recorded", got)
+	}
+}
+
+func TestTransferBudgetGrowsWithTheBytes(t *testing.T) {
+	if transferBudget(0) != 5*time.Minute || transferBudget(2<<30) != 5*time.Minute+4096*time.Second || transferBudget(-1) != 5*time.Minute {
+		t.Fatal(transferBudget(0), transferBudget(2<<30))
 	}
 }

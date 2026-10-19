@@ -44,7 +44,8 @@ func TestClamAVBatchLoadsSignaturesOnceAndAttributesEachFile(t *testing.T) {
 		{"truncated keeps detection", "/s/b.epub: Eicar FOUND\n/s/a.epub: OK", 1, true, errors.New("exit 1"), [2]string{"incomplete", "findings"}},
 		{"crlf output", strings.ReplaceAll("/s/a.epub: OK\n/s/b.epub: OK"+strings.Replace(summary2, "%d", "0", 1), "\n", "\r\n"), 0, false, nil, [2]string{"no_detections_reported", "no_detections_reported"}},
 		{"exit code disagrees", "/s/a.epub: OK\n/s/b.epub: OK" + strings.Replace(summary2, "%d", "0", 1), 1, false, errors.New("exit 1"), [2]string{"incomplete", "incomplete"}},
-		{"limit alert is a detection", "/s/a.epub: Heuristics.Limits.Exceeded.MaxFileSize FOUND\n/s/b.epub: OK" + strings.Replace(summary2, "%d", "1", 1), 1, false, errors.New("exit 1"), [2]string{"findings", "no_detections_reported"}},
+		{"limit alert is not scanned", "/s/a.epub: Heuristics.Limits.Exceeded.MaxFileSize FOUND\n/s/b.epub: OK" + strings.Replace(summary2, "%d", "1", 1), 1, false, errors.New("exit 1"), [2]string{"incomplete", "no_detections_reported"}},
+		{"limit alert beside a detection", "/s/a.epub: Heuristics.Limits.Exceeded.MaxScanSize FOUND\n/s/a.epub: Eicar FOUND\n/s/b.epub: OK" + strings.Replace(summary2, "%d", "1", 1), 1, false, errors.New("exit 1"), [2]string{"findings", "no_detections_reported"}},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			calls := 0

@@ -1,12 +1,12 @@
 package content
 
 import (
-	"bytes"
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"io"
 
 	"github.com/blisspixel/nemalo/internal/audio"
 )
@@ -27,22 +27,28 @@ func getMP4(ctx context.Context, req Request, result Result) (Result, error) {
 	if req.Part != "" || req.Resource || req.Unit != 0 || req.Offset != 0 || req.Cursor != "" || !req.UnitsOnly {
 		return result, errors.New("mp4-audio/1 lists units only; use units, and library open or export to play the file")
 	}
-	data, err := resolveSource(ctx, req, &result)
-	if err != nil {
-		return result, err
-	}
-	m, err := audio.ProbeMP4(ctx, bytes.NewReader(data), int64(len(data)))
-	if err != nil {
+	// The file is read at offsets; media data is never loaded, so a holding
+	// may be as large as an M4B or M4A is allowed to be.
+	var m audio.MP4
+	var probeErr error
+	err := resolveFile(ctx, req, &result, func(r io.ReaderAt, size int64) error {
+		m, probeErr = audio.ProbeMP4(ctx, r, size)
+		return probeErr
+	})
+	if probeErr != nil {
 		switch {
 		case ctx.Err() != nil:
-			result.Status, err = "cancelled", ctx.Err()
-		case errors.Is(err, audio.ErrBudget):
+			result.Status, probeErr = "cancelled", ctx.Err()
+		case errors.Is(probeErr, audio.ErrBudget):
 			result.Status = "budget_exceeded"
-		case errors.Is(err, audio.ErrNotMP4):
+		case errors.Is(probeErr, audio.ErrNotMP4):
 			result.Status = "unsupported_extraction"
 		default:
 			result.Status = "malformed_content"
 		}
+		return result, probeErr
+	}
+	if err != nil {
 		return result, err
 	}
 	encoded, err := json.Marshal(struct {

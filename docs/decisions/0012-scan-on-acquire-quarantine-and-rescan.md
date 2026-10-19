@@ -5,7 +5,9 @@ Status: accepted and implemented, 2026-10-11. Resolves
 [issue 8](https://github.com/blisspixel/nemalo/issues/8). Extends
 [decision 0003](0003-file-health-and-scanners.md),
 [decision 0007](0007-selected-acquisition.md), and
-[decision 0009](0009-managed-epub-import.md).
+[decision 0009](0009-managed-epub-import.md). A ClamAV limit alert is an
+incomplete scan, not a detection, and scan deadlines grow with file size
+([decision 0040](0040-large-mp4-audio-and-scan-limits.md)).
 
 ## Scan the bytes Nemalo just fetched
 

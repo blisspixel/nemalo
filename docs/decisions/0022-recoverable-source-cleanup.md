@@ -27,7 +27,9 @@ cleanup moves a source into `<library>/cleanup/<id>/files/<folder-relative path>
   packet without a receipt stays for review, as in ingest. A ZIP moves only when
   it starts with an entry, has no comment, holds at least one held book, every
   other member is a directory, and its bytes are unchanged after the check. A
-  file over 256 MiB, and names that differ only by case, stay. Everything else
+  file over its format's limit (256 MiB, or 2 GiB for an M4B or M4A,
+  [decision 0040](0040-large-mp4-audio-and-scan-limits.md)), and names that
+  differ only by case, stay. Everything else
   stays with a reason. The plan digest binds the folder path and every entry's
   disposition and file identities.
 - **Apply.** Under the writer lock, after completing any interrupted rescan, the

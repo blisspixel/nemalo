@@ -141,7 +141,9 @@ nemalo check /path/to/book.epub --epubcheck
 
 Supply real known size/hash values in the second example. `check` requires one
 nonempty regular file, rejects final-component symlinks, and uses a private
-temporary snapshot capped at 256 MiB. Source identity/size/mtime are checked across
+temporary snapshot capped at 256 MiB, or 2 GiB for an M4B or M4A, and refuses
+a snapshot that would not fit in the temporary folder
+([decision 0040](decisions/0040-large-mp4-audio-and-scan-limits.md)). Source identity/size/mtime are checked across
 copying. Temporary files are removed after assessment; cleanup errors fail the
 operation. No content is rendered, executed, or fetched from embedded links.
 
@@ -187,9 +189,10 @@ apt, dnf, zypper, apk, Homebrew, or Windows Security). Nothing is installed or
 updated. On Linux and macOS, install the
 distributor package that provides `clamscan` and update signatures with
 `freshclam` first. On Arch, including Omarchy, that package is `clamav`. Calls
-use argument arrays and no remediation, with two-minute deadlines and 64 KiB
-combined output. ClamAV requests limit and
-encryption alerts. A post-scan hash/identity check binds evidence to the snapshot.
+use argument arrays and no remediation, with deadlines of two minutes plus a
+minute per 256 MiB and 64 KiB combined output. ClamAV requests limit and
+encryption alerts; a limit alert is an incomplete scan, not a detection
+([decision 0040](decisions/0040-large-mp4-audio-and-scan-limits.md)). A post-scan hash/identity check binds evidence to the snapshot.
 Unknown output, failure, timeout, truncation, and missing tools remain unsuccessful;
 Defender output in unsupported languages may be incomplete. No-detection output
 does not independently establish signatures are current or every internal member
@@ -477,6 +480,6 @@ per track when the project links back
 adapter over the same services; `--allow-write` adds only previewed imports
 ([decision 0034](decisions/0034-mcp-import-tools.md)). Website search, other
 Gutenberg formats, recording identity across hosts, decoded audio timing, files
-above 256 MiB, OCR, and column reconstruction stay later. Generated analysis
+above 2 GiB, OCR, and column reconstruction stay later. Generated analysis
 and model/harness integrations remain post-1.0. Issues 1 and 2 are closed;
 their remaining OCR, column, and decoded audio work is milestone 7 and 8.
