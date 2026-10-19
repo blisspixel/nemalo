@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+## 0.1.0-alpha.13
+
+Thirteenth native prerelease. This remains an early library, not 1.0. PDFs and MP3s can now be checked, agents can import through a previewed plan, LibriVox readers are credited per track, and downloads, catalogs, and the journal recover from interrupted transfers, full disks, and torn writes.
+
 - Evaluating a LibriVox item on Archive reads the LibriVox project its call number names. When the project names the item back and its sections match the tracks by count and declared length, each track is credited with its readers; acquisition and ingest keep them, and `library recordings` lists them as narrators. Otherwise no reader is credited ([decision 0035](docs/decisions/0035-librivox-readers.md)).
 - A file request that fails before any body, with a transport error or a 429 or 5xx answer, is sent again up to three times in all, honoring a short `Retry-After`.
 - Tests cover every writer refused as busy while another holds the library, racing imports, and an unwritable store or control folder that recovers once writable.
@@ -16,6 +20,7 @@
 - `catalog fetch gutenberg` continues a download that gutenberg.org drops partway, up to three times, with a `Range` request bound to the first response's strong validator. It accepts only exactly the missing bytes of the same length, starts again when the catalog changed, and still checks the declared length and every row.
 - `acquire` continues its own transfer after a dropped connection, up to three times, when the source sent a strong validator. Each continuation is a checked resume of only the missing bytes, and the whole file is verified at the end. A refused resume, a mismatch, the budget, or cancellation stops at once and keeps the packet. Recording tracks continue in place the same way.
 - The installers retry a dropped connection, a timeout, or a server error up to three times, starting each try from an empty file. A missing release says so at once, and a failure to write the download says the temporary folder may be full instead of reporting a download failure. A temporary folder that cannot be created falls back to `~/.cache` or `%LOCALAPPDATA%`.
+
 ## 0.1.0-alpha.12
 
 Twelfth native prerelease. This remains an early library, not 1.0. Closes issues 20 through 35.
