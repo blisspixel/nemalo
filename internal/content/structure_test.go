@@ -198,7 +198,9 @@ func TestStructuredSelectedEmptyPartAndNamespacedAttributes(t *testing.T) {
 
 func TestStructuredAccessRestrictionsAndPartBudget(t *testing.T) {
 	for _, mutate := range []func(map[string]string){
-		func(files map[string]string) { files["META-INF/encryption.xml"] = "<encryption/>" },
+		func(files map[string]string) {
+			files["META-INF/encryption.xml"] = `<encryption xmlns="urn:oasis:names:tc:opendocument:xmlns:container" xmlns:enc="http://www.w3.org/2001/04/xmlenc#"><enc:EncryptedData><enc:EncryptionMethod Algorithm="http://www.w3.org/2001/04/xmlenc#aes128-cbc"/><enc:CipherData><enc:CipherReference URI="unit0.xhtml"/></enc:CipherData></enc:EncryptedData></encryption>`
+		},
 		func(files map[string]string) {
 			files["book.opf"] = strings.Replace(files["book.opf"], `media-type="application/xhtml+xml"`, `media-type="application/xhtml+xml" properties="scripted"`, 1)
 		},
@@ -448,5 +450,17 @@ func TestStructuredRangeCoverageAndPartContinuation(t *testing.T) {
 	cancel()
 	if _, err := Get(ctx, req); err == nil {
 		t.Fatal("cancellation ignored")
+	}
+}
+
+// Font obfuscation does not restrict reading: the text is unaffected.
+func TestFontObfuscatedEPUBIsReadable(t *testing.T) {
+	q := fixture(t, []string{"<p>Source</p>"}, func(files map[string]string) {
+		files["fonts/a.otf"] = "obfuscated"
+		files["META-INF/encryption.xml"] = `<encryption xmlns="urn:oasis:names:tc:opendocument:xmlns:container" xmlns:enc="http://www.w3.org/2001/04/xmlenc#"><enc:EncryptedData><enc:EncryptionMethod Algorithm="http://www.idpf.org/2008/embedding"/><enc:CipherData><enc:CipherReference URI="fonts/a.otf"/></enc:CipherData></enc:EncryptedData></encryption>`
+	})
+	r, err := Get(context.Background(), q)
+	if err != nil || r.Text != "Sour" {
+		t.Fatal(r.Status, err)
 	}
 }

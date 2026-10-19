@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- An EPUB whose only encryption is font obfuscation is no longer held for review or refused by content access; the obfuscated fonts are recorded. Other encryption, a wrapped key, an unreadable declaration, or an Adobe or LCP DRM license still keeps it in review, and an obfuscated font is never served as a resource ([decision 0036](docs/decisions/0036-epub-font-obfuscation.md)).
+
 ## 0.1.0-alpha.13
 
 Thirteenth native prerelease. This remains an early library, not 1.0. PDFs and MP3s can now be checked, agents can import through a previewed plan, LibriVox readers are credited per track, and downloads, catalogs, and the journal recover from interrupted transfers, full disks, and torn writes.

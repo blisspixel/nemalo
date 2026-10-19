@@ -139,8 +139,9 @@ continuations and bookmarks stay valid.
 A document the extractor cannot represent, such as an SVG reading-order item,
 is an `unsupported_document` unit in `unsupported_units`; other units stay
 readable and continuations stop there as in version 1. Only container access
-restrictions (encryption declarations, scripted items, active content, repeated
-spine references) refuse the whole source; other assessment warnings do not.
+restrictions (encryption beyond font obfuscation, DRM licenses, scripted items,
+active content, repeated spine references; see
+[decision 0036](decisions/0036-epub-font-obfuscation.md)) refuse the whole source; other assessment warnings do not.
 The representation hash covers units, text, and gap descriptors, so a gap
 change invalidates earlier references. On six illustrated Project Gutenberg
 EPUBs from issue 5, version 1 read 28 of 54 units and version 2 read all 54,

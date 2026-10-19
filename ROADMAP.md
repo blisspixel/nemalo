@@ -256,8 +256,10 @@ its setup command, and signature age. ZIP extraction is in milestone 2 ingest.
 PDFs whose page tree and active content were fully examined and clean can be
 checked ([decision 0032](docs/decisions/0032-pdf-checked-policy.md)). An MP3 whose frames
 index without damage or truncation can be checked
-([decision 0033](docs/decisions/0033-mp3-checked-policy.md)). Recording and track
-identities and cross-file work relationships remain. Depends on milestone 2.
+([decision 0033](docs/decisions/0033-mp3-checked-policy.md)). EPUB font
+obfuscation is a recorded fact, not DRM, while other encryption and DRM
+licenses stay restricted ([decision 0036](docs/decisions/0036-epub-font-obfuscation.md)).
+Recording and track identities and cross-file work relationships remain. Depends on milestone 2.
 
 Deliver EPUB package checks, content checks, scanner adapters, metadata handling,
 exact duplicate detection, and verified library publication.

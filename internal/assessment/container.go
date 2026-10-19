@@ -64,6 +64,9 @@ type EPUBFacts struct {
 	TextCharacters        int              `json:"non_whitespace_body_text_characters"`
 	ExpandedBytes         uint64           `json:"expanded_bytes"`
 	PageCountStatus       string           `json:"page_count_status"`
+	// ObfuscatedFonts are font members scrambled with the IDPF or Adobe font
+	// obfuscation algorithm. That is not DRM; the text is unaffected.
+	ObfuscatedFonts []string `json:"obfuscated_fonts,omitempty"`
 }
 
 // EPUBIdentifier is one package identifier string. It is not a work, edition,
@@ -327,10 +330,7 @@ func inspectEPUB(ctx context.Context, r io.ReaderAt, size int64, c *Checks, visi
 	}
 	c.Members, c.ZIPCRC = len(files), "passed"
 	c.EPUB = &EPUBFacts{ExpandedBytes: expanded, PageCountStatus: "unknown_no_fixed_page_count", Titles: []string{}, Languages: []string{}, Identifiers: []EPUBIdentifier{}}
-	if files["META-INF/encryption.xml"] != nil {
-		c.Warnings = append(c.Warnings, "encryption declarations present; may include font obfuscation")
-		c.AccessRestrictions = append(c.AccessRestrictions, "encryption_declarations")
-	}
+	epubEncryption(files, c)
 	mt, err := member(files, "mimetype", 128)
 	if err != nil || string(mt) != "application/epub+zip" || z.File[0].Name != "mimetype" || z.File[0].Method != zip.Store {
 		return errors.New("invalid EPUB mimetype placement, compression, or value")
@@ -488,6 +488,9 @@ func inspectEPUB(ctx context.Context, r io.ReaderAt, size int64, c *Checks, visi
 	c.EPUBPackage = "container_manifest_spine_checked"
 	c.ContentReview = "limited_token_indicators_only"
 	if resource != nil {
+		if containsString(c.EPUB.ObfuscatedFonts, resource.name) {
+			return errObfuscatedFont
+		}
 		resource.data, err = member(files, resource.name, resource.limit)
 		if err != nil {
 			return err
