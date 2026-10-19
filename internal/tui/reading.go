@@ -103,6 +103,20 @@ func (m *model) startRead(units bool, unit int, cursor string, repeat bool) tea.
 		req.Navigation = ""
 		req.Unit = 0
 	}
+	if !units && cursor == "" && !repeat && len(m.entries) > 0 && m.entries[m.selected].page {
+		e := m.entries[m.selected]
+		if e.pageRef == "" {
+			m.status = "This page label has no resolved location in the book."
+			m.resize()
+			return nil
+		}
+		// The marker's own reference reads from it; it is bound to the page list.
+		req.Representation, req.Cursor, req.Unit = "", e.pageRef, 0
+	}
+	if cursor != "" && m.reader.hasLast && (m.reader.last.Representation == "epub-page-list/1" || m.reader.last.Representation == "") {
+		// A read from a page label continues in epub-text/2; the cursor names it.
+		req.Representation = ""
+	}
 	if repeat {
 		req = m.reader.last
 	}
@@ -113,6 +127,42 @@ func (m *model) startRead(units bool, unit int, cursor string, repeat bool) tea.
 	m.reader.last, m.reader.hasLast = req, true
 	m.busy = true
 	m.status = "Retrieving source bytes. Escape cancels; no progress is recorded."
+	m.setReport("")
+	m.populate(nil)
+	m.resize()
+	return func() tea.Msg {
+		data, err := service.Content(ctx, req)
+		return result{id: id, data: data, err: err}
+	}
+}
+
+// listPages shows the book's declared page labels. It does not read text
+// and does not record a position.
+func (m *model) listPages() tea.Cmd {
+	if m.busy {
+		return nil
+	}
+	if m.reader.asset == "" || m.input.Value() == "" || m.secondary.Value() == "" {
+		m.status = "Select an asset in Holdings with r and enter its explicit root."
+		m.resize()
+		return nil
+	}
+	if m.reader.representation == "mpeg-audio/1" || m.reader.representation == "pdf-text/1" {
+		m.status = "Declared page labels are an EPUB page list. A PDF's printed labels are in its units (u)."
+		m.resize()
+		return nil
+	}
+	req := content.Request{
+		SchemaVersion: 1, Catalog: m.input.Value(), Root: m.secondary.Value(),
+		AssetID: m.reader.asset, Representation: "epub-page-list/1", UnitsOnly: true, MaxBytes: 4096,
+	}
+	ctx, cancel := context.WithCancel(m.ctx)
+	m.cancel = cancel
+	m.id++
+	id, service := m.id, m.service
+	m.reader.last, m.reader.hasLast = req, true
+	m.busy = true
+	m.status = "Reading the declared page labels. Nothing is recorded."
 	m.setReport("")
 	m.populate(nil)
 	m.resize()
@@ -180,6 +230,14 @@ func (m *model) readSelected(speed bool) tea.Cmd {
 		}
 		catalog, root, asset := m.input.Value(), m.secondary.Value(), m.reader.asset
 		bound := m.reader.boundCatalog == catalog && m.reader.boundRoot == root
+		if bound && len(m.entries) > 0 && m.entries[m.selected].page {
+			e := m.entries[m.selected]
+			if e.pageRef == "" {
+				m.status = "This page label has no resolved location in the book."
+				break
+			}
+			return m.openPager(catalog, root, asset, representation, reader.Position{Unit: e.pageUnit, Offset: e.pageOffset}, speed, reader.DefaultRate)
+		}
 		if bound && len(m.entries) > 0 && m.entries[m.selected].nav {
 			e := m.entries[m.selected]
 			if !e.navResolved {
@@ -225,7 +283,7 @@ func (m *model) handoff(representation string) (reader.Position, bool) {
 	}
 	shared := r.markRepresentation == representation
 	if representation == "epub-text/2" {
-		shared = r.markRepresentation == "epub-text/2" || r.markRepresentation == "epub-structure/1" || r.markRepresentation == "epub-nav/1"
+		shared = r.markRepresentation == "epub-text/2" || r.markRepresentation == "epub-structure/1" || r.markRepresentation == "epub-nav/1" || r.markRepresentation == "epub-page-list/1"
 	}
 	if !shared {
 		return reader.Position{}, false

@@ -37,9 +37,11 @@ nemalo mcp serve --scope /path/to/library --allow-network
 
 Implemented tools are all read-only: `nemalo_capabilities`, `library_status`,
 `library_list`, `library_recordings`, `library_audit`, `library_check`, `file_check` (no antivirus), and
-`content_capabilities`, `content_units`, `content_navigation`, `content_read`, `content_locate`, `content_source`,
+`content_capabilities`, `content_units`, `content_navigation`, `content_pages`, `content_read`, `content_locate`, `content_source`,
 `content_resource`. `content_navigation` lists source-declared EPUB contents;
 a read of one entry uses `content_read` with representation `epub-nav/1`.
+`content_pages` lists the EPUB's declared page labels; a read from one uses
+`content_read` with representation `epub-page-list/1` and its cursor or exact `label`.
 `catalog_search` and `catalog_evaluate` exist only with
 `--allow-network`. They search Open Library and Internet Archive.
 Gutenberg search, `evaluate --files`, and `acquire gutenberg:NUMBER` are CLI

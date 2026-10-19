@@ -71,17 +71,47 @@ func getTextV2(ctx context.Context, req Request, result Result) (Result, error) 
 		}
 		req.Unit, req.Offset = c.Unit, c.Offset
 	}
-	data, err := resolveSource(ctx, req, &result)
+	documents, _, err := loadEPUBText(ctx, req, &result)
 	if err != nil {
 		return result, err
 	}
+	view, err := viewTextV2(documents)
+	if err != nil {
+		result.Status = "budget_exceeded"
+		return result, err
+	}
+	result.UnsupportedUnits = view.unsupported
+	result.RepresentationID = view.id
+	result.Units = view.units
+	if req.Cursor != "" && c.RepresentationID != result.RepresentationID {
+		result.Status = "stale_reference"
+		return result, errors.New("continuation representation changed")
+	}
+	if req.UnitsOnly {
+		result.Status = "units_available"
+		return finishStructured(ctx, result)
+	}
+	if req.Find != "" {
+		return locate(ctx, req, result, view.units, view.texts)
+	}
+	return readTextV2Range(ctx, req, result, view, req.Unit, req.Offset)
+}
+
+// loadEPUBText resolves the source and loads every reading-order document
+// tolerantly, as epub-text/2 and the representations over its text do. It
+// returns the verified source bytes too.
+func loadEPUBText(ctx context.Context, req Request, result *Result) ([]document, []byte, error) {
+	data, err := resolveSource(ctx, req, result)
+	if err != nil {
+		return nil, nil, err
+	}
 	if bytes.HasPrefix(data, []byte("%PDF-")) {
 		result.Status = "unsupported_extraction"
-		return result, errors.New("this asset is a PDF; request representation pdf-text/1")
+		return nil, nil, errors.New("this asset is a PDF; request representation pdf-text/1")
 	}
 	if !bytes.HasPrefix(data, []byte("PK\x03\x04")) {
 		result.Status = "unsupported_extraction"
-		return result, errUnsupported
+		return nil, nil, errUnsupported
 	}
 	documents, _, err := loadDocuments(ctx, req, cursor{}, data, true)
 	if err != nil {
@@ -89,9 +119,24 @@ func getTextV2(ctx context.Context, req Request, result Result) (Result, error) 
 		if ctx.Err() != nil {
 			err = ctx.Err()
 		}
-		return result, err
+		return nil, nil, err
 	}
-	units, texts, gaps := []Unit{}, []string{}, [][]Gap{}
+	return documents, data, nil
+}
+
+// textV2View is the epub-text/2 view of loaded documents. Its id is hashed
+// exactly as epub-text/2 representation identities always have been.
+type textV2View struct {
+	units       []Unit
+	texts       []string
+	gaps        [][]Gap
+	unsupported []int
+	documents   []document
+	id          string
+}
+
+func viewTextV2(documents []document) (textV2View, error) {
+	v := textV2View{units: []Unit{}, texts: []string{}, gaps: [][]Gap{}, documents: documents}
 	for _, d := range documents {
 		u := d.unit
 		// Parts belong to the structured representation; text/2 reports gaps.
@@ -102,58 +147,53 @@ func getTextV2(ctx context.Context, req Request, result Result) (Result, error) 
 				u.Extraction = "supported_text_with_gaps"
 			}
 		} else {
-			result.UnsupportedUnits = append(result.UnsupportedUnits, u.Index)
+			v.unsupported = append(v.unsupported, u.Index)
 		}
-		units = append(units, u)
-		texts = append(texts, d.text)
-		gaps = append(gaps, documentGaps(d))
+		v.units = append(v.units, u)
+		v.texts = append(v.texts, d.text)
+		v.gaps = append(v.gaps, documentGaps(d))
 	}
 	encoded, err := json.Marshal(struct {
 		Extractor string
 		Units     []Unit
 		Texts     []string
 		Gaps      [][]Gap
-	}{TextExtractorV2, units, texts, gaps})
+	}{TextExtractorV2, v.units, v.texts, v.gaps})
 	if err != nil {
-		return result, err
+		return v, err
 	}
 	if len(encoded) > 32<<20 {
-		result.Status = "budget_exceeded"
-		return result, errBudget
+		return v, errBudget
 	}
 	hash := sha256.Sum256(encoded)
-	result.RepresentationID = "sha256:" + hex.EncodeToString(hash[:])
-	result.Units = units
-	if req.Cursor != "" && c.RepresentationID != result.RepresentationID {
-		result.Status = "stale_reference"
-		return result, errors.New("continuation representation changed")
-	}
-	if req.UnitsOnly {
-		result.Status = "units_available"
-		return finishStructured(ctx, result)
-	}
-	if req.Find != "" {
-		return locate(ctx, req, result, units, texts)
-	}
-	if req.Unit >= len(texts) || req.Offset > len(texts[req.Unit]) || (req.Offset < len(texts[req.Unit]) && !utf8.RuneStart(texts[req.Unit][req.Offset])) {
+	v.id = "sha256:" + hex.EncodeToString(hash[:])
+	return v, nil
+}
+
+// readTextV2Range reads epub-text/2 text from unit and offset, with its gaps,
+// breaks, and an epub-text/2 continuation. The locator is always in
+// epub-text/2 coordinates and identity.
+func readTextV2Range(ctx context.Context, req Request, result Result, v textV2View, unit, offset int) (Result, error) {
+	texts, units, gaps := v.texts, v.units, v.gaps
+	if unit >= len(texts) || offset > len(texts[unit]) || (offset < len(texts[unit]) && !utf8.RuneStart(texts[unit][offset])) {
 		result.Status = "invalid_request"
 		return result, errors.New("unit or UTF-8 byte offset is outside the extracted source")
 	}
-	if units[req.Unit].Extraction == "unsupported_document" {
+	if units[unit].Extraction == "unsupported_document" {
 		// A continuation stops here. Skipping to a later unit needs an explicit request.
 		result.Status = "unsupported_extraction"
 		return result, errUnsupported
 	}
-	text := texts[req.Unit]
-	end := min(len(text), req.Offset+req.MaxBytes)
+	text := texts[unit]
+	end := min(len(text), offset+req.MaxBytes)
 	for end < len(text) && !utf8.RuneStart(text[end]) {
 		end--
 	}
-	result.Text = text[req.Offset:end]
-	result.Locator = &Locator{SchemaVersion: 1, AssetID: req.AssetID, Extractor: TextExtractorV2, RepresentationID: result.RepresentationID, Unit: req.Unit, Start: req.Offset, End: end, Member: units[req.Unit].Member, OffsetUnit: "utf8_bytes"}
-	result.EndOfUnit, result.EndOfSource = end == len(text), end == len(text) && req.Unit == len(texts)-1
+	result.Text = text[offset:end]
+	result.Locator = &Locator{SchemaVersion: 1, AssetID: req.AssetID, Extractor: TextExtractorV2, RepresentationID: v.id, Unit: unit, Start: offset, End: end, Member: units[unit].Member, OffsetUnit: "utf8_bytes"}
+	result.EndOfUnit, result.EndOfSource = end == len(text), end == len(text) && unit == len(texts)-1
 	result.Status = "complete_range"
-	result.Breaks = rangeBreaks(text, documents[req.Unit].breaks, req.Offset, end)
+	result.Breaks = rangeBreaks(text, v.documents[unit].breaks, offset, end)
 	result.Coverage = &Coverage{Text: "complete_selected_range", KnownGaps: []string{}, ReferencedOutsideRange: []string{}, Unknown: []string{"CSS visibility, rendered layout, accessibility quality, and semantic completeness are not established."}}
 	if !result.EndOfUnit {
 		result.Status = "partial_range"
@@ -162,19 +202,19 @@ func getTextV2(ctx context.Context, req Request, result Result) (Result, error) 
 	// A zero-width gap belongs to the range that starts at its offset, or to the
 	// final range of the unit, so consecutive ranges disclose each gap exactly once.
 	result.Gaps = []Gap{}
-	for _, g := range gaps[req.Unit] {
-		if (g.Offset >= req.Offset && g.Offset < end) || (g.Offset == end && result.EndOfUnit) {
+	for _, g := range gaps[unit] {
+		if (g.Offset >= offset && g.Offset < end) || (g.Offset == end && result.EndOfUnit) {
 			result.Gaps = append(result.Gaps, g)
 			result.Coverage.KnownGaps = append(result.Coverage.KnownGaps, g.Part)
 			result.Coverage.Text = "known_extraction_gaps"
 		}
 	}
 	if !result.EndOfSource {
-		nextUnit, nextOffset := req.Unit, end
+		nextUnit, nextOffset := unit, end
 		if result.EndOfUnit {
-			nextUnit, nextOffset = req.Unit+1, 0
+			nextUnit, nextOffset = unit+1, 0
 		}
-		result.Continuation = encodeCursor(cursor{SchemaVersion: 1, AssetID: req.AssetID, Extractor: TextExtractorV2, RepresentationID: result.RepresentationID, Unit: nextUnit, Offset: nextOffset, Representation: "epub-text/2"})
+		result.Continuation = encodeCursor(cursor{SchemaVersion: 1, AssetID: req.AssetID, Extractor: TextExtractorV2, RepresentationID: v.id, Unit: nextUnit, Offset: nextOffset, Representation: "epub-text/2"})
 	}
 	return finishStructured(ctx, result)
 }

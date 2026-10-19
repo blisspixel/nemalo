@@ -60,6 +60,7 @@ item's other files for a new, deliberate review. See
 | o in managed Holdings results | Open a verified read-only copy in the default application |
 | Enter in Read results | Retrieve the selected source unit |
 | n / r / u in Read results | Next range / repeat last request / list units |
+| c / g in Read results | List the EPUB's declared contents / declared page labels, such as iv or 42. Enter reads from the selection |
 | p / s in Read results | Open as pages / one word at a time: the selected unit or entry of a listing, else where the last excerpt began, else the first unit |
 | Escape | Back; cancel active work |
 | Ctrl+C | Quit |

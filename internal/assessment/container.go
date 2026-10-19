@@ -111,6 +111,17 @@ type EPUBNavSource struct {
 // validated. Inspect does not retain it.
 type EPUBNavigation struct {
 	Sources []EPUBNavSource
+	// Pagination is each package's declared source of its page markers.
+	Pagination []EPUBPagination
+}
+
+// EPUBPagination is what a package states about the source of its page
+// markers: dc:source values refined as source-of pagination, and any
+// pageBreakSource property. Neither is checked against a print edition.
+type EPUBPagination struct {
+	Package          string
+	Sources          []string
+	PageBreakSources []string
 }
 
 // ReadEPUBNavigation validates the EPUB and returns declared NAV and NCX
@@ -415,6 +426,7 @@ func inspectEPUB(ctx context.Context, r io.ReaderAt, size int64, c *Checks, visi
 			if err := collectNavigation(files, entry.Path, data, documents, nav); err != nil {
 				return err
 			}
+			nav.Pagination = append(nav.Pagination, collectPagination(entry.Path, data))
 		}
 	}
 	if c.EPUB.TextCharacters == 0 {
@@ -685,4 +697,47 @@ func member(files map[string]*zip.File, name string, limit uint64) ([]byte, erro
 	}
 	defer r.Close()
 	return io.ReadAll(io.LimitReader(r, int64(limit)+1))
+}
+
+// collectPagination reads the package's declared pagination source. The
+// package was already parsed; a value that does not parse is no declaration.
+// At most 16 values of at most 1024 bytes each are kept.
+func collectPagination(packagePath string, opf []byte) EPUBPagination {
+	out := EPUBPagination{Package: packagePath}
+	var pkg struct {
+		Sources []struct {
+			ID    string `xml:"id,attr"`
+			Value string `xml:",chardata"`
+		} `xml:"metadata>source"`
+		Metas []struct {
+			Refines  string `xml:"refines,attr"`
+			Property string `xml:"property,attr"`
+			Value    string `xml:",chardata"`
+		} `xml:"metadata>meta"`
+	}
+	if xml.Unmarshal(opf, &pkg) != nil {
+		return out
+	}
+	keep := func(list []string, value string) []string {
+		value = strings.Join(strings.Fields(value), " ")
+		if value == "" || len(value) > 1024 || len(list) >= 16 || !utf8.ValidString(value) {
+			return list
+		}
+		return append(list, value)
+	}
+	pagination := map[string]bool{}
+	for _, m := range pkg.Metas {
+		switch {
+		case m.Property == "source-of" && strings.TrimSpace(m.Value) == "pagination" && strings.HasPrefix(m.Refines, "#"):
+			pagination[m.Refines[1:]] = true
+		case m.Property == "pageBreakSource" || m.Property == "a11y:pageBreakSource":
+			out.PageBreakSources = keep(out.PageBreakSources, m.Value)
+		}
+	}
+	for _, s := range pkg.Sources {
+		if s.ID != "" && pagination[s.ID] {
+			out.Sources = keep(out.Sources, s.Value)
+		}
+	}
+	return out
 }

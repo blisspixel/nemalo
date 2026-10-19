@@ -250,7 +250,9 @@ Explicit bookmarks are a separate library journal, written only by bookmark
 commands and the TUI save key
 ([decision 0027](decisions/0027-explicit-local-bookmarks.md)).
 Declared EPUB contents are `epub-nav/1`
-([decision 0026](decisions/0026-epub-navigation-and-chapter-selection.md)).
+([decision 0026](decisions/0026-epub-navigation-and-chapter-selection.md)), and declared
+page labels are `epub-page-list/1`
+([decision 0031](decisions/0031-epub-page-list.md)).
 
 Expand bounded text extraction and search per supported format. Derived indexes key
 on asset hash and extractor version; rebuild them without modifying originals.

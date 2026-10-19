@@ -58,6 +58,9 @@ type Request struct {
 	// Navigation selects epub-nav/1 evidence when a book declares more than
 	// one: nav-doc or ncx. It is required for a read in that case.
 	Navigation string
+	// Label selects an epub-page-list/1 marker by its exact declared label.
+	// Several markers with that label are returned as candidates.
+	Label string
 }
 
 func (r Request) Validate() error {
@@ -88,6 +91,9 @@ func (r Request) Validate() error {
 	}
 	if r.Navigation != "" && (r.Navigation != "nav-doc" && r.Navigation != "ncx" || r.Representation != "epub-nav/1" || r.Cursor != "") {
 		return errors.New("navigation source must be nav-doc or ncx, applies only to an epub-nav/1 request, and cannot be combined with a cursor")
+	}
+	if r.Label != "" && (len(r.Label) > maxNavLabel || !utf8.ValidString(r.Label) || r.Representation != "epub-page-list/1" || r.Cursor != "" || r.UnitsOnly || r.Unit != 0) {
+		return errors.New("label is valid UTF-8 of at most 256 bytes and applies only to an epub-page-list/1 read, without a cursor or unit")
 	}
 	return nil
 }
@@ -159,6 +165,13 @@ type Result struct {
 	// A spine boundary is EndOfUnit; it does not by itself end the declared range.
 	RangeStatus string   `json:"range_status,omitempty"`
 	RangeEnd    *Locator `json:"range_end,omitempty"`
+	// PageLists, Pagination, Page, and PageEnd are epub-page-list/1 results:
+	// the declared page lists, their stated source, the selected marker, and
+	// the next marker when it is established to follow.
+	PageLists  []PageList  `json:"page_lists,omitempty"`
+	Pagination *Pagination `json:"pagination,omitempty"`
+	Page       *PageEntry  `json:"page,omitempty"`
+	PageEnd    *Locator    `json:"page_end,omitempty"`
 }
 
 type cursor struct {
@@ -214,6 +227,7 @@ func Get(ctx context.Context, req Request) (result Result, err error) {
 			result.Parts, result.Coverage, result.Resource, result.Gaps = nil, nil, nil, nil
 			result.Audio, result.AudioRange, result.Matches = nil, nil, nil
 			result.Navigation, result.RangeEnd = nil, nil
+			result.PageLists, result.Pagination, result.Page, result.PageEnd = nil, nil, nil, nil
 			result.RangeStatus = ""
 			result.EndOfUnit, result.EndOfSource = false, false
 		}
@@ -259,6 +273,11 @@ func Get(ctx context.Context, req Request) (result Result, err error) {
 			return result, errors.New("part/resource access is unavailable for pdf-text/1")
 		}
 		return getPDFText(ctx, req, result)
+	case "epub-page-list/1":
+		if req.Part != "" || req.Resource || req.Find != "" {
+			return result, errors.New("part, resource, and find are unavailable for epub-page-list/1")
+		}
+		return getPageList(ctx, req, result)
 	case "epub-nav/1":
 		if req.Part != "" || req.Resource || req.Find != "" || req.Sample != 0 {
 			return result, errors.New("epub-nav/1 reads a declared entry by --unit, or continues with its cursor")

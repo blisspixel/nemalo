@@ -29,6 +29,11 @@ type entry struct {
 	navOrder           int
 	navUnit, navOffset int
 	navResolved        bool
+	// page marks one declared page-list marker; pageRef reads from it and
+	// pageUnit and pageOffset are its epub-text/2 position.
+	page                 bool
+	pageRef              string
+	pageUnit, pageOffset int
 }
 
 // Browsing is a presentation of shared service results, not another catalog.
@@ -175,6 +180,34 @@ func (m *model) populate(data any) {
 			for _, u := range p.Units {
 				label := pageLabel(u.PageLabel)
 				m.entries = append(m.entries, entry{title: fmt.Sprintf("Page %d, label %s", u.Index, label), summary: fmt.Sprintf("%s | %d text bytes | %d gaps", words(u.Extraction), u.TextBytes, u.KnownGaps), detail: fmt.Sprintf("PDF page\n\nPhysical index: %d (zero-based)\nPrinted label: %s\nExtraction: %s\nText bytes: %d; located gaps: %d\n\nText is in content-stream order; columns are not reconstructed and there is no OCR.\nEnter retrieves a bounded range of this page.\nNo reading progress is recorded.", u.Index, label, words(u.Extraction), u.TextBytes, u.KnownGaps)})
+			}
+		} else if p.Representation == "epub-page-list/1" && (p.Status == "units_available" || p.Status == "no_page_list") {
+			source := "Pagination source: not stated by the package."
+			if p.Pagination != nil && p.Pagination.Status == "declared" {
+				source = "Pagination source, as the package states it: " + list(append(append([]string{}, p.Pagination.Sources...), p.Pagination.PageBreakSources...))
+			}
+			if len(p.PageLists) == 0 {
+				m.entries = append(m.entries, entry{title: "No declared page list", summary: "This EPUB declares no page labels", detail: "No page labels are made up from text length or screen pages.\n" + source + "\n"})
+			}
+			for _, l := range p.PageLists {
+				if l.Problem != "" {
+					m.entries = append(m.entries, entry{title: "Page list not used: " + words(l.Problem), summary: line(l.Path), detail: rows("Path", line(l.Path), "Problem", words(l.Problem)) + "\nThe source was recorded and not repaired.\n"})
+					continue
+				}
+				for _, e := range l.Entries {
+					where := words(e.Status)
+					resolved := e.Status == "resolved" && e.Unit != nil && e.Offset != nil
+					if resolved {
+						where = fmt.Sprintf("unit %d, byte %d", *e.Unit, *e.Offset)
+					}
+					detail := fmt.Sprintf("Declared page label %s\n\n", line(e.Label)) + rows("Marker", fmt.Sprint(e.Order), "Status", words(e.Status), "Target", where, "Href", line(e.Href)) + "\n" + source + "\n" +
+						"A page label is this EPUB's own marker. It is not a screen page, and it is not checked against a print edition.\nEnter reads from it; p pages from it. Neither records reading progress.\n"
+					item := entry{title: "Page " + line(e.Label), summary: joinParts(where, fmt.Sprintf("marker %d", e.Order)), detail: detail, page: true, pageRef: e.Reference}
+					if resolved {
+						item.pageUnit, item.pageOffset = *e.Unit, *e.Offset
+					}
+					m.entries = append(m.entries, item)
+				}
 			}
 		} else if p.Status == "units_available" && p.Representation == "epub-nav/1" {
 			if len(p.Navigation) == 0 {
@@ -470,6 +503,10 @@ func (m *model) browserKey(key string) (bool, tea.Cmd) {
 	case "c":
 		if m.mode == "read" {
 			return true, m.listNavigation()
+		}
+	case "g":
+		if m.mode == "read" {
+			return true, m.listPages()
 		}
 	case "m":
 		if m.mode == "read" {

@@ -695,8 +695,17 @@ func navDescendant(entries []NavEntry, ancestor, i int) bool {
 }
 
 func parseNavDocument(ctx context.Context, data []byte) ([]NavEntry, error) {
+	entries, _, _, err := parseNavList(ctx, data, "toc")
+	return entries, err
+}
+
+// parseNavList reads the entries of the nav element of one epub:type, toc or
+// page-list. More than one toc fails, as epub-nav/1 always has; for a page
+// list the caller is told how many there were. hidden reports a hidden
+// attribute on the nav element.
+func parseNavList(ctx context.Context, data []byte, kind string) (entries []NavEntry, hidden bool, navs int, err error) {
 	if len(data) > 2<<20 || !utf8.Valid(data) {
-		return nil, errBudget
+		return nil, false, 0, errBudget
 	}
 	dec := xml.NewDecoder(bytes.NewReader(data))
 	dec.CharsetReader = func(string, io.Reader) (io.Reader, error) {
@@ -711,40 +720,43 @@ func parseNavDocument(ctx context.Context, data []byte) ([]NavEntry, error) {
 	}
 	stack := []frame{}
 	liEntries := []int{}
-	entries := []NavEntry{}
-	tocs := 0
+	entries = []NavEntry{}
 	inTOC := false
 	for {
 		if err := ctx.Err(); err != nil {
-			return nil, err
+			return nil, false, 0, err
 		}
 		token, err := dec.Token()
 		if errors.Is(err, io.EOF) {
-			return entries, nil
+			return entries, hidden, navs, nil
 		}
 		if err != nil {
-			return nil, err
+			return nil, false, 0, err
 		}
 		switch t := token.(type) {
 		case xml.StartElement:
 			if len(stack) >= 256 {
-				return nil, errBudget
+				return nil, false, 0, errBudget
 			}
 			f := frame{local: t.Name.Local}
 			if len(stack) > 0 {
 				f.inTOC = stack[len(stack)-1].inTOC
 			}
-			if t.Name.Local == "nav" && tocType(t) {
-				tocs++
-				if tocs > 1 {
-					return nil, fmt.Errorf("%w: more than one toc nav", errBudget)
+			if t.Name.Local == "nav" && navType(t, kind) {
+				navs++
+				if navs > 1 && kind == "toc" {
+					return nil, false, 0, fmt.Errorf("%w: more than one toc nav", errBudget)
 				}
+				if navs > 1 {
+					return nil, false, navs, nil
+				}
+				hidden = hasAttr(t, "hidden")
 				f.inTOC = true
 			}
 			inTOC = f.inTOC
 			if inTOC && t.Name.Local == "li" {
 				if len(liEntries) >= maxNavDepth {
-					return nil, fmt.Errorf("%w: navigation deeper than %d", errBudget, maxNavDepth)
+					return nil, false, 0, fmt.Errorf("%w: navigation deeper than %d", errBudget, maxNavDepth)
 				}
 				liEntries = append(liEntries, -1)
 				f.li = true
@@ -757,14 +769,14 @@ func parseNavDocument(ctx context.Context, data []byte) ([]NavEntry, error) {
 			}
 			if inTOC && (t.Name.Local == "a" || t.Name.Local == "span") && len(liEntries) > 0 && liEntries[len(liEntries)-1] < 0 && !labelAlready {
 				if len(entries) >= maxNavEntries {
-					return nil, fmt.Errorf("%w: more than %d navigation entries", errBudget, maxNavEntries)
+					return nil, false, 0, fmt.Errorf("%w: more than %d navigation entries", errBudget, maxNavEntries)
 				}
 				href := ""
 				if t.Name.Local == "a" {
 					href = attr(t, "href")
 				}
 				if len(href) > maxNavHref {
-					return nil, fmt.Errorf("%w: navigation href exceeds %d bytes", errBudget, maxNavHref)
+					return nil, false, 0, fmt.Errorf("%w: navigation href exceeds %d bytes", errBudget, maxNavHref)
 				}
 				parent := navParent(liEntries)
 				level := len(liEntries)
@@ -775,13 +787,13 @@ func parseNavDocument(ctx context.Context, data []byte) ([]NavEntry, error) {
 			stack = append(stack, f)
 		case xml.EndElement:
 			if len(stack) == 0 {
-				return nil, errUnsupported
+				return nil, false, 0, errUnsupported
 			}
 			f := stack[len(stack)-1]
 			if f.label {
 				label := collapseLabel(stack[len(stack)-1].labelText.String())
 				if len(label) > maxNavLabel {
-					return nil, fmt.Errorf("%w: navigation label exceeds %d bytes", errBudget, maxNavLabel)
+					return nil, false, 0, fmt.Errorf("%w: navigation label exceeds %d bytes", errBudget, maxNavLabel)
 				}
 				if li := len(liEntries) - 1; li >= 0 && liEntries[li] >= 0 {
 					entries[liEntries[li]].Label = label
@@ -802,11 +814,12 @@ func parseNavDocument(ctx context.Context, data []byte) ([]NavEntry, error) {
 	}
 }
 
-func tocType(t xml.StartElement) bool {
+// navType reports a nav element of one epub:type in the EPUB namespace.
+func navType(t xml.StartElement, kind string) bool {
 	for _, a := range t.Attr {
 		if a.Name.Local == "type" && a.Name.Space == "http://www.idpf.org/2007/ops" {
 			for _, v := range strings.Fields(a.Value) {
-				if v == "toc" {
+				if v == kind {
 					return true
 				}
 			}

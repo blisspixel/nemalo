@@ -122,6 +122,8 @@ Usage: nemalo <command> [options]
                       List supported EPUB reading-order documents, offline
   content navigation CATALOG --root DIRECTORY --asset sha256:HASH
                       List source-declared EPUB contents (nav and NCX), offline
+  content pages CATALOG --root DIRECTORY --asset sha256:HASH
+                      List an EPUB's declared page labels (page-list), offline
   content read CATALOG --root DIRECTORY --asset sha256:HASH
                       Retrieve bounded source text with exact continuation, offline
   content locate CATALOG --root DIRECTORY --asset sha256:HASH --text TEXT
@@ -173,14 +175,18 @@ Library import options: --apply, --scan
 Library rescan options: --apply (without it, scans and reports but writes nothing)
 Library audit options: --root DIRECTORY for a snapshot catalog
 Content read options: --unit 0, --text-offset 0, --max-bytes 4096, --cursor TOKEN
-                     --representation epub-text/2|epub-text/1|epub-structure/1|epub-nav/1|pdf-text/1|mpeg-audio/1,
-                     --navigation nav-doc|ncx, --part ID, --sample N (mpeg-audio/1)
+                     --representation epub-text/2|epub-text/1|epub-structure/1|epub-nav/1|epub-page-list/1|pdf-text/1|mpeg-audio/1,
+                     --navigation nav-doc|ncx, --label LABEL (epub-page-list/1), --part ID, --sample N (mpeg-audio/1)
 The default epub-text/2 omits images, tables, mathematics, and media from the
 text and locates each omission as a gap. A continuation keeps the representation
 it was issued for. epub-nav/1 reads one source-declared contents entry: --unit
 is that entry's order, and --text-offset is relative to the entry. When a book
 has both a navigation document and an NCX, a read names which one with
---navigation. Extraction is not rendered layout or acknowledgement of reading.
+--navigation. epub-page-list/1 reads from one declared page label: --label
+LABEL by its exact text, --unit by its order, or --cursor with its reference;
+a label that several markers carry lists them instead. A page label is the
+EPUB's own marker, not a screen page or a print-edition match.
+Extraction is not rendered layout or acknowledgement of reading.
 Bookmarks are a separate explicit record. Reading, repeating, continuing, and
 closing do not write one. bookmark save checks the representation id you pass
 and refuses the save when the bytes no longer match. bookmark resume returns
@@ -292,6 +298,7 @@ func Execute(ctx context.Context, args []string, out, errOut io.Writer, service 
 	flags.StringVar(&contentRequest.Representation, "representation", "", "negotiated content representation; a continuation selects its own")
 	flags.StringVar(&contentRequest.Part, "part", "", "exact source part ID")
 	flags.StringVar(&contentRequest.Navigation, "navigation", "", "epub-nav/1 source: nav-doc or ncx")
+	flags.StringVar(&contentRequest.Label, "label", "", "epub-page-list/1 page label")
 	representationID := flags.String("representation-id", "", "sha256: representation id observed for this location")
 	bookmarkInput := flags.String("input", "", "bookmark export to import")
 	replaceBookmarks := flags.Bool("replace", false, "replace differing bookmark locations on import")
@@ -438,8 +445,8 @@ func Execute(ctx context.Context, args []string, out, errOut io.Writer, service 
 		}
 		return guide(next(write(data, nil, 0), present.NextAfterAcquisition(data, c.Library)), data.Antivirus, true)
 	case "content":
-		if flags.NArg() != 1 || (action != "units" && action != "read" && action != "source" && action != "resource" && action != "locate" && action != "navigation") {
-			return write(nil, errors.New("use content units/navigation/read/locate/source/resource CATALOG --root DIRECTORY --asset sha256:HASH"), 2)
+		if flags.NArg() != 1 || (action != "units" && action != "read" && action != "source" && action != "resource" && action != "locate" && action != "navigation" && action != "pages") {
+			return write(nil, errors.New("use content units/navigation/pages/read/locate/source/resource CATALOG --root DIRECTORY --asset sha256:HASH"), 2)
 		}
 		if action == "locate" {
 			if *findText == "" {
@@ -447,7 +454,13 @@ func Execute(ctx context.Context, args []string, out, errOut io.Writer, service 
 			}
 			contentRequest.Find = *findText
 		}
-		contentRequest.Catalog, contentRequest.Root, contentRequest.UnitsOnly = flags.Arg(0), *auditRoot, action == "units" || action == "navigation"
+		contentRequest.Catalog, contentRequest.Root, contentRequest.UnitsOnly = flags.Arg(0), *auditRoot, action == "units" || action == "navigation" || action == "pages"
+		if action == "pages" {
+			if contentRequest.Representation != "" && contentRequest.Representation != "epub-page-list/1" {
+				return write(nil, errors.New("content pages lists representation epub-page-list/1"), 2)
+			}
+			contentRequest.Representation = "epub-page-list/1"
+		}
 		if action == "navigation" {
 			if contentRequest.Representation != "" && contentRequest.Representation != "epub-nav/1" {
 				return write(nil, errors.New("content navigation lists representation epub-nav/1"), 2)
@@ -984,7 +997,7 @@ func flagApplies(command, action, name string) bool {
 		return true
 	}
 	if command == "content" {
-		if action != "units" && action != "read" && action != "source" && action != "resource" && action != "locate" && action != "navigation" {
+		if action != "units" && action != "read" && action != "source" && action != "resource" && action != "locate" && action != "navigation" && action != "pages" {
 			return false
 		}
 		if name == "root" || name == "asset" {
@@ -992,6 +1005,12 @@ func flagApplies(command, action, name string) bool {
 		}
 		if action == "navigation" {
 			return name == "representation" || name == "navigation"
+		}
+		if action == "pages" {
+			return name == "representation"
+		}
+		if name == "label" {
+			return action == "read"
 		}
 		if name == "navigation" {
 			return action == "read" || action == "units"
@@ -1114,6 +1133,10 @@ func started(data any) bool {
 		return v.Applied || v.Resumed || v.AssetID != ""
 	case discovery.CatalogFile:
 		return v.Path != ""
+	case content.Result:
+		// A failed retrieval clears its text and references; its status is in
+		// the error and in --json.
+		return false
 	}
 	return true
 }

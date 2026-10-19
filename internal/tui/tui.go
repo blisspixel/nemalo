@@ -296,6 +296,13 @@ func (m *model) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 					if value.Representation == "epub-nav/1" {
 						m.status = "Declared navigation. Enter reads one entry and stops at its declared end. Nothing is recorded."
 					}
+					if value.Representation == "epub-page-list/1" {
+						m.status = "Declared page labels. Enter reads from one; p pages from it. Nothing is recorded."
+					}
+				case "no_page_list":
+					m.status = "This EPUB declares no page labels. None are made up."
+				case "ambiguous_label":
+					m.status = "Several page markers carry that label. Choose one from the list."
 				case "partial_range":
 					m.status = "Bounded range delivered; continuation available."
 				default:

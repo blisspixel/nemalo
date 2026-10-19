@@ -1,6 +1,6 @@
 ---
 name: nemalo
-description: Use when the user asks about books, ebooks, audiobooks, or files in their local Nemalo library, or wants text or audio ranges read from them. Covers the read-only nemalo MCP tools (library_list, library_recordings, library_status, library_audit, library_check, file_check, content_units, content_navigation, content_read, content_locate, content_source, content_resource) and when to suggest the nemalo CLI for changes.
+description: Use when the user asks about books, ebooks, audiobooks, or files in their local Nemalo library, or wants text or audio ranges read from them. Covers the read-only nemalo MCP tools (library_list, library_recordings, library_status, library_audit, library_check, file_check, content_units, content_navigation, content_pages, content_read, content_locate, content_source, content_resource) and when to suggest the nemalo CLI for changes.
 license: Apache-2.0
 compatibility: Requires the nemalo executable on PATH and an MCP host that starts it with nemalo mcp serve.
 ---
@@ -47,6 +47,13 @@ delete anything.
   entry's order. When the book has both a navigation document and an NCX, pass
   `navigation` as `nav-doc` or `ncx`. Stop at `range_status` `range_end`. The
   end of a spine file is `end_of_unit` and can fall inside the entry.
+- `content_pages` lists the book's declared page labels, such as `iv` or `42`,
+  from its EPUB 3 page list. To cite or open a printed page, call
+  `content_read` with representation `epub-page-list/1` and the entry's
+  `reference` as `cursor`, or an exact `label`. `ambiguous_label` lists every
+  marker with that label; ask which one. A label is the EPUB's own marker, not
+  a screen page, and `pagination` says what print source the book states, if
+  any. Without a page list, say so and do not number pages yourself.
   `content_read` returns bounded text with a `continuation` cursor. Pass the
   cursor back exactly as returned to continue; never edit or construct one.
 - The default text representation locates each omitted image, table, or formula

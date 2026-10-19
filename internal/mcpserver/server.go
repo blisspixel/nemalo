@@ -165,6 +165,14 @@ func New(service app.Service, opts Options) (*mcp.Server, error) {
 			}
 			return service.Content(ctx, req)
 		})
+	add(&r, "content_pages", "List an EPUB's declared page labels from its EPUB 3 page-list, such as iv or 42, with exact targets, resolution status, a reference for each, and the package's stated pagination source. These are the source's markers, not screen pages or a print-edition match. Read from one with content_read, representation epub-page-list/1, and its cursor or exact label.", false,
+		func(ctx context.Context, in contentInput) (content.Result, error) {
+			req, err := contentRequest(scopes, in, "pages")
+			if err != nil {
+				return content.Result{}, err
+			}
+			return service.Content(ctx, req)
+		})
 	add(&r, "content_navigation", "List an EPUB's source-declared contents. EPUB 3 nav and EPUB 2 NCX stay separate, with exact labels, nesting, and resolved targets. Nothing is inferred from headings. Read one entry with content_read and representation epub-nav/1; pass navigation nav-doc or ncx when both exist.", false,
 		func(ctx context.Context, in contentInput) (content.Result, error) {
 			req, err := contentRequest(scopes, in, "navigation")
@@ -315,10 +323,11 @@ type contentInput struct {
 	Catalog        string `json:"catalog" jsonschema:"catalog snapshot file, or the library directory for a managed holding"`
 	Root           string `json:"root" jsonschema:"explicit source root; for a managed holding, the same library directory"`
 	Asset          string `json:"asset" jsonschema:"exact asset ID, sha256: followed by 64 lowercase hex digits"`
-	Representation string `json:"representation,omitempty" jsonschema:"epub-text/2 (default), epub-text/1, epub-structure/1, epub-nav/1 for one declared contents entry, pdf-text/1 for PDF, or mpeg-audio/1 for MP3; a cursor keeps its own"`
+	Representation string `json:"representation,omitempty" jsonschema:"epub-text/2 (default), epub-text/1, epub-structure/1, epub-nav/1 for one declared contents entry, epub-page-list/1 from one declared page label, pdf-text/1 for PDF, or mpeg-audio/1 for MP3; a cursor keeps its own"`
 	Unit           int    `json:"unit,omitempty" jsonschema:"zero-based reading-order unit, zero-based physical page index for pdf-text/1, or the declared entry order for epub-nav/1, 0-9999"`
 	TextOffset     int    `json:"text_offset,omitempty" jsonschema:"zero-based UTF-8 byte offset inside the unit, or relative to a declared entry for epub-nav/1"`
 	Navigation     string `json:"navigation,omitempty" jsonschema:"nav-doc or ncx; required when reading epub-nav/1 and the book declares both"`
+	Label          string `json:"label,omitempty" jsonschema:"exact declared page label for an epub-page-list/1 read, such as iv; several markers with one label are listed as candidates"`
 	MaxBytes       int    `json:"max_bytes,omitempty" jsonschema:"bytes to return, 4-65536, default 4096"`
 	Cursor         string `json:"cursor,omitempty" jsonschema:"continuation or reference cursor exactly as returned; not combinable with unit or text_offset"`
 	Part           string `json:"part,omitempty" jsonschema:"exact structured part ID such as id:note-1; structured and source reads only"`
@@ -362,7 +371,7 @@ func contentRequest(s scope, in contentInput, operation string) (content.Request
 	if err != nil {
 		return content.Request{}, err
 	}
-	req := content.Request{SchemaVersion: 1, Catalog: catalog, Root: root, AssetID: in.Asset, Unit: in.Unit, Offset: in.TextOffset, MaxBytes: defaultInt(in.MaxBytes, 4096), Cursor: in.Cursor, Representation: in.Representation, Part: in.Part, Sample: in.Sample, Navigation: in.Navigation}
+	req := content.Request{SchemaVersion: 1, Catalog: catalog, Root: root, AssetID: in.Asset, Unit: in.Unit, Offset: in.TextOffset, MaxBytes: defaultInt(in.MaxBytes, 4096), Cursor: in.Cursor, Representation: in.Representation, Part: in.Part, Sample: in.Sample, Navigation: in.Navigation, Label: in.Label}
 	switch operation {
 	case "units":
 		req.UnitsOnly = true
@@ -371,6 +380,11 @@ func contentRequest(s scope, in contentInput, operation string) (content.Request
 			return content.Request{}, errors.New("content navigation lists representation epub-nav/1")
 		}
 		req.UnitsOnly, req.Representation = true, "epub-nav/1"
+	case "pages":
+		if req.Representation != "" && req.Representation != "epub-page-list/1" {
+			return content.Request{}, errors.New("content pages lists representation epub-page-list/1")
+		}
+		req.UnitsOnly, req.Representation = true, "epub-page-list/1"
 	case "source":
 		req.Representation = "epub-source/1"
 	case "resource":

@@ -127,7 +127,7 @@ gap belongs to the range that starts at its offset, or to the final range of its
 unit. `coverage.text` is `known_extraction_gaps` when a range contains one.
 
 Source whitespace stays in the text, so a hard-wrapped paragraph keeps its
-line feeds. Each `epub-text/2` and `epub-nav/1` range lists the line feeds
+line feeds. Each `epub-text/2`, `epub-nav/1`, and `epub-structure/1` range lists the line feeds
 that come from structure in `breaks`, each once, with its UTF-8 `offset` and
 a `kind`: `block` ends a paragraph, heading, list item, or other block, and
 `line` is an explicit `br` or a line of preformatted text. A `br` that ends
@@ -178,6 +178,24 @@ Remote hrefs stay `external_not_fetched`. A `javascript:` link refuses the
 source as active content. Nothing is fetched or executed. A navigation member
 that is not in the spine does not change the `epub-text/2` representation id.
 It does change the `epub-nav/1` id.
+
+## Declared page labels: `epub-page-list/1`
+
+```sh
+nemalo content pages CATALOG --root DIRECTORY --asset sha256:HASH --json
+nemalo content read CATALOG --root DIRECTORY --asset sha256:HASH --representation epub-page-list/1 --label iv --json
+```
+
+An EPUB 3 `page-list` is listed with each declared label, its exact target in
+`epub-text/2` coordinates, its status, and a reference bound to the page
+list's identity, plus the package's stated pagination source or `unknown`. A
+read starts at one marker by reference, exact label, or order; a label that
+several markers carry returns `ambiguous_label` with each candidate. The text
+and continuation are `epub-text/2`'s, and `page_end` is the next marker only
+when it resolves after this one. Page labels are the EPUB's own markers, not
+screen pages or a print-edition match, and none are generated. The table of
+contents and its ids are unchanged
+([decision 0031](decisions/0031-epub-page-list.md)).
 
 ## MP3 tracks: `mpeg-audio/1`
 

@@ -138,7 +138,7 @@ func TestToolsAreReadOnlyAndNetworkIsExplicit(t *testing.T) {
 	calls := 0
 	service := app.Service{Providers: map[string]app.Searcher{"openlibrary": catalog{&calls}}, Scanner: noScanner{t}}
 	offline := toolNames(t, connect(t, service, Options{Scopes: []string{t.TempDir()}, Version: "test"}))
-	want := []string{"content_capabilities", "content_locate", "content_navigation", "content_read", "content_resource", "content_source", "content_units", "file_check", "library_audit", "library_check", "library_list", "library_recordings", "library_status", "nemalo_capabilities"}
+	want := []string{"content_capabilities", "content_locate", "content_navigation", "content_pages", "content_read", "content_resource", "content_source", "content_units", "file_check", "library_audit", "library_check", "library_list", "library_recordings", "library_status", "nemalo_capabilities"}
 	if !slices.Equal(offline, want) {
 		t.Fatal("offline tools", offline)
 	}
@@ -152,7 +152,7 @@ func TestToolsAreReadOnlyAndNetworkIsExplicit(t *testing.T) {
 	}
 	_, env = call(t, online, "nemalo_capabilities", map[string]any{})
 	data := env["data"].(map[string]any)
-	if data["read_only"] != true || data["network"] != true || len(data["tools"].([]any)) != 16 {
+	if data["read_only"] != true || data["network"] != true || len(data["tools"].([]any)) != 17 {
 		t.Fatal("capabilities", data)
 	}
 }
@@ -327,5 +327,75 @@ func TestServerConfiguration(t *testing.T) {
 	}
 	if _, err := contentRequest(s, contentInput{Catalog: dir, Root: dir, Asset: "bad"}, "read"); err == nil {
 		t.Fatal("invalid asset accepted")
+	}
+}
+
+// pagedLibrary holds one EPUB whose navigation declares a page list.
+func pagedLibrary(t *testing.T) (string, string) {
+	t.Helper()
+	var buf bytes.Buffer
+	z := zip.NewWriter(&buf)
+	for _, f := range []struct{ name, body string }{
+		{"mimetype", "application/epub+zip"},
+		{"META-INF/container.xml", `<container xmlns="urn:oasis:names:tc:opendocument:xmlns:container"><rootfiles><rootfile full-path="book.opf" media-type="application/oebps-package+xml"/></rootfiles></container>`},
+		{"book.opf", `<package xmlns="http://www.idpf.org/2007/opf"><metadata xmlns:dc="http://purl.org/dc/elements/1.1/"><dc:title>Paged</dc:title><dc:language>en</dc:language></metadata><manifest><item id="c" href="c.xhtml" media-type="application/xhtml+xml"/><item id="nav" href="nav.xhtml" media-type="application/xhtml+xml" properties="nav"/></manifest><spine><itemref idref="c"/></spine></package>`},
+		{"c.xhtml", `<html xmlns="http://www.w3.org/1999/xhtml"><body><p id="pi">Roman page.</p><p id="p1">First page.</p></body></html>`},
+		{"nav.xhtml", `<html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops"><body><nav epub:type="toc"><ol><li><a href="c.xhtml">Text</a></li></ol></nav><nav epub:type="page-list" hidden=""><ol><li><a href="c.xhtml#pi">i</a></li><li><a href="c.xhtml#p1">1</a></li><li><a href="c.xhtml#p1">1</a></li></ol></nav></body></html>`},
+	} {
+		method := zip.Deflate
+		if f.name == "mimetype" {
+			method = zip.Store
+		}
+		w, err := z.CreateHeader(&zip.FileHeader{Name: f.name, Method: method})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := w.Write([]byte(f.body)); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := z.Close(); err != nil {
+		t.Fatal(err)
+	}
+	source := filepath.Join(t.TempDir(), "paged.epub")
+	if err := os.WriteFile(source, buf.Bytes(), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	root := t.TempDir()
+	if _, err := library.Initialize(context.Background(), root); err != nil {
+		t.Fatal(err)
+	}
+	r, err := library.Import(context.Background(), library.ImportRequest{Library: root, Source: source, Apply: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	return root, r.AssetID
+}
+
+func TestPageListThroughMCPMatchesTheService(t *testing.T) {
+	root, asset := pagedLibrary(t)
+	service := app.Service{Scanner: noScanner{t}}
+	s := connect(t, service, Options{Scopes: []string{root}, Version: "test"})
+	_, env := call(t, s, "content_pages", map[string]any{"catalog": root, "root": root, "asset": asset})
+	direct, err := service.Content(context.Background(), content.Request{SchemaVersion: 1, Catalog: root, Root: root, AssetID: asset, MaxBytes: 4096, Representation: "epub-page-list/1", UnitsOnly: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	want, _ := json.Marshal(direct)
+	got, _ := json.Marshal(env["data"])
+	var a, b any
+	_ = json.Unmarshal(want, &a)
+	_ = json.Unmarshal(got, &b)
+	if direct.Status != "units_available" || len(direct.PageLists) != 1 || len(direct.PageLists[0].Entries) != 3 || !jsonEqual(a, b) {
+		t.Fatalf("page list through MCP\n%s\n%s", want, got)
+	}
+	_, env = call(t, s, "content_read", map[string]any{"catalog": root, "root": root, "asset": asset, "representation": "epub-page-list/1", "label": "i"})
+	data := env["data"].(map[string]any)
+	if data["text"] == nil || !strings.HasPrefix(data["text"].(string), "Roman page.") || data["page"].(map[string]any)["label"] != "i" {
+		t.Fatal("label read through MCP", env)
+	}
+	_, env = call(t, s, "content_read", map[string]any{"catalog": root, "root": root, "asset": asset, "representation": "epub-page-list/1", "label": "1"})
+	if env["data"].(map[string]any)["status"] != "ambiguous_label" {
+		t.Fatal("duplicate label through MCP", env)
 	}
 }

@@ -18,12 +18,16 @@ func Content(r content.Result) string {
 	fmt.Fprintf(&b, "Source access: %s\n", words(r.Status))
 	field(&b, "Asset", Line(r.AssetID))
 	field(&b, "Representation", Line(r.Representation))
-	// An audio track is one unit, described by its index below.
-	if r.Status == "units_available" && r.Audio == nil {
+	// An audio track is one unit, described by its index below. A page list
+	// lists its markers instead of the spine units.
+	if r.Status == "units_available" && r.Audio == nil && r.Representation != "epub-page-list/1" {
 		writeUnits(&b, r)
 	}
 	if len(r.Navigation) > 0 {
 		writeNavigation(&b, r)
+	}
+	if r.Representation == "epub-page-list/1" {
+		writePages(&b, r)
 	}
 	if r.Locator != nil {
 		if r.Representation == "pdf-text/1" {
@@ -134,6 +138,54 @@ func writeUnits(b *strings.Builder, r content.Result) {
 	}
 	if len(r.UnsupportedUnits) > 0 {
 		fmt.Fprintf(b, "Unsupported units %v return no text; select another unit explicitly.\n", r.UnsupportedUnits)
+	}
+}
+
+// writePages shows declared page markers, the stated pagination source, and
+// the marker a read starts at.
+func writePages(b *strings.Builder, r content.Result) {
+	switch r.Status {
+	case "no_page_list":
+		b.WriteString("This EPUB declares no page list. No page labels are made up from text length or screen pages.\n")
+	case "ambiguous_label":
+		b.WriteString("Several page markers carry this label. Choose one with its --cursor:\n")
+	}
+	if p := r.Pagination; p != nil {
+		switch {
+		case p.Status == "declared":
+			fmt.Fprintf(b, "Pagination source, as the package states it: %s\n", list(append(append([]string{}, p.Sources...), p.PageBreakSources...)))
+		default:
+			b.WriteString("Pagination source: not stated by the package.\n")
+		}
+	}
+	for _, l := range r.PageLists {
+		hidden := ""
+		if l.Hidden {
+			hidden = ", hidden in reading systems"
+		}
+		fmt.Fprintf(b, "Page list %s%s: %d marker(s)", Exact(l.Path), hidden, len(l.Entries))
+		if l.Problem != "" {
+			fmt.Fprintf(b, ", not used: %s", words(l.Problem))
+		}
+		b.WriteString("\n")
+		for _, e := range l.Entries {
+			where := words(e.Status)
+			if e.Unit != nil && e.Offset != nil {
+				where = fmt.Sprintf("unit %d byte %d", *e.Unit, *e.Offset)
+			}
+			fmt.Fprintf(b, "  %4d  %-10s  %s\n", e.Order, Line(e.Label), where)
+			if r.Status == "ambiguous_label" && e.Reference != "" {
+				fmt.Fprintf(b, "        --cursor %s\n", e.Reference)
+			}
+		}
+	}
+	if p := r.Page; p != nil {
+		fmt.Fprintf(b, "Page label %s (marker %d), as the EPUB declares it\n", Line(p.Label), p.Order)
+		if r.PageEnd != nil {
+			fmt.Fprintf(b, "Next marker: unit %d byte %d\n", r.PageEnd.Unit, r.PageEnd.Start)
+		} else {
+			b.WriteString("Where this page ends is not established.\n")
+		}
 	}
 }
 
