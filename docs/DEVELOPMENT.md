@@ -383,6 +383,11 @@ XDG variables are absent. Relative environment paths are rejected. Reading confi
 and running `doctor` do not create these directories. `doctor` also reports whether
 the directory descriptor bridge is present. That is `/proc/self/fd` on Linux and
 `/dev/fd` on macOS. It does not execute a scanner or create a hard link.
+Like every other command, `doctor` prints a short text summary: paths, any
+configured library, review folder, and catalog, the recommended scanner and its
+signature age, the descriptor bridge, optional tools, and a `Next:` line for
+each thing that needs action. `doctor --json` is the full report. Before
+0.1.0-alpha.12, `doctor` printed that JSON object by default.
 
 ## Omarchy
 

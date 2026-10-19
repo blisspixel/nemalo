@@ -10,6 +10,7 @@
 - `library init`, `acquire`, `library import`, and `catalog fetch` print only the error when they fail before doing anything, instead of a block of empty values. An interrupted catalog download says how much arrived and that nothing was kept. Closes issue 28.
 - Human output reads as labelled values and sentences instead of Go values. Empty values and lists are left out, status tokens read as words (`Status: review (unscanned)`, `File rights: not resolved at file level`), and source text is shown without Go quotes on one row with control characters escaped. This covers search, evaluate, acquire, check, content, bookmarks, and every library command. `--json` keeps every field and exact token. Closes issue 29.
 - The terminal interface follows the same rules: browser rows, details panes, review screens, and status messages show file names and paths without Go quotes, status values as words, and no empty lists. A path is quoted only when spaces or control characters would otherwise hide its exact value. Closes issue 30.
+- `nemalo doctor` prints a short text summary by default: paths, configuration, the recommended scanner and its signature age, the descriptor bridge, optional tools, and a `Next:` line for each thing that needs action. `doctor --json` is the full report, which was the default before. Closes issue 31.
 
 ## 0.1.0-alpha.11
 

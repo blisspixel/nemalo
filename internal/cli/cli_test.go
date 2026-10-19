@@ -215,7 +215,7 @@ func TestInspectAndDoctor(t *testing.T) {
 		t.Fatal(code, out)
 	}
 	code, out, _ = execute(t, []string{"doctor"}, nil)
-	if code != 0 || !strings.Contains(out, "not_scanned") {
+	if code != 0 || !strings.Contains(out, "Nemalo doctor: ") || !strings.Contains(out, "Descriptor bridge: ") || !strings.Contains(out, "nemalo doctor --json") || strings.Contains(out, "{") {
 		t.Fatal(code, out)
 	}
 	code, _, _ = execute(t, []string{"tui"}, nil)

@@ -1120,6 +1120,9 @@ func started(data any) bool {
 
 func printData(out io.Writer, data any) error {
 	switch value := data.(type) {
+	case app.Doctor:
+		_, err := io.WriteString(out, present.Doctor(value))
+		return err
 	case acquisition.Result:
 		_, err := io.WriteString(out, present.Acquisition(value))
 		return err
