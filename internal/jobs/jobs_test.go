@@ -148,8 +148,11 @@ func TestJobsOfAnEndedProcessAreInterrupted(t *testing.T) {
 	if j, err := s.Get(id); err != nil || j.Status != Running || j.Owner != "another_process" {
 		t.Fatalf("held %+v %v", j, err)
 	}
-	if _, err := s.Cancel(id); err == nil || !strings.Contains(err.Error(), "another process") {
-		t.Fatal(err)
+	if j, err := s.Cancel(id); err != nil || !strings.Contains(j.Detail, "cancel requested") {
+		t.Fatal(j, err)
+	}
+	if _, err := os.Stat(filepath.Join(dir, fileID(id)+".cancel")); err != nil {
+		t.Fatal("no cancel marker", err)
 	}
 	_ = safeio.Unlock(holder)
 	_ = holder.Close()
@@ -190,4 +193,56 @@ func TestOpenRemovesOldFinishedJobsAndRejectsBadFolders(t *testing.T) {
 func asJSON(v any) string {
 	b, _ := json.Marshal(v)
 	return string(b)
+}
+
+// Another process cancels a job through a marker the owner polls for, and
+// jobs queued when the server closes do not start.
+func TestJobsCancelAcrossProcessesAndDoNotStartAfterClose(t *testing.T) {
+	dir := t.TempDir()
+	owner, err := Open(dir, 1, 4)
+	if err != nil {
+		t.Fatal(err)
+	}
+	other, err := Open(dir, 1, 4)
+	if err != nil {
+		t.Fatal(err)
+	}
+	block := func(ctx context.Context, _ func(Progress)) (any, error) {
+		<-ctx.Done()
+		return nil, ctx.Err()
+	}
+	running, _ := owner.Start("demo", nil, block)
+	queued, _ := owner.Start("demo", nil, block)
+	time.Sleep(50 * time.Millisecond)
+	owner.Close()
+	if j, err := other.Cancel(running.ID); err != nil || j.Owner != "another_process" {
+		t.Fatal(j, err)
+	}
+	if j := waitFinal(t, owner, running.ID); j.Status != Cancelled {
+		t.Fatalf("%+v", j)
+	}
+	if j := waitFinal(t, owner, queued.ID); j.Status != Cancelled || !strings.Contains(j.Detail, "closed") {
+		t.Fatalf("%+v", j)
+	}
+	_ = owner.Wait(context.Background())
+}
+
+// Work that returned success is recorded as succeeded even if a cancel came
+// at the end; a failure after a cancel keeps its own error.
+func TestALateCancelDoesNotHideSuccess(t *testing.T) {
+	s, _ := open(t, 1, 0)
+	started, finish := make(chan struct{}), make(chan struct{})
+	j, _ := s.Start("demo", nil, func(ctx context.Context, _ func(Progress)) (any, error) {
+		close(started)
+		<-finish
+		return map[string]bool{"complete": true}, nil
+	})
+	<-started
+	if _, err := s.Cancel(j.ID); err != nil {
+		t.Fatal(err)
+	}
+	close(finish)
+	if got := waitFinal(t, s, j.ID); got.Status != Succeeded {
+		t.Fatalf("%+v", got)
+	}
 }

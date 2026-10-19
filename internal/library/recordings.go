@@ -189,17 +189,30 @@ func Recordings(ctx context.Context, directory, source string) (RecordingsResult
 		m := RecordingManifest{Schema: RecordingManifestVersion, SourceID: k.source, Format: k.format, Kind: k.kind, Missing: []int{}, Tracks: []RecordingEntry{}, Narrators: []Reader{}, Findings: []string{}}
 		counts, held := map[int]bool{}, map[string]Holding{}
 		byPosition := map[int][]claim{}
-		narrations := map[string]Narration{}
-		unnamed := false
+		// Narration is decided per held asset: an asset names one when any of
+		// its sources in this recording does, so an older source of the same
+		// bytes beside a newer one does not count against it.
+		named := map[string]map[string]Narration{}
 		for _, c := range groups[k] {
 			held[c.h.ID] = c.h
 			counts[c.rec.Tracks] = true
 			m.DeclaredTracks = max(m.DeclaredTracks, c.rec.Tracks)
 			byPosition[c.rec.Position] = append(byPosition[c.rec.Position], c)
+			if named[c.h.ID] == nil {
+				named[c.h.ID] = map[string]Narration{}
+			}
 			if c.src.Narration != nil {
-				narrations[c.src.Narration.ID] = *c.src.Narration
-			} else {
+				named[c.h.ID][c.src.Narration.ID] = *c.src.Narration
+			}
+		}
+		narrations := map[string]Narration{}
+		unnamed := false
+		for _, ns := range named {
+			if len(ns) == 0 {
 				unnamed = true
+			}
+			for id, n := range ns {
+				narrations[id] = n
 			}
 		}
 		// A recording names a reading only when every held track names it.

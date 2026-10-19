@@ -264,3 +264,20 @@ func TestEligibilityUsesEachFormatsLimit(t *testing.T) {
 		t.Fatal("default budgets")
 	}
 }
+
+// While one acquisition writes an output folder, another into the same folder
+// is refused before any request, and runs once the first is done.
+func TestOneAcquisitionWritesAnOutputAtATime(t *testing.T) {
+	p, r := fixture(), request(t)
+	release, err := lockOutput(r.Output)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := Acquire(context.Background(), p, r); err == nil || !strings.Contains(err.Error(), "another acquisition") || p.evaluations != 0 {
+		t.Fatal("a second acquisition ran", err, p.evaluations)
+	}
+	release()
+	if result, err := Acquire(context.Background(), p, r); err != nil || !result.Complete {
+		t.Fatal(result, err)
+	}
+}

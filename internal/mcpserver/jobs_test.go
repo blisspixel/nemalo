@@ -90,6 +90,7 @@ func TestJobToolsRunAcquisitionAndRescanDurably(t *testing.T) {
 		"outside scope": {"source_id": "archive:demo", "file": "paper.pdf", "output": filepath.Join(t.TempDir(), "packet")},
 		"both kinds":    {"source_id": "archive:demo", "file": "paper.pdf", "recording_format": "64Kbps MP3", "output": filepath.Join(intake, "packet")},
 		"no name":       {"source_id": "archive:demo", "file": "paper.pdf", "output": intake + string(filepath.Separator) + ".."},
+		"gutenberg":     {"source_id": "gutenberg:1342", "file": "1342.epub.noimages", "output": filepath.Join(intake, "gutenberg")},
 	} {
 		if res, _ := call(t, s, "acquisition_start", args); !res.IsError {
 			t.Fatal(name, "started")
@@ -129,10 +130,18 @@ func TestJobToolsRunAcquisitionAndRescanDurably(t *testing.T) {
 	if res, _ := call(t, s, "job_get", map[string]any{"id": "job:nothing"}); !res.IsError {
 		t.Fatal("an unknown job was found")
 	}
+	// A server with other scopes sees none of these jobs.
+	elsewhere := connect(t, service, Options{Scopes: []string{t.TempDir()}, Write: true, Jobs: store, Version: "test"})
+	if _, env := call(t, elsewhere, "job_list", map[string]any{}); len(env["data"].([]any)) != 0 {
+		t.Fatal("jobs outside scope were listed", env)
+	}
+	if res, _ := call(t, elsewhere, "job_get", map[string]any{"id": id}); !res.IsError {
+		t.Fatal("a job outside scope was read")
+	}
 }
 
-// writeToolNames lists a write server's tools; reads must still be marked
-// read-only and starts and cancels not destructive.
+// writeToolNames lists a write server's tools. Job tools are not
+// destructive and not idempotent, and only acquisition reaches the network.
 func writeToolNames(t *testing.T, s interface {
 	ListTools(context.Context, *mcp.ListToolsParams) (*mcp.ListToolsResult, error)
 }) []string {
@@ -144,11 +153,11 @@ func writeToolNames(t *testing.T, s interface {
 	names := []string{}
 	for _, tool := range list.Tools {
 		a := tool.Annotations
-		if (tool.Name == "job_get" || tool.Name == "job_list") && (a == nil || !a.ReadOnlyHint) {
-			t.Fatal("job read not read-only", tool.Name)
-		}
-		if strings.HasSuffix(tool.Name, "_start") && (a == nil || a.DestructiveHint == nil || *a.DestructiveHint) {
-			t.Fatal("start annotations", tool.Name)
+		if strings.HasPrefix(tool.Name, "job_") || strings.HasSuffix(tool.Name, "_start") {
+			network := tool.Name == "acquisition_start"
+			if a == nil || a.ReadOnlyHint || a.IdempotentHint || a.DestructiveHint == nil || *a.DestructiveHint || a.OpenWorldHint == nil || *a.OpenWorldHint != network {
+				t.Fatal("job tool annotations", tool.Name, a)
+			}
 		}
 		names = append(names, tool.Name)
 	}

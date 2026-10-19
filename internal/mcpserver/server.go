@@ -282,8 +282,14 @@ type registrar struct {
 // time. A service error becomes a tool error whose structured content still
 // carries the service's status, exactly as the CLI JSON envelope does.
 func add[In, Out any](r *registrar, name, description string, openWorld bool, run func(context.Context, In) (Out, error)) {
+	register(r, name, description, &mcp.ToolAnnotations{ReadOnlyHint: true, IdempotentHint: true, OpenWorldHint: &openWorld}, run)
+}
+
+// register adds a tool with its annotations. Every call is bounded in
+// concurrency and time.
+func register[In, Out any](r *registrar, name, description string, annotations *mcp.ToolAnnotations, run func(context.Context, In) (Out, error)) {
 	r.names = append(r.names, name)
-	tool := &mcp.Tool{Name: name, Description: description, Annotations: &mcp.ToolAnnotations{ReadOnlyHint: true, IdempotentHint: true, OpenWorldHint: &openWorld}}
+	tool := &mcp.Tool{Name: name, Description: description, Annotations: annotations}
 	mcp.AddTool(r.server, tool, func(ctx context.Context, _ *mcp.CallToolRequest, in In) (*mcp.CallToolResult, Envelope[Out], error) {
 		env := Envelope[Out]{SchemaVersion: 1, Tool: name}
 		select {

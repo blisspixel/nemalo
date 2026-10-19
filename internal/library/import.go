@@ -620,19 +620,24 @@ func boundToken(value string) string {
 
 func mergeSources(current Holding, add Source) []Source {
 	out := append([]Source{}, current.Sources...)
-	if !sourceKnown(current, add) {
-		out = append(out, add)
+	for i, source := range out {
+		if source.Kind == add.Kind && sameImportSource(source.Path, add.Path) {
+			// A narration found since the earlier import is recorded on it.
+			if source.Narration == nil && add.Narration != nil {
+				out[i].Narration = add.Narration
+			}
+			return out
+		}
 	}
-	if len(out) == 0 {
-		out = []Source{add}
-	}
-	return out
+	return append(out, add)
 }
 
+// sourceKnown reports a source already recorded as add would record it, so
+// importing it again writes nothing.
 func sourceKnown(current Holding, add Source) bool {
 	for _, source := range current.Sources {
 		if source.Kind == add.Kind && sameImportSource(source.Path, add.Path) {
-			return true
+			return source.Narration != nil || add.Narration == nil
 		}
 	}
 	return false

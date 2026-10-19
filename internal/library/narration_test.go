@@ -125,3 +125,35 @@ func TestATrackSetNamingTwoNarrationsIsAFinding(t *testing.T) {
 		t.Fatal(r, err)
 	}
 }
+
+// Importing a packet again records a narration found since its first
+// import, and an older source of the same bytes does not hide it.
+func TestReimportAddsANarrationAndOldSourcesDoNotHideIt(t *testing.T) {
+	ctx := context.Background()
+	root := t.TempDir()
+	if _, err := Initialize(ctx, root); err != nil {
+		t.Fatal(err)
+	}
+	book := mp4Audiobook(30)
+	packet := t.TempDir()
+	writeTree(t, packet, map[string][]byte{"content.m4b": book, "receipt.json": audioReceipt(t, book, "demo", "Demo.m4b", "", "", nil)})
+	if _, err := Import(ctx, ImportRequest{Library: root, Source: packet, Apply: true}); err != nil {
+		t.Fatal(err)
+	}
+	if r, _ := Recordings(ctx, root, ""); len(r.Recordings) != 1 || r.Recordings[0].Narration != nil {
+		t.Fatal(r)
+	}
+	writeTree(t, packet, map[string][]byte{"receipt.json": audioReceipt(t, book, "demo", "Demo.m4b", "7", "demo", nil)})
+	if _, err := Import(ctx, ImportRequest{Library: root, Source: packet, Apply: true}); err != nil {
+		t.Fatal(err)
+	}
+	other := t.TempDir()
+	writeTree(t, other, map[string][]byte{"content.m4b": book, "receipt.json": audioReceipt(t, book, "demo", "Demo.m4b", "", "", nil)})
+	if _, err := Import(ctx, ImportRequest{Library: root, Source: other, Apply: true}); err != nil {
+		t.Fatal(err)
+	}
+	r, err := Recordings(ctx, root, "")
+	if err != nil || len(r.Recordings) != 1 || r.Recordings[0].Narration == nil || r.Recordings[0].Narration.ID != "librivox:7" || len(r.Recordings[0].Findings) != 0 {
+		t.Fatal(r, err)
+	}
+}

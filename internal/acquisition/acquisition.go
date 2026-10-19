@@ -4,6 +4,8 @@ package acquisition
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -162,6 +164,11 @@ var ErrDetected = errors.New("antivirus reported a detection; the download was n
 // the missing range, and the whole file verified at the end. A refused resume,
 // a checksum or size mismatch, a budget, or cancellation is not retried.
 func Acquire(ctx context.Context, provider Provider, request Request) (Result, error) {
+	release, err := lockOutput(request.Output)
+	if err != nil {
+		return Result{SchemaVersion: 1, Status: "not_started", Antivirus: "not_scanned"}, err
+	}
+	defer release()
 	result, err := acquireOnce(ctx, provider, request)
 	for attempt := 1; err != nil && attempt <= maxContinuations && continuable(ctx, result, err); attempt++ {
 		select {
@@ -666,6 +673,30 @@ func sameContent(root *os.Root, name string, file *os.File) error {
 		return errors.New("intake content path was replaced during acquisition")
 	}
 	return nil
+}
+
+// lockOutput holds an operating system lock named by the output folder for
+// one acquisition, so two acquisitions, from jobs or terminals, never write
+// one packet at once. The lock lives in the temporary folder, not in or
+// beside the packet, and the system releases it however the process ends.
+func lockOutput(output string) (func(), error) {
+	abs, err := filepath.Abs(output)
+	if err != nil {
+		return nil, err
+	}
+	sum := sha256.Sum256([]byte(filepath.Clean(abs)))
+	f, err := os.OpenFile(filepath.Join(os.TempDir(), "nemalo-acquire-"+hex.EncodeToString(sum[:16])+".lock"), os.O_RDWR|os.O_CREATE, 0o600)
+	if err != nil {
+		return nil, fmt.Errorf("lock the output folder: %w", err)
+	}
+	if err := safeio.TryLock(f, true); err != nil {
+		_ = f.Close()
+		if errors.Is(err, safeio.ErrLocked) {
+			return nil, errors.New("another acquisition is writing this output folder; wait for it to finish or stop it first")
+		}
+		return nil, err
+	}
+	return func() { _ = safeio.Unlock(f); _ = f.Close() }, nil
 }
 
 // transferDeadline bounds metadata, transfer, and local checks, with

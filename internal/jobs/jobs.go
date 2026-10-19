@@ -82,8 +82,9 @@ const (
 	maxRequest   = 64 << 10
 	maxResult    = 1 << 20
 	maxJournal   = 4 << 20
-	maxProgress  = 1000
-	progressGap  = time.Second
+	maxProgress  = 10000
+	progressGap  = 2 * time.Second
+	cancelPoll   = time.Second
 	keepFinished = 30 * 24 * time.Hour
 	maxListed    = 100
 )
@@ -131,6 +132,20 @@ func Open(dir string, maxRunning, maxPending int) (*Store, error) {
 	if err != nil {
 		return nil, err
 	}
+	// A lock left without a journal, by a crash during a start, goes.
+	if entries, err := os.ReadDir(dir); err == nil {
+		for _, e := range entries {
+			name, ok := strings.CutSuffix(e.Name(), ".lock")
+			if !ok || !validID("job:"+name) {
+				continue
+			}
+			if _, err := os.Lstat(s.journal(name)); errors.Is(err, os.ErrNotExist) {
+				if info, err := e.Info(); err == nil && time.Since(info.ModTime()) > time.Hour {
+					_ = os.Remove(filepath.Join(dir, e.Name()))
+				}
+			}
+		}
+	}
 	for _, id := range ids {
 		j, err := s.Get(id)
 		if err != nil {
@@ -150,8 +165,9 @@ func final(status string) bool {
 	return status == Succeeded || status == Failed || status == Cancelled || status == Interrupted
 }
 
-func (s *Store) journal(id string) string  { return filepath.Join(s.dir, id+".jsonl") }
-func (s *Store) lockName(id string) string { return filepath.Join(s.dir, id+".lock") }
+func (s *Store) journal(id string) string    { return filepath.Join(s.dir, id+".jsonl") }
+func (s *Store) cancelName(id string) string { return filepath.Join(s.dir, id+".cancel") }
+func (s *Store) lockName(id string) string   { return filepath.Join(s.dir, id+".lock") }
 
 func validID(id string) bool {
 	rest, ok := strings.CutPrefix(id, "job:")
@@ -176,7 +192,7 @@ func (s *Store) Start(kind string, request any, run Run) (Job, error) {
 		s.mu.Unlock()
 		return Job{}, errors.New("this server is closing and starts no new jobs")
 	}
-	if len(s.jobs) >= s.maxPending {
+	if len(s.jobs) >= s.maxPending || s.unfinishedElsewhere() >= s.maxPending {
 		s.mu.Unlock()
 		return Job{}, ErrBusy
 	}
@@ -192,6 +208,25 @@ func (s *Store) Start(kind string, request any, run Run) (Job, error) {
 	s.mu.Unlock()
 	go s.run(ctx, id, r, run)
 	return s.Get(id)
+}
+
+// unfinishedElsewhere counts unfinished jobs other processes hold, so
+// several servers sharing a state folder share one bound. Called with mu.
+func (s *Store) unfinishedElsewhere() int {
+	ids, err := s.ids()
+	if err != nil {
+		return 0
+	}
+	n := 0
+	for _, id := range ids {
+		if _, mine := s.jobs[id]; mine {
+			continue
+		}
+		if j, err := s.read(id); err == nil && !final(j.Status) {
+			n++
+		}
+	}
+	return n
 }
 
 // create makes a job's lock, held from here to the end of its run, and its
@@ -235,6 +270,34 @@ func (s *Store) run(ctx context.Context, id string, r *running, run Run) {
 		return
 	}
 	defer func() { <-s.slots }()
+	s.mu.Lock()
+	closed := s.closed
+	s.mu.Unlock()
+	if closed {
+		// The connection that queued it is gone; it does not start now.
+		_ = s.append(id, record{Event: "finished", Status: Cancelled, Detail: "the server closed before the job started"}, true)
+		return
+	}
+	// Another process asks this one to stop a job by leaving a marker.
+	stopWatch := make(chan struct{})
+	defer close(stopWatch)
+	go func() {
+		tick := time.NewTicker(cancelPoll)
+		defer tick.Stop()
+		for {
+			select {
+			case <-stopWatch:
+				return
+			case <-tick.C:
+				if _, err := os.Lstat(s.cancelName(fileID(id))); err == nil {
+					_ = s.append(id, record{Event: "cancel_requested"}, false)
+					r.cancel()
+					return
+				}
+			}
+		}
+	}()
+	defer os.Remove(s.cancelName(fileID(id)))
 	_ = s.append(id, record{Event: Running}, false)
 	var last time.Time
 	reports := 0
@@ -266,9 +329,11 @@ func (s *Store) run(ctx context.Context, id string, r *running, run Run) {
 			rec.Detail = "the result was too large to record"
 		}
 	}
+	// Work that returned success succeeded, even if a cancel came late; a
+	// failure after a cancel is cancelled, keeping the work's own error.
 	switch {
-	case ctx.Err() != nil:
-		rec.Status, rec.Error = Cancelled, "cancelled"
+	case err != nil && ctx.Err() != nil:
+		rec.Status, rec.Error = Cancelled, bound(err.Error(), 2000)
 	case err != nil:
 		rec.Status, rec.Error = Failed, bound(err.Error(), 2000)
 	}
@@ -297,7 +362,14 @@ func (s *Store) Cancel(id string) (Job, error) {
 		if err != nil || final(j.Status) {
 			return j, errors.Join(err, errors.New("the job has already finished"))
 		}
-		return j, errors.New("the job runs in another process, which alone can cancel it")
+		// The owner polls for this marker and stops at its next check.
+		f, err := os.OpenFile(s.cancelName(fileID(id)), os.O_WRONLY|os.O_CREATE, 0o600)
+		if err != nil {
+			return j, err
+		}
+		_ = f.Close()
+		j.Detail = "cancel requested; the process running the job stops it at its next check"
+		return j, nil
 	}
 	_ = s.append(id, record{Event: "cancel_requested"}, false)
 	r.cancel()
@@ -391,7 +463,8 @@ func (s *Store) List() ([]Job, error) {
 			out = append(out, j)
 		}
 	}
-	sort.Slice(out, func(i, k int) bool { return out[i].Created > out[k].Created })
+	created := func(j Job) time.Time { t, _ := time.Parse(time.RFC3339Nano, j.Created); return t }
+	sort.Slice(out, func(i, k int) bool { return created(out[i]).After(created(out[k])) })
 	if len(out) > maxListed {
 		out = out[:maxListed]
 	}

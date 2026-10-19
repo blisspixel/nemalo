@@ -131,6 +131,11 @@ func AcquireRecording(ctx context.Context, provider Provider, request RecordingR
 	if request.Scanner != nil && !request.NoScan && request.Quarantine == "" && request.OnDetection != "delete" {
 		return result, errors.New("scanning requires a quarantine directory for detected files")
 	}
+	release, err := lockOutput(request.Output)
+	if err != nil {
+		return result, err
+	}
+	defer release()
 	abs, err := filepath.Abs(request.Output)
 	if err != nil {
 		return result, err
@@ -399,6 +404,9 @@ func AcquireRecording(ctx context.Context, provider Provider, request RecordingR
 	}
 	if err := ctx.Err(); err != nil {
 		return result, err
+	}
+	if request.Progress != nil {
+		request.Progress("tracks", int64(len(plan)), int64(len(plan)))
 	}
 	now := time.Now().UTC()
 	result.CompletedAt, result.Complete, result.Status = &now, true, "untrusted_intake"

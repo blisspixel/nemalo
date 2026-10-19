@@ -28,28 +28,41 @@ bits.
   its run; the system releases it however the process ends. A reader that
   finds a job unfinished takes the lock: if it can, the owner is gone, and it
   records `interrupted`, under the lock so it is recorded once. If it cannot,
-  the job is reported as running in another process, which alone can cancel
-  it.
-- **Limits.** One server runs at most two jobs and queues six more; a start
-  beyond that is refused. Progress is journaled at most once a second and a
+  the job is reported as running in another process. Only the lock holder
+  writes a journal; another process cancels a job by leaving a
+  `<HEX>.cancel` marker, which the owner checks every second.
+- **Limits.** One server runs at most two jobs and queues eight more, and a
+  start is also refused when the store's unfinished jobs from other processes
+  reach that bound, so servers sharing a state folder share it. Work that
+  returned success is succeeded even if a cancel arrived at its end. A lock
+  file left without a journal by a crash during a start is removed after an
+  hour. Progress is journaled at most once a second and a
   thousand times; a journal grows to at most 4 MiB, and a torn last line, as
   a crash leaves, is dropped by the next write. Finished jobs older than 30
   days are removed when a server opens the store. A panic in a job's work is
   a failed job, not a dead server.
 - **Lifetime.** `nemalo mcp serve --allow-write` opens the store in the state
-  folder. When the connection closes, the server starts no new jobs, says on
-  standard error how many are running, and exits once they finish, so a
-  later connection reads their results. Interrupting the process ends them;
+  folder. When the connection closes, the server starts no new jobs, and a
+  job still queued then is cancelled rather than started; it says on standard
+  error how many are running and exits once they finish, so a later
+  connection reads their results. Interrupting the process ends them;
   they are then interrupted.
 - **Tools.** With `--allow-write`: `library_rescan_start` (an applied rescan of
   a scoped library), `job_get`, `job_list`, and `job_cancel`; with
   `--allow-network` too, `acquisition_start`, for one selected Archive file or
   every track of a declared recording, into a new intake folder whose parent
-  is in scope, or with `resume` into the existing one. Each start validates
+  is in scope, or with `resume` into the existing one. Only `archive:ITEM`
+  sources are accepted; Gutenberg stays out of MCP. An acquisition, from a job
+  or a terminal, holds a lock named by its output folder in the temporary
+  folder, so a second acquisition into the same packet is refused rather than
+  writing over the first. Each start validates
   its request as the CLI does, returns the queued job at once, and runs the
   same application service. Acquisition reports bytes received and the scan
-  phase; a recording reports tracks done. Annotations mark the reads
-  read-only and the starts and cancel not destructive.
+  phase; a recording reports tracks done, through the last. A server shows
+  and cancels only jobs whose output or library lies inside its scopes. Job
+  tools are annotated not destructive and not idempotent (a start starts a
+  new job, and a read may record an interrupted one), and only
+  `acquisition_start` as reaching the network.
 
 ## Consequences
 
@@ -79,3 +92,15 @@ job as succeeded with its receipt result. A 55,296,087-byte M4B acquisition
 whose server was killed with `kill -9` after six seconds was read by the next
 connection as interrupted, its last progress 2,531,328 bytes, and
 `acquisition_start` with `resume` then completed it.
+
+An independent adversarial review then found nine defects, each now fixed
+with a test: `acquisition_start` accepted Gutenberg identifiers; two
+acquisitions could resume into one packet at once; jobs queued at disconnect
+still started, and another process could not cancel them; the bound was per
+process; job tools listed jobs outside the server's scopes; a success
+finishing as a cancel arrived was recorded as cancelled; annotations called
+the reads read-only and the start offline and idempotent; jobs sorted
+wrongly within a second; and stale lock files were never removed. It also
+found that re-importing did not add a narration to an older source, and
+that an older source of the same bytes counted against a narration
+(decision 0044); both are fixed.

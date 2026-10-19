@@ -35,7 +35,10 @@ recording evidence and exact hashes, never on titles or text.
   `narrations`: each narration with the recordings held of it and whether each
   is complete. Exact duplicates were already one asset by SHA-256.
 - Existing holdings keep what they recorded: a source imported by an earlier
-  version names no narration until imported again from its packet.
+  version names no narration until imported again from its packet, which
+  then records it. A narration is decided per held asset: an asset names one
+  when any of its sources in that recording does, so an older source of the
+  same bytes does not count against it.
 
 The MP4 reader of [decision 0039](0039-mp4-audio-samples.md) is now
 `nemalo.mp4.samples/2`: only the audio track's samples must lie inside media
