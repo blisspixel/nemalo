@@ -65,6 +65,9 @@ type ingestUnit struct {
 	file    string // absolute path of the file, packet folder, or archive
 	packet  bool
 	archive bool
+	// volumes are a volume set's folder-relative paths in order; file is
+	// the first, which names its members' provenance.
+	volumes []string
 }
 
 // Ingest inventories the folder once, then imports each candidate through the
@@ -197,7 +200,7 @@ func Ingest(ctx context.Context, request IngestRequest) (result IngestResult, er
 			result.Imported++
 		case "failed":
 			result.Failed++
-		case "packet_part":
+		case "packet_part", "archive_volume":
 		default:
 			result.NotImported++
 		}
@@ -261,9 +264,67 @@ func planIngest(folder string, entries []inventory.Entry, result *IngestResult) 
 	for _, dir := range dirs {
 		units = append(units, ingestUnit{item: IngestItem{Source: dir, Kind: "packet"}, file: filepath.Join(folder, filepath.FromSlash(dir)), packet: true})
 	}
+	// Volume sets: NAME.7z.001, .002, ... and NAME.part1.rar, .part2.rar, ...
+	// A complete set, numbered from 1 without gaps, is one archive read
+	// through its first volume; the others are its parts. A set with a gap,
+	// or a lone split volume, is preserved.
+	type volume struct {
+		path   string
+		number int
+	}
+	sets := map[string][]volume{}
+	for _, e := range entries {
+		if e.Finding != "" || e.Kind == "link" || e.Kind == "special" || e.Kind == "unreadable" || e.Kind == "directory" || parts[e.Path] != "" {
+			continue
+		}
+		if set, n, ok := staging.VolumeOf(e.Path); ok {
+			sets[set] = append(sets[set], volume{e.Path, n})
+		}
+	}
+	setOf, setFirst := map[string]string{}, map[string]bool{}
+	setNames := make([]string, 0, len(sets))
+	for set := range sets {
+		setNames = append(setNames, set)
+	}
+	sort.Strings(setNames)
+	for _, set := range setNames {
+		vs := sets[set]
+		sort.Slice(vs, func(i, j int) bool { return vs[i].number < vs[j].number })
+		complete := len(vs) >= 2
+		for i, v := range vs {
+			complete = complete && v.number == i+1
+		}
+		if !complete {
+			// A lone .part1.rar may be a whole archive; it is read as one.
+			if len(vs) == 1 && vs[0].number == 1 && strings.HasSuffix(strings.ToLower(vs[0].path), ".rar") {
+				continue
+			}
+			for _, v := range vs {
+				setOf[v.path] = "incomplete"
+			}
+			continue
+		}
+		paths := make([]string, len(vs))
+		for i, v := range vs {
+			paths[i] = filepath.FromSlash(v.path)
+			setOf[v.path] = vs[0].path
+		}
+		setFirst[vs[0].path] = true
+		first := filepath.Join(folder, paths[0])
+		if strings.Contains(first, "!/") {
+			continue
+		}
+		units = append(units, ingestUnit{item: IngestItem{Source: vs[0].path, Kind: "archive"}, file: first, archive: true, volumes: paths})
+	}
 	for _, e := range entries {
 		item := IngestItem{Source: e.Path, Kind: e.Kind}
 		switch {
+		case setFirst[e.Path]:
+			continue
+		case setOf[e.Path] == "incomplete":
+			item.Outcome, item.Detail = "not_imported", "a volume of a set with a missing volume; preserved"
+		case setOf[e.Path] != "":
+			item.Outcome, item.Detail = "archive_volume", "a volume of the set read through "+setOf[e.Path]
 		case e.Finding != "" || e.Kind == "link" || e.Kind == "special" || e.Kind == "unreadable":
 			item.Outcome, item.Detail = "not_imported", firstNonEmpty(e.Finding, e.Kind)
 		case e.Kind == "directory":
@@ -318,7 +379,13 @@ func ingestArchive(ctx context.Context, src *os.Root, folder, dir string, u inge
 		return err
 	}
 	item := u.item
-	members, extractErr := staging.Extract(ctx, src, rel, stage, supportedImport, staging.Defaults())
+	var members staging.Extraction
+	var extractErr error
+	if len(u.volumes) > 0 {
+		members, extractErr = staging.ExtractSet(ctx, src, u.volumes, stage, supportedImport, staging.Defaults())
+	} else {
+		members, extractErr = staging.Extract(ctx, src, rel, stage, supportedImport, staging.Defaults())
+	}
 	if errors.Is(extractErr, staging.ErrNoArchiveTool) {
 		// Without 7-Zip a RAR or 7z is listed and preserved, as before.
 		item.Outcome, item.Detail = "not_imported", extractErr.Error()

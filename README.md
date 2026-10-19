@@ -48,8 +48,8 @@ AI service. The agent interface (MCP) uses the same application services.
   indexed without damage, or an M4B or M4A whose every sample lies inside the
   file, and a recorded no-detection scan; other assessed files stay in review.
   `library ingest` imports a whole folder, including intake packets and the
-  members of ZIP archives, and of RAR and 7z archives through an installed
-  7-Zip, and preserves the folder. `library cleanup` then moves sources whose
+  members of ZIP archives, and of RAR and 7z archives and their volume sets
+  through an installed 7-Zip, and preserves the folder. `library cleanup` then moves sources whose
   books the library holds into a recoverable holding area, and `library restore`
   undoes it. `library purge` frees that space once the library holds the
   same verified bytes, after its own preview. `library rescan` scans review holdings in
@@ -87,7 +87,7 @@ AI service. The agent interface (MCP) uses the same application services.
   import tools that store only the plan a preview returned, and acquisition
   and rescan as durable jobs that outlive the connection.
 
-Multipart archives, cleanup of RAR and 7z archives,
+Old-style RAR volume names, cleanup of RAR and 7z archives,
 recording identity beyond LibriVox, and CLI and TUI views of jobs are planned. Single-file import is not
 a full checked-library policy.
 File checks report limited evidence, never a safety or completeness guarantee.

@@ -458,3 +458,32 @@ func TestIngestPreservesRARAnd7zWithoutAnArchiveTool(t *testing.T) {
 		t.Fatal(outcomes["book.epub"])
 	}
 }
+
+// Volume sets are accounted for whole: a complete set is one archive read
+// through its first volume, its other volumes are its parts, and a set with
+// a gap is preserved. Without 7-Zip the set is preserved too.
+func TestIngestAccountsForVolumeSets(t *testing.T) {
+	saved := staging.SevenZip
+	staging.SevenZip = func() (string, error) { return "", errors.New("missing") }
+	t.Cleanup(func() { staging.SevenZip = saved })
+	ctx := context.Background()
+	root, folder := t.TempDir(), t.TempDir()
+	if _, err := Initialize(ctx, root); err != nil {
+		t.Fatal(err)
+	}
+	writeTree(t, folder, map[string][]byte{"a.7z.001": []byte("x"), "a.7z.002": []byte("y"), "b.part1.rar": []byte("x"), "b.part3.rar": []byte("y")})
+	r, err := Ingest(ctx, IngestRequest{Library: root, Folder: folder, Apply: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := map[string]string{}
+	for _, item := range r.Items {
+		got[item.Source] = item.Outcome
+	}
+	want := map[string]string{"a.7z.001": "not_imported", "a.7z.002": "archive_volume", "b.part1.rar": "not_imported", "b.part3.rar": "not_imported"}
+	for source, outcome := range want {
+		if got[source] != outcome {
+			t.Errorf("%s: %s, want %s", source, got[source], outcome)
+		}
+	}
+}

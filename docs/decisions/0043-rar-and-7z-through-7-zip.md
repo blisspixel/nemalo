@@ -63,8 +63,8 @@ decoder of Nemalo's own. 7-Zip parses untrusted archives as an external
 program, as ClamAV and FFmpeg do; its own path handling is never used, since
 nothing is extracted to a path. A solid 7z archive is decompressed from the
 start of its block for each member, so a large solid archive takes longer.
-Multipart sets, nested archives, tar, and compressed streams stay listed and
-preserved. Cleanup of RAR and 7z archives is later work.
+Volume sets are [decision 0046](0046-archive-volume-sets.md); nested
+archives, tar, and compressed streams stay listed and preserved. Cleanup of RAR and 7z archives is later work.
 
 ## Validation
 

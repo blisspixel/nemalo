@@ -27,11 +27,22 @@ func fakeSeven() {
 		fmt.Sscan(string(b), &n)
 		return n
 	}
-	if len(args) == 0 || !slices.Contains(args, noPassword) || !slices.Contains(args, "--") || !slices.Contains(args, "-tRar5") {
+	kind := os.Getenv("NEMALO_FAKE_7Z_TYPE")
+	if kind == "" {
+		kind = "-tRar5"
+	}
+	if len(args) == 0 || !slices.Contains(args, noPassword) || !slices.Contains(args, "--") || !slices.Contains(args, kind) {
 		os.Exit(7)
 	}
 	switch args[0] {
 	case "l":
+		if !slices.Contains(args, "-ba") {
+			// Without -ba 7-Zip prints the archive's own block first.
+			h, _ := os.ReadFile(filepath.Join(dir, "header.txt"))
+			os.Stdout.WriteString("Listing archive: x\n\n--\n")
+			os.Stdout.Write(h)
+			os.Stdout.WriteString("\n----------\n")
+		}
 		b, _ := os.ReadFile(filepath.Join(dir, "listing.txt"))
 		os.Stdout.Write(b)
 		os.Exit(code("list.code"))
@@ -228,5 +239,63 @@ func TestSevenZipRefusesWhatItCannotList(t *testing.T) {
 	}
 	if !Supported("x.7z") || !Supported("x.RAR") || Supported("x.tar") {
 		t.Fatal("supported archives")
+	}
+}
+
+// A RAR volume set is read only when 7-Zip's header names it multi-volume
+// with as many volumes as were found; a split 7z is joined in order.
+func TestVolumeSetsAreReadWholeOrPreserved(t *testing.T) {
+	body := []byte("an epub body")
+	src, dst := sevenFixture(t, []sevenMember{{name: "book.epub", body: body}})
+	dir := os.Getenv("NEMALO_FAKE_7Z")
+	for i, name := range []string{"set.part1.rar", "set.part2.rar"} {
+		data := []byte("Rar!\x1a\x07\x01\x00 volume")
+		if i == 1 {
+			data = []byte("more")
+		}
+		if err := os.WriteFile(filepath.Join(src.Name(), name), data, 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	header := func(text string) {
+		if err := os.WriteFile(filepath.Join(dir, "header.txt"), []byte(text), 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	header("Path = x\nType = Rar5\nMultivolume = +\nVolumes = 2\n")
+	x, err := ExtractSet(context.Background(), src, []string{"set.part1.rar", "set.part2.rar"}, dst, books, Defaults())
+	if err != nil || len(x.Members) != 1 || x.Members[0].Disposition != "extracted" {
+		t.Fatal(x, err)
+	}
+	header("Path = x\nType = Rar5\nMultivolume = +\nVolumes = 3\n")
+	if _, err := ExtractSet(context.Background(), src, []string{"set.part1.rar", "set.part2.rar"}, dst, books, Defaults()); err == nil || !strings.Contains(err.Error(), "3 volume") {
+		t.Fatal(err)
+	}
+	for name, names := range map[string][]string{
+		"gap":       {"set.part1.rar", "set.part3.rar"},
+		"other set": {"set.part1.rar", "other.part2.rar"},
+		"one":       {"set.part1.rar"},
+	} {
+		if _, err := ExtractSet(context.Background(), src, names, dst, books, Defaults()); err == nil {
+			t.Fatal(name, "accepted")
+		}
+	}
+	// A split 7z is its volumes joined: here a 7z signature across two files.
+	t.Setenv("NEMALO_FAKE_7Z_TYPE", "-t7z")
+	for name, data := range map[string]string{"set.7z.001": "7z\xbc", "set.7z.002": "\xaf\x27\x1c rest"} {
+		if err := os.WriteFile(filepath.Join(src.Name(), name), []byte(data), 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	_ = os.Remove(filepath.Join(dst.Name(), "00000.epub"))
+	x, err = ExtractSet(context.Background(), src, []string{"set.7z.001", "set.7z.002"}, dst, books, Defaults())
+	if err != nil || len(x.Members) != 1 || x.Members[0].Disposition != "extracted" {
+		t.Fatal(x, err)
+	}
+	if set, n, ok := VolumeOf("dir/Set.Part02.RAR"); !ok || n != 2 || set != filepath.Join("dir", "Set")+".rar" {
+		t.Fatal(set, n, ok)
+	}
+	if _, _, ok := VolumeOf("set.rar"); ok {
+		t.Fatal("a plain archive named a volume")
 	}
 }

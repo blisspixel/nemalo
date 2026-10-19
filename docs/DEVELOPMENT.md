@@ -339,6 +339,9 @@ staging with path, size, ratio, and CRC checks and recorded as
 `ARCHIVE!/MEMBER`. With 7-Zip installed, RAR and 7z members are extracted the
 same way, one at a time by exact name to standard output, from a private
 snapshot of the archive ([decision 0043](decisions/0043-rar-and-7z-through-7-zip.md)).
+A split 7z (`NAME.7z.001`, ...) or a RAR volume set (`NAME.part1.rar`, ...) is
+read whole through its first volume, and a set with a missing volume is
+preserved ([decision 0046](decisions/0046-archive-volume-sets.md)).
 The folder and its archives are never changed. See
 [decision 0017](decisions/0017-folder-and-zip-ingest.md).
 

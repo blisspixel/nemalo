@@ -235,7 +235,10 @@ output, with the same accounting and CRC checks
 ([decision 0043](docs/decisions/0043-rar-and-7z-through-7-zip.md)); the pure-Go
 readers checked on 2026-10-11 lack verifiable checksums or memory bounds (see the
 [research record](docs/RESEARCH.md#version-sensitive-research-record)).
-Multipart sets, nested archives, and PAR2 remain planned. Depends on
+Split 7z and multi-volume RAR sets are read whole through their first volume
+when 7-Zip names exactly the volumes found, and a set with a gap is preserved
+([decision 0046](docs/decisions/0046-archive-volume-sets.md)). Old-style RAR
+volume names, split ZIPs, nested archives, and PAR2 remain planned. Depends on
 milestone 1.
 
 Deliver recursive inventory, file-signature checks, ZIP handling, additional archive
