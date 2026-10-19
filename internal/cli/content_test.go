@@ -131,17 +131,17 @@ func TestContentCLIContract(t *testing.T) {
 func TestReadCLIOpensTheReaderAndPrintsWhereItClosed(t *testing.T) {
 	asset := "sha256:" + strings.Repeat("a", 64)
 	var got []tui.ReadOptions
-	var stop *reader.Position
+	var stop *tui.Closed
 	var fail error
 	saved := readTerminal
-	readTerminal = func(_ context.Context, _ app.Service, _ io.Writer, o tui.ReadOptions) (*reader.Position, error) {
+	readTerminal = func(_ context.Context, _ app.Service, _ io.Writer, o tui.ReadOptions) (*tui.Closed, error) {
 		got = append(got, o)
 		return stop, fail
 	}
 	t.Cleanup(func() { readTerminal = saved })
-	stop = &reader.Position{Unit: 3, Offset: 120}
+	stop = &tui.Closed{At: reader.Position{Unit: 3, Offset: 120}, Summary: "Closed at Chapter Two, 40% through. Nothing about this reading was recorded."}
 	code, out, stderr := execute(t, []string{"read", "catalog.json", "--root", "books", "--asset", asset, "--speed", "--rate", "300", "--unit", "1", "--text-offset", "5"}, nil)
-	if code != 0 || stderr != "" || !strings.Contains(out, "Closed at unit 3, byte 120. Nothing was recorded.") || !strings.Contains(out, "--unit 3 --text-offset 120") {
+	if code != 0 || stderr != "" || !strings.Contains(out, "Closed at Chapter Two, 40% through. Nothing about this reading was recorded.\n") || !strings.Contains(out, "--unit 3 --text-offset 120") {
 		t.Fatal(code, out, stderr)
 	}
 	if len(got) != 1 || got[0] != (tui.ReadOptions{Catalog: "catalog.json", Root: "books", Asset: asset, Start: reader.Position{Unit: 1, Offset: 5}, Speed: true, Rate: 300}) {

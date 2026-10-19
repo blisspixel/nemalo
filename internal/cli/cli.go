@@ -346,7 +346,7 @@ func Execute(ctx context.Context, args []string, out, errOut io.Writer, service 
 			return write(nil, err, 1)
 		}
 		if stop != nil {
-			_, err = fmt.Fprintf(out, "Closed at unit %d, byte %d. Nothing was recorded. To return there, repeat this command with --unit %d --text-offset %d. Closing does not save a bookmark.\n", stop.Unit, stop.Offset, stop.Unit, stop.Offset)
+			_, err = fmt.Fprintf(out, "%s\nTo return there, repeat this command with --unit %d --text-offset %d.\n", stop.Summary, stop.At.Unit, stop.At.Offset)
 			if err != nil {
 				return 1
 			}
@@ -764,7 +764,7 @@ func Execute(ctx context.Context, args []string, out, errOut io.Writer, service 
 }
 
 // readTerminal runs the interactive reader; tests replace it.
-var readTerminal = func(ctx context.Context, s app.Service, out io.Writer, o tui.ReadOptions) (*reader.Position, error) {
+var readTerminal = func(ctx context.Context, s app.Service, out io.Writer, o tui.ReadOptions) (*tui.Closed, error) {
 	return tui.Read(ctx, s, os.Stdin, out, o)
 }
 

@@ -62,9 +62,14 @@ session, so nothing is lost or repeated.
   missing, and off-spine targets are listed and never followed. Detours nest
   at most four deep over an untouched passage session; Escape returns, late
   results are ignored, and nothing is recorded.
-- Position is shown as unit and byte. Closing reports it, and `nemalo read`
-  prints the `--unit` and `--text-offset` that return there. No position,
-  history, rate, or reading time is recorded.
+- Position is shown as unit and byte. Closing prints one line naming the
+  place, the book's declared contents entry or the unit label, and how far
+  through its text it is, rounded down, then that nothing was recorded
+  (issue 35). It names a saved bookmark only when one exists for the book
+  at another place. The exact unit and byte stay in the TUI's full report,
+  and `nemalo read` prints the `--unit` and `--text-offset` that return
+  there. The contents and bookmark list are read, never written. No
+  position, history, rate, or reading time is recorded.
 - MCP gains no tool. A host shows a person one page at a time with
   `content_read` and its continuation; the plugin skill says how. Timed
   presentation belongs to a terminal the person controls, not to an agent.

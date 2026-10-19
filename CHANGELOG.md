@@ -18,6 +18,7 @@
 - `nemalo help` is a one-screen overview grouped by find, acquire, check, keep, and read. `nemalo help COMMAND` and `COMMAND --help` print that command's options and limits, with today's text. Help wraps to a terminal narrower than 80 columns. `nemalo --version` and `nemalo version` print the version and, when built from a source checkout, the commit. Closes issue 34.
 - The TUI uses the terminal's own ANSI colours: blue accent, green for done, yellow for work and attention, red for failures and detections, and dim context. It no longer emits truecolor values that assumed a dark background, which left about 2:1 contrast on light themes. The status line's colour comes from the operation's result, not from words in the status. Closes issue 32.
 - TUI mode labels never split from their number: when every name does not fit, the other modes show their numbers and the selected mode keeps its name. Field hints and context lines end at a whole word, the footer is one line when it fits, and the reader no longer repeats the unit label above its own heading. Closes issue 33.
+- Closing the reader prints one line, such as `Closed at Chapter One, 12% through. Nothing about this reading was recorded.`, naming the book's declared contents entry, or the unit, and how far through it is. The exact unit and byte stay in the full report and in `nemalo read`'s return command. A saved bookmark is mentioned only when it is at another place. Closes issue 35.
 
 ## 0.1.0-alpha.11
 

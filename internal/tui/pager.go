@@ -13,6 +13,7 @@ import (
 	"charm.land/lipgloss/v2"
 	"github.com/blisspixel/nemalo/internal/app"
 	"github.com/blisspixel/nemalo/internal/content"
+	"github.com/blisspixel/nemalo/internal/library"
 	"github.com/blisspixel/nemalo/internal/present"
 	"github.com/blisspixel/nemalo/internal/reader"
 )
@@ -75,6 +76,11 @@ type pager struct {
 	help bool
 	// notes is a detour into source notes; the passage above stays as it is.
 	notes *notesState
+	// session numbers this reader for its read-only side facts: the book's
+	// declared contents, which name where it closed, and a saved bookmark.
+	session  int
+	contents []content.NavEntry
+	saved    *library.Bookmark
 }
 
 type pagerChunk struct {
@@ -106,7 +112,7 @@ func (m *model) openPager(catalog, root, asset, representation string, start rea
 	if representation == "pdf-text/1" {
 		measure = pdfMeasure
 	}
-	m.pager = &pager{catalog: catalog, root: root, asset: asset, representation: representation, start: start, measure: measure, rate: min(max(rate, reader.MinRate), reader.MaxRate), speed: speed, failed: -1}
+	m.pager = &pager{catalog: catalog, root: root, asset: asset, representation: representation, start: start, measure: measure, rate: min(max(rate, reader.MinRate), reader.MaxRate), speed: speed, failed: -1, session: m.nextSeq()}
 	m.pager.notice = "Retrieving source text. Nothing about this reading is recorded."
 	return m.pagerFetch(content.Request{UnitsOnly: true}, true)
 }
@@ -130,9 +136,9 @@ type ReadOptions struct {
 	Rate                 int
 }
 
-// Read runs only the reader and returns the position it closed at, so the
-// caller can show how to return there. Nothing is recorded.
-func Read(ctx context.Context, service app.Service, in io.Reader, out io.Writer, o ReadOptions) (*reader.Position, error) {
+// Read runs only the reader and returns where it closed and the closing
+// line, so the caller can show how to return there. Nothing is recorded.
+func Read(ctx context.Context, service app.Service, in io.Reader, out io.Writer, o ReadOptions) (*Closed, error) {
 	if !interactiveTerminal(in, out) {
 		return nil, errors.New("read requires an interactive terminal")
 	}
@@ -152,7 +158,7 @@ func Read(ctx context.Context, service app.Service, in io.Reader, out io.Writer,
 	if _, err := tea.NewProgram(m, tea.WithContext(ctx), tea.WithInput(in), tea.WithOutput(out)).Run(); err != nil {
 		return nil, err
 	}
-	return m.readerStop, nil
+	return m.closed, nil
 }
 
 func (m *model) pagerFetch(req content.Request, units bool) tea.Cmd {
@@ -228,15 +234,16 @@ func (m *model) pagerChunk(msg pagerChunk) tea.Cmd {
 		}
 		p.doc = reader.New(p.representation, p.units)
 		p.doc.StartAt(p.start)
+		facts := m.pagerFacts()
 		if p.chapter {
 			if p.chapterCursor != "" {
 				cursor := p.chapterCursor
 				p.chapterCursor = ""
-				return m.pagerFetch(content.Request{Cursor: cursor}, false)
+				return tea.Batch(m.pagerFetch(content.Request{Cursor: cursor}, false), facts)
 			}
-			return m.pagerFetch(content.Request{Unit: p.navOrder, Offset: 0, Navigation: p.navEvidence}, false)
+			return tea.Batch(m.pagerFetch(content.Request{Unit: p.navOrder, Offset: 0, Navigation: p.navEvidence}, false), facts)
 		}
-		return m.pagerFetch(content.Request{Unit: p.start.Unit, Offset: p.start.Offset}, false)
+		return tea.Batch(m.pagerFetch(content.Request{Unit: p.start.Unit, Offset: p.start.Offset}, false), facts)
 	}
 	if msg.data.Locator != nil {
 		p.representationID = msg.data.Locator.RepresentationID
@@ -436,10 +443,16 @@ func (m *model) closePager() tea.Cmd {
 	if p.notes != nil && p.notes.cancel != nil {
 		p.notes.cancel()
 	}
-	m.status = "Closed the reader. Nothing about this reading was recorded. Closing does not save a bookmark."
+	m.status = "Closed the reader. Nothing about this reading was recorded."
 	if at, ok := m.pagerPosition(); ok {
-		m.readerStop = &at
-		m.status = fmt.Sprintf("Closed the reader at unit %d, byte %d (%s). Nothing about this reading was recorded. Closing does not save a bookmark.", at.Unit, at.Offset, p.doc.Label(at.Unit))
+		m.status = m.closingLine(at)
+		m.closed = &Closed{At: at, Summary: m.status}
+		// The exact place stays in the full report, for an exact restart.
+		exact := fmt.Sprintf("Reader closed at unit %d, byte %d (%s). nemalo read returns there with --unit %d --text-offset %d.\n", at.Unit, at.Offset, p.doc.Label(at.Unit), at.Unit, at.Offset)
+		if m.report != "" {
+			exact = m.report + "\n" + exact
+		}
+		m.setReport(exact)
 	}
 	only := p.only
 	m.pager = nil

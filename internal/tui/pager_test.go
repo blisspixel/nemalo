@@ -262,7 +262,7 @@ func TestReaderPagesThroughEveryWordAndStopsAtAnUnreadableUnit(t *testing.T) {
 		t.Fatal("] after a failed jump opens the unit after it", m.pagerView())
 	}
 	press(m, "q")
-	if m.pager != nil || m.readerStop == nil || !strings.Contains(m.status, "Nothing about this reading was recorded") {
+	if m.pager != nil || m.closed == nil || !strings.Contains(m.status, "Nothing about this reading was recorded") {
 		t.Fatal(m.status)
 	}
 	if after := files(t, root, filepath.Dir(catalog)); !slices.Equal(before, after) {
@@ -496,7 +496,7 @@ func TestReadModeOpensTheReaderOnTheSelectedUnit(t *testing.T) {
 		t.Fatal(m.View().Content)
 	}
 	press(m, "esc")
-	if m.pager != nil || m.mode != "read" || !strings.Contains(m.status, "unit 2, byte 0") {
+	if m.pager != nil || m.mode != "read" || !strings.Contains(m.status, "Closed at Document 3 of 3") || !strings.Contains(m.report, "unit 2, byte 0") {
 		t.Fatal(m.status)
 	}
 	m.reader.representation = "mpeg-audio/1"

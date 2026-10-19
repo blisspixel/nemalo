@@ -83,10 +83,10 @@ type model struct {
 	id                         int
 	cancel                     context.CancelFunc
 	reader                     readerState
-	// pager, when open, fills the screen; readerStop is where it was closed.
-	pager      *pager
-	readerStop *reader.Position
-	pagerSeq   int
+	// pager, when open, fills the screen; closed is where it was closed.
+	pager    *pager
+	closed   *Closed
+	pagerSeq int
 	// initial is a command run at start, such as the reader's first fetch.
 	initial         tea.Cmd
 	downloadReview  *acquisition.Request
@@ -133,6 +133,9 @@ func (m *model) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 		return m, m.pagerTick(msg)
 	case noteChunk:
 		return m, m.noteChunk(msg)
+	case pagerAux:
+		m.pagerAuxResult(msg)
+		return m, nil
 	case tea.KeyPressMsg:
 		if m.pager != nil {
 			if msg.String() == "ctrl+c" {

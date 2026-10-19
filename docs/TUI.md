@@ -149,7 +149,10 @@ at those rates in studies. Paused, the surrounding rows show the word marked.
 An unreadable unit stops reading when you reach it, after everything already
 delivered; `]` opens the next unit. A session holds up to 4 MiB of text; at
 that limit `]` continues from the same place in a new session.
-Closing shows the unit and byte and does not save a bookmark. `m` saves only
+Closing shows one line, such as `Closed at Chapter One, 12% through. Nothing
+about this reading was recorded.`, and keeps the exact unit and byte in the F5
+full report. It mentions a bookmark only when one is saved for the book at
+another place, since closing never moves it. `m` saves only
 when bookmarks are enabled on an initialized library.
 
 `f` lists the EPUB links on the page, from `epub-structure/1`. A link the
