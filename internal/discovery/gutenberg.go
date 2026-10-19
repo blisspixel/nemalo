@@ -462,7 +462,10 @@ func fetchCatalog(ctx context.Context, output, rawURL string, client *http.Clien
 	hasher := sha256.New()
 	n, err := io.Copy(io.MultiWriter(f, hasher), io.LimitReader(resp.Body, maxCatalogBytes+1))
 	if err != nil {
-		return result, err
+		if resp.ContentLength > 0 {
+			return result, fmt.Errorf("the catalog download stopped after %d of %d bytes, and nothing was kept; try again: %w", n, resp.ContentLength, err)
+		}
+		return result, fmt.Errorf("the catalog download stopped after %d bytes, and nothing was kept; try again: %w", n, err)
 	}
 	if n < 1 || n > maxCatalogBytes {
 		return result, errors.New("gutenberg catalog must be a non-empty file no larger than 64 MiB")

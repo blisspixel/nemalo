@@ -61,7 +61,7 @@ func publicDial(host string, lookup lookupIP, dial dialIP) dialIP {
 		}
 		for _, ip := range ips {
 			if !publicIP(ip) {
-				return nil, errors.New("provider resolved to a nonpublic destination")
+				return nil, errors.New(h + " resolved to a non-public address")
 			}
 		}
 		var attempts error

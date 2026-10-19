@@ -83,6 +83,12 @@ opened by an earlier prerelease
 
 JSON mode uses schema version 1 and exit codes 0
 (success), 1 (failed/incomplete operation), and 2 (usage/configuration error).
+Without `--json`, an error is one line on stderr, `nemalo: ` and a plain
+sentence: a request error names the host and the cause instead of the URL, a
+file error says what is wrong with the path, and control characters and line
+breaks from a source cannot start another line. A command that failed before
+doing anything prints only that line; one that kept bytes, a journal, or a
+detection prints its result first. `--json` keeps the full error and result.
 
 ## Source item evaluation
 

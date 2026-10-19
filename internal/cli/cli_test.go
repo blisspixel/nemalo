@@ -8,6 +8,7 @@ import (
 	"flag"
 	"io"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -257,7 +258,7 @@ func TestMissingLibraryCleanupPrintsNoPreview(t *testing.T) {
 	if code != 1 || strings.TrimSpace(out) != "" || strings.Contains(out, "Preview") || strings.Contains(out, "Nothing here is held") {
 		t.Fatal(code, out, stderr)
 	}
-	if !strings.Contains(stderr, "library not found") || !strings.Contains(stderr, "missing") {
+	if !strings.Contains(stderr, "nemalo: library folder ") || !strings.Contains(stderr, "missing does not exist") {
 		t.Fatal(stderr)
 	}
 }
@@ -392,4 +393,43 @@ func TestSearchOrderSelection(t *testing.T) {
 	if code != 0 || !strings.Contains(out, "stable for paging") {
 		t.Fatal(code, out)
 	}
+}
+
+// A command that fails before doing anything prints only the error, as one
+// plain line; --json keeps the full result beside it (issues 27 and 28).
+func TestFailureBeforeAnyWorkPrintsOnlyThePlainError(t *testing.T) {
+	missing := filepath.Join(t.TempDir(), "lib")
+	code, out, stderr := execute(t, []string{"library", "init", missing}, nil)
+	if code != 1 || out != "" || stderr != "nemalo: library folder "+missing+" does not exist; a library is an existing folder, so create it first\n" {
+		t.Fatalf("%d %q %q", code, out, stderr)
+	}
+	refused := &url.Error{Op: "Get", URL: "https://archive.org/metadata/demo?x=%22y%22", Err: errors.New("archive.org resolved to a non-public address")}
+	acquire := func(args ...string) (int, string, string) {
+		var out, errOut bytes.Buffer
+		s := app.Service{Providers: map[string]app.Searcher{"archive": refusingCatalog{refused}}, Scanner: fakeScanner("unavailable")}
+		code := Execute(context.Background(), append([]string{"acquire", "archive:demo", "--file", "book.pdf", "--output", filepath.Join(t.TempDir(), "packet")}, args...), &out, &errOut, s, func(string) string { return "" }, func() (config.Paths, error) {
+			return config.Paths{Config: filepath.Join(t.TempDir(), "none"), State: t.TempDir()}, nil
+		}, nil)
+		return code, out.String(), errOut.String()
+	}
+	code, out, stderr = acquire()
+	if code != 1 || out != "" || stderr != "nemalo: request to archive.org failed: archive.org resolved to a non-public address\n" {
+		t.Fatalf("%d %q %q", code, out, stderr)
+	}
+	code, out, _ = acquire("--json")
+	if code != 1 || !strings.Contains(out, `"status"`) || !strings.Contains(out, `https://archive.org/metadata/demo`) {
+		t.Fatal("JSON keeps the result and the full error", code, out)
+	}
+}
+
+type refusingCatalog struct{ err error }
+
+func (r refusingCatalog) Search(context.Context, string, int, int) (discovery.Page, error) {
+	return discovery.Page{}, r.err
+}
+func (r refusingCatalog) Evaluate(context.Context, string) (discovery.Evaluation, error) {
+	return discovery.Evaluation{}, r.err
+}
+func (r refusingCatalog) Download(context.Context, discovery.OfferedFile) (*http.Response, error) {
+	return nil, r.err
 }

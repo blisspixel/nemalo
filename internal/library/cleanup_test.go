@@ -20,7 +20,7 @@ func TestCleanupOfAMissingLibraryNamesThePath(t *testing.T) {
 	folder := t.TempDir()
 	lib := filepath.Join(t.TempDir(), "missing")
 	_, err := Cleanup(context.Background(), CleanupRequest{Library: lib, Folder: folder})
-	if err == nil || !strings.Contains(err.Error(), "library not found:") || !strings.Contains(err.Error(), "missing") {
+	if err == nil || !strings.Contains(err.Error(), "does not exist") || !errors.Is(err, os.ErrNotExist) || !strings.Contains(err.Error(), "missing") {
 		t.Fatal(err)
 	}
 }

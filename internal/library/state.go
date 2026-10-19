@@ -282,8 +282,22 @@ func appendEvent(ctx context.Context, c *control, f *os.File, event journalEvent
 	return f.Sync()
 }
 
+// missingLibrary says an explicit library folder does not exist. Nemalo
+// never creates one, so the person names an existing folder. It matches
+// os.ErrNotExist.
+type missingLibrary string
+
+func (m missingLibrary) Error() string {
+	return "library folder " + string(m) + " does not exist; a library is an existing folder, so create it first"
+}
+
+func (missingLibrary) Is(target error) bool { return target == os.ErrNotExist }
+
 func openControl(directory string, write bool) (*control, bool, error) {
 	parent, err := safeio.OpenRoot(directory)
+	if errors.Is(err, os.ErrNotExist) {
+		return nil, false, missingLibrary(directory)
+	}
 	if err != nil {
 		return nil, false, fmt.Errorf("explicit library root: %w", err)
 	}

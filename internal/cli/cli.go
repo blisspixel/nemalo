@@ -315,12 +315,12 @@ func Execute(ctx context.Context, args []string, out, errOut io.Writer, service 
 				return 1
 			}
 		} else if err != nil {
-			if data != nil {
+			if started(data) {
 				if outputErr := printData(out, data); outputErr != nil {
 					return 1
 				}
 			}
-			_, _ = fmt.Fprintf(errOut, "nemalo: %q\n", err.Error())
+			_, _ = fmt.Fprintf(errOut, "nemalo: %s\n", present.Error(err))
 		} else {
 			if encodeErr := printData(out, data); encodeErr != nil {
 				return 1
@@ -890,7 +890,7 @@ func Execute(ctx context.Context, args []string, out, errOut io.Writer, service 
 	case "mcp":
 		// Stdout belongs to the protocol from here on; diagnostics go to stderr.
 		fail := func(err error, code int) int {
-			_, _ = fmt.Fprintf(errOut, "nemalo: %q\n", err.Error())
+			_, _ = fmt.Fprintf(errOut, "nemalo: %s\n", present.Error(err))
 			return code
 		}
 		if action != "serve" || flags.NArg() != 0 || *transport != "stdio" || *jsonMode {
@@ -1096,6 +1096,26 @@ func parse(flags *flag.FlagSet, args []string) error {
 		options = append(options, args[i])
 	}
 	return flags.Parse(append(append(options, "--"), positionals...))
+}
+
+// started reports whether a failed command's result shows something that
+// happened, such as bytes kept for --resume, a detection, or journal state. A
+// result of empty values is left out of human output, so the error stands
+// alone; --json still carries it.
+func started(data any) bool {
+	switch v := data.(type) {
+	case nil:
+		return false
+	case acquisition.Result:
+		return v.Output != "" || v.Transfer.Bytes > 0
+	case library.State:
+		return v.LibraryID != "" || v.Created || v.Resumed || (v.Status != "unavailable" && v.Status != "")
+	case library.ImportResult:
+		return v.Applied || v.Resumed || v.AssetID != ""
+	case discovery.CatalogFile:
+		return v.Path != ""
+	}
+	return true
 }
 
 func printData(out io.Writer, data any) error {

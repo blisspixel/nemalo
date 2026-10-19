@@ -6,6 +6,8 @@
 - Gutenberg search results show the catalog's Type and Issued date, such as `Text, issued 1998-06-01` or `Sound, issued 2007-02-03`, in the CLI and TUI, and as `media_type` and `issued` in JSON. A text and its recordings no longer look identical. Closes issue 24.
 - Each step of the first-book path names the next command: a local Gutenberg evaluation names `evaluate --files`, an evaluation names `acquire` for the first eligible EPUB or PDF, an acquisition names `library import`, a preview names `--apply`, and an import names `read`. Scan guidance follows these lines instead of replacing them. The README quick start goes from the catalog to the reader. Closes issue 25.
 - Suggested commands quote source file names and paths for the shell. They were Go-quoted before, and a shell expands `$(...)` inside double quotes. A name with a control or format character is not offered.
+- Errors print as one plain sentence. A refused request names the host and the reason instead of the encoded URL, for example `nemalo: request to archive.org failed: archive.org resolved to a non-public address`, and a missing library folder says so. `--json` keeps the full message. Closes issue 27.
+- `library init`, `acquire`, `library import`, and `catalog fetch` print only the error when they fail before doing anything, instead of a block of empty values. An interrupted catalog download says how much arrived and that nothing was kept. Closes issue 28.
 
 ## 0.1.0-alpha.11
 
