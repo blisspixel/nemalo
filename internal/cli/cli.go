@@ -30,197 +30,6 @@ import (
 
 const Version = "0.1.0-alpha.11"
 
-const help = `Nemalo
-Find knowledge. Care for it. Realize its potential.
-
-Usage: nemalo <command> [options]
-
-  tui                 Open the interactive terminal interface
-  doctor              Report configuration and optional tool availability
-  search QUERY        Search a selected catalog. Open Library and Internet Archive
-                      use the network. Gutenberg reads a local catalog file.
-  evaluate archive:ITEM|gutenberg:NUMBER|openlibrary:ID [--files|--editions]
-                      Inspect source-declared files, rights, and access restrictions.
-                      gutenberg:NUMBER without --files is one local catalog row and lists no files.
-                      --files fetches one Gutenberg bibliographic record and lists EPUB offers.
-                      It does not download an ebook.
-                      openlibrary:WORK --editions lists one page of editions (--limit, --offset).
-                      openlibrary:EDITION reads that edition. When its ocaid names one Archive
-                      item, the result is that item's metadata. Acquire the printed archive:ITEM.
-                      A work-level Archive identifier is not selected.
-  catalog fetch gutenberg --output FILE
-                      Download the official Gutenberg catalog to a new file.
-                      Search does not do this, and it does not download ebooks.
-  acquire archive:ITEM --file NAME --output NEW_DIRECTORY
-                      Download a selected EPUB/PDF/MP3 into untrusted intake
-  acquire gutenberg:NUMBER --file NAME --output NEW_DIRECTORY
-                      Download one EPUB named by the bibliographic record, such as
-                      1342.epub.noimages, into untrusted intake
-  acquire archive:ITEM --recording FORMAT --output NEW_DIRECTORY [--resume]
-                      Download every track of a declared recording, in order
-  inspect DIRECTORY   Read-only inventory of an explicitly selected folder
-  check FILE          Bounded file health assessment, without rendering content
-  library snapshot DIRECTORY --output FILE
-                      Save a new portable byte-identity catalog outside the root
-  library list CATALOG|LIBRARY [--query TEXT]
-                      Browse a snapshot's files, or a managed library's holdings
-  library import LIBRARY SOURCE [--apply] [--scan]
-                      Assess one EPUB, PDF, MP3, or intake packet; --apply stores it
-  library ingest LIBRARY FOLDER [--apply] [--scan]
-                      Import every EPUB, PDF, MP3, intake packet, and ZIP member
-                      in a folder; the folder and its archives are preserved
-  library recordings LIBRARY [--source archive:ITEM]
-                      List held audiobook recordings in declared track order;
-                      with --source, verify and index each track's timing
-  library cleanup LIBRARY FOLDER [--apply --plan DIGEST]
-                      Move sources the library holds into a recoverable holding
-                      area; the preview lists every entry and a plan digest
-  library cleanup LIBRARY --stop
-                      Close a pending cleanup that cannot finish, so it can be restored
-  library restore LIBRARY --cleanup ID [--apply | --stop]
-                      Return a cleanup's files to their folder, never replacing;
-                      --stop closes a restore that cannot finish
-  library rescan LIBRARY [--apply]
-                      Scan review EPUBs that lack scan evidence; --apply records results
-  library open LIBRARY --asset sha256:HASH [--app APPLICATION]
-                      Open a verified read-only copy in a reader or player
-  library export LIBRARY --asset sha256:HASH --output DIRECTORY
-                      Copy one holding out, verified, never overwriting
-  library audit CATALOG --root DIRECTORY
-                      Compare a snapshot catalog with files under an explicit root
-  library audit LIBRARY
-                      Compare managed holdings with their stored bytes
-  library check LIBRARY
-                      Verify the whole library read-only: stored and held bytes,
-                      untracked files, unfinished operations, review counts
-  library init DIRECTORY
-                      Initialize local control state in an existing explicit folder
-  library status DIRECTORY
-                      Read control identity and journal state without creating files
-  bookmark enable LIBRARY
-                      Allow explicit local bookmarks in this library
-  bookmark disable LIBRARY
-                      Keep saved places and refuse new saves and resume
-  bookmark list LIBRARY
-                      List explicit bookmarks. Notes are not book text
-  bookmark save LIBRARY --asset sha256:HASH --representation ID
-                      --representation-id sha256:HASH --unit N --text-offset N
-                      [--cursor TOKEN]
-                      Save one source location. Repeating the same place writes nothing
-  bookmark note LIBRARY --asset sha256:HASH [--text NOTE]
-                      Set the reader's note, or clear it when text is empty
-  bookmark delete LIBRARY --asset sha256:HASH
-                      Drop one asset's saved location. Earlier journal lines stay
-  bookmark export LIBRARY --output FILE
-                      Write current bookmarks to a new file outside .nemalo
-  bookmark import LIBRARY --input FILE [--replace]
-                      Add bookmarks from an export. A difference writes nothing
-                      unless --replace is set
-  bookmark resume LIBRARY --asset sha256:HASH
-                      Open the saved location when those bytes still match
-  content units CATALOG --root DIRECTORY --asset sha256:HASH
-                      List supported EPUB reading-order documents, offline
-  content navigation CATALOG --root DIRECTORY --asset sha256:HASH
-                      List source-declared EPUB contents (nav and NCX), offline
-  content pages CATALOG --root DIRECTORY --asset sha256:HASH
-                      List an EPUB's declared page labels (page-list), offline
-  content read CATALOG --root DIRECTORY --asset sha256:HASH
-                      Retrieve bounded source text with exact continuation, offline
-  content locate CATALOG --root DIRECTORY --asset sha256:HASH --text TEXT
-                      Find exact quotations by unit or PDF page, with offsets
-  content source CATALOG --root DIRECTORY --asset sha256:HASH
-                      Read bounded original EPUB XML, optionally --part ID
-  content resource CATALOG --root DIRECTORY --asset sha256:HASH --cursor TOKEN
-                      Read referenced local image bytes as base64; never render
-  content capabilities
-                      Report supported representation versions and limits
-  read CATALOG|LIBRARY --root DIRECTORY --asset sha256:HASH [--speed]
-                      Read EPUB or PDF text as terminal pages, or one word at a
-                      time with --speed (--rate WPM, default 250). --unit and
-                      --text-offset choose the start. Nothing is recorded.
-  mcp serve --scope DIRECTORY
-                      Serve read-only MCP tools over stdio for an agent host
-  version             Show the development version
-  help                Show this help
-
-Shared options: --json, --config FILE, --library DIRECTORY, --review DIRECTORY
-Search options: --source openlibrary|archive|gutenberg (default openlibrary),
-                --limit 10, --offset 0,
-                --sort relevance|identifier|downloads (identifier and downloads are
-                Archive only; Gutenberg also accepts identifier),
-                --catalog FILE (absolute pg_catalog.csv for Gutenberg search,
-                evaluate, and tui; also gutenberg_catalog in config, or
-                NEMALO_GUTENBERG_CATALOG). Gutenberg does not query the website.
-Acquire options: --file exact-source-filename, --output new-directory,
-                 --max-file-bytes 268435456 (maximum 256 MiB),
-                 --no-scan, --on-detection quarantine|delete,
-                 --recording "64Kbps MP3" (a format listed under recordings by
-                 evaluate), --max-recording-bytes 4294967296 (maximum 16 GiB),
-                 --resume (continue a recording directory; completed tracks stay)
-Acquisition creates missing parent folders, retains incomplete output, and never
-overwrites it. --resume continues an interrupted file in its packet when the
-source still has the same bytes and the packet already has a transfer record
-and partial bytes. A failure before any bytes has no transfer record; start a
-new output. --resume also continues a recording, keeping completed tracks.
-When a scanner is installed it scans the downloaded bytes once. A detection
-moves them to the Nemalo quarantine (or deletes them) and lists other files
-from the same item. Rights remain unresolved.
-Inspect options: --hashes, --max-entries 10000, --max-depth 32,
-                 --max-file-bytes 268435456, --max-total-bytes 1073741824
-Check options: --scan, --expected-bytes N, --expected-sha256 HASH
-Library snapshot options: --output FILE, --assess (local health/EPUB metadata)
-Library list options: --query TEXT, --format all|epub|pdf|mp3, --limit 10, --offset 0,
-                      --status all|checked|review (managed library only)
-Library import options: --apply, --scan
-Library rescan options: --apply (without it, scans and reports but writes nothing)
-Library audit options: --root DIRECTORY for a snapshot catalog
-Content read options: --unit 0, --text-offset 0, --max-bytes 4096, --cursor TOKEN
-                     --representation epub-text/2|epub-text/1|epub-structure/1|epub-nav/1|epub-page-list/1|pdf-text/1|mpeg-audio/1,
-                     --navigation nav-doc|ncx, --label LABEL (epub-page-list/1), --part ID, --sample N (mpeg-audio/1)
-The default epub-text/2 omits images, tables, mathematics, and media from the
-text and locates each omission as a gap. A continuation keeps the representation
-it was issued for. epub-nav/1 reads one source-declared contents entry: --unit
-is that entry's order, and --text-offset is relative to the entry. When a book
-has both a navigation document and an NCX, a read names which one with
---navigation. epub-page-list/1 reads from one declared page label: --label
-LABEL by its exact text, --unit by its order, or --cursor with its reference;
-a label that several markers carry lists them instead. A page label is the
-EPUB's own marker, not a screen page or a print-edition match.
-Extraction is not rendered layout or acknowledgement of reading.
-Bookmarks are a separate explicit record. Reading, repeating, continuing, and
-closing do not write one. bookmark save checks the representation id you pass
-and refuses the save when the bytes no longer match. bookmark resume returns
-no text when the file or the representation changed. A note is your text, kept
-with the bookmark and never written into the book. MCP does not read or write
-bookmarks. Enabling bookmarks adds .nemalo/bookmarks.jsonl; a library that has
-that file needs this version or newer to open its control directory.
-MCP options: --scope DIRECTORY (repeatable; the configured library and review
-             folders are added), --allow-network (catalog search and evaluation),
-             --transport stdio. Tools are read-only; stdout carries protocol only.
-Snapshot and snapshot audit also accept inventory max-* limits. Snapshots hash
-all regular files, account for excluded links, refuse incomplete inventories,
-and never overwrite. Snapshot audit requires --root; the catalog cannot
-authorize a scan. A library-directory audit compares managed holdings only.
-
-Check uses a private temporary snapshot (up to 256 MiB). EPUB text/document counts
-are measured; fixed pages, PDF page counts, and audio duration are not inferred.
---scan invokes installed antivirus without remediation. It is recommended for
-a file you did not produce. Windows uses Microsoft Defender. Linux and macOS
-use ClamAV (clamscan) after you install it and update signatures with freshclam.
-External scanner cloud and sample-submission settings apply. Missing/failed
-scans cannot mean clean. A no-detection result is not proof the file is safe.
-When a publisher supplies a SHA-256, pass --expected-sha256. A match shows the
-bytes are the published bytes. It does not prove those bytes are safe.
-
-Inventory does not extract archives, validate books, or scan for malware.
-library import copies one assessed file into an initialized library and preserves
-the source. Without --apply it writes nothing. checked requires an EPUB whose
-limited checks passed and whose scan reported no detections. PDF, MP3, unscanned,
-and other results stay in review. This is not folder cleanup, archive extraction,
-or download resume. PDF/MP3 checks currently establish candidate signatures only.
-Exit codes: 0 success, 1 operation failed/incomplete, 2 invalid usage/configuration.
-`
-
 type Envelope struct {
 	SchemaVersion int    `json:"schema_version"`
 	Command       string `json:"command"`
@@ -235,11 +44,22 @@ func Run(ctx context.Context, args []string, out, errOut io.Writer) int {
 // Execute exposes external boundaries for offline contract and cancellation tests.
 func Execute(ctx context.Context, args []string, out, errOut io.Writer, service app.Service, env func(string) string, paths func() (config.Paths, error), terminal func(context.Context, app.Service) error) int {
 	if len(args) == 0 || args[0] == "help" || args[0] == "--help" || args[0] == "-h" {
-		_, err := io.WriteString(out, help)
-		if err != nil {
+		text := overview
+		if len(args) > 1 && args[0] == "help" {
+			topic, ok := commandHelp[args[1]]
+			if !ok || len(args) > 2 && args[1] != "library" && args[1] != "content" && args[1] != "bookmark" && args[1] != "mcp" && args[1] != "catalog" {
+				_, _ = fmt.Fprintf(errOut, "nemalo: no help for %s; help is available for %s\n", present.Line(strings.Join(args[1:], " ")), topics())
+				return 2
+			}
+			text = topic
+		}
+		if err := writeHelp(out, text); err != nil {
 			return 1
 		}
 		return 0
+	}
+	if args[0] == "--version" {
+		args = []string{"version"}
 	}
 	command := args[0]
 	action := ""
@@ -336,8 +156,11 @@ func Execute(ctx context.Context, args []string, out, errOut io.Writer, service 
 		return code
 	}
 	if errors.Is(parseErr, flag.ErrHelp) {
-		_, err := io.WriteString(out, help)
-		if err != nil {
+		text, ok := commandHelp[command]
+		if !ok {
+			text = overview
+		}
+		if err := writeHelp(out, text); err != nil {
 			return 1
 		}
 		return 0
@@ -358,7 +181,13 @@ func Execute(ctx context.Context, args []string, out, errOut io.Writer, service 
 		if flags.NArg() != 0 {
 			return write(nil, errors.New("version takes no arguments"), 2)
 		}
-		return write(Version, nil, 0)
+		if *jsonMode {
+			return write(Version, nil, 0)
+		}
+		if _, err := fmt.Fprintln(out, versionLine()); err != nil {
+			return 1
+		}
+		return 0
 	}
 	if command == "content" && action == "capabilities" {
 		if flags.NArg() != 0 {

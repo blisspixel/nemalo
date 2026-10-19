@@ -148,8 +148,8 @@ func TestBookmarkCommandsKeepExplicitLocations(t *testing.T) {
 	if code, _, _ = execute(t, []string{"bookmark", "save", root, "--asset", second.AssetID, "--representation", "epub-text/2", "--representation-id", secondRead.Data.RepresentationID, "--unit", "0", "--text-offset", "0"}, nil); code == 0 {
 		t.Fatal("save while disabled wrote")
 	}
-	code, out, _ = execute(t, nil, nil)
-	if code != 0 || !strings.Contains(out, "bookmark enable") || !strings.Contains(out, "MCP does not read or write") {
+	code, out, _ = execute(t, []string{"help", "bookmark"}, nil)
+	if code != 0 || !strings.Contains(out, "bookmark enable") || !strings.Contains(out, "MCP does not read") {
 		t.Fatal(out)
 	}
 }

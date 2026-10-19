@@ -1,0 +1,341 @@
+package cli
+
+import (
+	"io"
+	"os"
+	"runtime/debug"
+	"sort"
+	"strings"
+
+	"github.com/charmbracelet/x/term"
+)
+
+// overview is the one-screen help, grouped by the path a book takes.
+const overview = `Nemalo VERSION
+Find knowledge. Care for it. Realize its potential.
+
+Usage: nemalo <command> [options]
+
+Find      search QUERY, evaluate ID, catalog fetch gutenberg
+Acquire   acquire ID --file NAME --output NEW_DIRECTORY
+Check     inspect DIRECTORY, check FILE [--scan]
+Keep      library init, import, ingest, list, audit, check, cleanup,
+          restore, rescan, open, export, recordings, snapshot, status
+Read      read LIBRARY --root LIBRARY --asset sha256:HASH,
+          content units, navigation, pages, read, locate, bookmark
+Tools     tui, doctor, mcp serve, version
+
+First book: catalog fetch gutenberg, search, evaluate --files, acquire,
+library init, library import --apply, read. Each step prints the next.
+
+nemalo help COMMAND shows a command's options and limits.
+Shared options: --json, --config FILE, --library DIRECTORY, --review DIRECTORY
+Exit codes: 0 success, 1 operation failed or incomplete, 2 invalid usage.
+`
+
+// commandHelp is each command's usage, options, and limits.
+var commandHelp = map[string]string{
+	"tui": `nemalo tui
+  Open the interactive terminal interface. It needs a terminal and has no
+  --json. Keys are listed on screen and in docs/TUI.md.
+`,
+	"doctor": `nemalo doctor [--json]
+  Report paths, configuration, the recommended scanner and its signature age,
+  the directory descriptor bridge, and optional tools, with a Next line for
+  each thing that needs action. --json is the full report. Nothing is
+  executed or installed, and tool availability is not scan evidence.
+`,
+	"search": `nemalo search QUERY [options]
+  Search a selected catalog. Open Library and Internet Archive use the
+  network. Gutenberg reads a local catalog file and does not query the
+  website.
+
+Options:
+  --source openlibrary|archive|gutenberg (default openlibrary)
+  --limit 10, --offset 0
+  --sort relevance|identifier|downloads (identifier and downloads are Archive
+         only; Gutenberg also accepts identifier)
+  --catalog FILE   absolute pg_catalog.csv for Gutenberg search, evaluate,
+                   and tui; also gutenberg_catalog in config, or
+                   NEMALO_GUTENBERG_CATALOG
+`,
+	"evaluate": `nemalo evaluate archive:ITEM|gutenberg:NUMBER|openlibrary:ID [--files|--editions]
+  Inspect source-declared files, rights, and access restrictions.
+  gutenberg:NUMBER without --files is one local catalog row and lists no
+  files. --files fetches one Gutenberg bibliographic record and lists EPUB
+  offers; it does not download an ebook.
+  openlibrary:WORK --editions lists one page of editions (--limit, --offset).
+  openlibrary:EDITION reads that edition. When its ocaid names one Archive
+  item, the result is that item's metadata; acquire the printed archive:ITEM.
+  A work-level Archive identifier is not selected.
+`,
+	"catalog": `nemalo catalog fetch gutenberg --output FILE
+  Download the official Gutenberg catalog to a new file. Search does not do
+  this, and it does not download ebooks. An interrupted download keeps
+  nothing.
+`,
+	"acquire": `nemalo acquire archive:ITEM --file NAME --output NEW_DIRECTORY
+  Download a selected EPUB, PDF, or MP3 into untrusted intake.
+nemalo acquire gutenberg:NUMBER --file NAME --output NEW_DIRECTORY
+  Download one EPUB named by the bibliographic record, such as
+  1342.epub.noimages, into untrusted intake.
+nemalo acquire archive:ITEM --recording FORMAT --output NEW_DIRECTORY [--resume]
+  Download every track of a declared recording, in order.
+
+Options:
+  --file NAME             exact source file name
+  --output NEW_DIRECTORY  a new folder; missing parents are created
+  --max-file-bytes 268435456 (maximum 256 MiB)
+  --no-scan, --on-detection quarantine|delete
+  --recording "64Kbps MP3"  a format listed under recordings by evaluate
+  --max-recording-bytes 4294967296 (maximum 16 GiB)
+  --resume  continue an interrupted file or recording
+
+Acquisition retains incomplete output and never overwrites it. --resume
+continues an interrupted file in its packet when the source still has the
+same bytes and the packet already has a transfer record and partial bytes.
+A failure before any bytes has no transfer record; start a new output.
+--resume also continues a recording, keeping completed tracks. When a
+scanner is installed it scans the downloaded bytes once. A detection moves
+them to the Nemalo quarantine (or deletes them) and lists other files from
+the same item. Rights remain unresolved.
+`,
+	"inspect": `nemalo inspect DIRECTORY [options]
+  Read-only inventory of an explicitly selected folder.
+
+Options:
+  --hashes, --max-entries 10000, --max-depth 32,
+  --max-file-bytes 268435456, --max-total-bytes 1073741824
+
+Inventory does not extract archives, validate books, or scan for malware.
+`,
+	"check": `nemalo check FILE [options]
+  Bounded file health assessment, without rendering content.
+
+Options:
+  --scan, --expected-bytes N, --expected-sha256 HASH
+
+Check uses a private temporary snapshot (up to 256 MiB). EPUB text and
+document counts are measured; fixed pages, PDF page counts, and audio
+duration are not inferred. --scan invokes installed antivirus without
+remediation. It is recommended for a file you did not produce. Windows uses
+Microsoft Defender. Linux and macOS use ClamAV (clamscan) after you install
+it and update signatures with freshclam. External scanner cloud and
+sample-submission settings apply. Missing or failed scans cannot mean clean.
+A no-detection result is not proof the file is safe. When a publisher
+supplies a SHA-256, pass --expected-sha256. A match shows the bytes are the
+published bytes. It does not prove those bytes are safe.
+`,
+	"library": `nemalo library init DIRECTORY
+  Initialize local control state in an existing explicit folder.
+nemalo library status DIRECTORY
+  Read control identity and journal state without creating files.
+nemalo library import LIBRARY SOURCE [--apply] [--scan]
+  Assess one EPUB, PDF, MP3, or intake packet; --apply stores it.
+nemalo library ingest LIBRARY FOLDER [--apply] [--scan]
+  Import every EPUB, PDF, MP3, intake packet, and ZIP member in a folder;
+  the folder and its archives are preserved.
+nemalo library list CATALOG|LIBRARY [--query TEXT]
+  Browse a snapshot's files, or a managed library's holdings.
+  Options: --format all|epub|pdf|mp3, --limit 10, --offset 0,
+           --status all|checked|review (managed library only)
+nemalo library recordings LIBRARY [--source archive:ITEM]
+  List held recordings in declared track order; with --source, verify and
+  index each track's timing.
+nemalo library cleanup LIBRARY FOLDER [--apply --plan DIGEST]
+  Move sources the library holds into a recoverable holding area; the
+  preview lists every entry and a plan digest.
+nemalo library cleanup LIBRARY --stop
+  Close a pending cleanup that cannot finish, so it can be restored.
+nemalo library restore LIBRARY --cleanup ID [--apply | --stop]
+  Return a cleanup's files to their folder, never replacing.
+nemalo library rescan LIBRARY [--apply]
+  Scan review EPUBs that lack scan evidence; --apply records results.
+nemalo library open LIBRARY --asset sha256:HASH [--app APPLICATION]
+  Open a verified read-only copy in a reader or player.
+nemalo library export LIBRARY --asset sha256:HASH --output DIRECTORY
+  Copy one holding out, verified, never overwriting.
+nemalo library audit LIBRARY
+  Compare managed holdings with their stored bytes.
+nemalo library audit CATALOG --root DIRECTORY
+  Compare a snapshot catalog with files under an explicit root.
+nemalo library check LIBRARY
+  Verify the whole library read-only: stored and held bytes, untracked
+  files, unfinished operations, review counts.
+nemalo library snapshot DIRECTORY --output FILE [--assess]
+  Save a new portable byte-identity catalog outside the root. Also accepts
+  the inspect max-* limits.
+
+library import copies one assessed file into an initialized library and
+preserves the source. Without --apply it writes nothing. checked requires an
+EPUB whose limited checks passed and whose scan reported no detections. PDF,
+MP3, unscanned, and other results stay in review. Snapshots hash all regular
+files, account for excluded links, refuse incomplete inventories, and never
+overwrite. A snapshot audit requires --root; the catalog cannot authorize a
+scan. A library audit compares managed holdings only.
+`,
+	"bookmark": `nemalo bookmark enable LIBRARY
+  Allow explicit local bookmarks in this library.
+nemalo bookmark disable LIBRARY
+  Keep saved places and refuse new saves and resume.
+nemalo bookmark list LIBRARY
+  List explicit bookmarks. Notes are not book text.
+nemalo bookmark save LIBRARY --asset sha256:HASH --representation ID
+       --representation-id sha256:HASH --unit N --text-offset N [--cursor TOKEN]
+  Save one source location. Repeating the same place writes nothing.
+nemalo bookmark note LIBRARY --asset sha256:HASH [--text NOTE]
+  Set the reader's note, or clear it when the text is empty.
+nemalo bookmark delete LIBRARY --asset sha256:HASH
+  Drop one asset's saved location. Earlier journal lines stay.
+nemalo bookmark export LIBRARY --output FILE
+  Write current bookmarks to a new file outside .nemalo.
+nemalo bookmark import LIBRARY --input FILE [--replace]
+  Add bookmarks from an export. A difference writes nothing unless
+  --replace is set.
+nemalo bookmark resume LIBRARY --asset sha256:HASH
+  Open the saved location when those bytes still match.
+
+Bookmarks are a separate explicit record. Reading, repeating, continuing, and
+closing do not write one. bookmark save checks the representation id you pass
+and refuses the save when the bytes no longer match. bookmark resume returns
+no text when the file or the representation changed. A note is your text,
+kept with the bookmark and never written into the book. MCP does not read or
+write bookmarks. Enabling bookmarks adds .nemalo/bookmarks.jsonl; a library
+that has that file needs this version or newer to open its control directory.
+`,
+	"content": `nemalo content units CATALOG --root DIRECTORY --asset sha256:HASH
+  List supported reading-order documents or PDF pages, offline.
+nemalo content navigation CATALOG --root DIRECTORY --asset sha256:HASH
+  List source-declared EPUB contents (nav and NCX), offline.
+nemalo content pages CATALOG --root DIRECTORY --asset sha256:HASH
+  List an EPUB's declared page labels (page-list), offline.
+nemalo content read CATALOG --root DIRECTORY --asset sha256:HASH
+  Retrieve bounded source text with exact continuation, offline.
+nemalo content locate CATALOG --root DIRECTORY --asset sha256:HASH --text TEXT
+  Find exact quotations by unit or PDF page, with offsets.
+nemalo content source CATALOG --root DIRECTORY --asset sha256:HASH
+  Read bounded original EPUB XML, optionally --part ID.
+nemalo content resource CATALOG --root DIRECTORY --asset sha256:HASH --cursor TOKEN
+  Read referenced local image bytes as base64; never render.
+nemalo content capabilities
+  Report supported representation versions and limits.
+
+Read options:
+  --unit 0, --text-offset 0, --max-bytes 4096, --cursor TOKEN
+  --representation epub-text/2|epub-text/1|epub-structure/1|epub-nav/1|
+                   epub-page-list/1|pdf-text/1|mpeg-audio/1
+  --navigation nav-doc|ncx, --label LABEL (epub-page-list/1),
+  --part ID, --sample N (mpeg-audio/1)
+
+The default epub-text/2 omits images, tables, mathematics, and media from the
+text and locates each omission as a gap. A continuation keeps the
+representation it was issued for. epub-nav/1 reads one source-declared
+contents entry: --unit is that entry's order, and --text-offset is relative
+to the entry. When a book has both a navigation document and an NCX, a read
+names which one with --navigation. epub-page-list/1 reads from one declared
+page label: --label LABEL by its exact text, --unit by its order, or --cursor
+with its reference; a label that several markers carry lists them instead. A
+page label is the EPUB's own marker, not a screen page or a print-edition
+match. Extraction is not rendered layout or acknowledgement of reading.
+`,
+	"read": `nemalo read CATALOG|LIBRARY --root DIRECTORY --asset sha256:HASH [options]
+  Read EPUB or PDF text as terminal pages, or one word at a time. For a
+  managed library, --root is the library folder. It needs a terminal.
+
+Options:
+  --speed           one word at a time, starting paused
+  --rate 250        words per minute, 100 to 1000
+  --unit N, --text-offset N   where to start
+
+Closing prints the unit and byte to return to. Nothing is recorded, and
+closing does not save a bookmark.
+`,
+	"mcp": `nemalo mcp serve --scope DIRECTORY [options]
+  Serve read-only MCP tools over stdio for an agent host.
+
+Options:
+  --scope DIRECTORY  repeatable; the configured library and review folders
+                     are added
+  --allow-network    catalog search and evaluation
+  --transport stdio
+
+Tools are read-only; stdout carries protocol only.
+`,
+	"version": `nemalo version, nemalo --version
+  Show the version, and the commit when built from a source checkout.
+`,
+	"help": `nemalo help [COMMAND]
+  Show the overview, or one command's options and limits.
+`,
+}
+
+// topics lists the commands that have help, for an unknown topic.
+func topics() string {
+	names := make([]string, 0, len(commandHelp))
+	for name := range commandHelp {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+	return strings.Join(names, ", ")
+}
+
+// versionLine is the version, with the source commit when the build
+// recorded one.
+func versionLine() string {
+	line := "nemalo " + Version
+	if info, ok := debug.ReadBuildInfo(); ok {
+		revision, modified := "", false
+		for _, s := range info.Settings {
+			switch s.Key {
+			case "vcs.revision":
+				revision = s.Value
+			case "vcs.modified":
+				modified = s.Value == "true"
+			}
+		}
+		if len(revision) >= 12 {
+			line += " (" + revision[:12]
+			if modified {
+				line += ", modified"
+			}
+			line += ")"
+		}
+	}
+	return line
+}
+
+// writeHelp writes help text wrapped to the terminal width, or 80 columns
+// when output is not a terminal.
+func writeHelp(out io.Writer, text string) error {
+	width := 80
+	if f, ok := out.(*os.File); ok && term.IsTerminal(f.Fd()) {
+		if w, _, err := term.GetSize(f.Fd()); err == nil && w >= 20 && w < width {
+			width = w
+		}
+	}
+	_, err := io.WriteString(out, wrapHelp(strings.ReplaceAll(text, "VERSION", Version), width))
+	return err
+}
+
+// wrapHelp breaks a line wider than width at spaces, continuing it under its
+// own indent plus two.
+func wrapHelp(text string, width int) string {
+	var b strings.Builder
+	for _, line := range strings.SplitAfter(text, "\n") {
+		body := strings.TrimSuffix(line, "\n")
+		indent := body[:len(body)-len(strings.TrimLeft(body, " "))]
+		for len(body) > width {
+			cut := strings.LastIndex(body[:width+1], " ")
+			if cut <= len(indent) {
+				break
+			}
+			b.WriteString(strings.TrimRight(body[:cut], " ") + "\n")
+			body = indent + "  " + strings.TrimLeft(body[cut:], " ")
+		}
+		b.WriteString(body)
+		if strings.HasSuffix(line, "\n") {
+			b.WriteByte('\n')
+		}
+	}
+	return b.String()
+}

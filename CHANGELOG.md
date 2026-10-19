@@ -15,6 +15,7 @@
 - `f` in the reader lists the page's EPUB links with their source labels and status. A source-declared note reference is marked as one; other links are not presumed to be notes. Enter reads one note's bounded part, or the paragraph a `[1]` marker starts, and Escape returns to the exact passage, paused in word mode. Long notes continue within their part. Notes nest four deep. External, missing, and off-spine targets are never followed, and bookmarks stay with the passage. `epub-structure/1` ranges now carry the same `breaks` as `epub-text/2`. Closes issue 21.
 - List an EPUB's declared page labels, such as `iv` or `42`, with `content pages`, MCP `content_pages`, or `g` in TUI Read, and read from one with `epub-page-list/1` by reference or exact label. A duplicate label lists its candidates. The package's stated pagination source is shown, or `unknown`. A page end is given only when the next marker follows. Page labels are the book's own markers, never generated, and the table of contents and its ids are unchanged ([decision 0031](docs/decisions/0031-epub-page-list.md)). Closes issue 22.
 - A failed `content` request prints only the error.
+- `nemalo help` is a one-screen overview grouped by find, acquire, check, keep, and read. `nemalo help COMMAND` and `COMMAND --help` print that command's options and limits, with today's text. Help wraps to a terminal narrower than 80 columns. `nemalo --version` and `nemalo version` print the version and, when built from a source checkout, the commit. Closes issue 34.
 
 ## 0.1.0-alpha.11
 

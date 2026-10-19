@@ -158,11 +158,55 @@ func execute(t *testing.T, args []string, searchErr error) (int, string, string)
 }
 
 func TestHelpAndVersion(t *testing.T) {
-	for _, args := range [][]string{nil, {"help"}, {"--help"}, {"-h"}, {"inspect", "--help"}, {"library", "--help"}, {"library", "snapshot", "--help"}} {
+	for _, args := range [][]string{nil, {"help"}, {"--help"}, {"-h"}} {
 		code, out, _ := execute(t, args, nil)
-		if code != 0 || !strings.Contains(out, "Nemalo") || !strings.Contains(out, "recommended for") || !strings.Contains(out, "--expected-sha256") {
+		if code != 0 || !strings.HasPrefix(out, "Nemalo "+Version+"\n") || !strings.Contains(out, "nemalo help COMMAND") {
 			t.Fatal(code, out)
 		}
+		lines := strings.Split(strings.TrimSuffix(out, "\n"), "\n")
+		for _, line := range lines {
+			if len([]rune(line)) > 80 {
+				t.Fatalf("overview line over 80 columns: %q", line)
+			}
+		}
+		if len(lines) > 25 {
+			t.Fatal("overview is longer than one screen", len(lines))
+		}
+	}
+	// Each command's help keeps its options and limits, within 80 columns.
+	for _, args := range [][]string{{"check", "--help"}, {"help", "check"}} {
+		code, out, _ := execute(t, args, nil)
+		if code != 0 || !strings.Contains(out, "recommended for") || !strings.Contains(out, "--expected-sha256") {
+			t.Fatal(args, code, out)
+		}
+	}
+	for _, args := range [][]string{{"inspect", "--help"}, {"library", "--help"}, {"library", "snapshot", "--help"}, {"help", "library", "snapshot"}} {
+		if code, out, _ := execute(t, args, nil); code != 0 || !strings.HasPrefix(out, "nemalo ") || strings.Contains(out, "First book") {
+			t.Fatal(args, code, out)
+		}
+	}
+	for _, command := range []string{"tui", "doctor", "search", "evaluate", "catalog", "acquire", "inspect", "check", "library", "bookmark", "content", "read", "mcp", "version", "help"} {
+		code, out, _ := execute(t, []string{"help", command}, nil)
+		if code != 0 || out == "" {
+			t.Fatal("no help for", command)
+		}
+		for _, line := range strings.Split(out, "\n") {
+			if len([]rune(line)) > 80 {
+				t.Fatalf("%s help line over 80 columns: %q", command, line)
+			}
+		}
+	}
+	if code, _, stderr := execute(t, []string{"help", "nope"}, nil); code != 2 || !strings.Contains(stderr, "help is available for") {
+		t.Fatal(code, stderr)
+	}
+	for _, args := range [][]string{{"version"}, {"--version"}} {
+		code, out, _ := execute(t, args, nil)
+		if code != 0 || !strings.HasPrefix(out, "nemalo "+Version) {
+			t.Fatal(args, code, out)
+		}
+	}
+	if got := wrapHelp("  --scope DIRECTORY  repeatable; the configured library and review folders\n", 40); got != "  --scope DIRECTORY  repeatable; the\n    configured library and review\n    folders\n" {
+		t.Fatalf("%q", got)
 	}
 	code, out, _ := execute(t, []string{"version"}, nil)
 	if code != 0 || !strings.Contains(out, Version) {
