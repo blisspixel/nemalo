@@ -127,6 +127,7 @@ func Execute(ctx context.Context, args []string, out, errOut io.Writer, service 
 	flags.Int64Var(&contentRequest.Sample, "sample", 0, "encoded sample where an mpeg-audio/1 read starts")
 	flags.BoolVar(&checkOptions.Scan, "scan", false, "invoke installed antivirus")
 	flags.BoolVar(&checkOptions.EPUBCheck, "epubcheck", false, "run the installed EPUBCheck on an EPUB")
+	flags.BoolVar(&checkOptions.Decode, "decode", false, "decode an MP3, M4B, or M4A with the installed FFmpeg")
 	flags.Int64Var(&checkOptions.ExpectedBytes, "expected-bytes", 0, "known expected file size")
 	flags.StringVar(&checkOptions.ExpectedSHA256, "expected-sha256", "", "known expected SHA-256")
 	flags.BoolVar(&limits.Hashes, "hashes", false, "hash eligible regular files")
@@ -935,7 +936,7 @@ func flagApplies(command, action, name string) bool {
 	case "catalog":
 		return action == "fetch" && name == "output"
 	case "check":
-		return name == "scan" || name == "epubcheck" || name == "expected-bytes" || name == "expected-sha256"
+		return name == "scan" || name == "epubcheck" || name == "decode" || name == "expected-bytes" || name == "expected-sha256"
 	case "inspect":
 		return name == "hashes" || strings.HasPrefix(name, "max-")
 	}

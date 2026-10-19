@@ -528,7 +528,10 @@ from the QuickTime chapter track or a Nero list, and `mp4-audio/1` lists them
 be 2 GiB; scans and transfers allow time by size, a stalled download continues
 like a dropped one, and a ClamAV limit alert is an incomplete scan
 ([decision 0040](docs/decisions/0040-large-mp4-audio-and-scan-limits.md)).
-Decoded timing and M4B byte ranges remain. Depends on shared assessment/publication and recovery milestones.
+`check --decode` decodes an MP3, M4B, or M4A with an installed FFmpeg and
+reports decoded duration and decoder errors apart from probed timing
+([decision 0042](docs/decisions/0042-optional-ffmpeg-decode.md)). M4B byte
+ranges and decoded timing in content access remain. Depends on shared assessment/publication and recovery milestones.
 Can follow milestone 5 independently of paper-provider expansion.
 
 Deliver local MP3/M4B intake and LibriVox acquisition, permitted Archive audio

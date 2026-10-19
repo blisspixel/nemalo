@@ -161,6 +161,8 @@ object parser only through its budgets and guards; unmapped codes are gaps, neve
 MP3 frame indexing is `internal/audio`, exposed as `mpeg-audio/1` (decision 0015).
 M4B/M4A sample tables are `audio.ProbeMP4`, units-only `mp4-audio/1` (decision 0039):
 read boxes at offsets, never load media data, and place every sample before checked.
+Optional full decode is `internal/decode` over an installed FFmpeg (decision 0042): only
+`check --decode`, file protocol and a fixed demuxer, never in import or the core path.
 Keep probed and declared timing separate and never decode in the core path.
 Re-validate range or preroll changes bit-exactly against a reference decoder. Test located gaps and range
 coverage separately from source bytes, rendering, safety, and semantic completeness.

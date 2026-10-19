@@ -164,8 +164,10 @@ tree and active content without reading page content
 without decoding ([decision 0033](decisions/0033-mp3-checked-policy.md)); M4B
 and M4A checks place every sample from the sample tables, reading no media
 data, and find truncation, misplaced samples, fragments, and protected audio
-([decision 0039](decisions/0039-mp4-audio-samples.md)). Audio decoding remains
-unsupported.
+([decision 0039](decisions/0039-mp4-audio-samples.md)). `--decode` decodes an
+MP3, M4B, or M4A in full with an installed FFmpeg, through the file protocol
+and a fixed demuxer only, and reports decoded duration and decoder errors as
+evidence ([decision 0042](decisions/0042-optional-ffmpeg-decode.md)).
 
 `--expected-bytes` and `--expected-sha256` compare known external expectations.
 `--epubcheck` runs an installed EPUBCheck on an EPUB snapshot; reported errors,
@@ -488,7 +490,7 @@ per track when the project links back
 ([decision 0035](decisions/0035-librivox-readers.md)). MCP is a scoped
 adapter over the same services; `--allow-write` adds only previewed imports
 ([decision 0034](decisions/0034-mcp-import-tools.md)). Website search, other
-Gutenberg formats, recording identity across hosts, decoded audio timing, files
-above 2 GiB, OCR, and column reconstruction stay later. Generated analysis
+Gutenberg formats, recording identity across hosts, decoded timing in content
+access, files above 2 GiB, OCR, and column reconstruction stay later. Generated analysis
 and model/harness integrations remain post-1.0. Issues 1 and 2 are closed;
 their remaining OCR, column, and decoded audio work is milestone 7 and 8.

@@ -511,6 +511,8 @@ func (s Service) doctor(paths config.Paths, cfg config.Config, lookup func(strin
 		{"MpCmdRun.exe", "Recommended on Windows for a file you did not produce. This is the built-in Microsoft Defender scanner. A no-detection result is not proof the file is safe."},
 		{"7z", "optional future archive adapter"},
 		{"epubcheck", "optional EPUB conformance check for check --epubcheck"},
+		{"ffmpeg", "optional full audio decode for check --decode, with ffprobe"},
+		{"ffprobe", "reads the decoder's output rate for check --decode"},
 	} {
 		_, err := lookup(item.name)
 		d.Capabilities = append(d.Capabilities, Capability{Name: item.name, Available: err == nil, Recommended: recommendedScanner(item.name), Use: item.use})

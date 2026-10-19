@@ -21,15 +21,33 @@ func Health(r assessment.Report) string {
 		field(&b, "Language", list(e.Languages))
 	}
 	if m := r.Checks.MP3; m != nil {
-		fmt.Fprintf(&b, "MP3: %s, %d Hz, %d channel(s), %d frames, %s encoded (not decoded)\n", Line(m.Format), m.SampleRate, m.Channels, m.Frames, clock(m.EncodedDurationMs))
+		fmt.Fprintf(&b, "MP3: %s, %d Hz, %d channel(s), %d frames, %s encoded, from frame headers\n", Line(m.Format), m.SampleRate, m.Channels, m.Frames, clock(m.EncodedDurationMs))
 		notes(&b, "Note", m.Notes)
 	}
 	if m := r.Checks.MP4; m != nil {
-		fmt.Fprintf(&b, "MP4 audio: %s, %d Hz, %d channel(s), %d samples, %s encoded (not decoded)\n", words(m.Codec), m.SampleRate, m.Channels, m.Samples, clock(m.EncodedDurationMs))
+		fmt.Fprintf(&b, "MP4 audio: %s, %d Hz, %d channel(s), %d samples, %s encoded, from sample tables\n", words(m.Codec), m.SampleRate, m.Channels, m.Samples, clock(m.EncodedDurationMs))
 		if m.Chapters > 0 {
 			fmt.Fprintf(&b, "Chapters: %d declared (%s)\n", m.Chapters, words(m.ChapterSource))
 		}
 		notes(&b, "Note", m.Notes)
+	}
+	if d := r.Decode; d != nil {
+		switch d.Status {
+		case "passed", "errors_reported":
+			fmt.Fprintf(&b, "Decoded by FFmpeg %s: %s, %s at %d Hz, %d error(s)\n", Line(d.Version), words(d.Status), clock(d.DecodedDurationMs), d.SampleRate, d.Errors)
+			for _, m := range d.Messages {
+				fmt.Fprintf(&b, "  %s\n", Line(m))
+			}
+			if d.MessagesOmitted > 0 {
+				fmt.Fprintf(&b, "  %d more message(s) omitted\n", d.MessagesOmitted)
+			}
+		default:
+			fmt.Fprintf(&b, "Decode: %s", words(d.Status))
+			if d.Detail != "" {
+				fmt.Fprintf(&b, " (%s)", Line(d.Detail))
+			}
+			b.WriteString("\n")
+		}
 	}
 	if c := r.Conformance; c != nil {
 		switch c.Status {

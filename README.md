@@ -34,7 +34,8 @@ AI service. The agent interface (MCP) uses the same application services.
 - Inventory explicit folders; check file structure, size, hashes, and EPUB text
   measurements. A scan is recommended for a file you did not produce and stays
   optional: Defender on Windows, ClamAV on Linux and macOS. Pass a publisher
-  SHA-256 when one exists.
+  SHA-256 when one exists. An installed EPUBCheck can check EPUB conformance,
+  and an installed FFmpeg can decode audio in full, both only when asked.
 - Save portable catalog snapshots, browse holdings, and audit changed/missing files.
 - List and search a managed library, and open a holding in a reader or player
   through a verified read-only copy, so readers never modify stored files.

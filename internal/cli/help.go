@@ -113,11 +113,17 @@ Inventory does not extract archives, validate books, or scan for malware.
   Bounded file health assessment, without rendering content.
 
 Options:
-  --scan, --epubcheck, --expected-bytes N, --expected-sha256 HASH
+  --scan, --epubcheck, --decode, --expected-bytes N, --expected-sha256 HASH
 
 --epubcheck runs the installed EPUBCheck on an EPUB snapshot. Errors it
 reports, or a check that could not run, are review findings; warnings are
 listed. Nemalo never installs or downloads EPUBCheck.
+
+--decode decodes an MP3, M4B, or M4A snapshot in full with the installed
+FFmpeg and FFprobe, reading only that file, and reports the decoded duration
+beside the encoded one. Decoder errors, a decoded duration more than a second
+from the encoded one, or a decode that could not run are review findings.
+FFmpeg parses the untrusted file; use it on files you mean to keep.
 
 Check uses a private temporary snapshot (up to 256 MiB, or 2 GiB for an M4B
 or M4A) and needs that much free temporary space. EPUB text and document

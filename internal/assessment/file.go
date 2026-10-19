@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/blisspixel/nemalo/internal/conformance"
+	"github.com/blisspixel/nemalo/internal/decode"
 	"github.com/blisspixel/nemalo/internal/safeio"
 	"github.com/blisspixel/nemalo/internal/scanner"
 )
@@ -23,7 +24,11 @@ type Options struct {
 	Scan bool
 	// EPUBCheck runs the installed EPUBCheck on an EPUB snapshot. Errors it
 	// reports, and a requested check that did not complete, are findings.
-	EPUBCheck      bool
+	EPUBCheck bool
+	// Decode runs an installed FFmpeg over an MP3, M4B, or M4A snapshot.
+	// Decoder errors, a decoded duration far from the encoded one, and a
+	// requested decode that did not complete are findings.
+	Decode         bool
 	ExpectedBytes  int64
 	ExpectedSHA256 string
 }
@@ -42,6 +47,7 @@ type Report struct {
 	Checks         Checks              `json:"checks"`
 	Antivirus      scanner.Result      `json:"antivirus"`
 	Conformance    *conformance.Result `json:"conformance,omitempty"`
+	Decode         *decode.Result      `json:"decode,omitempty"`
 	Findings       []string            `json:"findings"`
 	Limitations    []string            `json:"limitations"`
 }
@@ -78,7 +84,7 @@ func (o Options) Validate() error {
 // Check assesses a bounded private snapshot. It never opens a reader, renders a
 // document, extracts to the source tree, or mutates the selected file.
 func Check(ctx context.Context, file string, options Options, av Scanner) (report Report, err error) {
-	report = Report{File: file, CheckedAt: time.Now().UTC(), Status: "incomplete", Findings: []string{}, Antivirus: scanner.Result{Status: "not_scanned", ExitCode: -1}, Limitations: []string{"Limited checks do not establish safety, semantic completeness, or edition quality.", "PDF page trees and active content are examined without reading page content; MP3 frames are indexed and M4B and M4A samples located, but audio is not decoded.", "EPUB text counts are tokenizer measurements, not rendered pages or proof of complete text."}}
+	report = Report{File: file, CheckedAt: time.Now().UTC(), Status: "incomplete", Findings: []string{}, Antivirus: scanner.Result{Status: "not_scanned", ExitCode: -1}, Limitations: []string{"Limited checks do not establish safety, semantic completeness, or edition quality.", "PDF page trees and active content are examined without reading page content; MP3 frames are indexed and M4B and M4A samples located; audio is decoded only by an installed FFmpeg with --decode.", "EPUB text counts are tokenizer measurements, not rendered pages or proof of complete text."}}
 	if err := options.Validate(); err != nil {
 		return report, err
 	}
@@ -100,9 +106,12 @@ func Check(ctx context.Context, file string, options Options, av Scanner) (repor
 // CheckInRoot shares the file assessment pipeline with explicitly scoped callers.
 // The supplied name cannot escape root, even if a parent is replaced by a link.
 func CheckInRoot(ctx context.Context, root *os.Root, name string, options Options, av Scanner) (report Report, err error) {
-	ctx, cancel := context.WithTimeout(ctx, 5*time.Minute)
+	// Five minutes bound the snapshot and inspection. A scan, EPUBCheck, and
+	// decode then run under the caller's context, each with its own deadline
+	// by size, as CheckManyInRoot does, so a large file is not cut short.
+	prepCtx, cancel := context.WithTimeout(ctx, 5*time.Minute)
 	defer cancel()
-	p, err := prepare(ctx, root, name, options)
+	p, err := prepare(prepCtx, root, name, options)
 	if p == nil {
 		return incompleteReport(root, name), err
 	}
@@ -128,11 +137,16 @@ func CheckInRoot(ctx context.Context, root *os.Root, name string, options Option
 			return p.report, err
 		}
 	}
+	if options.Decode && decode.Supported(p.report.DetectedFormat) {
+		if err := p.bindDecode(ctx, decode.Audio(ctx, p.snapshot, p.report.DetectedFormat, p.n)); err != nil {
+			return p.report, err
+		}
+	}
 	return p.finish()
 }
 
 func incompleteReport(root *os.Root, name string) Report {
-	return Report{File: filepath.Join(root.Name(), filepath.FromSlash(name)), CheckedAt: time.Now().UTC(), Status: "incomplete", Findings: []string{}, Antivirus: scanner.Result{Status: "not_scanned", ExitCode: -1}, Limitations: []string{"Limited checks do not establish safety, semantic completeness, or edition quality.", "PDF page trees and active content are examined without reading page content; MP3 frames are indexed and M4B and M4A samples located, but audio is not decoded.", "EPUB text counts are tokenizer measurements, not rendered pages or proof of complete text."}}
+	return Report{File: filepath.Join(root.Name(), filepath.FromSlash(name)), CheckedAt: time.Now().UTC(), Status: "incomplete", Findings: []string{}, Antivirus: scanner.Result{Status: "not_scanned", ExitCode: -1}, Limitations: []string{"Limited checks do not establish safety, semantic completeness, or edition quality.", "PDF page trees and active content are examined without reading page content; MP3 frames are indexed and M4B and M4A samples located; audio is decoded only by an installed FFmpeg with --decode.", "EPUB text counts are tokenizer measurements, not rendered pages or proof of complete text."}}
 }
 
 // prepared is one private snapshot whose limited checks are complete and whose
@@ -270,6 +284,38 @@ func (p *prepared) bindConformance(ctx context.Context, result conformance.Resul
 		p.report.Findings = append(p.report.Findings, "EPUBCheck was requested but did not complete: "+result.Status)
 	}
 	if p.report.Status == "limited_checks_passed" {
+		p.report.Status = "needs_review"
+	}
+	return nil
+}
+
+// bindDecode records an FFmpeg decode of the snapshot, revalidated as a scan
+// is. Decoder errors, a decoded duration more than a second from the encoded
+// one, and a decode that did not complete are findings.
+func (p *prepared) bindDecode(ctx context.Context, result decode.Result) error {
+	p.report.Decode = &result
+	if err := p.revalidate(ctx); err != nil {
+		p.report.Status = "incomplete"
+		return errors.New("decoded snapshot changed or could not be revalidated")
+	}
+	switch result.Status {
+	case "passed":
+	case "errors_reported":
+		p.report.Findings = append(p.report.Findings, "the audio decoder reported errors")
+	default:
+		p.report.Findings = append(p.report.Findings, "an audio decode was requested but did not complete: "+result.Status)
+	}
+	encoded := int64(-1)
+	switch c := p.report.Checks; {
+	case c.MP3 != nil:
+		encoded = c.MP3.EncodedDurationMs
+	case c.MP4 != nil:
+		encoded = c.MP4.EncodedDurationMs
+	}
+	if result.Status == "passed" && encoded >= 0 && (result.DecodedDurationMs-encoded > 1000 || encoded-result.DecodedDurationMs > 1000) {
+		p.report.Findings = append(p.report.Findings, "the decoded duration differs from the encoded duration by more than a second")
+	}
+	if len(p.report.Findings) > 0 && p.report.Status == "limited_checks_passed" {
 		p.report.Status = "needs_review"
 	}
 	return nil
