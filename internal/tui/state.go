@@ -88,8 +88,8 @@ func (m *model) confirmInitialization(msg tea.KeyPressMsg) tea.Cmd {
 	switch msg.String() {
 	case "ctrl+c":
 		return tea.Quit
-	case "esc", "f7", "f8", "f9", "ctrl+r":
-		m.cleanupDigest = ""
+	case "esc", "f7", "f8", "f9", "ctrl+r", "ctrl+p":
+		m.cleanupDigest, m.purgeDigest = "", ""
 		m.setReport(m.confirmReport)
 		m.status = m.confirmStatus
 		m.confirmKind, m.confirmRoot, m.confirmSource, m.confirmReport, m.confirmStatus = "", "", "", "", ""
@@ -102,7 +102,7 @@ func (m *model) confirmInitialization(msg tea.KeyPressMsg) tea.Cmd {
 	case "enter":
 		kind := m.confirmKind
 		m.input.SetValue(m.confirmRoot)
-		if kind == "import" || kind == "cleanup" {
+		if kind == "import" || kind == "cleanup" || kind == "purge" {
 			m.secondary.SetValue(m.confirmSource)
 		}
 		m.confirmKind, m.confirmRoot, m.confirmSource, m.confirmReport, m.confirmStatus = "", "", "", "", ""
@@ -111,8 +111,8 @@ func (m *model) confirmInitialization(msg tea.KeyPressMsg) tea.Cmd {
 			m.importAction = true
 		case "rescan":
 			m.rescanAction = true
-		case "cleanup":
-			// cleanupDigest stays set: start applies exactly the reviewed plan.
+		case "cleanup", "purge":
+			// The digest stays set: start applies exactly the reviewed plan.
 		case "restore":
 			m.restoreAction = true
 		default:
@@ -121,6 +121,18 @@ func (m *model) confirmInitialization(msg tea.KeyPressMsg) tea.Cmd {
 		return m.start(true)
 	}
 	return nil
+}
+
+// requestPurge previews a purge of the cleanup ID in the source field. The
+// preview hashes but removes nothing; a plan with removals becomes a review.
+func (m *model) requestPurge() tea.Cmd {
+	if m.input.Value() == "" || !strings.HasPrefix(strings.TrimSpace(m.secondary.Value()), "cleanup:") {
+		m.status = "Enter the library folder and, with Ctrl+N, a cleanup ID such as cleanup:... to purge."
+		m.resize()
+		return nil
+	}
+	m.purgePlan, m.purgeDigest = true, ""
+	return m.start(true)
 }
 
 // requestCleanup previews a cleanup of the source folder. The preview reads

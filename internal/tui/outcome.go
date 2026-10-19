@@ -66,6 +66,10 @@ func resultOutcome(data any, err error) outcome {
 		if v.Applied {
 			return outcomeOK
 		}
+	case library.PurgeResult:
+		if v.Applied {
+			return outcomeOK
+		}
 	case library.RescanResult:
 		switch {
 		case v.Detections > 0:

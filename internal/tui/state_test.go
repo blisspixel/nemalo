@@ -354,3 +354,56 @@ func TestAuditOfALibraryDirectoryRunsTheLibraryCheck(t *testing.T) {
 		t.Fatal(m.status, m.report)
 	}
 }
+
+// Ctrl+P with a cleanup ID previews a purge; Escape removes nothing, and Enter
+// removes exactly the reviewed held copy while the library keeps its own.
+func TestStatePurgePreviewsThenAppliesTheReviewedPlan(t *testing.T) {
+	ctx := context.Background()
+	root, folder := t.TempDir(), t.TempDir()
+	if _, err := library.Initialize(ctx, root); err != nil {
+		t.Fatal(err)
+	}
+	book := writeStateEPUB(t, folder)
+	if _, err := library.Import(ctx, library.ImportRequest{Library: root, Source: book, Apply: true}); err != nil {
+		t.Fatal(err)
+	}
+	plan, err := library.Cleanup(ctx, library.CleanupRequest{Library: root, Folder: folder})
+	if err != nil {
+		t.Fatal(err)
+	}
+	cleanup, err := library.Cleanup(ctx, library.CleanupRequest{Library: root, Folder: folder, Apply: plan.Digest})
+	if err != nil {
+		t.Fatal(err)
+	}
+	held := filepath.Join(cleanup.HoldingArea, "files", filepath.Base(book))
+	m := newModel(ctx, app.Service{})
+	m.switchMode("state")
+	m.input.SetValue(root)
+	m.secondary.SetValue(folder)
+	if cmd := m.requestPurge(); cmd != nil || !strings.Contains(m.status, "cleanup ID") {
+		t.Fatal("purge without a cleanup ID", m.status)
+	}
+	m.secondary.SetValue(cleanup.CleanupID)
+	_, cmd := m.Update(tea.KeyPressMsg{Code: 'p', Mod: tea.ModCtrl})
+	if cmd == nil {
+		t.Fatal("Ctrl+P did not preview")
+	}
+	m.Update(cmd())
+	if m.confirmKind != "purge" || m.purgeDigest == "" || !strings.Contains(m.report, "Purge: 1") || !strings.Contains(m.footer(), "Enter purge") {
+		t.Fatal("purge review", m.status, m.report)
+	}
+	m.Update(tea.KeyPressMsg{Code: tea.KeyEscape})
+	if _, err := os.Stat(held); err != nil || m.purgeDigest != "" {
+		t.Fatal("escape removed or kept the plan", err)
+	}
+	_, cmd = m.Update(tea.KeyPressMsg{Code: 'p', Mod: tea.ModCtrl})
+	m.Update(cmd())
+	_, cmd = m.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
+	m.Update(cmd())
+	if _, err := os.Stat(held); !os.IsNotExist(err) || !strings.Contains(m.report, "-> purged") {
+		t.Fatal("purge", err, m.report)
+	}
+	if check, err := library.CheckLibrary(ctx, root); err != nil || !check.Healthy || check.Verified != 1 {
+		t.Fatal("the library's copy", check.Issues, err)
+	}
+}

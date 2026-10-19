@@ -140,7 +140,7 @@ func (m *model) contextLine() string {
 		return fmt.Sprintf("Offline | Bookmark only on m | Asset %s", present.Exact(m.reader.asset))
 	}
 	if m.mode == "state" {
-		return "Enter status | F7 init | F8 import | F9 cleanup | Ctrl+R rescan"
+		return "Enter status | F7 init | F8 import | F9 cleanup | Ctrl+P purge | Ctrl+R rescan"
 	}
 	if m.mode == "search" {
 		if m.source == "gutenberg" {
@@ -187,7 +187,7 @@ func (m *model) footer() string {
 		return lipgloss.Wrap(m.paint("Enter acquire  Esc back  PgUp/PgDown review  Ctrl+C quit", warning, false), max(1, m.width-2), " ")
 	}
 	if m.confirmRoot != "" {
-		verb := map[string]string{"init": "initialize", "import": "import", "rescan": "rescan", "cleanup": "move to holding", "restore": "restore"}[m.confirmKind]
+		verb := map[string]string{"init": "initialize", "import": "import", "rescan": "rescan", "cleanup": "move to holding", "restore": "restore", "purge": "purge"}[m.confirmKind]
 		return lipgloss.Wrap(m.paint("Enter "+verb+"  Esc back  PgUp/PgDown review  Ctrl+C quit", warning, false), max(1, m.width-2), " ")
 	}
 	help := "Enter run  F6 browse  Tab modes  Ctrl+C quit"
@@ -348,7 +348,7 @@ func (m *model) position() string {
 		return fmt.Sprintf("Review acquisition | Scroll %.0f%%", m.viewport.ScrollPercent()*100)
 	}
 	if m.confirmRoot != "" {
-		label := map[string]string{"init": "initialization", "import": "import", "rescan": "rescan", "cleanup": "cleanup", "restore": "restore"}[m.confirmKind]
+		label := map[string]string{"init": "initialization", "import": "import", "rescan": "rescan", "cleanup": "cleanup", "restore": "restore", "purge": "purge"}[m.confirmKind]
 		return fmt.Sprintf("Review %s | Scroll %.0f%%", label, m.viewport.ScrollPercent()*100)
 	}
 	position := fmt.Sprintf("Results | Scroll %.0f%%", m.viewport.ScrollPercent()*100)
@@ -388,7 +388,7 @@ func (m *model) emptyHelp() string {
 	case "evaluate":
 		return "Look before acquiring.\n\nEnter archive:ITEM, or gutenberg:NUMBER. Select a search result and press e.\nEnter retrieves metadata only. A Gutenberg catalog row lists no files.\nWith an intake folder, d on that row requests one bibliographic record and then lists EPUB offers.\nF6 browses source files when the evaluation lists any.\nEnter a new intake folder with Ctrl+N; select a file and press d to review acquisition.\nDownloads remain untrusted; existing intake is never overwritten."
 	case "state":
-		return "Establish a library identity.\n\nEnter an existing folder, then Enter to read its control status.\nF7 reviews initialization before writing control metadata.\nCtrl+N sets one source. F8 reviews import and does not scan or delete it.\nCtrl+R reviews a scan of review holdings that lack scan evidence.\nF9 previews moving the source folder's held files to the library's recoverable holding area; with a cleanup ID as the source, it previews restoring that cleanup."
+		return "Establish a library identity.\n\nEnter an existing folder, then Enter to read its control status.\nF7 reviews initialization before writing control metadata.\nCtrl+N sets one source. F8 reviews import and does not scan or delete it.\nCtrl+R reviews a scan of review holdings that lack scan evidence.\nF9 previews moving the source folder's held files to the library's recoverable holding area; with a cleanup ID as the source, it previews restoring that cleanup.\nCtrl+P previews purging that cleanup's held copies the library holds; Enter removes exactly those, and the library keeps its own copy."
 	case "read":
 		return "Read from exact source bytes.\n\nSelect an asset in Holdings and press r. Enter its explicit root, then Enter lists units.\nF6 browses units; Enter retrieves text. n continues, r repeats, u lists units.\nc lists the book's declared contents. Enter reads one entry and stops at its declared end.\ng lists the EPUB's declared page labels, such as iv or 42; Enter reads from one. They are the book's own markers, not screen pages.\np opens the selection as pages sized to the terminal; s opens it one word at a time.\nm saves a bookmark in an initialized library. ' restores that bookmark.\nDelivery does not record reading progress, and closing does not save a bookmark.\nNotes and image resources are available through content CLI references."
 	default:

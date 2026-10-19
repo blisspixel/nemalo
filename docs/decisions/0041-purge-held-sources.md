@@ -68,7 +68,8 @@ library's own copy, which `library export` gives back, is the remaining one.
 Receipts and intents stay, so a cleanup's holding area keeps its provenance
 records; delete them by hand only when they are no longer needed. A library
 with a purge record cannot be opened by earlier prereleases. MCP has no purge
-tool, and the TUI has no purge review.
+tool. The TUI previews a purge with Ctrl+P in State and applies only the
+reviewed plan.
 
 ## Validation
 

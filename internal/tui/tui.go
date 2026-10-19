@@ -73,16 +73,20 @@ type model struct {
 	// restorePlan previews a restore of the cleanup ID in the source field;
 	// restoreAction applies it after review.
 	restorePlan, restoreAction bool
-	mode                       string
-	source                     string
-	order                      string
-	catalog                    string
-	format                     string
-	status                     string
-	busy                       bool
-	id                         int
-	cancel                     context.CancelFunc
-	reader                     readerState
+	// purgePlan previews a purge of the cleanup ID in the source field;
+	// purgeDigest, once reviewed, applies exactly that plan.
+	purgePlan   bool
+	purgeDigest string
+	mode        string
+	source      string
+	order       string
+	catalog     string
+	format      string
+	status      string
+	busy        bool
+	id          int
+	cancel      context.CancelFunc
+	reader      readerState
 	// pager, when open, fills the screen; closed is where it was closed.
 	pager    *pager
 	closed   *Closed
@@ -178,6 +182,17 @@ func (m *model) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 			m.cleanupDigest = value.Digest
 			m.status = "Review cleanup. Enter moves the listed files to the holding area; Escape returns without moving."
 			m.setReport(present.Cleanup(value) + "\nEnter moves exactly these entries. A changed folder refuses the plan. Restore with library restore.\n")
+			m.viewport.GotoTop()
+			m.resize()
+			return m, nil
+		}
+		// A purge preview with held copies to remove becomes a review; Enter
+		// applies exactly that plan digest.
+		if value, ok := msg.data.(library.PurgeResult); ok && msg.err == nil && !value.Applied && value.Purge > 0 {
+			m.confirmKind, m.confirmRoot, m.confirmSource, m.confirmReport, m.confirmStatus = "purge", value.Library, value.CleanupID, m.report, m.status
+			m.purgeDigest = value.Digest
+			m.status = "Review purge. Enter removes the listed held copies; Escape returns without removing anything."
+			m.setReport(present.Purge(value) + "\nEnter removes exactly these held copies. The library keeps its own copy of each; a purged copy cannot be restored from the holding area.\n")
 			m.viewport.GotoTop()
 			m.resize()
 			return m, nil
@@ -364,6 +379,8 @@ func (m *model) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 			data = []byte(present.LibraryCheck(value))
 		case library.RestoreResult:
 			data = []byte(present.Restore(value))
+		case library.PurgeResult:
+			data = []byte(present.Purge(value))
 		case library.Audit:
 			data = []byte(present.Audit(value))
 		case library.ImportResult:
@@ -422,6 +439,9 @@ func (m *model) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		if msg.String() == "f9" && m.mode == "state" && !m.busy {
 			return m, m.requestCleanup()
+		}
+		if msg.String() == "ctrl+p" && m.mode == "state" && !m.busy {
+			return m, m.requestPurge()
 		}
 		if handled, cmd := m.browserKey(msg.String()); handled {
 			return m, cmd

@@ -134,8 +134,13 @@ func (m *model) start(reset bool) tea.Cmd {
 		mode = "restore"
 	} else if mode == "state" && m.cleanupDigest != "" {
 		mode = "cleanup"
+	} else if mode == "state" && m.purgePlan {
+		mode = "purgeplan"
+	} else if mode == "state" && m.purgeDigest != "" {
+		mode = "purge"
 	}
-	digest := m.cleanupDigest
+	digest, purgeDigest := m.cleanupDigest, m.purgeDigest
+	m.purgePlan, m.purgeDigest = false, ""
 	m.initializeAction, m.importAction, m.rescanAction, m.cleanupPlan, m.cleanupDigest = false, false, false, false, ""
 	m.restorePlan, m.restoreAction = false, false
 	second, assess, offset, format := m.secondary.Value(), m.assess, m.offset, m.format
@@ -168,6 +173,13 @@ func (m *model) start(reset bool) tea.Cmd {
 			return result{id, data, err}
 		case "restoreplan", "restore":
 			data, err := m.service.Restore(ctx, library.RestoreRequest{Library: value, CleanupID: strings.TrimSpace(second), Apply: mode == "restore"})
+			return result{id, data, err}
+		case "purgeplan", "purge":
+			request := library.PurgeRequest{Library: value, CleanupID: strings.TrimSpace(second)}
+			if mode == "purge" {
+				request.Apply = purgeDigest
+			}
+			data, err := m.service.Purge(ctx, request)
 			return result{id, data, err}
 		case "cleanupplan":
 			data, err := m.service.Cleanup(ctx, library.CleanupRequest{Library: value, Folder: second})

@@ -54,6 +54,7 @@ item's other files for a new, deliberate review. See
 | e in Archive, Gutenberg, or Open Library results | Prepare selected-item evaluation, without requesting it. A Gutenberg catalog row lists no files. An Open Library work lists editions on Enter. e on an edition row selects that edition |
 | d in Evaluate results | Review selected-file acquisition into a new intake directory. An empty Intake field asks for a folder (Ctrl+N) and does not fetch. On a Gutenberg catalog row, d then requests that one bibliographic record and lists EPUB offers. After an Open Library edition names an Archive item, d reviews that Archive file |
 | F9 in State | Preview moving the source folder's held files to the holding area; Enter applies that exact plan. With a cleanup ID in the source field (set after a cleanup), preview restoring it |
+| Ctrl+P in State | With a cleanup ID in the source field, preview purging its held copies whose bytes the library holds and verifies; Enter removes exactly those. The library keeps its own copy |
 | t in Holdings results | Show the recording that holds the selected track: order, missing tracks, timing |
 | a in Evaluate results | Review acquiring every track of the recording that holds the selected MP3. An empty Intake field asks for a folder (Ctrl+N) and does not open that review |
 | r in Holdings results | Stage source access; explicit root still required |
