@@ -330,3 +330,29 @@ func TestArchiveBlockIgnoresCommentsAndExtraVolumes(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+// An archive is whole only when its block, as 7-Zip 26 prints it, has no
+// comment, warning, offset, or tail, and the named size equals the bytes read.
+func TestWholeBlockNeedsNothingBeyondTheMembers(t *testing.T) {
+	clean := "Scanning\n\n--\nPath = one.7z\nType = 7z\nPhysical Size = 123\nHeaders Size = 114\nSolid = -\nBlocks = 1\n\n----------\nPath = a.txt\n"
+	if !wholeBlock([]byte(clean), "Physical Size", 123) || wholeBlock([]byte(clean), "Physical Size", 127) {
+		t.Fatal("size")
+	}
+	set := "x\n--\nPath = set.part1.rar\nType = Rar5\nPhysical Size = 138595\nTotal Physical Size = 361184\nMultivolume = +\nVolumes = 2\n\n----------\n"
+	if !wholeBlock([]byte(set), "Total Physical Size", 361184) {
+		t.Fatal("set")
+	}
+	for name, block := range map[string]string{
+		"tail":      "x\n--\nPath = one.7z\nType = 7z\nWARNINGS:\nThere are data after the end of archive\nPhysical Size = 123\nTail Size = 4\n\n----------\n",
+		"comment":   "x\n--\nPath = c.rar\nType = Rar5\nComment = Physical Size = 123\nPhysical Size = 123\n\n----------\n",
+		"offset":    "x\n--\nPath = s.exe\nType = Rar5\nOffset = 4096\nPhysical Size = 123\n\n----------\n",
+		"repeated":  "x\n--\nPhysical Size = 1\nPhysical Size = 123\n\n----------\n",
+		"no end":    "x\n--\nPhysical Size = 123\n",
+		"no block":  "Physical Size = 123\n----------\n",
+		"other key": "x\n--\nPath = one.7z\nPhysical Size = 99\n\n----------\n",
+	} {
+		if wholeBlock([]byte(block), "Physical Size", 123) {
+			t.Error(name, "was whole")
+		}
+	}
+}

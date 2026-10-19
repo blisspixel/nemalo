@@ -38,6 +38,10 @@ func TestCollectionFilesAreExactSelections(t *testing.T) {
 		"schema":            `{"schema_version":2,"name":"B","items":[{"source":"archive:x","file":"x.epub"}]}`,
 		"empty":             `{"schema_version":1,"name":"B","items":[]}`,
 		"two values":        good + good,
+		"trailing bracket":  good + "]",
+		"trailing brace":    good + "}",
+		"duplicate key":     `{"schema_version":1,"name":"B","name":"C","items":[{"source":"archive:x","file":"x.epub"}]}`,
+		"duplicate in item": `{"schema_version":1,"name":"B","items":[{"source":"archive:x","file":"x.epub","file":"y.epub"}]}`,
 	} {
 		if err := read(body); err == nil {
 			t.Error(name, "accepted")
@@ -80,6 +84,27 @@ func TestCollectionRecordingNeedsEveryTrack(t *testing.T) {
 	}
 	ingest(2)
 	if r, err = CollectionStatus(ctx, root, collection); err != nil || r.Items[0].Status == CollectionIncomplete || r.Items[0].Status == CollectionNotHeld || len(r.Items[0].Holdings) != 2 {
+		t.Fatalf("%+v %v", r.Items, err)
+	}
+	// Two byte-identical tracks are one holding at two positions; the
+	// recording is still held.
+	same := t.TempDir()
+	if _, err := Initialize(ctx, same); err != nil {
+		t.Fatal(err)
+	}
+	body := mp3Track(70)
+	folder := t.TempDir()
+	tree := map[string][]byte{}
+	for position := 1; position <= 2; position++ {
+		dir := fmt.Sprintf("tracks/%04d", position)
+		tree[dir+"/content.mp3"] = body
+		tree[dir+"/receipt.json"] = audioReceipt(t, body, "demo", fmt.Sprintf("part_%02d.mp3", position), "", "", map[string]any{"source_format": "64Kbps MP3", "position": position, "tracks": 2})
+	}
+	writeTree(t, folder, tree)
+	if r, err := Ingest(ctx, IngestRequest{Library: same, Folder: folder, Apply: true}); err != nil {
+		t.Fatal(r, err)
+	}
+	if r, err := CollectionStatus(ctx, same, collection); err != nil || r.Items[0].HeldTracks != 2 || r.Items[0].Status == CollectionIncomplete || len(r.Items[0].Holdings) != 1 {
 		t.Fatalf("%+v %v", r.Items, err)
 	}
 	if _, err := CollectionStatus(ctx, t.TempDir(), collection); err == nil {

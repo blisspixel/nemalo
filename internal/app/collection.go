@@ -18,8 +18,11 @@ type CollectionAcquireRequest struct {
 	Intake        string
 	Apply         bool
 	MaxTotalBytes int64
-	NoScan        bool
-	OnDetection   string
+	// MaxRecordingBytes bounds one recording's declared size; zero is the
+	// acquire default.
+	MaxRecordingBytes int64
+	NoScan            bool
+	OnDetection       string
 }
 
 // Step actions, decided from the library and the intake directory alone.
@@ -37,6 +40,7 @@ type CollectionStep struct {
 	Packet    string                 `json:"packet"`
 	Action    string                 `json:"action"`
 	Outcome   string                 `json:"outcome,omitempty"`
+	Remaining int64                  `json:"remaining_bytes,omitempty"`
 	Bytes     int64                  `json:"bytes,omitempty"`
 	SHA256    string                 `json:"sha256,omitempty"`
 	Antivirus string                 `json:"antivirus,omitempty"`
@@ -81,8 +85,12 @@ func (s Service) CollectionAcquire(ctx context.Context, request CollectionAcquir
 	if library.Overlaps(intake, status.Library) {
 		return r, errors.New("the intake directory must be outside the library")
 	}
-	if request.MaxTotalBytes < 0 {
-		return r, errors.New("the total byte budget must be positive")
+	if request.MaxTotalBytes < 0 || request.MaxRecordingBytes < 0 || request.MaxRecordingBytes > acquisition.MaxRecordingBytes {
+		return r, errors.New("byte budgets must be positive, and a recording's at most 16 GiB")
+	}
+	recordingBudget := request.MaxRecordingBytes
+	if recordingBudget == 0 {
+		recordingBudget = defaultRecordingBytes
 	}
 	for _, item := range status.Items {
 		if item.Status != library.CollectionNotHeld && item.Status != library.CollectionIncomplete {
@@ -90,17 +98,22 @@ func (s Service) CollectionAcquire(ctx context.Context, request CollectionAcquir
 		}
 		step := CollectionStep{Item: item.Item, Packet: filepath.Join(intake, item.Packet), Action: StepAcquire}
 		if info, err := os.Lstat(step.Packet); err == nil {
+			// The acquisition package reads what an existing packet holds.
+			state := acquisition.PacketState{State: acquisition.PacketRetained, Detail: "the packet path is not a directory"}
 			switch {
 			case !info.IsDir():
-				step.Action = StepRetained
 			case item.Item.Recording != "":
-				step.Action = StepResume
-			case exists(step.Packet, "receipt.json"):
-				step.Action = StepAwaitingImport
-			case exists(step.Packet, "intent.json") && exists(step.Packet, "transfer.json"):
-				step.Action = StepResume
+				state = acquisition.InspectRecording(step.Packet)
 			default:
-				step.Action = StepRetained
+				state = acquisition.InspectPacket(step.Packet)
+			}
+			switch state.State {
+			case acquisition.PacketImportable:
+				step.Action = StepAwaitingImport
+			case acquisition.PacketResumable:
+				step.Action, step.Remaining = StepResume, state.Remaining
+			default:
+				step.Action, step.Detail = StepRetained, state.Detail
 			}
 		} else if !errors.Is(err, os.ErrNotExist) {
 			return r, err
@@ -143,8 +156,14 @@ func (s Service) CollectionAcquire(ctx context.Context, request CollectionAcquir
 			return limit
 		}
 		resume := step.Action == StepResume
+		if resume && remaining > 0 && step.Remaining > remaining {
+			// A resume keeps the budget its packet was started with, so it is
+			// started only when what it may still fetch fits.
+			step.Outcome, step.Detail, r.Complete = "not_started", "what this resume may still transfer exceeds the remaining total byte budget", false
+			continue
+		}
 		if step.Item.Recording != "" {
-			res, err := s.AcquireRecording(ctx, acquisition.RecordingRequest{SourceID: step.Item.Source, Format: step.Item.Recording, Output: step.Packet, MaxBytes: budget(defaultRecordingBytes), Resume: resume, NoScan: request.NoScan, OnDetection: request.OnDetection})
+			res, err := s.AcquireRecording(ctx, acquisition.RecordingRequest{SourceID: step.Item.Source, Format: step.Item.Recording, Output: step.Packet, MaxBytes: budget(recordingBudget), Resume: resume, NoScan: request.NoScan, OnDetection: request.OnDetection})
 			for _, t := range res.Tracks {
 				if !t.Reused {
 					r.Transferred += t.Bytes
@@ -159,17 +178,14 @@ func (s Service) CollectionAcquire(ctx context.Context, request CollectionAcquir
 			continue
 		}
 		res, err := s.Acquire(ctx, acquisition.Request{SourceID: step.Item.Source, File: step.Item.File, Output: step.Packet, MaxBytes: budget(acquisition.DefaultMaxBytes(step.Item.File)), Resume: resume, NoScan: request.NoScan, OnDetection: request.OnDetection})
-		r.Transferred += res.Transfer.Bytes
-		step.Outcome, step.Bytes, step.SHA256, step.Antivirus = res.Status, res.Transfer.Bytes, res.Transfer.SHA256, res.Antivirus
+		// A resumed transfer counts only the bytes this run fetched.
+		fetched := max(0, res.Transfer.Bytes-res.ResumedFrom)
+		r.Transferred += fetched
+		step.Outcome, step.Bytes, step.SHA256, step.Antivirus = res.Status, fetched, res.Transfer.SHA256, res.Antivirus
 		if err != nil {
 			step.Detail = err.Error()
 		}
 		r.Complete = r.Complete && err == nil && res.Complete
 	}
 	return r, nil
-}
-
-func exists(dir, name string) bool {
-	_, err := os.Lstat(filepath.Join(dir, name))
-	return err == nil
 }

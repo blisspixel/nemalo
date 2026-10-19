@@ -87,6 +87,8 @@ verified, not when code exists. No stage has a time estimate.
    PAR2 sets inventoried and retained without repair, cleanup of RAR and 7z
    sources and volume sets with every member accounted for, and Windows reparse
    point tests. These close the ingest and cleanup acceptance for messy folders.
+   Progress: cleanup of RAR, 7z, and volume sets
+   ([decision 0051](docs/decisions/0051-cleanup-of-rar-7z-and-volume-sets.md)).
 3. **Audio access** (milestone 8). M4B and M4A byte ranges and decoded timing in
    content access, bounded ranges usable by an external player, and output
    demonstrated with a real audiobook reader or server.
@@ -365,7 +367,9 @@ journaled crash recovery, and restore are implemented in CLI, JSON, and TUI
 ([decision 0022](docs/decisions/0022-recoverable-source-cleanup.md)). `library
 purge` removes a completed cleanup's held copies whose bytes the library holds
 and verifies, after its own preview and plan, and resumes from its manifest
-([decision 0041](docs/decisions/0041-purge-held-sources.md)). `library check` reports missing, changed,
+([decision 0041](docs/decisions/0041-purge-held-sources.md)). RAR, 7z, and
+volume sets move only when whole as 7-Zip lists them
+([decision 0051](docs/decisions/0051-cleanup-of-rar-7z-and-volume-sets.md)). `library check` reports missing, changed,
 untracked, and unscanned entries, unfinished operations, and held copies without
 changing anything ([decision 0024](docs/decisions/0024-library-check.md)).
 Disk-full and scanner-failure faults are injected in tests: a full disk

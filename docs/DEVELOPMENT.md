@@ -306,6 +306,8 @@ nemalo library cleanup /path/to/library /path/to/downloads --apply --plan DIGEST
 nemalo library restore /path/to/library --cleanup cleanup:ID --apply
 nemalo library purge /path/to/library --cleanup cleanup:ID
 nemalo library purge /path/to/library --cleanup cleanup:ID --apply --plan DIGEST
+nemalo collection status /path/to/books.json /path/to/library
+nemalo collection acquire /path/to/books.json /path/to/library --output /path/to/intake --apply
 nemalo content read /path/to/library --root /path/to/library --asset sha256:HASH
 nemalo content read /path/to/library --root /path/to/library --asset sha256:HASH \
   --representation pdf-text/1 --unit 3

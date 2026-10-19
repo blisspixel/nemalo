@@ -117,7 +117,49 @@ func Extract7z(ctx context.Context, src *os.Root, name string, dst *os.Root, sup
 	if err != nil {
 		return x, err
 	}
-	return extractSnapshot(ctx, exe, kind, filepath.Join(tmp, snapshot), info.Size(), dst, supported, limits)
+	x, err = extractSnapshot(ctx, exe, kind, filepath.Join(tmp, snapshot), info.Size(), dst, supported, limits)
+	if err == nil {
+		x.Whole = wholeArchive(ctx, exe, kind, filepath.Join(tmp, snapshot), "Physical Size", info.Size())
+	}
+	return x, err
+}
+
+// wholeArchive lists the archive block and reports that it has no comment,
+// warning, offset, or tail, and that key equals size.
+func wholeArchive(ctx context.Context, exe, kind, archive, key string, size int64) bool {
+	headerCtx, cancel := context.WithTimeout(ctx, 2*time.Minute)
+	defer cancel()
+	out, code, err := runSeven(headerCtx, exe, nil, "l", "-slt", "-t"+kind, noPassword, "--", archive)
+	if err != nil || code != 0 {
+		return false
+	}
+	return wholeBlock(out, key, size)
+}
+
+// wholeBlock reads the archive block line by line up to the member listing.
+// Every line must be a key, each key once; a comment, an offset or tail, or
+// any other line, such as a WARNINGS heading, refuses it.
+func wholeBlock(out []byte, key string, size int64) bool {
+	text := strings.ReplaceAll(string(out), "\r\n", "\n")
+	start := strings.Index(text, "\n--\n")
+	if start < 0 {
+		return false
+	}
+	keys := map[string]string{}
+	for _, line := range strings.Split(text[start+4:], "\n") {
+		if line == "" {
+			continue
+		}
+		if line == "----------" {
+			return keys[key] == strconv.FormatInt(size, 10)
+		}
+		k, v, ok := strings.Cut(line, " = ")
+		if _, seen := keys[k]; !ok || seen || k == "Comment" || k == "Offset" || k == "Tail Size" {
+			return false
+		}
+		keys[k] = v
+	}
+	return false
 }
 
 // extractSnapshot lists a snapshot already typed by its signature and
@@ -561,7 +603,11 @@ func ExtractSet(ctx context.Context, src *os.Root, names []string, dst *os.Root,
 		if err != nil || code != 0 || !ok || keys["Physical Size"] != strconv.FormatInt(total, 10) {
 			return x, errors.New("the joined volumes are not exactly one 7z archive; the set is preserved")
 		}
-		return extractSnapshot(ctx, exe, kind, archive, total, dst, supported, limits)
+		x, err = extractSnapshot(ctx, exe, kind, archive, total, dst, supported, limits)
+		if err == nil {
+			x.Whole = wholeArchive(ctx, exe, kind, archive, "Physical Size", total)
+		}
+		return x, err
 	}
 	// RAR volumes keep their number, so 7-Zip finds each next one by name.
 	first := ""
@@ -589,7 +635,12 @@ func ExtractSet(ctx context.Context, src *os.Root, names []string, dst *os.Root,
 	if volumes, multi := setHeader(out); !multi || volumes != len(names) {
 		return x, fmt.Errorf("7-Zip reads this set as %d volume(s), not the %d found; it is preserved", volumes, len(names))
 	}
-	return extractSnapshot(ctx, exe, kind, archive, total, dst, supported, limits)
+	x, err = extractSnapshot(ctx, exe, kind, archive, total, dst, supported, limits)
+	if err == nil {
+		// A RAR set's block gives the physical size of all its volumes.
+		x.Whole = wholeArchive(ctx, exe, kind, archive, "Total Physical Size", total)
+	}
+	return x, err
 }
 
 // archiveBlock reads the keys of the archive block of a listing without

@@ -739,9 +739,11 @@ func Execute(ctx context.Context, args []string, out, errOut io.Writer, service 
 			}
 			total := int64(0)
 			if visited(flags, "max-total-bytes") {
-				total = limits.TotalBytes
+				if total = limits.TotalBytes; total < 1 {
+					return write(nil, errors.New("--max-total-bytes must be at least 1"), 2)
+				}
 			}
-			data, err := service.CollectionAcquire(ctx, app.CollectionAcquireRequest{Library: flags.Arg(1), Collection: flags.Arg(0), Intake: *output, Apply: *apply, MaxTotalBytes: total, NoScan: *noScan, OnDetection: detection})
+			data, err := service.CollectionAcquire(ctx, app.CollectionAcquireRequest{Library: flags.Arg(1), Collection: flags.Arg(0), Intake: *output, Apply: *apply, MaxTotalBytes: total, MaxRecordingBytes: *maxRecording, NoScan: *noScan, OnDetection: detection})
 			if err != nil {
 				return write(data, err, 1)
 			}
@@ -1025,7 +1027,7 @@ func flagApplies(command, action, name string) bool {
 	}
 	switch command {
 	case "collection":
-		return action == "acquire" && (name == "output" || name == "apply" || name == "max-total-bytes" || name == "no-scan" || name == "on-detection")
+		return action == "acquire" && (name == "output" || name == "apply" || name == "max-total-bytes" || name == "max-recording-bytes" || name == "no-scan" || name == "on-detection")
 	case "acquire":
 		return name == "file" || name == "output" || name == "max-file-bytes" || name == "no-scan" || name == "on-detection" || name == "recording" || name == "resume" || name == "max-recording-bytes"
 	case "search":

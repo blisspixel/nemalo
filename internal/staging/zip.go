@@ -51,6 +51,11 @@ type Member struct {
 type Extraction struct {
 	Members  []Member `json:"members"`
 	Complete bool     `json:"complete"`
+	// Whole reports, for an archive read through 7-Zip, that its archive
+	// block names no comment, warning, leading offset, or trailing bytes, and
+	// a physical size equal to the bytes read, so the members are all it
+	// holds. Cleanup moves such an archive only when Whole.
+	Whole bool `json:"whole,omitempty"`
 }
 
 var nestedArchive = map[string]bool{".zip": true, ".rar": true, ".7z": true, ".tar": true, ".gz": true, ".bz2": true, ".xz": true, ".zst": true, ".cbz": true}

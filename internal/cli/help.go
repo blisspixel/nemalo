@@ -220,7 +220,10 @@ nemalo collection acquire COLLECTION LIBRARY --output INTAKE [--apply]
   is resumed, and any other existing packet is left as it is.
 
 Options:
-  --max-total-bytes N  stop starting new items once N bytes have transferred
+  --max-total-bytes N      bytes the run may transfer in all; each new item's
+                           budget is cut to what remains, so a larger item
+                           fails, and a resume starts only if it fits
+  --max-recording-bytes N  a recording's declared size budget (4 GiB)
   --no-scan, --on-detection quarantine|delete  as for acquire
 
 A collection file is JSON: {"schema_version":1,"name":"...","items":[

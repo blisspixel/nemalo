@@ -26,7 +26,9 @@ cleanup moves a source into `<library>/cleanup/<id>/files/<folder-relative path>
   and its receipt is a completed Nemalo receipt for exactly that content; a
   packet without a receipt stays for review, as in ingest. A ZIP moves only when
   it starts with an entry, has no comment, holds at least one held book, every
-  other member is a directory, and its bytes are unchanged after the check. A
+  other member is a directory, and its bytes are unchanged after the check; a RAR,
+  7z, or volume set follows the same rule through 7-Zip and must be whole as
+  7-Zip lists it ([decision 0051](0051-cleanup-of-rar-7z-and-volume-sets.md)). A
   file over its format's limit (256 MiB, or 2 GiB for an M4B or M4A,
   [decision 0040](0040-large-mp4-audio-and-scan-limits.md)), and names that
   differ only by case, stay. Everything else

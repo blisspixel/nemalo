@@ -268,59 +268,38 @@ func planIngest(folder string, entries []inventory.Entry, result *IngestResult) 
 	// A complete set, numbered from 1 without gaps, is one archive read
 	// through its first volume; the others are its parts. A set with a gap,
 	// or a lone split volume, is preserved.
-	type volume struct {
-		path   string
-		number int
-	}
-	sets := map[string][]volume{}
+	var candidates []string
 	for _, e := range entries {
 		if e.Finding != "" || e.Kind == "link" || e.Kind == "special" || e.Kind == "unreadable" || e.Kind == "directory" || parts[e.Path] != "" {
 			continue
 		}
-		if set, n, ok := staging.VolumeOf(e.Path); ok {
-			sets[set] = append(sets[set], volume{e.Path, n})
-		}
+		candidates = append(candidates, e.Path)
 	}
 	setOf, setFirst := map[string]string{}, map[string]bool{}
-	setNames := make([]string, 0, len(sets))
-	for set := range sets {
-		setNames = append(setNames, set)
-	}
-	sort.Strings(setNames)
-	for _, set := range setNames {
-		vs := sets[set]
-		sort.Slice(vs, func(i, j int) bool { return vs[i].number < vs[j].number })
-		complete := len(vs) >= 2
-		for i, v := range vs {
-			complete = complete && v.number == i+1
-		}
-		if !complete {
-			// A lone .part1.rar may be a whole archive; it is read as one.
-			if len(vs) == 1 && vs[0].number == 1 && strings.HasSuffix(strings.ToLower(vs[0].path), ".rar") {
-				continue
-			}
-			for _, v := range vs {
-				setOf[v.path] = "incomplete"
+	for _, set := range volumeSets(candidates) {
+		if !set.complete {
+			for _, v := range set.volumes {
+				setOf[v] = "incomplete"
 			}
 			continue
 		}
-		paths := make([]string, len(vs))
-		for i, v := range vs {
-			paths[i] = filepath.FromSlash(v.path)
+		paths := make([]string, len(set.volumes))
+		for i, v := range set.volumes {
+			paths[i] = filepath.FromSlash(v)
 		}
 		first := filepath.Join(folder, paths[0])
 		if strings.Contains(first, "!/") {
 			// "!/" separates an archive from its member in provenance labels.
-			for _, v := range vs {
-				setOf[v.path] = "unlabelable"
+			for _, v := range set.volumes {
+				setOf[v] = "unlabelable"
 			}
 			continue
 		}
-		for _, v := range vs {
-			setOf[v.path] = vs[0].path
+		for _, v := range set.volumes {
+			setOf[v] = set.volumes[0]
 		}
-		setFirst[vs[0].path] = true
-		units = append(units, ingestUnit{item: IngestItem{Source: vs[0].path, Kind: "archive"}, file: first, archive: true, volumes: paths})
+		setFirst[set.volumes[0]] = true
+		units = append(units, ingestUnit{item: IngestItem{Source: set.volumes[0], Kind: "archive"}, file: first, archive: true, volumes: paths})
 	}
 	for _, e := range entries {
 		item := IngestItem{Source: e.Path, Kind: e.Kind}

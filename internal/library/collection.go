@@ -128,13 +128,16 @@ func ReadCollection(path string) (Collection, string, error) {
 	if len(data) > maxCollectionBytes {
 		return c, "", errors.New("a collection file is at most 1 MiB")
 	}
+	if err := uniqueKeys(data); err != nil {
+		return c, "", fmt.Errorf("read collection: %w", err)
+	}
 	dec := json.NewDecoder(bytes.NewReader(data))
 	dec.DisallowUnknownFields()
 	if err := dec.Decode(&c); err != nil {
 		return c, "", fmt.Errorf("read collection: %w", err)
 	}
-	if dec.More() {
-		return c, "", errors.New("read collection: more than one JSON value")
+	if len(bytes.TrimSpace(data[dec.InputOffset():])) != 0 {
+		return c, "", errors.New("read collection: data follows the JSON value")
 	}
 	if err := c.Validate(); err != nil {
 		return c, "", err
@@ -173,6 +176,7 @@ type CollectionItemStatus struct {
 	Item           CollectionItem `json:"item"`
 	Status         string         `json:"status"`
 	Holdings       []string       `json:"holdings"`
+	Detail         string         `json:"detail,omitempty"`
 	HeldTracks     int            `json:"held_tracks,omitempty"`
 	DeclaredTracks int            `json:"declared_tracks,omitempty"`
 	Packet         string         `json:"packet"`
@@ -224,6 +228,7 @@ func CollectionStatus(ctx context.Context, directory, collection string) (Collec
 	files := map[fileKey][]Holding{}
 	tracks := map[trackKey]map[int]Holding{}
 	declared := map[trackKey]int{}
+	conflict := map[trackKey]bool{}
 	for _, h := range latestList(lines) {
 		for _, s := range h.Sources {
 			if s.SourceID == "" {
@@ -241,6 +246,9 @@ func CollectionStatus(ctx context.Context, directory, collection string) (Collec
 				if _, ok := tracks[k][rec.Position]; !ok {
 					tracks[k][rec.Position] = h
 				}
+				if declared[k] != 0 && declared[k] != rec.Tracks {
+					conflict[k] = true
+				}
 				declared[k] = max(declared[k], rec.Tracks)
 			}
 		}
@@ -254,14 +262,20 @@ func CollectionStatus(ctx context.Context, directory, collection string) (Collec
 		if item.File != "" {
 			held = files[fileKey{item.Source, item.File}]
 		} else {
+			// Positions are counted, not holdings: two byte-identical tracks
+			// are one holding at two positions.
 			k := trackKey{item.Source, item.Recording}
-			st.DeclaredTracks, st.HeldTracks = declared[k], len(tracks[k])
+			st.DeclaredTracks = declared[k]
 			for position := 1; position <= st.DeclaredTracks; position++ {
 				if h, ok := tracks[k][position]; ok {
+					st.HeldTracks++
 					held = appendHolding(held, h)
 				}
 			}
-			if len(held) > 0 && len(held) < st.DeclaredTracks {
+			switch {
+			case conflict[k] && st.HeldTracks > 0:
+				st.Status, st.Detail = CollectionIncomplete, "held tracks of this format declare different track totals; review with library recordings"
+			case st.HeldTracks > 0 && st.HeldTracks < st.DeclaredTracks:
 				st.Status = CollectionIncomplete
 			}
 		}
@@ -289,6 +303,52 @@ func CollectionStatus(ctx context.Context, directory, collection string) (Collec
 		r.Items = append(r.Items, st)
 	}
 	return r, nil
+}
+
+// uniqueKeys refuses a JSON document in which an object names a key twice,
+// which the decoder would otherwise settle silently by the last value.
+func uniqueKeys(data []byte) error {
+	dec := json.NewDecoder(bytes.NewReader(data))
+	var walk func(depth int) error
+	walk = func(depth int) error {
+		if depth > 16 {
+			return errors.New("JSON nests too deeply")
+		}
+		tok, err := dec.Token()
+		if err != nil {
+			return err
+		}
+		switch tok {
+		case json.Delim('{'):
+			seen := map[string]bool{}
+			for dec.More() {
+				key, err := dec.Token()
+				if err != nil {
+					return err
+				}
+				name, _ := key.(string)
+				if seen[name] {
+					return fmt.Errorf("key %q appears twice in one object", name)
+				}
+				seen[name] = true
+				if err := walk(depth + 1); err != nil {
+					return err
+				}
+			}
+			_, err = dec.Token()
+			return err
+		case json.Delim('['):
+			for dec.More() {
+				if err := walk(depth + 1); err != nil {
+					return err
+				}
+			}
+			_, err = dec.Token()
+			return err
+		}
+		return nil
+	}
+	return walk(0)
 }
 
 func appendHolding(list []Holding, h Holding) []Holding {

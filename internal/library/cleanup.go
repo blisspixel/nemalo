@@ -123,7 +123,7 @@ func cleanupLimitations() []string {
 	return []string{
 		"Only files whose exact bytes the library holds, with stored bytes verified, move. Everything else stays, with its reason.",
 		"Moved sources go to the library's cleanup holding area and can be restored. library purge removes held copies the library holds, after its own preview.",
-		"An archive moves only when every member is a directory or a held file. Intake packets move as their receipt, intent, and content.",
+		"An archive moves only when every member is a directory or a held file; a RAR or 7z, or a volume set as a whole, also only when 7-Zip lists it with nothing beyond its members. Intake packets move as their receipt, intent, and content.",
 		"Directory-entry durability across power loss depends on the filesystem.",
 	}
 }
@@ -824,6 +824,27 @@ func planCleanup(ctx context.Context, store, src *os.Root, lines []Holding) ([]C
 		e.Disposition, e.Reason, e.Holdings = "move", "the packet content is held; its records move with it", []string{h.ID}
 		entries = append(entries, e)
 	}
+	// A volume set is planned as one archive through its first volume, as
+	// ingest reads it, and moves only as a whole.
+	var candidates []string
+	for _, ie := range inv.Entries {
+		if !inPacket[ie.Path] && regular(ie.Path) && !incomplete[ie.Path] && !caseClash(ie.Path) {
+			candidates = append(candidates, ie.Path)
+		}
+	}
+	setVolumes, setOf, brokenSet := map[string][]string{}, map[string]string{}, map[string]bool{}
+	for _, set := range volumeSets(candidates) {
+		for _, v := range set.volumes {
+			if set.complete {
+				setOf[v] = set.volumes[0]
+			} else {
+				brokenSet[v] = true
+			}
+		}
+		if set.complete {
+			setVolumes[set.volumes[0]] = set.volumes
+		}
+	}
 	for _, ie := range inv.Entries {
 		if inPacket[ie.Path] {
 			continue
@@ -836,9 +857,18 @@ func planCleanup(ctx context.Context, store, src *os.Root, lines []Holding) ([]C
 			e.Reason = "content of an intake packet without a receipt; retained for review"
 		case caseClash(ie.Path):
 			e.Reason = "the name differs only by case from another entry; preserved"
-		case strings.EqualFold(path.Ext(ie.Path), ".zip"):
+		case setVolumes[ie.Path] != nil:
 			e.Kind = "archive"
-			if err := planArchive(ctx, src, ie.Path, held, hashFile, &e); err != nil {
+			if err := planArchive(ctx, src, ie.Path, setVolumes[ie.Path], held, hashFile, &e); err != nil {
+				return nil, err
+			}
+		case setOf[ie.Path] != "":
+			e.Reason = "a volume of the set read through " + setOf[ie.Path] + "; it stays with that set"
+		case brokenSet[ie.Path]:
+			e.Reason = "a volume of a set with a missing volume; preserved"
+		case staging.Supported(ie.Path):
+			e.Kind = "archive"
+			if err := planArchive(ctx, src, ie.Path, nil, held, hashFile, &e); err != nil {
 				return nil, err
 			}
 		case importFormat(ie.Path) != "":
@@ -864,26 +894,54 @@ func planCleanup(ctx context.Context, store, src *os.Root, lines []Holding) ([]C
 		}
 		entries = append(entries, e)
 	}
+	// The other volumes of a set that moves are files of its entry.
+	moved := map[string]bool{}
+	for _, e := range entries {
+		if setVolumes[e.Path] != nil && e.Disposition == "move" {
+			moved[e.Path] = true
+		}
+	}
+	kept := entries[:0]
+	for _, e := range entries {
+		if first := setOf[e.Path]; first == "" || first == e.Path || !moved[first] {
+			kept = append(kept, e)
+		}
+	}
+	entries = kept
 	sort.SliceStable(entries, func(i, j int) bool { return entries[i].Path < entries[j].Path })
 	return entries, nil
 }
 
-// planArchive moves a ZIP only when every member is a directory or extracts
-// to bytes the library holds. Members are staged privately and removed.
-func planArchive(ctx context.Context, src *os.Root, rel string, held func(string) (Holding, bool, error), hashFile func(string) (CleanupFile, error), e *CleanupEntry) error {
+// planArchive moves an archive, or a volume set read through its first
+// volume, only when every member is a directory or extracts to bytes the
+// library holds. A ZIP must start with its first entry and carry no comment;
+// a RAR or 7z must be whole as 7-Zip lists it, with no comment, offset, or
+// bytes outside its members. Members are staged privately and removed.
+func planArchive(ctx context.Context, src *os.Root, rel string, volumes []string, held func(string) (Holding, bool, error), hashFile func(string) (CleanupFile, error), e *CleanupEntry) error {
 	// The archive's own bytes are fixed first; the same bytes must remain
 	// after its members were checked.
-	before, err := hashFile(rel)
-	if errors.Is(err, errTooLarge) {
-		e.Reason = "over the file limit; preserved"
-		return nil
+	files := volumes
+	if files == nil {
+		files = []string{rel}
 	}
-	if err != nil {
-		return err
+	before := make([]CleanupFile, len(files))
+	for i, f := range files {
+		h, err := hashFile(f)
+		if errors.Is(err, errTooLarge) {
+			e.Reason = "over the file limit; preserved"
+			return nil
+		}
+		if err != nil {
+			return err
+		}
+		before[i] = h
 	}
-	if accounted, why := zipAccounted(src, rel); !accounted {
-		e.Reason = why + "; the archive is preserved"
-		return nil
+	isZip := volumes == nil && strings.EqualFold(path.Ext(rel), ".zip")
+	if isZip {
+		if accounted, why := zipAccounted(src, rel); !accounted {
+			e.Reason = why + "; the archive is preserved"
+			return nil
+		}
 	}
 	tmp, err := os.MkdirTemp("", "nemalo-cleanup-")
 	if err != nil {
@@ -895,12 +953,27 @@ func planArchive(ctx context.Context, src *os.Root, rel string, held func(string
 		return err
 	}
 	defer stage.Close()
-	x, err := staging.ExtractZip(ctx, src, filepath.FromSlash(rel), stage, supportedImport, staging.Defaults())
-	if err != nil {
-		if ctx.Err() != nil {
-			return ctx.Err()
+	var x staging.Extraction
+	if volumes != nil {
+		names := make([]string, len(volumes))
+		for i, v := range volumes {
+			names[i] = filepath.FromSlash(v)
 		}
+		x, err = staging.ExtractSet(ctx, src, names, stage, supportedImport, staging.Defaults())
+	} else {
+		x, err = staging.Extract(ctx, src, filepath.FromSlash(rel), stage, supportedImport, staging.Defaults())
+	}
+	switch {
+	case err != nil && ctx.Err() != nil:
+		return ctx.Err()
+	case errors.Is(err, staging.ErrNoArchiveTool):
+		e.Reason = "7-Zip is not installed, so its members cannot be checked; preserved"
+		return nil
+	case err != nil:
 		e.Reason = "the archive could not be read; preserved"
+		return nil
+	case !isZip && !x.Whole:
+		e.Reason = "7-Zip lists a comment, leading data, or bytes beyond the archive's members; preserved"
 		return nil
 	}
 	ids := []string{}
@@ -929,15 +1002,17 @@ func planArchive(ctx context.Context, src *os.Root, rel string, held func(string
 		e.Reason = "the archive holds no book the library has; preserved"
 		return nil
 	}
-	after, err := fileIdentity(ctx, src, rel)
-	if err != nil {
-		return err
+	for i, f := range files {
+		after, err := fileIdentity(ctx, src, f)
+		if err != nil {
+			return err
+		}
+		if after != before[i] {
+			e.Reason = "the archive changed while it was checked; preserved"
+			return nil
+		}
 	}
-	if after != before {
-		e.Reason = "the archive changed while it was checked; preserved"
-		return nil
-	}
-	e.Disposition, e.Reason, e.Files, e.Holdings = "move", "every member is held with verified stored bytes", []CleanupFile{before}, ids
+	e.Disposition, e.Reason, e.Files, e.Holdings = "move", "every member is held with verified stored bytes", before, ids
 	return nil
 }
 

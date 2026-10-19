@@ -63,6 +63,18 @@ neither selection, duplicates, a path, a wrong Gutenberg name, an unversioned
 arXiv ID, Gutenberg audio, another source, another schema, no items, and two
 JSON values were refused.
 
+An independent review then found, now fixed with tests: a recording already
+receipted was resumed and reported as failed; a packet whose receipt records a
+detection or review was shown as awaiting ingest; byte-identical tracks made a
+recording look incomplete, and positions beyond the declared total were
+counted; an interrupted packet that cannot resume (an arXiv transfer, or one
+without a strong validator) was offered as a resume; a resume ignored the total
+budget, and resumed bytes were counted twice; trailing brackets and repeated
+keys in the file were accepted. The acquisition package now reads an existing
+packet's state (`InspectPacket`, `InspectRecording`); a resume starts only when
+what it may still transfer fits the remaining budget; `--max-recording-bytes`
+sets a recording's budget; and tracks declaring different totals are reported.
+
 Live on 2026-10-19: a collection of `gutenberg:84` (`84.epub.noimages`) and
 `arxiv:1706.03762v1` previewed two items, acquired 356,586 and 2,128,686 bytes
 with ClamAV reporting no detections, ingested both as checked, and then
