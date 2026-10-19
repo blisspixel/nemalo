@@ -188,6 +188,9 @@ func copyHolding(ctx context.Context, root string, h Holding, dest *os.Root, nam
 		return err
 	}
 	defer in.Close()
+	if err := safeio.EnsureSpace(dest.Name(), h.Bytes); err != nil {
+		return err
+	}
 	out, err := dest.OpenFile(name, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o644)
 	if err != nil {
 		return err

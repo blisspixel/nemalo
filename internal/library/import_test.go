@@ -15,6 +15,7 @@ import (
 	"testing"
 
 	"github.com/blisspixel/nemalo/internal/assessment"
+	"github.com/blisspixel/nemalo/internal/safeio"
 	"github.com/blisspixel/nemalo/internal/scanner"
 )
 
@@ -597,3 +598,31 @@ func mustRead(t *testing.T, path string) []byte {
 }
 
 var _ assessment.Scanner = cleanScan{}
+
+// An import that would not fit is refused before any journal entry or copy.
+func TestImportRefusesWhatWouldNotFit(t *testing.T) {
+	ctx := context.Background()
+	root := t.TempDir()
+	if _, err := Initialize(ctx, root); err != nil {
+		t.Fatal(err)
+	}
+	before, _ := os.ReadFile(filepath.Join(root, ".nemalo", "journal.jsonl"))
+	saved := safeio.FreeSpace
+	safeio.FreeSpace = func(string) (int64, error) { return 1 << 20, nil }
+	t.Cleanup(func() { safeio.FreeSpace = saved })
+	if _, err := Import(ctx, ImportRequest{Library: root, Source: writeEPUB(t, t.TempDir()), Apply: true}); !errors.Is(err, safeio.ErrNoSpace) {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(filepath.Join(root, ".nemalo", "operations.jsonl")); !os.IsNotExist(err) {
+		t.Fatal("a refused import wrote an operation", err)
+	}
+	if after, _ := os.ReadFile(filepath.Join(root, ".nemalo", "journal.jsonl")); string(after) != string(before) {
+		t.Fatal("journal changed")
+	}
+	_ = filepath.WalkDir(filepath.Join(root, "assets"), func(p string, d os.DirEntry, err error) error {
+		if err == nil && !d.IsDir() {
+			t.Fatal("a refused import stored bytes", p)
+		}
+		return nil
+	})
+}

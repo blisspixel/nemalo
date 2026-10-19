@@ -84,6 +84,9 @@ func (p *rangeProvider) DownloadFrom(_ context.Context, _ discovery.OfferedFile,
 
 func interrupted(t *testing.T, p *rangeProvider) Request {
 	t.Helper()
+	saved := maxContinuations
+	maxContinuations = 0
+	defer func() { maxContinuations = saved }()
 	p.cutAt = 40
 	r := Request{SourceID: "archive:demo", File: "track.mp3", Output: filepath.Join(t.TempDir(), "packet"), MaxBytes: 1 << 20}
 	if _, err := Acquire(context.Background(), p, r); err == nil {
@@ -211,9 +214,12 @@ func (p *rangedRecording) DownloadFrom(_ context.Context, f discovery.OfferedFil
 func TestRecordingResumeContinuesAnInterruptedTrackInPlace(t *testing.T) {
 	p := &rangedRecording{recordingProvider: recordingFixture(), cut: true}
 	r := recordingRequest(t)
+	saved := maxContinuations
+	maxContinuations = 0
 	if _, err := AcquireRecording(context.Background(), p, r); err == nil {
 		t.Fatal("cut track succeeded")
 	}
+	maxContinuations = saved
 	p.cut, p.downloads, r.Resume = false, nil, true
 	done, err := AcquireRecording(context.Background(), p, r)
 	if err != nil || !done.Complete {

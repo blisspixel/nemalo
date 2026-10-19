@@ -300,6 +300,10 @@ func (p *resumeTUIProvider) DownloadFrom(_ context.Context, _ discovery.OfferedF
 		}
 		return &http.Response{StatusCode: 200, ContentLength: int64(len(resumeBody)), Header: h, Body: io.NopCloser(r)}, nil
 	}
+	if p.cut {
+		// While the source is still failing, a continuation is refused.
+		return &http.Response{StatusCode: 503, Header: h, Body: io.NopCloser(strings.NewReader(""))}, nil
+	}
 	h.Set("Content-Range", fmt.Sprintf("bytes %d-%d/%d", offset, len(resumeBody)-1, len(resumeBody)))
 	return &http.Response{StatusCode: 206, ContentLength: int64(len(resumeBody)) - offset, Header: h, Body: io.NopCloser(strings.NewReader(resumeBody[offset:]))}, nil
 }

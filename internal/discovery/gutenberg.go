@@ -19,6 +19,7 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"github.com/blisspixel/nemalo/internal/safeio"
 	"github.com/blisspixel/nemalo/internal/transfer"
 )
 
@@ -531,6 +532,10 @@ func downloadCatalog(ctx context.Context, client *http.Client, rawURL string, f 
 		if total > maxCatalogBytes {
 			resp.Body.Close()
 			return n, nil, continued, errors.New("gutenberg catalog is larger than 64 MiB")
+		}
+		if err := safeio.EnsureSpace(filepath.Dir(f.Name()), total-n); err != nil {
+			resp.Body.Close()
+			return n, nil, continued, err
 		}
 		written, copyErr := io.Copy(io.MultiWriter(f, hasher), io.LimitReader(resp.Body, maxCatalogBytes+1-n))
 		resp.Body.Close()

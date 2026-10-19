@@ -98,7 +98,11 @@ func ExtractZip(ctx context.Context, src *os.Root, name string, dst *os.Root, su
 				x.Complete = false
 			} else {
 				m.Staged = fmt.Sprintf("%05d%s", i, strings.ToLower(path.Ext(entry.Name)))
-				if err := extract(ctx, entry, dst, m.Staged, limits.MemberBytes); err != nil {
+				if err := safeio.EnsureSpace(dst.Name(), m.Bytes); err != nil {
+					// Too little space: the member stays in the archive.
+					m.Disposition, m.Detail, m.Staged = "failed", err.Error(), ""
+					x.Complete = false
+				} else if err := extract(ctx, entry, dst, m.Staged, limits.MemberBytes); err != nil {
 					m.Disposition, m.Detail, m.Staged = "failed", err.Error(), ""
 					_ = dst.Remove(fmt.Sprintf("%05d%s", i, strings.ToLower(path.Ext(entry.Name))))
 					x.Complete = false

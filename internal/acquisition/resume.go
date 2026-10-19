@@ -191,6 +191,10 @@ func resumeTransfer(ctx context.Context, ranged RangeProvider, root *os.Root, ab
 	p.request.MaxBytes = max(request.MaxBytes, intent.Request.MaxBytes)
 	result.Output, result.Status, result.Intent = abs, "retained_incomplete", &intent
 	result.ContentPath, result.ResumedFrom = filepath.Join(abs, name), offset
+	if err := safeio.EnsureSpace(abs, size-offset); err != nil {
+		_ = f.Close()
+		return nil, result, err
+	}
 	resp, err := ranged.DownloadFrom(ctx, file, offset, rec.ETag)
 	if err != nil {
 		_ = f.Close()

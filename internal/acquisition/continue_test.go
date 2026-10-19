@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/blisspixel/nemalo/internal/discovery"
+	"github.com/blisspixel/nemalo/internal/safeio"
 )
 
 // flakyProvider drops every response after chunk bytes with an unexpected
@@ -165,5 +166,22 @@ func TestARecordingTrackThatDropsContinuesInPlace(t *testing.T) {
 	}
 	if fmt.Sprint(p.ranges) != "[7]" {
 		t.Fatal("track was not continued from its retained bytes", p.ranges)
+	}
+}
+
+// A download that would not fit in the free space is refused before any
+// folder is made or byte requested.
+func TestAcquireRefusesADownloadThatWouldNotFit(t *testing.T) {
+	saved := safeio.FreeSpace
+	safeio.FreeSpace = func(string) (int64, error) { return 1 << 20, nil }
+	t.Cleanup(func() { safeio.FreeSpace = saved })
+	p := &flakyProvider{rangeProvider: newRangeProvider("ID3 small"), chunk: 1 << 20}
+	r := Request{SourceID: "archive:demo", File: "track.mp3", Output: filepath.Join(t.TempDir(), "new", "packet"), MaxBytes: 1 << 20}
+	_, err := Acquire(context.Background(), p, r)
+	if !errors.Is(err, safeio.ErrNoSpace) || !strings.Contains(err.Error(), "are free") {
+		t.Fatal(err)
+	}
+	if _, statErr := os.Lstat(filepath.Dir(r.Output)); !os.IsNotExist(statErr) || len(p.requests) != 0 {
+		t.Fatal("a refused download made folders or requests", p.requests)
 	}
 }

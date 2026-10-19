@@ -239,6 +239,14 @@ func AcquireRecording(ctx context.Context, provider Provider, request RecordingR
 		result.Tracks = append(result.Tracks, rt)
 	}
 
+	// The tracks still to fetch must fit before the first is requested.
+	var remaining int64
+	for _, p := range plan {
+		remaining += *p.file.Bytes
+	}
+	if err := safeio.EnsureSpace(abs, remaining); err != nil {
+		return result, err
+	}
 	scan := request.Scanner != nil && !request.NoScan
 	// A batch-capable scanner scans a group of transferred tracks at once, so
 	// signatures load once per group; receipts wait for that scan. Groups are

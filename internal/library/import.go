@@ -312,6 +312,12 @@ func finish(ctx context.Context, control *control, store *os.Root, libraryID str
 		result.AlreadyHeld, result.Applied = true, true
 		return result, nil
 	}
+	if !obj.present {
+		// Refused before any journal entry, so nothing is left to recover.
+		if err = safeio.EnsureSpace(store.Name(), holding.Bytes); err != nil {
+			return result, err
+		}
+	}
 	writeHolding := !sameFact(current, fact) || !sourceKnown(current, add) || !sameIdentity(current, holding)
 	now := time.Now().UTC().Format(time.RFC3339Nano)
 	if !resume {
@@ -968,6 +974,9 @@ func copyPartial(ctx context.Context, root *os.Root, source, partial string, siz
 		return err
 	}
 	defer in.Close()
+	if err := safeio.EnsureSpace(root.Name(), size); err != nil {
+		return err
+	}
 	out, err := root.OpenFile(partial, os.O_RDWR|os.O_CREATE|os.O_EXCL, 0600)
 	if err != nil {
 		return err

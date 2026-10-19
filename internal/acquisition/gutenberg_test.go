@@ -104,8 +104,14 @@ func TestAcquireGutenbergMissingMirrorWritesNothing(t *testing.T) {
 	if _, err := os.Lstat(r.Output); !os.IsNotExist(err) {
 		t.Fatal("mirror miss created a packet", err)
 	}
-	if len(stub.calls) != 1 || strings.Contains(stub.calls[0], "www.gutenberg.org") || !strings.HasSuffix(stub.calls[0], "/pg1342.rdf") {
+	// A dropped connection is tried again at the mirror only.
+	if len(stub.calls) < 1 {
 		t.Fatal(stub.calls)
+	}
+	for _, c := range stub.calls {
+		if strings.Contains(c, "www.gutenberg.org") || !strings.HasSuffix(c, "/pg1342.rdf") {
+			t.Fatal(stub.calls)
+		}
 	}
 	stub.fail = false
 	stub.status = 404
@@ -175,9 +181,12 @@ func TestAcquireGutenbergResumeUsesTheRecordedResponseLength(t *testing.T) {
 	extent := int64(len(body) + 9)
 	stub := &mirrorStub{t: t, rdf: mirrorRDF("1342", extent, 2000), body: body, etag: `"6abe5e40-88fce"`, cut: 40}
 	r := gutenbergRequest(t)
+	saved := maxContinuations
+	maxContinuations = 0
 	if _, err := Acquire(context.Background(), stub.provider(), r); err == nil {
 		t.Fatal("cut transfer succeeded")
 	}
+	maxContinuations = saved
 	stub.cut = 0
 	r.Resume = true
 	result, err := Acquire(context.Background(), stub.provider(), r)

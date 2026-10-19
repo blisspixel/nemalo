@@ -158,8 +158,9 @@ func Acquire(ctx context.Context, provider Provider, request Request) (Result, e
 	return result, err
 }
 
-// maxContinuations bounds automatic continuation of one acquisition.
-const maxContinuations = 3
+// maxContinuations bounds automatic continuation of one acquisition; tests
+// that build an interrupted packet set it to zero.
+var maxContinuations = 3
 
 // continuationPause waits longer before each continuation; tests shorten it.
 var continuationPause = func(attempt int) time.Duration { return time.Duration(attempt) * 2 * time.Second }
@@ -214,6 +215,10 @@ func acquireOnce(ctx context.Context, provider Provider, request Request) (resul
 		return result, err
 	}
 	if err := ctx.Err(); err != nil {
+		return result, err
+	}
+	// A download that would not fit is refused before any folder is made.
+	if err := safeio.EnsureSpace(parentPath, *file.Bytes); err != nil {
 		return result, err
 	}
 	if parentMissing {

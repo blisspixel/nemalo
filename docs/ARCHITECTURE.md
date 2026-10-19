@@ -399,6 +399,18 @@ junk disposition. Unknown entries and missing volumes cannot disappear through
 an archive-level success flag. Disk-full, cancellation, scanner failure, permissions,
 and concurrent changes must preserve recoverable content.
 
+Every write of known size first checks the free space of its folder, or its
+nearest existing parent, through `safeio.EnsureSpace`: an acquisition (and
+each continuation), a recording's remaining tracks, a catalog download, an
+import before its journal intent, a ZIP member before extraction, a cleanup
+copy, and an export or open copy. A write that would leave less than 64 MiB
+free is refused with the needed and free sizes, before any folder, journal
+entry, or request. A root opened through the descriptor bridge is measured
+at the folder it refers to. Free space that cannot be read, or a pseudo
+filesystem that reports no blocks, does not refuse a write, and the write
+still fails cleanly if the disk fills. The check is an early refusal, not a
+reservation; another process can still fill the disk.
+
 ## Providers and networking
 
 The implemented metadata boundary supports explicit Open Library/Internet Archive

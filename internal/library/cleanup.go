@@ -639,6 +639,9 @@ func sameBytes(ctx context.Context, r io.ReaderAt, f CleanupFile) (bool, error) 
 // copyVerified copies in to a new file name in root, synced, and reports
 // whether the bytes were the planned ones. A mismatch leaves nothing behind.
 func copyVerified(ctx context.Context, in io.ReaderAt, root *os.Root, name string, f CleanupFile) (bool, error) {
+	if err := safeio.EnsureSpace(root.Name(), f.Bytes); err != nil {
+		return false, err
+	}
 	out, err := root.OpenFile(name, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o600)
 	if err != nil {
 		return false, err
