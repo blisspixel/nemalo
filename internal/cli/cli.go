@@ -65,7 +65,7 @@ func Execute(ctx context.Context, args []string, out, errOut io.Writer, service 
 	command := args[0]
 	action := ""
 	arguments := args[1:]
-	if (command == "library" || command == "content" || command == "mcp" || command == "bookmark" || command == "catalog" || command == "jobs") && len(arguments) > 0 {
+	if (command == "library" || command == "content" || command == "mcp" || command == "bookmark" || command == "catalog" || command == "jobs" || command == "collection") && len(arguments) > 0 {
 		action = arguments[0]
 		arguments = arguments[1:]
 		if action == "--help" || action == "-h" {
@@ -200,7 +200,7 @@ func Execute(ctx context.Context, args []string, out, errOut io.Writer, service 
 		}
 		return write(service.ContentCapabilities(), nil, 0)
 	}
-	if command != "doctor" && command != "search" && command != "evaluate" && command != "acquire" && command != "inspect" && command != "check" && command != "tui" && command != "library" && command != "content" && command != "mcp" && command != "read" && command != "bookmark" && command != "catalog" && command != "jobs" {
+	if command != "doctor" && command != "search" && command != "evaluate" && command != "acquire" && command != "inspect" && command != "check" && command != "tui" && command != "library" && command != "content" && command != "mcp" && command != "read" && command != "bookmark" && command != "catalog" && command != "jobs" && command != "collection" {
 		return write(nil, fmt.Errorf("unknown command %q; use nemalo help", command), 2)
 	}
 	p, err := paths()
@@ -501,9 +501,9 @@ func Execute(ctx context.Context, args []string, out, errOut io.Writer, service 
 		}
 		if action == "related" {
 			if flags.NArg() != 1 {
-				return write(nil, errors.New("use library related LIBRARY [--asset sha256:HASH]"), 2)
+				return write(nil, errors.New("use library related LIBRARY [--asset sha256:HASH] [--limit 10] [--offset 0]"), 2)
 			}
-			data, err := service.Related(ctx, flags.Arg(0), contentRequest.AssetID)
+			data, err := service.Related(ctx, library.RelatedRequest{Directory: flags.Arg(0), Holding: contentRequest.AssetID, Limit: *limit, Offset: *offset})
 			if err != nil {
 				return write(data, err, 1)
 			}
@@ -724,6 +724,34 @@ func Execute(ctx context.Context, args []string, out, errOut io.Writer, service 
 			return write(nil, errors.New("doctor takes no arguments"), 2)
 		}
 		return write(service.Doctor(p, c, app.Lookup), nil, 0)
+	case "collection":
+		switch {
+		case action == "status" && flags.NArg() == 2:
+			data, err := service.CollectionStatus(ctx, flags.Arg(1), flags.Arg(0))
+			if err != nil {
+				return write(data, err, 1)
+			}
+			return write(data, nil, 0)
+		case action == "acquire" && flags.NArg() == 2 && *output != "":
+			detection := c.OnDetection
+			if visited(flags, "on-detection") {
+				detection = *onDetection
+			}
+			total := int64(0)
+			if visited(flags, "max-total-bytes") {
+				total = limits.TotalBytes
+			}
+			data, err := service.CollectionAcquire(ctx, app.CollectionAcquireRequest{Library: flags.Arg(1), Collection: flags.Arg(0), Intake: *output, Apply: *apply, MaxTotalBytes: total, NoScan: *noScan, OnDetection: detection})
+			if err != nil {
+				return write(data, err, 1)
+			}
+			code := 0
+			if data.Applied && !data.Complete {
+				code = 1
+			}
+			return write(data, nil, code)
+		}
+		return write(nil, errors.New("use collection status COLLECTION LIBRARY, or collection acquire COLLECTION LIBRARY --output INTAKE [--apply]"), 2)
 	case "jobs":
 		// The durable jobs MCP servers started, from their journals.
 		store, err := jobs.Open(filepath.Join(p.State, "jobs"), 1, 0)
@@ -978,7 +1006,7 @@ func flagApplies(command, action, name string) bool {
 		case "recordings":
 			return name == "source"
 		case "related":
-			return name == "asset"
+			return name == "asset" || name == "limit" || name == "offset"
 		case "check":
 			return false
 		case "cleanup":
@@ -996,6 +1024,8 @@ func flagApplies(command, action, name string) bool {
 		}
 	}
 	switch command {
+	case "collection":
+		return action == "acquire" && (name == "output" || name == "apply" || name == "max-total-bytes" || name == "no-scan" || name == "on-detection")
 	case "acquire":
 		return name == "file" || name == "output" || name == "max-file-bytes" || name == "no-scan" || name == "on-detection" || name == "recording" || name == "resume" || name == "max-recording-bytes"
 	case "search":
@@ -1089,6 +1119,12 @@ func printData(out io.Writer, data any) error {
 		return err
 	case acquisition.RecordingResult:
 		_, err := io.WriteString(out, present.Recording(value))
+		return err
+	case library.CollectionStatusResult:
+		_, err := io.WriteString(out, present.CollectionStatus(value))
+		return err
+	case app.CollectionAcquireResult:
+		_, err := io.WriteString(out, present.CollectionAcquire(value))
 		return err
 	case library.RelatedResult:
 		_, err := io.WriteString(out, present.Related(value))

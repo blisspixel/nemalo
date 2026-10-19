@@ -79,7 +79,9 @@ verified, not when code exists. No stage has a time estimate.
    any update. First, because evidence, collections, and stored records cite
    these identities, and changing them after 1.0 breaks libraries. Progress:
    source-declared edition and work identifiers and `library related`
-   ([decision 0049](docs/decisions/0049-declared-identifiers-and-related-holdings.md)).
+   ([decision 0049](docs/decisions/0049-declared-identifiers-and-related-holdings.md)),
+   and collections resolved by holdings with idempotent acquisition
+   ([decision 0050](docs/decisions/0050-collections.md)).
 2. **Intake completeness** (milestones 2 and 4). Old-style RAR volume names
    (`.rar`, `.r00`), split ZIPs, nested archives within the existing bounds,
    PAR2 sets inventoried and retained without repair, cleanup of RAR and 7z

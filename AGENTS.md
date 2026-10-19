@@ -100,6 +100,8 @@ MCP tool. Do not fall back to another host.
 arXiv (decision 0047): explicit `arxiv:IDvN` only, `export.arxiv.org` and
 `oaipmh.arxiv.org` only, one request every three seconds, no search or MCP tool,
 and a latest-version license never applied to an older version.
+Collections (decision 0050) are user files of exact selections; holdings are their
+only resolved record, and `collection acquire` reuses the acquire service per item.
 Source evaluation is declaration evidence, never file rights, safety, or write
 authorization. See decision 0005 before changing access classification or networking.
 The bounded collection harness is in `internal/collection` and `cmd/collection`;

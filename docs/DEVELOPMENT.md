@@ -136,6 +136,10 @@ item declares, import records them on the source, and `library related LIBRARY
 [--asset ID]` groups holdings that share a stated work, edition, or version, an
 arXiv paper, a narration, or a source item, without merging anything
 ([decision 0049](decisions/0049-declared-identifiers-and-related-holdings.md)).
+A collection file names exact selections; `collection status` resolves them
+against holdings offline, and `collection acquire` previews and, with `--apply`,
+acquires only the missing ones into an intake directory for `library ingest`
+([decision 0050](decisions/0050-collections.md)).
 Registry confirmation of identifiers and rights policy remain planned.
 
 ## File health and scanning

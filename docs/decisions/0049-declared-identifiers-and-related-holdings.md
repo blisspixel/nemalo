@@ -19,13 +19,16 @@ edition `OL49359464M`, and work `OL66554W`.
 
 - An Archive evaluation copies, as declared, the values of `isbn`,
   `openlibrary_edition`, `openlibrary_work`, and the `urn:isbn:` values of
-  `external-identifier`, at most 32, each at most 300 bytes. A field of another
+  `external-identifier`, at most 16 from each field and 64 in all, each at most
+  300 bytes. A field of another
   shape is skipped without failing the evaluation. The evaluation lists them as
   `declared_identifiers`.
 - Import records them on the packet's source as identities with origin
   `source_metadata` and confidence `source_declared`: an ISBN with a valid check
   digit as an edition, an Open Library key as an edition or work. Any other value
-  is not recorded. At most 16 are kept, in identity order. A stored identity that
+  is not recorded. At most 16 are kept: Open Library work keys first, then
+  editions, then ISBNs, so many ISBNs cannot crowd out the work; the kept list
+  is stored in identity order. A stored identity that
   does not reclassify to itself fails closed, as package identities do. A later
   import of the same packet adds identities to a source recorded before them.
 - `library related LIBRARY [--asset ID]` and the read-only MCP tool
@@ -34,7 +37,11 @@ edition `OL49359464M`, and work `OL66554W`.
   paper (`arxiv:ID`, each member with its version); a narration; or files of one
   Archive item or Gutenberg book. Each member lists the statements that place it.
   Only keys held by two or more holdings form a group; a holding can be in
-  several groups.
+  several groups. An ISBN-10 and the ISBN-13 that carries it relate under the
+  ISBN-13, while each identity keeps the form stated. Tracks of a recording are
+  left to `library recordings`. Groups are paged (`--limit`, at most 200, and
+  `--offset`, with the total), and an asset the library does not hold is an
+  error rather than an empty answer.
 - Nothing is merged, no group implies the same text, edition, or bytes, and
   titles, authors, and text are never compared. Identifiers are not confirmed
   against a registry.
@@ -58,3 +65,7 @@ versions of one arXiv paper grouped in version order and a third paper alone; a
 filter to one holding; forged, duplicated, and unknown-field identities refused
 on read; Archive fields of the wrong shape skipped and the count bounded.
 Live: the Archive item above lists its three declared identifiers in evaluate.
+
+An independent review then found, now fixed with tests: an ISBN-10 and an
+ISBN-13 of one edition did not relate; many ISBNs could crowd out the work key;
+the report had no page bound; and an asset not held returned an empty answer.

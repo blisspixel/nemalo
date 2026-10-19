@@ -39,7 +39,7 @@ nemalo mcp serve --scope /path/to/library --allow-network
 ```
 
 Implemented tools are all read-only: `nemalo_capabilities`, `library_status`,
-`library_list`, `library_recordings`, `library_related`, `library_audit`, `library_check`, `file_check` (no antivirus), and
+`library_list`, `library_recordings`, `library_related`, `collection_status`, `library_audit`, `library_check`, `file_check` (no antivirus), and
 `content_capabilities`, `content_units`, `content_navigation`, `content_pages`, `content_read`, `content_locate`, `content_source`,
 `content_resource`. `content_navigation` lists source-declared EPUB contents;
 a read of one entry uses `content_read` with representation `epub-nav/1`.

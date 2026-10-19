@@ -1,6 +1,6 @@
 ---
 name: nemalo
-description: Use when the user asks about books, ebooks, audiobooks, or files in their local Nemalo library, or wants text or audio ranges read from them. Covers the read-only nemalo MCP tools (library_list, library_recordings, library_related, library_status, library_audit, library_check, file_check, content_units, content_navigation, content_pages, content_read, content_locate, content_source, content_resource) and when to suggest the nemalo CLI for changes.
+description: Use when the user asks about books, ebooks, audiobooks, or files in their local Nemalo library, or wants text or audio ranges read from them. Covers the read-only nemalo MCP tools (library_list, library_recordings, library_related, collection_status, library_status, library_audit, library_check, file_check, content_units, content_navigation, content_pages, content_read, content_locate, content_source, content_resource) and when to suggest the nemalo CLI for changes.
 license: Apache-2.0
 compatibility: Requires the nemalo executable on PATH and an MCP host that starts it with nemalo mcp serve.
 ---
@@ -40,6 +40,10 @@ delete anything.
   version, versions of one arXiv paper, a narration, or files of one source
   item, with the evidence for each member. A group is not a claim that the
   holdings hold the same text; say which relation and evidence connect them.
+- `collection_status` with a collection file and a library lists each declared
+  selection as held, held in review, recording incomplete, or not held. To fetch
+  missing items, suggest `nemalo collection acquire COLLECTION LIBRARY --output
+  INTAKE`, then `--apply`, then `nemalo library ingest`.
 - `library_check` verifies the whole library and lists issues (missing, changed,
   untracked, unfinished work) and review counts with next steps. `library_status`
   and `library_audit` are narrower. Report findings as they are; do not offer to

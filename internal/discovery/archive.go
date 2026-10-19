@@ -237,8 +237,13 @@ type DeclaredIdentifier struct {
 	Value string `json:"value"`
 }
 
-// MaxDeclaredIdentifiers bounds the identifiers copied from one evaluation.
-const MaxDeclaredIdentifiers = 32
+// MaxDeclaredIdentifiers bounds the identifiers copied from one evaluation,
+// at most maxFieldIdentifiers from each field, so many values in one field
+// cannot crowd out another.
+const (
+	MaxDeclaredIdentifiers = 64
+	maxFieldIdentifiers    = 16
+)
 
 // archiveIdentifierFields are the Archive metadata fields that name an edition
 // or work; from external-identifier only urn:isbn values are copied.
@@ -248,6 +253,7 @@ func archiveIdentifiers(metadata map[string]json.RawMessage) []DeclaredIdentifie
 	var out []DeclaredIdentifier
 	seen := map[DeclaredIdentifier]bool{}
 	for _, field := range archiveIdentifierFields {
+		taken := 0
 		var values Strings
 		if b, ok := metadata[field]; !ok || json.Unmarshal(b, &values) != nil {
 			continue
@@ -261,10 +267,11 @@ func archiveIdentifiers(metadata map[string]json.RawMessage) []DeclaredIdentifie
 				continue
 			}
 			d := DeclaredIdentifier{Field: field, Value: v}
-			if seen[d] || len(out) == MaxDeclaredIdentifiers {
+			if seen[d] || taken == maxFieldIdentifiers || len(out) == MaxDeclaredIdentifiers {
 				continue
 			}
 			seen[d] = true
+			taken++
 			out = append(out, d)
 		}
 	}

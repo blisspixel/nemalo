@@ -285,20 +285,50 @@ func classifySourceIdentifier(field, raw string) (Identity, bool) {
 }
 
 // sourceIdentities classifies a source's declared identifiers, keeping the
-// first statement of each identity, at most 16, in identity order.
+// first statement of each identity. When more than 16 are valid, Open
+// Library work keys are kept first, then Open Library editions, then ISBNs,
+// so many ISBNs cannot crowd out the work. The kept list is in identity order.
 func sourceIdentities(declared []declaredIdentifier) []Identity {
-	var list []Identity
+	var all []Identity
 	seen := map[string]bool{}
 	for _, d := range declared {
 		id, ok := classifySourceIdentifier(d.Field, d.Value)
-		if !ok || seen[id.ID] || len(list) == maxSourceIdentities {
+		if !ok || seen[id.ID] {
 			continue
 		}
 		seen[id.ID] = true
-		list = append(list, id)
+		all = append(all, id)
+	}
+	var list []Identity
+	for _, prefix := range []string{"openlibrary_work:", "openlibrary_edition:", "isbn:"} {
+		for _, id := range all {
+			if strings.HasPrefix(id.ID, prefix) && len(list) < maxSourceIdentities {
+				list = append(list, id)
+			}
+		}
 	}
 	sortIdentities(list)
 	return list
+}
+
+// editionKey is the key that relates edition identities: an ISBN-10 and the
+// ISBN-13 that carries it name one edition, so both relate as the ISBN-13.
+// The stored identity keeps the form stated.
+func editionKey(id string) string {
+	digits, ok := strings.CutPrefix(id, "isbn:")
+	if !ok || len(digits) != 10 {
+		return id
+	}
+	body := "978" + digits[:9]
+	sum := 0
+	for i := 0; i < 12; i++ {
+		n := int(body[i] - '0')
+		if i%2 == 1 {
+			n *= 3
+		}
+		sum += n
+	}
+	return "isbn:" + body + string(rune('0'+(10-sum%10)%10))
 }
 
 type declaredIdentifier struct {

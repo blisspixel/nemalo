@@ -5,6 +5,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/blisspixel/nemalo/internal/app"
 	"github.com/blisspixel/nemalo/internal/library"
 )
 
@@ -293,7 +294,7 @@ func Related(r library.RelatedResult) string {
 	var b strings.Builder
 	field(&b, "Library", Line(r.LibraryID))
 	field(&b, "Holding", Line(r.Holding))
-	fmt.Fprintf(&b, "Related groups: %d\n", len(r.Groups))
+	fmt.Fprintf(&b, "Related groups: %d, from offset %d\n", r.Total, r.Offset)
 	for _, g := range r.Groups {
 		fmt.Fprintf(&b, "\n%s: %s (%d holdings)\n", words(g.Relation), Line(g.Key), len(g.Members))
 		for _, m := range g.Members {
@@ -301,7 +302,11 @@ func Related(r library.RelatedResult) string {
 			if m.Version > 0 {
 				version = fmt.Sprintf(" version %d", m.Version)
 			}
-			fmt.Fprintf(&b, "  %s %s%s %s\n", Line(m.Holding), Line(m.Format), version, Line(m.Title))
+			line := Line(m.Holding) + " " + Line(m.Format) + version
+			if m.Title != "" {
+				line += " " + Line(m.Title)
+			}
+			fmt.Fprintf(&b, "  %s\n", line)
 			for _, e := range m.Evidence {
 				fmt.Fprintf(&b, "    %s\n", Line(e))
 			}
@@ -539,5 +544,73 @@ func LibraryCheck(r library.LibraryCheck) string {
 	}
 	notes(&b, "Limitation", r.Limitations)
 	b.WriteString("Nothing was changed.\n")
+	return b.String()
+}
+
+func collectionItem(i library.CollectionItem) string {
+	if i.Recording != "" {
+		return Line(i.Source) + " recording " + Line(i.Recording)
+	}
+	return Line(i.Source) + " " + Line(i.File)
+}
+
+// CollectionStatus shows each item of a collection and the holdings that
+// resolve it.
+func CollectionStatus(r library.CollectionStatusResult) string {
+	var b strings.Builder
+	field(&b, "Collection", Line(r.Name))
+	field(&b, "Library", Line(r.LibraryID))
+	fmt.Fprintf(&b, "Items: %d | held %d | in review %d | recording incomplete %d | not held %d\n", len(r.Items), r.Held, r.InReview, r.Incomplete, r.NotHeld)
+	for _, it := range r.Items {
+		fmt.Fprintf(&b, "\n%s %s\n", words(it.Status), collectionItem(it.Item))
+		if it.DeclaredTracks > 0 {
+			fmt.Fprintf(&b, "  %d of %d tracks held\n", it.HeldTracks, it.DeclaredTracks)
+		}
+		for _, h := range it.Holdings {
+			fmt.Fprintf(&b, "  %s\n", Line(h))
+		}
+		if it.Item.Note != "" {
+			fmt.Fprintf(&b, "  Note: %s\n", Line(it.Item.Note))
+		}
+	}
+	notes(&b, "Limitation", r.Limitations)
+	return b.String()
+}
+
+// CollectionAcquire shows the acquisitions a collection needs and, once
+// applied, their outcomes.
+func CollectionAcquire(r app.CollectionAcquireResult) string {
+	var b strings.Builder
+	field(&b, "Collection", Line(r.Status.Name))
+	field(&b, "Intake", Line(r.Intake))
+	fmt.Fprintf(&b, "Items: %d | held %d | to acquire %d\n", len(r.Status.Items), r.Status.Held+r.Status.InReview, len(r.Steps))
+	for _, s := range r.Steps {
+		fmt.Fprintf(&b, "\n%s %s\n", words(s.Action), collectionItem(s.Item))
+		fmt.Fprintf(&b, "  Packet: %s\n", Line(s.Packet))
+		if s.Outcome != "" {
+			fmt.Fprintf(&b, "  Outcome: %s", words(s.Outcome))
+			if s.Bytes > 0 {
+				fmt.Fprintf(&b, ", %d bytes", s.Bytes)
+			}
+			if s.Antivirus != "" {
+				fmt.Fprintf(&b, ", antivirus %s", words(s.Antivirus))
+			}
+			b.WriteString("\n")
+		}
+		if s.Detail != "" {
+			fmt.Fprintf(&b, "  %s\n", Line(s.Detail))
+		}
+	}
+	notes(&b, "Limitation", r.Limitations)
+	switch {
+	case !r.Applied && len(r.Steps) > 0:
+		b.WriteString("Preview only. Nothing was fetched. Add --apply to acquire these items.\n")
+	case !r.Applied:
+		b.WriteString("Every item is held. Nothing to acquire.\n")
+	case r.Complete:
+		fmt.Fprintf(&b, "Transferred: %d bytes\nNext: nemalo library ingest %s %s --apply\n", r.Transferred, Line(r.Status.Library), Line(r.Intake))
+	default:
+		fmt.Fprintf(&b, "Transferred: %d bytes\nSome items did not complete; they are kept for review. Run the same command again to resume interrupted ones.\n", r.Transferred)
+	}
 	return b.String()
 }

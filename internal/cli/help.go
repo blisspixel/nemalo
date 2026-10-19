@@ -17,7 +17,8 @@ Find knowledge. Care for it. Realize its potential.
 Usage: nemalo <command> [options]
 
 Find      search QUERY, evaluate ID, catalog fetch gutenberg
-Acquire   acquire ID --file NAME --output NEW_DIRECTORY
+Acquire   acquire ID --file NAME --output NEW_DIRECTORY,
+          collection status, collection acquire
 Check     inspect DIRECTORY, check FILE [--scan]
 Keep      library init, import, ingest, list, audit, check, cleanup,
           restore, rescan, open, export, recordings, related, snapshot,
@@ -167,7 +168,7 @@ nemalo library list CATALOG|LIBRARY [--query TEXT]
 nemalo library recordings LIBRARY [--source archive:ITEM]
   List held recordings in declared track order; with --source, verify and
   index each track's timing.
-nemalo library related LIBRARY [--asset sha256:HASH]
+nemalo library related LIBRARY [--asset sha256:HASH] [--limit 10] [--offset 0]
   Group holdings that share an identifier an EPUB package or a source's
   metadata states, versions of one arXiv paper, files of one source item,
   or a narration. Nothing is merged, and titles are never compared.
@@ -208,6 +209,26 @@ results stay in review. Snapshots hash all regular
 files, account for excluded links, refuse incomplete inventories, and never
 overwrite. A snapshot audit requires --root; the catalog cannot authorize a
 scan. A library audit compares managed holdings only.
+`,
+	"collection": `nemalo collection status COLLECTION LIBRARY
+  Resolve each item of a collection file against the library, offline:
+  held, held in review, recording incomplete, or not held.
+nemalo collection acquire COLLECTION LIBRARY --output INTAKE [--apply]
+  Preview, then with --apply acquire each item the library does not hold
+  into INTAKE, one at a time, as acquire does. Run library ingest on INTAKE
+  afterwards. A packet with a receipt waits for ingest, an interrupted one
+  is resumed, and any other existing packet is left as it is.
+
+Options:
+  --max-total-bytes N  stop starting new items once N bytes have transferred
+  --no-scan, --on-detection quarantine|delete  as for acquire
+
+A collection file is JSON: {"schema_version":1,"name":"...","items":[
+  {"source":"archive:ITEM","file":"NAME"},
+  {"source":"archive:ITEM","recording":"64Kbps MP3"},
+  {"source":"gutenberg:NUMBER","file":"NUMBER.epub.noimages"},
+  {"source":"arxiv:IDvN","file":"IDvN.pdf","note":"optional"}]}
+Items are exact selections; titles and identifiers are not matched.
 `,
 	"jobs": `nemalo jobs list
   List durable jobs that MCP servers started, newest first.

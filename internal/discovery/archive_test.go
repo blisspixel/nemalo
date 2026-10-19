@@ -304,7 +304,8 @@ func TestArchiveIdentifiersAreCopiedAsDeclared(t *testing.T) {
 		many[i] = fmt.Sprintf("97803064061%02d", i)
 	}
 	b, _ := json.Marshal(many)
-	if n := len(archiveIdentifiers(map[string]json.RawMessage{"isbn": b})); n != MaxDeclaredIdentifiers {
-		t.Fatal(n)
+	crowded := archiveIdentifiers(map[string]json.RawMessage{"isbn": b, "openlibrary_work": json.RawMessage(`"OL45804W"`)})
+	if len(crowded) != maxFieldIdentifiers+1 || crowded[len(crowded)-1].Field != "openlibrary_work" {
+		t.Fatal(len(crowded), crowded)
 	}
 }

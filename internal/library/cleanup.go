@@ -1197,3 +1197,7 @@ func journalRoom(control *control, records int) error {
 	}
 	return nil
 }
+
+// Overlaps reports whether either path is inside the other, after resolving
+// links in their existing parts.
+func Overlaps(a, b string) bool { return overlapping(a, b) }

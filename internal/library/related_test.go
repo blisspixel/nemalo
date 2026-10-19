@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/blisspixel/nemalo/internal/pdftext/pdftest"
@@ -47,7 +48,7 @@ func TestRelatedGroupsOnlyOnStatedIdentifiers(t *testing.T) {
 	}
 	// Two Archive scans of one work, one also naming a valid ISBN.
 	packet("a", pdftest.Pages("", "Scan A."), "archive:scan_a", "a.pdf", [2]string{"openlibrary_work", "OL45804W"}, [2]string{"isbn", "978-0-306-40615-7"}, [2]string{"isbn", "9780306406158"})
-	packet("b", pdftest.Pages("", "Scan B."), "archive:scan_b", "b.pdf", [2]string{"openlibrary_work", "OL45804W"}, [2]string{"publisher", "Same"})
+	packet("b", pdftest.Pages("", "Scan B."), "archive:scan_b", "b.pdf", [2]string{"openlibrary_work", "OL45804W"}, [2]string{"publisher", "Same"}, [2]string{"isbn", "0306406152"})
 	// Two files of one item.
 	packet("c", pdftest.Pages("", "Item C one."), "archive:item_c", "one.pdf")
 	packet("d", pdftest.Pages("", "Item C two."), "archive:item_c", "two.pdf")
@@ -60,7 +61,7 @@ func TestRelatedGroupsOnlyOnStatedIdentifiers(t *testing.T) {
 	if r, err := Ingest(ctx, IngestRequest{Library: root, Folder: folder, Apply: true}); err != nil || !r.Complete {
 		t.Fatal(r, err)
 	}
-	r, err := Related(ctx, root, "")
+	r, err := Related(ctx, RelatedRequest{Directory: root, Limit: 100})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -68,7 +69,7 @@ func TestRelatedGroupsOnlyOnStatedIdentifiers(t *testing.T) {
 	for _, g := range r.Groups {
 		got[g.Relation+" "+g.Key] = g
 	}
-	if len(r.Groups) != 3 {
+	if len(r.Groups) != 4 || len(got["same_edition isbn:9780306406157"].Members) != 2 {
 		t.Fatalf("%+v", r.Groups)
 	}
 	work := got["same_work openlibrary_work:OL45804W"]
@@ -104,12 +105,30 @@ func TestRelatedGroupsOnlyOnStatedIdentifiers(t *testing.T) {
 	if fmt.Sprint(ids) != "[isbn:9780306406157 openlibrary_work:OL45804W]" {
 		t.Fatal(ids)
 	}
-	one, err := Related(ctx, root, paper.Members[0].Holding)
+	if k := editionKey("isbn:0306406152"); k != "isbn:9780306406157" {
+		t.Fatal(k)
+	}
+	// Many valid ISBNs do not crowd out the work.
+	var many []declaredIdentifier
+	for i := 0; i < 30; i++ {
+		many = append(many, declaredIdentifier{"isbn", fmt.Sprintf("97803064061%02d", i)})
+	}
+	kept := sourceIdentities(append(many, declaredIdentifier{"openlibrary_work", "OL45804W"}))
+	if len(kept) > maxSourceIdentities || !validSourceIdentities(kept) || kept[len(kept)-1].ID != "openlibrary_work:OL45804W" {
+		t.Fatal(kept)
+	}
+	one, err := Related(ctx, RelatedRequest{Directory: root, Holding: paper.Members[0].Holding, Limit: 100})
 	if err != nil || len(one.Groups) != 1 || one.Groups[0].Key != "arxiv:1706.03762" {
 		t.Fatal(one, err)
 	}
-	if _, err := Related(ctx, root, "nope"); err == nil {
-		t.Fatal("an invalid holding was accepted")
+	for _, bad := range []RelatedRequest{{Directory: root, Holding: "nope", Limit: 10}, {Directory: root, Holding: "sha256:" + strings.Repeat("0", 64), Limit: 10}, {Directory: root, Limit: 0}, {Directory: root, Limit: 10, Offset: -1}} {
+		if _, err := Related(ctx, bad); err == nil {
+			t.Fatal("accepted", bad)
+		}
+	}
+	page, err := Related(ctx, RelatedRequest{Directory: root, Limit: 1, Offset: 2})
+	if err != nil || page.Total != 4 || len(page.Groups) != 1 || page.Groups[0].Key != r.Groups[2].Key {
+		t.Fatal(page, err)
 	}
 }
 
