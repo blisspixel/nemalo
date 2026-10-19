@@ -68,7 +68,7 @@ func TestLibraryCleanupAndRestoreCommands(t *testing.T) {
 		t.Fatal("held source still in the folder")
 	}
 	id := out[strings.Index(out, "--cleanup ")+len("--cleanup ") : strings.Index(out, " --apply\n")]
-	if code, out := run("library", "restore", root, "--cleanup", id, "--apply"); code != 0 || !strings.Contains(out, "restore \"book.epub\" -> restored") {
+	if code, out := run("library", "restore", root, "--cleanup", id, "--apply"); code != 0 || !strings.Contains(out, "restore book.epub -> restored") {
 		t.Fatal("restore", code, out)
 	}
 	if _, err := os.Stat(book); err != nil {

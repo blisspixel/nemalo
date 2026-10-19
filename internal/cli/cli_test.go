@@ -31,7 +31,7 @@ func TestHealthCommand(t *testing.T) {
 			args = append(args, "--json")
 		}
 		code, out, stderr := execute(t, args, nil)
-		if code != 0 || stderr != "" || !strings.Contains(out, "limited_checks_passed") || !strings.Contains(out, "not_scanned") {
+		if code != 0 || stderr != "" || !strings.Contains(out, map[bool]string{false: "Status: limited checks passed", true: `"status":"limited_checks_passed"`}[json]) || !strings.Contains(out, map[bool]string{false: "Antivirus: not scanned", true: `"not_scanned"`}[json]) {
 			t.Fatal(code, out, stderr)
 		}
 	}
@@ -303,7 +303,7 @@ func TestGutenbergCatalogCommands(t *testing.T) {
 		t.Fatal(code, out, stderr)
 	}
 	code, out, stderr = run("evaluate", "gutenberg:11", "--catalog", catalog)
-	if code != 0 || stderr != "" || !strings.Contains(out, "local_catalog") || !strings.Contains(out, "Files listed: 0") || !strings.Contains(out, "download URL") {
+	if code != 0 || stderr != "" || !strings.Contains(out, "Access: local catalog") || strings.Contains(out, "Files listed") || !strings.Contains(out, "download URL") {
 		t.Fatal(code, out, stderr)
 	}
 	code, out, _ = run("evaluate", "gutenberg:11", "--catalog", catalog, "--json")
@@ -359,7 +359,7 @@ func TestEvaluateFilesListsGutenbergOffers(t *testing.T) {
 		return code, out.String(), errOut.String()
 	}
 	code, out, stderr := run("evaluate", "gutenberg:1342", "--files")
-	if code != 0 || stderr != "" || !strings.Contains(out, "mirror_rdf") || !strings.Contains(out, "1342.epub.noimages") || !strings.Contains(out, "https://gutenberg.pglaf.org/cache/epub/1342/pg1342.epub") || strings.Contains(out, "automatically generated") {
+	if code != 0 || stderr != "" || !strings.Contains(out, "Access: mirror rdf") || !strings.Contains(out, "1342.epub.noimages") || !strings.Contains(out, "https://gutenberg.pglaf.org/cache/epub/1342/pg1342.epub") || strings.Contains(out, "automatically generated") {
 		t.Fatal(code, out, stderr)
 	}
 	if !strings.Contains(out, "1342.txt.utf-8") || !strings.Contains(out, "not acquired") {

@@ -66,7 +66,7 @@ func TestAcquireCommandAndSubsequentLocalWorkflow(t *testing.T) {
 			args = append(args, "--json")
 		}
 		code, out := run(args)
-		if code != 0 || !strings.Contains(out, "untrusted_intake") || !strings.Contains(out, "unavailable") {
+		if code != 0 || !(strings.Contains(out, "untrusted_intake") || strings.Contains(out, "untrusted intake")) || !strings.Contains(out, "unavailable") {
 			t.Fatal(code, out)
 		}
 		// Human output names the import, then the install step; JSON stays a single value.
@@ -87,12 +87,12 @@ func TestAcquireCommandAndSubsequentLocalWorkflow(t *testing.T) {
 			}
 		}
 	}
-	if code, out := run([]string{"acquire", "archive:demo", "--file", "book.pdf", "--output", filepath.Join(t.TempDir(), "a", "b", "packet"), "--no-scan"}); code != 0 || !strings.Contains(out, "not_scanned") || strings.Count(out, "Next: ") != 1 || !strings.Contains(out, "Next: nemalo library import LIBRARY ") {
+	if code, out := run([]string{"acquire", "archive:demo", "--file", "book.pdf", "--output", filepath.Join(t.TempDir(), "a", "b", "packet"), "--no-scan"}); code != 0 || !strings.Contains(out, "Antivirus: not scanned") || strings.Count(out, "Next: ") != 1 || !strings.Contains(out, "Next: nemalo library import LIBRARY ") {
 		t.Fatal("missing parents or --no-scan", code, out)
 	}
 	s.Scanner = fakeScanner("findings")
 	code, out := run([]string{"acquire", "archive:demo", "--file", "book.pdf", "--output", filepath.Join(t.TempDir(), "detected")})
-	if code != 1 || !strings.Contains(out, "detected_quarantined") || !strings.Contains(out, "will not be imported") || !strings.Contains(out, "content.pdf.quarantined") {
+	if code != 1 || !strings.Contains(out, "Acquisition: detected quarantined, not kept as intake") || !strings.Contains(out, "will not be imported") || !strings.Contains(out, "content.pdf.quarantined") {
 		t.Fatal("detection", code, out)
 	}
 	for _, args := range [][]string{{"acquire"}, {"acquire", "archive:demo"}, {"acquire", "archive:demo", "--file", "../x.epub", "--output", "x"}, {"acquire", "archive:demo", "--file", "x.epub", "--output", "x", "--scan"}, {"acquire", "archive:demo", "--file", "x.epub", "--output", "x", "--max-file-bytes", "268435457"}, {"acquire", "archive:demo", "--file", "x.epub", "--output", "x", "--on-detection", "keep"}, {"check", "x", "--no-scan"}} {
@@ -231,7 +231,7 @@ func TestAcquireRecordingCommandResumesAndIngestsInOrder(t *testing.T) {
 	if code, out := run("library", "list", library, "--format", "mp3"); code != 0 || !strings.Contains(out, "Track 1 of 2") || !strings.Contains(out, "Track 2 of 2") {
 		t.Fatal("recording order not listed", code, out)
 	}
-	if code, out := run("library", "recordings", library); code != 0 || !strings.Contains(out, "2 of 2 tracks held | complete: true") {
+	if code, out := run("library", "recordings", library); code != 0 || !strings.Contains(out, "2 of 2 tracks held, complete") {
 		t.Fatal("recordings", code, out)
 	}
 	// The fixture tracks are not MPEG audio, so indexing reports it per track.

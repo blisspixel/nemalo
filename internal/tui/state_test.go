@@ -35,7 +35,7 @@ func TestStateInitializationReviewAndDispatch(t *testing.T) {
 		t.Fatal("status unavailable")
 	}
 	m.Update(cmd())
-	if !strings.Contains(m.report, "not_initialized") {
+	if !strings.Contains(m.report, "not initialized") {
 		t.Fatal("status hidden", m.report)
 	}
 	previous := m.report
@@ -67,7 +67,7 @@ func TestStateInitializationReviewAndDispatch(t *testing.T) {
 		t.Fatal("write happened outside service command")
 	}
 	m.Update(cmd())
-	if m.busy || !strings.Contains(m.report, `Control state: "initialized"`) || !strings.Contains(m.report, "Content was not imported") {
+	if m.busy || !strings.Contains(m.report, "Control state: initialized") || !strings.Contains(m.report, "Content was not imported") {
 		t.Fatal("initialization evidence missing", m.report)
 	}
 	if !m.input.Focused() {
@@ -162,7 +162,7 @@ func TestStateImportReviewCancelAndApply(t *testing.T) {
 		t.Fatal("write happened outside service command")
 	}
 	m.Update(cmd())
-	if m.busy || !strings.Contains(m.report, `Status: "review"`) || !strings.Contains(m.report, `Title: "Test"`) {
+	if m.busy || !strings.Contains(m.report, "Status: review") || !strings.Contains(m.report, "Title: Test") {
 		t.Fatal("import evidence missing", m.report)
 	}
 }
@@ -267,7 +267,7 @@ func TestStateImportOfAPlainFolderIngestsIt(t *testing.T) {
 	}
 	_, cmd := m.Update(key(tea.KeyEnter))
 	m.Update(cmd())
-	if !strings.Contains(m.report, "Imported: 1") || !strings.Contains(m.report, "Applied: true") {
+	if !strings.Contains(m.report, "Imported: 1") || !strings.Contains(m.report, "Ingest: complete") {
 		t.Fatal("folder was not ingested", m.report)
 	}
 }

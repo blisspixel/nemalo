@@ -7,12 +7,11 @@ import (
 
 	"github.com/blisspixel/nemalo/internal/discovery"
 	"github.com/blisspixel/nemalo/internal/inventory"
-	"github.com/blisspixel/nemalo/internal/textsafe"
 )
 
 func Search(page discovery.Page) string {
 	var b strings.Builder
-	fmt.Fprintf(&b, "%q search %q: %d matches; %d shown from offset %d.\n", page.Source, page.Query, page.Total, len(page.Results), page.Offset)
+	fmt.Fprintf(&b, "%s search for %s: %d matches; %d shown from offset %d.\n", sourceName(page.Source), Line(page.Query), page.Total, len(page.Results), page.Offset)
 	switch page.Order {
 	case discovery.OrderRelevance:
 		if page.Source == "gutenberg" {
@@ -33,11 +32,22 @@ func Search(page discovery.Page) string {
 		b.WriteString("No results in this page.\n")
 	}
 	for i, r := range page.Results {
-		fmt.Fprintf(&b, "\n%d. %q\n   ID: %q\n   Authors: %q\n   Languages: %q\n", page.Offset+i+1, r.Title, r.ID, r.Authors, r.Languages)
+		fmt.Fprintf(&b, "\n%d. %s\n   ID: %s\n", page.Offset+i+1, Line(r.Title), Line(r.ID))
+		if v := list(r.Authors); v != "" {
+			fmt.Fprintf(&b, "   Author: %s\n", v)
+		}
+		if v := list(r.Languages); v != "" {
+			fmt.Fprintf(&b, "   Language: %s\n", v)
+		}
 		if claim := CatalogClaim(r); claim != "" {
 			fmt.Fprintf(&b, "   Catalog: %s\n", claim)
 		}
-		fmt.Fprintf(&b, "   %q\n   Discovery metadata; download availability not resolved.\n", r.LandingPage)
+		if v := Line(r.LandingPage); v != "" {
+			fmt.Fprintf(&b, "   Page: %s\n", v)
+		}
+	}
+	if len(page.Results) > 0 {
+		b.WriteString("Discovery metadata only; download availability is not resolved.\n")
 	}
 	return b.String()
 }
@@ -45,30 +55,50 @@ func Search(page discovery.Page) string {
 // CatalogClaim is a catalog row's type and issue date as the catalog states
 // them, for example "Sound, issued 2007-02-03", or "" when it states neither.
 func CatalogClaim(r discovery.Result) string {
-	claim := textsafe.Visible(r.MediaType)
-	if r.Issued != "" {
+	claim := Line(r.MediaType)
+	if issued := Line(r.Issued); issued != "" {
 		if claim != "" {
 			claim += ", "
 		}
-		claim += "issued " + textsafe.Visible(r.Issued)
+		claim += "issued " + issued
 	}
 	return claim
 }
 
+// sourceName is a provider's display name.
+func sourceName(source string) string {
+	switch source {
+	case "openlibrary":
+		return "Open Library"
+	case "archive":
+		return "Internet Archive"
+	case "gutenberg":
+		return "Project Gutenberg"
+	}
+	return Line(source)
+}
+
 func Catalog(file discovery.CatalogFile) string {
-	return fmt.Sprintf("Catalog written: %q\nBytes: %d\nSHA-256: %q\nSearch with: nemalo search QUERY --source gutenberg --catalog %q\nThis file is catalog metadata. It does not include ebook bytes or a rights statement.\n", file.Path, file.Bytes, file.SHA256, file.Path)
+	var b strings.Builder
+	fmt.Fprintf(&b, "Catalog written: %s\nBytes: %d\nSHA-256: %s\n", Line(file.Path), file.Bytes, Line(file.SHA256))
+	if c := command("nemalo", "search", "QUERY", "--source", "gutenberg", "--catalog", file.Path); c != "" {
+		fmt.Fprintf(&b, "Next: %s\n", c)
+	}
+	b.WriteString("This file is catalog metadata. It does not include ebook bytes or a rights statement.\n")
+	return b.String()
 }
 
 func Inventory(r inventory.Report) string {
 	var b strings.Builder
-	fmt.Fprintf(&b, "Folder: %q\nComplete: %t | Entries: %d | Bytes read: %d\nSecurity: not scanned. Formats below are filename candidates.\n", r.Root, r.Complete, len(r.Entries), r.BytesRead)
+	field(&b, "Folder", Line(r.Root))
+	fmt.Fprintf(&b, "Inventory: %s | Entries: %d | Bytes read: %d\nSecurity: not scanned. Formats below are filename candidates.\n", map[bool]string{true: "complete", false: "incomplete"}[r.Complete], len(r.Entries), r.BytesRead)
 	for _, e := range r.Entries {
-		fmt.Fprintf(&b, "\n%-18q %q (%d bytes)\n", e.Kind, e.Path, e.Bytes)
+		fmt.Fprintf(&b, "\n%-16s %s (%d bytes)\n", words(e.Kind), Line(e.Path), e.Bytes)
 		if e.SHA256 != "" {
-			fmt.Fprintf(&b, "  SHA-256: %q\n", e.SHA256)
+			fmt.Fprintf(&b, "  SHA-256: %s\n", Line(e.SHA256))
 		}
 		if e.Finding != "" {
-			fmt.Fprintf(&b, "  Finding: %q\n", e.Finding)
+			fmt.Fprintf(&b, "  Finding: %s\n", words(e.Finding))
 		}
 	}
 	return b.String()

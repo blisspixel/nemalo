@@ -27,7 +27,7 @@ func TestLibraryImportPreviewApplyAuditAndRead(t *testing.T) {
 		t.Fatal(code)
 	}
 	code, out, _ := execute(t, []string{"library", "import", libraryRoot, source}, nil)
-	if code != 0 || !strings.Contains(out, "Preview only") || !strings.Contains(out, `Status: "review"`) || !strings.Contains(out, `Title: "Test"`) {
+	if code != 0 || !strings.Contains(out, "Preview only") || !strings.Contains(out, "Status: review") || !strings.Contains(out, "Title: Test") {
 		t.Fatal(code, out)
 	}
 	if _, err := os.Stat(filepath.Join(libraryRoot, ".nemalo", "operations.jsonl")); !errors.Is(err, os.ErrNotExist) {

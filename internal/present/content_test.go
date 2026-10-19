@@ -40,7 +40,7 @@ func TestContentMarksLocatedGapsWithoutAlteringSource(t *testing.T) {
 
 func TestContentUnitsResourcesAndContinuationCommand(t *testing.T) {
 	units := Content(content.Result{Status: "units_available", Units: []content.Unit{{Index: 0, Extraction: "supported_text_with_gaps", TextBytes: 12, KnownGaps: 2, Linear: "yes", Member: "a.xhtml"}, {Index: 1, Extraction: "unsupported_document", Linear: "no", Member: "b.svg"}}, UnsupportedUnits: []int{1}})
-	if !strings.Contains(units, "Reading-order units: 2") || !strings.Contains(units, "supported_text_with_gaps") || !strings.Contains(units, "Unsupported units [1]") {
+	if !strings.Contains(units, "Reading-order units: 2") || !strings.Contains(units, "supported text with gaps") || !strings.Contains(units, "Unsupported units [1]") {
 		t.Fatal(units)
 	}
 	res := Content(content.Result{Status: "partial_range", Resource: &content.ResourceData{Member: "i.png", SHA256: "abc", TotalBytes: 10, Data: []byte("1234")}, Locator: &content.Locator{OffsetUnit: "resource_bytes"}})
@@ -48,7 +48,7 @@ func TestContentUnitsResourcesAndContinuationCommand(t *testing.T) {
 		t.Fatal(res)
 	}
 	cmd := ContentCommand(content.Result{Status: "partial_range", Text: "a", Continuation: "TOKEN", Locator: &content.Locator{}})
-	if !strings.Contains(cmd, "Continue with: --cursor TOKEN") || !strings.Contains(cmd, "(utf8_bytes)") {
+	if !strings.Contains(cmd, "Continue with: --cursor TOKEN") || !strings.Contains(cmd, "(utf8 bytes)") {
 		t.Fatal(cmd)
 	}
 	if strings.Contains(ContentCommand(content.Result{Status: "complete_range", Text: "a", Locator: &content.Locator{}}), "--cursor") {
@@ -64,7 +64,7 @@ func TestContentPresentsAudioIndexAndRangeWithoutBytes(t *testing.T) {
 		Resource:   &content.ResourceData{SHA256: "abc", TotalBytes: 2000, Data: []byte("raw audio bytes")},
 		Locator:    &content.Locator{OffsetUnit: "encoded_samples"}}
 	s := Content(r)
-	for _, want := range []string{"mpeg1_layer3, 44100 Hz", "Indexed frames: 3", "Presented samples", "ID3 declared length: 9000 ms", `Declared chapter "c1" "One"`, "trailing_unsynchronized_bytes", "Frames 1..3 (1 preroll frame(s), complete: true)", "not decoded"} {
+	for _, want := range []string{"mpeg1_layer3, 44100 Hz", "Indexed frames: 3", "Presented samples", "ID3 declared length: 9000 ms", "Declared chapter c1: ", "(One)", "trailing unsynchronized bytes", "Frames 1..3 (1 preroll frame(s), complete: true)", "not decoded"} {
 		if !strings.Contains(s, want) {
 			t.Fatal("missing", want, s)
 		}

@@ -45,14 +45,14 @@ func TestContentReadsAndLocatesPDFPages(t *testing.T) {
 	}
 	asset := imported.Data.AssetID
 	common := []string{root, "--root", root, "--asset", asset, "--representation", "pdf-text/1"}
-	if code, out := run(append([]string{"content", "units"}, common...)...); code != 0 || !strings.Contains(out, "Pages: 3") || !strings.Contains(out, `label "i"`) || !strings.Contains(out, `label "2"`) {
+	if code, out := run(append([]string{"content", "units"}, common...)...); code != 0 || !strings.Contains(out, "Pages: 3") || !strings.Contains(out, "label i ") || !strings.Contains(out, "label 2 ") {
 		t.Fatal("units", code, out)
 	}
-	if code, out := run(append([]string{"content", "read"}, append(common, "--unit", "1")...)...); code != 0 || !strings.Contains(out, `Page index 1 (zero-based) | printed label "1"`) || !strings.Contains(out, "The method is described here.") || !strings.Contains(out, "Continue with: --cursor") {
+	if code, out := run(append([]string{"content", "read"}, append(common, "--unit", "1")...)...); code != 0 || !strings.Contains(out, "Page index 1 (zero-based) | printed label 1 |") || !strings.Contains(out, "The method is described here.") || !strings.Contains(out, "Continue with: --cursor") {
 		t.Fatal("read", code, out)
 	}
 	code, out = run(append([]string{"content", "locate"}, append(common, "--text", "method")...)...)
-	if code != 0 || !strings.Contains(out, "Exact matches: 2") || !strings.Contains(out, `page index 1, label "1"`) || !strings.Contains(out, `page index 2, label "2"`) {
+	if code != 0 || !strings.Contains(out, "Exact matches: 2") || !strings.Contains(out, "page index 1, label 1 |") || !strings.Contains(out, "page index 2, label 2 |") {
 		t.Fatal("locate", code, out)
 	}
 	for _, args := range [][]string{

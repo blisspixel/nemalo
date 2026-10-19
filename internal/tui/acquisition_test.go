@@ -135,7 +135,7 @@ func TestTerminalDetectionOffersTheItemsOtherFiles(t *testing.T) {
 	if !strings.Contains(m.status, "Detection") || len(m.entries) != 1 || m.entries[0].sourceID != "other.epub" {
 		t.Fatal("detection did not offer the other file", m.status, m.entries)
 	}
-	if !strings.Contains(m.report, "detected_quarantined") || strings.Contains(m.drafts["check"].input, "content.pdf") {
+	if !strings.Contains(m.report, "detected quarantined") || strings.Contains(m.drafts["check"].input, "content.pdf") {
 		t.Fatal("detected file staged for checking", m.report)
 	}
 	if calls != 1 {

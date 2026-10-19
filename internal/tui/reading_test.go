@@ -262,7 +262,7 @@ func TestHoldingsShowsATracksRecordingAndKeepsTheList(t *testing.T) {
 		t.Fatal("recording not dispatched")
 	}
 	m.Update(cmd())
-	if len(m.entries) != 1 || !strings.Contains(m.report, "1 of 2 tracks held") || !strings.Contains(m.report, "Missing positions: [2]") || !strings.Contains(m.report, "Chapter one") {
+	if len(m.entries) != 1 || !strings.Contains(m.report, "1 of 2 tracks held") || !strings.Contains(m.report, "Missing positions: 2") || !strings.Contains(m.report, "Chapter one") {
 		t.Fatal("recording manifest", m.status, m.report)
 	}
 }
@@ -296,7 +296,7 @@ func TestHoldingsReadsAPDFByPageAndLabel(t *testing.T) {
 	m.Update(key(tea.KeyF6))
 	_, cmd := m.Update(key(tea.KeyEnter))
 	m.Update(cmd())
-	if !strings.Contains(m.report, "Page text here.") || !strings.Contains(m.report, `printed label "IV"`) {
+	if !strings.Contains(m.report, "Page text here.") || !strings.Contains(m.report, "printed label IV") {
 		t.Fatal("page text", m.status, m.report)
 	}
 }

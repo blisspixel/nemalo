@@ -9,10 +9,25 @@ import (
 
 func Acquisition(r acquisition.Result) string {
 	var b strings.Builder
-	fmt.Fprintf(&b, "Acquisition: %q\nComplete: %t | Transfer complete: %t\nOutput: %q\nContent: %q\nTransferred: %d bytes\nSHA-256: %q\nAntivirus: %q\n", r.Status, r.Complete, r.TransferComplete, r.Output, r.ContentPath, r.Transfer.Bytes, r.Transfer.SHA256, r.Antivirus)
-	if r.Scan != nil && r.Scan.Tool != "" {
-		fmt.Fprintf(&b, "Scanner: %q\n", r.Scan.Tool)
+	state := "incomplete"
+	switch {
+	case strings.HasPrefix(r.Status, "detected_"):
+		state = "not kept as intake"
+	case r.Complete:
+		state = "complete"
+	case r.TransferComplete:
+		state = "transfer complete, checks incomplete"
 	}
+	fmt.Fprintf(&b, "Acquisition: %s, %s\n", words(r.Status), state)
+	field(&b, "Output", Line(r.Output))
+	field(&b, "Content", Line(r.ContentPath))
+	fmt.Fprintf(&b, "Transferred: %d bytes\n", r.Transfer.Bytes)
+	field(&b, "SHA-256", Line(r.Transfer.SHA256))
+	antivirus := words(r.Antivirus)
+	if r.Scan != nil && r.Scan.Tool != "" {
+		antivirus += ", by " + Line(r.Scan.Tool)
+	}
+	field(&b, "Antivirus", antivirus)
 	switch {
 	case r.ResumedFrom > 0 && r.Complete:
 		fmt.Fprintf(&b, "Resumed from byte %d; the whole file was verified.\n", r.ResumedFrom)
@@ -21,17 +36,24 @@ func Acquisition(r acquisition.Result) string {
 	}
 	if r.Intent != nil {
 		e := r.Intent.Selection
-		fmt.Fprintf(&b, "Source: %q\nSelected file: %q\nTitles: %q\nDeclared rights: %q\nDeclared licenses: %q\nMetadata SHA-256: %q\n", r.Intent.Request.SourceID, r.Intent.Request.File, e.Title, e.Rights, e.LicenseURLs, e.MetadataSHA256)
+		field(&b, "Source", Line(r.Intent.Request.SourceID))
+		field(&b, "Selected file", Line(r.Intent.Request.File))
+		field(&b, "Title", list(e.Title))
+		field(&b, "Declared rights", list(e.Rights))
+		field(&b, "Declared license", list(e.LicenseURLs))
+		field(&b, "Metadata SHA-256", Line(e.MetadataSHA256))
 	}
-	if r.SizeNote != "" {
-		fmt.Fprintf(&b, "Size note: %s\n", r.SizeNote)
-	}
+	field(&b, "Size note", Line(r.SizeNote))
 	if r.Checks != nil {
-		fmt.Fprintf(&b, "Signature: %q | EPUB package: %q\nWarnings: %q\n", r.Checks.Signature, r.Checks.EPUBPackage, r.Checks.Warnings)
+		field(&b, "Signature", words(r.Checks.Signature))
+		if r.Checks.EPUBPackage != "" && r.Checks.EPUBPackage != "not_applicable" {
+			field(&b, "EPUB package", words(r.Checks.EPUBPackage))
+		}
+		notes(&b, "Warning", r.Checks.Warnings)
 	}
 	switch r.Status {
 	case "detected_quarantined":
-		fmt.Fprintf(&b, "Detection: the scanner flagged this download. It was moved to %q and will not be imported.\n", r.QuarantinedPath)
+		fmt.Fprintf(&b, "Detection: the scanner flagged this download. It was moved to %s and will not be imported.\n", Line(r.QuarantinedPath))
 	case "detected_deleted":
 		b.WriteString("Detection: the scanner flagged this download. It was deleted and will not be imported.\n")
 	case "detected_retained":
@@ -86,26 +108,32 @@ func writeAlternatives(b *strings.Builder, r acquisition.Result) {
 // Recording summarizes a whole-recording acquisition, one line per track.
 func Recording(r acquisition.RecordingResult) string {
 	var b strings.Builder
-	fmt.Fprintf(&b, "Recording: %q\nComplete: %t\nSource: %q\nFormat: %q | Order from: %q\nOutput: %q\nTracks: %d | Declared bytes: %d\n", r.Status, r.Complete, r.SourceID, r.Format, r.OrderSource, r.Output, len(r.Tracks), r.DeclaredBytes)
+	fmt.Fprintf(&b, "Recording: %s, %s\n", words(r.Status), map[bool]string{true: "complete", false: "incomplete"}[r.Complete])
+	field(&b, "Source", Line(r.SourceID))
+	format := Line(r.Format)
+	if r.OrderSource != "" {
+		format += ", in order from " + words(r.OrderSource)
+	}
+	field(&b, "Format", format)
+	field(&b, "Output", Line(r.Output))
+	fmt.Fprintf(&b, "Tracks: %d | Declared bytes: %d\n", len(r.Tracks), r.DeclaredBytes)
 	for _, t := range r.Tracks {
-		fmt.Fprintf(&b, "%d. %q %s", t.Position, t.File, t.Status)
+		fmt.Fprintf(&b, "%d. %s %s", t.Position, Line(t.File), words(t.Status))
 		if t.Packet != "" {
-			fmt.Fprintf(&b, " in %q", t.Packet)
+			fmt.Fprintf(&b, " in %s", Line(t.Packet))
 		}
 		if t.Antivirus != "" {
-			fmt.Fprintf(&b, " | antivirus %s", t.Antivirus)
+			fmt.Fprintf(&b, " | antivirus %s", words(t.Antivirus))
 		}
 		if t.Reused {
 			b.WriteString(" (kept from an earlier run)")
 		}
 		b.WriteString("\n")
 		if t.Detail != "" {
-			fmt.Fprintf(&b, "   %q\n", t.Detail)
+			fmt.Fprintf(&b, "   %s\n", Line(t.Detail))
 		}
 	}
-	for _, note := range r.Limitations {
-		fmt.Fprintf(&b, "Limitation: %q\n", note)
-	}
+	notes(&b, "Limitation", r.Limitations)
 	switch {
 	case r.Complete:
 		if c := command("nemalo", "library", "ingest", "LIBRARY", r.Output, "--apply"); c != "" {

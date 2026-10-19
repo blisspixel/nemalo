@@ -97,7 +97,7 @@ func TestContentCLIContract(t *testing.T) {
 	// Human output is escaped readable text, never raw book control bytes, and
 	// names the continuation explicitly when one exists.
 	code, out, _ = execute(t, []string{"content", "read", catalog, "--root", root, "--asset", s.Catalog.Assets[0].ID}, nil)
-	if code != 0 || !strings.Contains(out, "\nRead a little.") || !strings.Contains(out, `Representation: "epub-text/2"`) || strings.ContainsAny(out, "\x1b\r") {
+	if code != 0 || !strings.Contains(out, "\nRead a little.") || !strings.Contains(out, "Representation: epub-text/2") || strings.ContainsAny(out, "\x1b\r") {
 		t.Fatal(code, out)
 	}
 	code, out, _ = execute(t, []string{"content", "read", catalog, "--root", root, "--asset", s.Catalog.Assets[0].ID, "--max-bytes", "4"}, nil)
@@ -105,7 +105,7 @@ func TestContentCLIContract(t *testing.T) {
 		t.Fatal(code, out)
 	}
 	code, out, _ = execute(t, []string{"content", "units", catalog, "--root", root, "--asset", s.Catalog.Assets[0].ID}, nil)
-	if code != 0 || !strings.Contains(out, "Reading-order units: 1") || !strings.Contains(out, "supported_plain_text") {
+	if code != 0 || !strings.Contains(out, "Reading-order units: 1") || !strings.Contains(out, "supported plain text") {
 		t.Fatal(code, out)
 	}
 	code, out, _ = execute(t, []string{"content", "capabilities", "--json"}, nil)

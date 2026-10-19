@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"testing"
 
@@ -78,7 +77,7 @@ func TestGutenbergSearchReadsTheLocalCatalog(t *testing.T) {
 	}
 	_, cmd = m.Update(key(tea.KeyEnter))
 	m.Update(cmd())
-	if len(m.entries) != 1 || m.entries[0].sourceID != "gutenberg:11" || !strings.Contains(m.viewport.GetContent(), "local_catalog") || !strings.Contains(m.viewport.GetContent(), "Files listed: 0") || !strings.Contains(m.entries[0].detail, "bibliographic record") {
+	if len(m.entries) != 1 || m.entries[0].sourceID != "gutenberg:11" || !strings.Contains(m.viewport.GetContent(), "Access: local catalog") || strings.Contains(m.viewport.GetContent(), "Files listed") || !strings.Contains(m.entries[0].detail, "bibliographic record") {
 		t.Fatal(len(m.entries), m.viewport.GetContent())
 	}
 }
@@ -134,7 +133,7 @@ func TestGutenbergDownloadAsksForTheRecordBeforeAnEPUB(t *testing.T) {
 		t.Fatal(calls, m.status)
 	}
 	m.Update(cmd())
-	if calls != 1 || len(m.entries) != 1 || m.entries[0].sourceID != "1342.epub.noimages" || !strings.Contains(m.viewport.GetContent(), "public_file_no_source_checksum") {
+	if calls != 1 || len(m.entries) != 1 || m.entries[0].sourceID != "1342.epub.noimages" || !strings.Contains(m.viewport.GetContent(), "public file no source checksum") {
 		t.Fatal(calls, m.entries, m.viewport.GetContent())
 	}
 	_, cmd = m.Update(tea.KeyPressMsg{Text: "d", Code: 'd'})
@@ -199,7 +198,7 @@ func TestTerminalWorkflow(t *testing.T) {
 	m.input.SetValue(p)
 	_, cmd = m.Update(key(tea.KeyEnter))
 	m.Update(cmd())
-	if !strings.Contains(m.viewport.GetContent(), "limited_checks_passed") || !strings.Contains(m.viewport.GetContent(), "Antivirus: not_scanned") {
+	if !strings.Contains(m.viewport.GetContent(), "limited checks passed") || !strings.Contains(m.viewport.GetContent(), "Antivirus: not scanned") {
 		t.Fatal("health result missing")
 	}
 	m.Update(key(tea.KeyTab))
@@ -250,7 +249,7 @@ func TestTerminalWorkflow(t *testing.T) {
 		t.Fatal("busy field changed")
 	}
 	m.Update(cmd())
-	if !strings.Contains(m.viewport.GetContent(), "File locations: 1") || !strings.Contains(m.viewport.GetContent(), strconv.Quote(file)) {
+	if !strings.Contains(m.viewport.GetContent(), "File locations: 1") || !strings.Contains(m.viewport.GetContent(), "Saved: "+file+"\n") {
 		t.Fatal("snapshot missing", m.status, m.viewport.GetContent())
 	}
 	m.Update(key(tea.KeyTab))

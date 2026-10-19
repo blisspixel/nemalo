@@ -59,7 +59,7 @@ func TestLibraryRescanCommand(t *testing.T) {
 		t.Fatal(code, out)
 	}
 	code, out := run("library", "import", root, epubFile(t, t.TempDir()), "--apply")
-	if code != 0 || !strings.Contains(out, `"unscanned"`) || !strings.Contains(out, "Next: Add --scan") {
+	if code != 0 || !strings.Contains(out, "unscanned") || !strings.Contains(out, "Next: Add --scan") {
 		t.Fatal("unscanned import must name the next step", code, out)
 	}
 	code, out = run("library", "rescan", root)
@@ -93,7 +93,7 @@ func TestLibraryListManagedHoldings(t *testing.T) {
 	run("library", "init", root)
 	run("library", "import", root, epubFile(t, t.TempDir()), "--apply", "--scan")
 	code, out := run("library", "list", root, "--status", "checked")
-	if code != 0 || !strings.Contains(out, "Matching holdings: 1") || !strings.Contains(out, `"Rescan"`) {
+	if code != 0 || !strings.Contains(out, "Matching holdings: 1") || !strings.Contains(out, "\nRescan\n") {
 		t.Fatal(code, out)
 	}
 	code, out = run("library", "list", root, "--status", "review", "--json")
@@ -130,7 +130,7 @@ func TestLibraryOpenAndExportCommands(t *testing.T) {
 	asset := out[strings.Index(out, `"asset_id":"`)+12:]
 	asset = asset[:strings.Index(asset, `"`)]
 	code, out := run("library", "open", root, "--asset", asset)
-	if code != 0 || !strings.HasPrefix(opened, filepath.Join(state, "handoff")) || !strings.Contains(out, "Read-only: true") {
+	if code != 0 || !strings.HasPrefix(opened, filepath.Join(state, "handoff")) || !strings.Contains(out, "Copy state: read-only") {
 		t.Fatal(code, out, opened)
 	}
 	if code, out := run("library", "export", root, "--asset", asset, "--output", dest, "--json"); code != 0 || !strings.Contains(out, `"read_only":false`) {

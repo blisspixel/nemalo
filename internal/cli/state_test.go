@@ -28,7 +28,7 @@ func TestLibraryControlCommands(t *testing.T) {
 	}
 	for _, action := range []string{"init", "status"} {
 		code, out, _ = execute(t, []string{"library", action, root}, nil)
-		if code != 0 || !strings.Contains(out, `Control state: "initialized"`) || !strings.Contains(out, "Journal records: 2") {
+		if code != 0 || !strings.Contains(out, "Control state: initialized") || !strings.Contains(out, "Journal records: 2") {
 			t.Fatal(action, code, out)
 		}
 		code, out, _ = execute(t, []string{"library", action, root, "--json"}, nil)

@@ -15,7 +15,9 @@ import (
 // their located offsets. Markers are presentation only, never source text.
 func Content(r content.Result) string {
 	var b strings.Builder
-	fmt.Fprintf(&b, "Source access: %q\nAsset: %q\nRepresentation: %q\n", r.Status, r.AssetID, r.Representation)
+	fmt.Fprintf(&b, "Source access: %s\n", words(r.Status))
+	field(&b, "Asset", Line(r.AssetID))
+	field(&b, "Representation", Line(r.Representation))
 	// An audio track is one unit, described by its index below.
 	if r.Status == "units_available" && r.Audio == nil {
 		writeUnits(&b, r)
@@ -25,9 +27,9 @@ func Content(r content.Result) string {
 	}
 	if r.Locator != nil {
 		if r.Representation == "pdf-text/1" {
-			fmt.Fprintf(&b, "Page index %d (zero-based) | printed label %q | bytes %d..%d (%s)\n", r.Locator.Unit, r.Locator.PageLabel, r.Locator.Start, r.Locator.End, offsetUnit(r.Locator))
+			fmt.Fprintf(&b, "Page index %d (zero-based) | printed label %s | bytes %d..%d (%s)\n", r.Locator.Unit, pageLabel(r.Locator.PageLabel), r.Locator.Start, r.Locator.End, words(offsetUnit(r.Locator)))
 		} else {
-			fmt.Fprintf(&b, "Unit %d | bytes %d..%d (%s)\n", r.Locator.Unit, r.Locator.Start, r.Locator.End, offsetUnit(r.Locator))
+			fmt.Fprintf(&b, "Unit %d | bytes %d..%d (%s)\n", r.Locator.Unit, r.Locator.Start, r.Locator.End, words(offsetUnit(r.Locator)))
 		}
 	}
 	if r.Status == "matches_found" || r.Status == "matches_truncated" || r.Status == "no_matches" {
@@ -39,13 +41,13 @@ func Content(r content.Result) string {
 		for _, m := range r.Matches {
 			where := fmt.Sprintf("unit %d", m.Unit)
 			if r.Representation == "pdf-text/1" {
-				where = fmt.Sprintf("page index %d, label %q", m.Unit, m.PageLabel)
+				where = fmt.Sprintf("page index %d, label %s", m.Unit, pageLabel(m.PageLabel))
 			}
 			fmt.Fprintf(&b, "  %s | bytes %d..%d | read with --cursor %s\n", where, m.Start, m.End, m.Cursor)
 		}
 	}
 	if a := r.Audio; a != nil {
-		fmt.Fprintf(&b, "Audio: %s, %d Hz, %d channel(s) %s, %s\n", a.Format, a.SampleRate, a.Channels, a.ChannelMode, a.Bitrate)
+		fmt.Fprintf(&b, "Audio: %s, %d Hz, %d channel(s) %s, %s\n", Line(a.Format), a.SampleRate, a.Channels, words(a.ChannelMode), words(a.Bitrate))
 		fmt.Fprintf(&b, "Indexed frames: %d | encoded samples: %d | encoded duration: %d ms | bytes %d..%d\n", a.Frames, a.EncodedSamples, a.EncodedDurationMs, a.AudioStart, a.AudioEnd)
 		if a.PresentedSamples != nil {
 			fmt.Fprintf(&b, "Presented samples after declared encoder delay and padding: %d (declared, not verified)\n", *a.PresentedSamples)
@@ -53,36 +55,35 @@ func Content(r content.Result) string {
 		if a.Declared.LengthMs != nil {
 			fmt.Fprintf(&b, "ID3 declared length: %d ms\n", *a.Declared.LengthMs)
 		}
-		if a.Metadata.Title != "" || a.Metadata.Artist != "" {
-			fmt.Fprintf(&b, "Declared title: %q | artist: %q\n", a.Metadata.Title, a.Metadata.Artist)
-		}
+		field(&b, "Declared title", Line(a.Metadata.Title))
+		field(&b, "Declared artist", Line(a.Metadata.Artist))
 		for _, c := range a.Chapters {
-			fmt.Fprintf(&b, "Declared chapter %q %q: %d..%d ms\n", c.ID, c.Title, c.StartMs, c.EndMs)
+			fmt.Fprintf(&b, "Declared chapter %s: %d..%d ms", Line(c.ID), c.StartMs, c.EndMs)
+			if title := Line(c.Title); title != "" {
+				fmt.Fprintf(&b, " (%s)", title)
+			}
+			b.WriteString("\n")
 		}
 		for _, g := range a.Gaps {
-			fmt.Fprintf(&b, "Unindexed bytes %d..%d: %s\n", g.Start, g.End, g.Kind)
+			fmt.Fprintf(&b, "Unindexed bytes %d..%d: %s\n", g.Start, g.End, words(g.Kind))
 		}
-		for _, f := range a.Findings {
-			fmt.Fprintf(&b, "Finding: %q\n", f)
-		}
+		notes(&b, "Finding", a.Findings)
 		b.WriteString("Decoded: not decoded; timing comes from frame headers.\n")
 	}
 	if a := r.AudioRange; a != nil {
 		fmt.Fprintf(&b, "Frames %d..%d (%d preroll frame(s), complete: %t) | samples %d..%d at %d Hz | file bytes %d..%d\n", a.FirstFrame, a.FirstFrame+a.Frames, a.PrerollFrames, a.PrerollComplete, a.SampleStart, a.SampleEnd, a.SampleRate, a.ByteStart, a.ByteEnd)
 	}
 	if r.Resource != nil {
-		fmt.Fprintf(&b, "Resource %q | SHA-256 %q | %d of %d bytes. Bytes are not rendered here; use --json for base64 data.\n", r.Resource.Member, r.Resource.SHA256, len(r.Resource.Data), r.Resource.TotalBytes)
+		fmt.Fprintf(&b, "Resource %s | SHA-256 %s | %d of %d bytes. Bytes are not rendered here; use --json for base64 data.\n", Line(r.Resource.Member), Line(r.Resource.SHA256), len(r.Resource.Data), r.Resource.TotalBytes)
 	}
 	markers := gapMarkers(r)
 	if r.Coverage != nil {
-		fmt.Fprintf(&b, "Coverage: %q\n", r.Coverage.Text)
+		fmt.Fprintf(&b, "Coverage: %s\n", words(r.Coverage.Text))
 		if len(markers) > 0 {
 			fmt.Fprintf(&b, "Omitted from text: %d located gap(s), marked [ ] below.\n", len(markers))
 		}
 		fmt.Fprintf(&b, "References outside range: %d\n", len(r.Coverage.ReferencedOutsideRange))
-		for _, unknown := range r.Coverage.Unknown {
-			fmt.Fprintf(&b, "Not established: %q\n", unknown)
-		}
+		notes(&b, "Not established", r.Coverage.Unknown)
 	}
 	if r.Text != "" || len(markers) > 0 {
 		b.WriteString("\n")
@@ -104,6 +105,14 @@ func ContentCommand(r content.Result) string {
 	return s
 }
 
+// pageLabel is a printed PDF page label, or "none" when the page has none.
+func pageLabel(label string) string {
+	if label = Line(label); label != "" {
+		return label
+	}
+	return "none"
+}
+
 func offsetUnit(l *content.Locator) string {
 	if l.OffsetUnit == "" {
 		return "utf8_bytes"
@@ -115,13 +124,13 @@ func writeUnits(b *strings.Builder, r content.Result) {
 	if r.Representation == "pdf-text/1" {
 		fmt.Fprintf(b, "Pages: %d (index is zero-based and physical; label is the printed page label)\n", len(r.Units))
 		for _, u := range r.Units {
-			fmt.Fprintf(b, "  %4d  label %-10q  %-26s  %8d text bytes  %d gaps\n", u.Index, u.PageLabel, u.Extraction, u.TextBytes, u.KnownGaps)
+			fmt.Fprintf(b, "  %4d  label %-10s  %-26s  %8d text bytes  %d gaps\n", u.Index, pageLabel(u.PageLabel), words(u.Extraction), u.TextBytes, u.KnownGaps)
 		}
 		return
 	}
 	fmt.Fprintf(b, "Reading-order units: %d (not necessarily chapters)\n", len(r.Units))
 	for _, u := range r.Units {
-		fmt.Fprintf(b, "  %3d  %-26s  %8d text bytes  %d gaps  linear %s  %q\n", u.Index, u.Extraction, u.TextBytes, u.KnownGaps, u.Linear, u.Member)
+		fmt.Fprintf(b, "  %3d  %-26s  %8d text bytes  %d gaps  linear %s  %s\n", u.Index, words(u.Extraction), u.TextBytes, u.KnownGaps, words(u.Linear), Line(u.Member))
 	}
 	if len(r.UnsupportedUnits) > 0 {
 		fmt.Fprintf(b, "Unsupported units %v return no text; select another unit explicitly.\n", r.UnsupportedUnits)
@@ -138,9 +147,9 @@ func writeNavigation(b *strings.Builder, r content.Result) {
 		if path == "" {
 			path = "(none)"
 		}
-		fmt.Fprintf(b, "  %s %q", doc.Evidence, path)
+		fmt.Fprintf(b, "  %s %s", words(doc.Evidence), Line(path))
 		if doc.Problem != "" {
-			fmt.Fprintf(b, "  problem %q", doc.Problem)
+			fmt.Fprintf(b, "  problem: %s", words(doc.Problem))
 		}
 		b.WriteByte('\n')
 		for _, e := range doc.Entries {
@@ -148,18 +157,18 @@ func writeNavigation(b *strings.Builder, r content.Result) {
 			if e.Parent != nil {
 				parent = fmt.Sprintf("  parent %d", *e.Parent)
 			}
-			where := e.Status
+			where := words(e.Status)
 			if e.Unit != nil && e.Offset != nil {
 				where = fmt.Sprintf("unit %d byte %d", *e.Unit, *e.Offset)
 			}
-			fmt.Fprintf(b, "    %4d  L%d  %-22s  %s%s\n", e.Order, e.Level, strconv.Quote(e.Label), where, parent)
+			fmt.Fprintf(b, "    %4d  L%d  %-22s  %s%s\n", e.Order, e.Level, Line(e.Label), where, parent)
 			if e.Range != nil {
-				fmt.Fprintf(b, "          range %s  %d:%d .. %d:%d\n", e.Range.Status, e.Range.StartUnit, e.Range.StartOffset, e.Range.EndUnit, e.Range.EndOffset)
+				fmt.Fprintf(b, "          range %s  %d:%d .. %d:%d\n", words(e.Range.Status), e.Range.StartUnit, e.Range.StartOffset, e.Range.EndUnit, e.Range.EndOffset)
 			}
 		}
 	}
 	if r.RangeStatus != "" {
-		fmt.Fprintf(b, "Declared range: %s\n", r.RangeStatus)
+		fmt.Fprintf(b, "Declared range: %s\n", words(r.RangeStatus))
 		if r.RangeEnd != nil {
 			fmt.Fprintf(b, "Declared end: unit %d byte %d\n", r.RangeEnd.Unit, r.RangeEnd.Start)
 		}

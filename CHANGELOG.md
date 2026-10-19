@@ -8,6 +8,7 @@
 - Suggested commands quote source file names and paths for the shell. They were Go-quoted before, and a shell expands `$(...)` inside double quotes. A name with a control or format character is not offered.
 - Errors print as one plain sentence. A refused request names the host and the reason instead of the encoded URL, for example `nemalo: request to archive.org failed: archive.org resolved to a non-public address`, and a missing library folder says so. `--json` keeps the full message. Closes issue 27.
 - `library init`, `acquire`, `library import`, and `catalog fetch` print only the error when they fail before doing anything, instead of a block of empty values. An interrupted catalog download says how much arrived and that nothing was kept. Closes issue 28.
+- Human output reads as labelled values and sentences instead of Go values. Empty values and lists are left out, status tokens read as words (`Status: review (unscanned)`, `File rights: not resolved at file level`), and source text is shown without Go quotes on one row with control characters escaped. This covers search, evaluate, acquire, check, content, bookmarks, and every library command. `--json` keeps every field and exact token. Closes issue 29.
 
 ## 0.1.0-alpha.11
 

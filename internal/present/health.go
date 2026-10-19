@@ -9,30 +9,23 @@ import (
 
 func Health(r assessment.Report) string {
 	var b strings.Builder
-	fmt.Fprintf(&b, "File: %q\nStatus: %s\nDetected format: %q\nBytes: %d\nSHA-256: %q\nAntivirus: %s\n", r.File, r.Status, r.DetectedFormat, r.Bytes, r.SHA256, r.Antivirus.Status)
+	field(&b, "File", Line(r.File))
+	field(&b, "Status", words(r.Status))
+	field(&b, "Detected format", words(r.DetectedFormat))
+	fmt.Fprintf(&b, "Bytes: %d\n", r.Bytes)
+	field(&b, "SHA-256", Line(r.SHA256))
+	field(&b, "Antivirus", words(r.Antivirus.Status))
 	if e := r.Checks.EPUB; e != nil {
 		fmt.Fprintf(&b, "EPUB: %d reading-order HTML documents, %d images, %d non-whitespace body text characters, %d expanded bytes\nPages: unknown (EPUB has no universal fixed page count)\n", e.ReadingOrderDocuments, e.Images, e.TextCharacters, e.ExpandedBytes)
-		for _, title := range e.Titles {
-			fmt.Fprintf(&b, "Title: %q\n", title)
-		}
-		for _, lang := range e.Languages {
-			fmt.Fprintf(&b, "Language: %q\n", lang)
-		}
+		field(&b, "Title", list(e.Titles))
+		field(&b, "Language", list(e.Languages))
 	}
-	for _, finding := range r.Findings {
-		fmt.Fprintf(&b, "Review: %q\n", finding)
-	}
-	if r.Antivirus.Output != "" {
-		fmt.Fprintf(&b, "Scanner output: %q\n", r.Antivirus.Output)
-	}
-	if r.Antivirus.Error != "" {
-		fmt.Fprintf(&b, "Scanner error: %q\n", r.Antivirus.Error)
-	}
+	notes(&b, "Review", r.Findings)
+	field(&b, "Scanner output", Line(r.Antivirus.Output))
+	field(&b, "Scanner error", Line(r.Antivirus.Error))
 	if r.Antivirus.OutputTruncated {
 		b.WriteString("Scanner output exceeded 64 KiB; result incomplete.\n")
 	}
-	for _, limitation := range append(append([]string{}, r.Limitations...), r.Antivirus.Limitations...) {
-		fmt.Fprintf(&b, "Limit: %q\n", limitation)
-	}
+	notes(&b, "Limit", append(append([]string{}, r.Limitations...), r.Antivirus.Limitations...))
 	return b.String()
 }

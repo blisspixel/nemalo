@@ -181,7 +181,7 @@ func TestBrowserEscapingEvidenceAndResponsiveLayouts(t *testing.T) {
 		t.Fatal("unassessed identity or all locations lost")
 	}
 	m.populate(library.Page{Assets: []library.Asset{{ID: "hash", Bytes: 1 << 20, Health: &assessment.Report{Status: "limited_checks_passed"}}}})
-	if !strings.Contains(m.entries[0].detail, "historical") || !strings.Contains(m.entries[0].detail, "limited_checks_passed") {
+	if !strings.Contains(m.entries[0].detail, "historical") || !strings.Contains(m.entries[0].detail, "limited checks passed") {
 		t.Fatal("historical assessment hidden")
 	}
 	m.populate(nil)

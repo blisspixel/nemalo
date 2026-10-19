@@ -125,7 +125,7 @@ func TestHoldingsPaginationAndBudget(t *testing.T) {
 	m.input.SetValue(catalogFile)
 	m.Update(m.start(true)())
 	m.Update(m.turnPage(true)())
-	if m.offset != 50 || m.total != 51 || !strings.Contains(m.viewport.GetContent(), "offset: 50") {
+	if m.offset != 50 || m.total != 51 || !strings.Contains(m.viewport.GetContent(), "from offset 50") {
 		t.Fatal("last holdings asset inaccessible")
 	}
 	if m.turnPage(true) != nil {
