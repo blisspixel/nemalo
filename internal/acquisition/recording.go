@@ -314,7 +314,7 @@ func AcquireRecording(ctx context.Context, provider Provider, request RecordingR
 			cancel()
 			// A track that dropped mid-transfer continues in place, as a
 			// single file does, before the recording stops.
-			for attempt := 1; transferErr != nil && canResume && attempt <= maxContinuations && continuable(ctx, transferred, transferErr); attempt++ {
+			for attempt := 1; transferErr != nil && canResume && attempt <= maxContinuations && continuable(ctx, provider, transferred, transferErr); attempt++ {
 				select {
 				case <-ctx.Done():
 				case <-time.After(continuationPause(attempt)):

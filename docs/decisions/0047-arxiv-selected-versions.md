@@ -22,11 +22,13 @@ the OAI-PMH `arXiv` record at `oaipmh.arxiv.org`, for the latest version only.
 
 - `evaluate arxiv:ID` or `arxiv:IDvN`, in the new scheme (`YYMM.NNNN` from
   April 2007 through 2014, `YYMM.NNNNN` since) or the old one
-  (`hep-th/9901001`), asks the query API for the latest version and, for an
+  (`hep-th/9901001`, August 1991 through March 2007; the subject class form
+  `math.GT/0309136` is refused, since arXiv answers with the archive form),
+  asks the query API for the latest version and, for an
   older version, for that version too. An unversioned request is resolved to
   the latest, shown as `arxiv:IDvN` with "version N of M". A version beyond
-  the latest, an unknown identifier, or an answer naming another paper is an
-  error.
+  the latest, an unknown identifier, or an answer naming another paper or
+  another version than the one asked for is an error.
 - The license from OAI-PMH is recorded only when the selected version is the
   latest and the record names this paper; for an older version the latest
   license is quoted and that version's license stays not established.
@@ -43,8 +45,10 @@ the OAI-PMH `arXiv` record at `oaipmh.arxiv.org`, for the latest version only.
   measured. The PDF is then assessed, scanned, and imported like any PDF.
 - Every arXiv request shares one pace of one request every three seconds; a
   transport failure or a 429 or 5xx answer is tried again at that pace at most
-  three times in all, after a `Retry-After` of at most 30 seconds. Other
-  answers are not retried. Requests go only to `export.arxiv.org` and
+  three times in all. A `Retry-After` delays every later request and never
+  shortens the pace; one longer than 30 seconds refuses every arXiv request
+  until it passes. Other answers are not retried. One shared client holds at
+  most one connection per host. Requests go only to `export.arxiv.org` and
   `oaipmh.arxiv.org`.
 - arXiv has no search here and no MCP tool, and `search --source all` does
   not include it.
@@ -77,3 +81,13 @@ established. `acquire arxiv:1706.03762v7` transferred exactly 2,215,244 bytes
 as checked with source `arxiv:1706.03762v7`; `pdf-text/1` gave its 15 pages and
 located the exact title. An unversioned acquisition was refused before any
 request.
+
+An independent adversarial review then found, each now fixed with a test: a
+short `Retry-After` replaced the next permitted time and broke the pace; a
+long one was ignored by later requests; a new client per request opened a
+connection each time; a versioned query answered with another version was
+accepted with that version's title; the subject class form could never
+resolve; and a dropped transfer from a source that cannot resume reported
+the resume refusal instead of its own error. In the TUI an unversioned
+evaluation acquires the version it resolved, and the review screen describes
+arXiv rather than Archive.

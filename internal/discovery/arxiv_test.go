@@ -121,7 +121,7 @@ func TestArxivRefusesWhatItCannotVouchFor(t *testing.T) {
 }
 
 func TestArxivIdentifiersAndNames(t *testing.T) {
-	for id, want := range map[string]bool{"arxiv:1706.03762": true, "arxiv:1706.03762v7": true, "arxiv:2301.0123": false, "arxiv:0704.0001": true, "arxiv:1412.12345": false, "arxiv:1713.01234": false, "arxiv:hep-th/9901001v1": true, "arxiv:math.GT/0309136": true,
+	for id, want := range map[string]bool{"arxiv:1706.03762": true, "arxiv:1706.03762v7": true, "arxiv:2301.0123": false, "arxiv:0704.0001": true, "arxiv:1412.12345": false, "arxiv:1713.01234": false, "arxiv:hep-th/9901001v1": true, "arxiv:math.GT/0309136": false, "arxiv:-/9901001": false, "arxiv:hep-th/0801001": false, "arxiv:hep-th/9107001": false, "arxiv:cond-mat/0703001": true,
 		"arxiv:1706.0376": false, "arxiv:1706.03762v0": false, "arxiv:../etc": false, "arxiv:hep-th/99010": false, "1706.03762": false, "arxiv:1706.03762vx": false} {
 		if ValidArxivID(id) != want {
 			t.Errorf("%s: %v", id, !want)
@@ -165,5 +165,57 @@ func TestArxivQuotaIsRetriedAndRefusalIsNot(t *testing.T) {
 	a.Client = &http.Client{Transport: refused}
 	if _, err := a.Evaluate(context.Background(), "arxiv:1706.03762"); err == nil || refused.calls != 1 || !strings.Contains(err.Error(), "403") {
 		t.Fatal("refusal", refused.calls, err)
+	}
+}
+
+type retryAfterTransport struct {
+	after string
+	at    []time.Time
+}
+
+func (r *retryAfterTransport) RoundTrip(req *http.Request) (*http.Response, error) {
+	r.at = append(r.at, time.Now())
+	return &http.Response{StatusCode: 503, Header: http.Header{"Retry-After": {r.after}}, Body: io.NopCloser(strings.NewReader("")), Request: req}, nil
+}
+
+// A short Retry-After never shortens the pace, and a long one stops every
+// later request until it passes.
+func TestArxivRetryAfterKeepsThePace(t *testing.T) {
+	a := testArxiv(t, nil)
+	arxivPace = 300 * time.Millisecond
+	short := &retryAfterTransport{after: "0"}
+	a.Client = &http.Client{Transport: short}
+	_, _ = a.get(context.Background(), http.MethodGet, "https://export.arxiv.org/api/query")
+	for i := 1; i < len(short.at); i++ {
+		if short.at[i].Sub(short.at[i-1]) < 250*time.Millisecond {
+			t.Fatal("a retry broke the pace")
+		}
+	}
+	long := &retryAfterTransport{after: "120"}
+	a.Client = &http.Client{Transport: long}
+	if _, err := a.Evaluate(context.Background(), "arxiv:1706.03762"); err == nil || len(long.at) != 1 {
+		t.Fatal(len(long.at), err)
+	}
+	if _, err := a.get(context.Background(), http.MethodHead, "https://export.arxiv.org/pdf/1706.03762v1"); err == nil || len(long.at) != 1 || !strings.Contains(err.Error(), "not to be asked again") {
+		t.Fatal("a request was sent inside a long Retry-After", len(long.at), err)
+	}
+}
+
+// A versioned query answered with another version is refused.
+func TestArxivVersionedQueryMustMatch(t *testing.T) {
+	tr := &arxivTransport{feeds: map[string]string{"1706.03762": feed("1706.03762", 7, "T7"), "1706.03762v2": feed("1706.03762", 7, "T7")}, oai: oaiFor("1706.03762", ""), head: 1}
+	if _, err := testArxiv(t, tr).Evaluate(context.Background(), "arxiv:1706.03762v2"); err == nil || !strings.Contains(err.Error(), "version 7") {
+		t.Fatal(err)
+	}
+}
+
+func TestArxivSharesOneConnection(t *testing.T) {
+	a := NewArxiv()
+	if n := a.Client.Transport.(fileTransport).base.(*http.Transport).MaxConnsPerHost; n != 1 {
+		t.Fatal(n)
+	}
+	var lazy Arxiv
+	if first := lazy.client(); first != lazy.client() {
+		t.Fatal("a client was built per request")
 	}
 }

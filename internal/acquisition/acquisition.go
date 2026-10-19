@@ -179,7 +179,7 @@ func Acquire(ctx context.Context, provider Provider, request Request) (Result, e
 	}
 	defer release()
 	result, err := acquireOnce(ctx, provider, request)
-	for attempt := 1; err != nil && attempt <= maxContinuations && continuable(ctx, result, err); attempt++ {
+	for attempt := 1; err != nil && attempt <= maxContinuations && continuable(ctx, provider, result, err); attempt++ {
 		select {
 		case <-ctx.Done():
 			return result, err
@@ -207,7 +207,11 @@ var continuationPause = func(attempt int) time.Duration { return time.Duration(a
 
 // continuable reports a transfer that stopped for a transport reason with
 // bytes retained in a packet that a strong validator lets continue.
-func continuable(ctx context.Context, r Result, err error) bool {
+func continuable(ctx context.Context, provider Provider, r Result, err error) bool {
+	// A source that cannot resume keeps the transfer's own error.
+	if _, ok := provider.(RangeProvider); !ok {
+		return false
+	}
 	if ctx.Err() != nil || r.Output == "" || r.TransferComplete || !r.TransferRecorded || !r.StrongValidator || r.Transfer.Bytes < 1 {
 		return false
 	}

@@ -36,7 +36,10 @@ const maxArxivRecord = 1 << 20
 
 var (
 	arxivNew = regexp.MustCompile(`^[0-9]{4}\.[0-9]{4,5}$`)
-	arxivOld = regexp.MustCompile(`^[a-z-]+(\.[A-Z]{2})?/[0-9]{7}$`)
+	// An old identifier names its archive (hep-th, cond-mat). The subject
+	// class form (math.GT/0309136) is refused: arXiv answers with the
+	// archive form, so it could never be matched.
+	arxivOld = regexp.MustCompile(`^[a-z]+(-[a-z]+)*/[0-9]{7}$`)
 	arxivVer = regexp.MustCompile(`v([1-9][0-9]{0,3})$`)
 )
 
@@ -64,6 +67,13 @@ func SplitArxivID(id string) (paper string, version int, ok bool) {
 	if !arxivOld.MatchString(rest) {
 		return "", 0, false
 	}
+	// YYMMNNN from August 1991 through March 2007.
+	seq := rest[strings.IndexByte(rest, '/')+1:]
+	yy, _ := strconv.Atoi(seq[:2])
+	mm, _ := strconv.Atoi(seq[2:4])
+	if mm < 1 || mm > 12 || (yy > 7 && yy < 91) || (yy == 91 && mm < 8) || (yy == 7 && mm > 3) {
+		return "", 0, false
+	}
 	return rest, version, true
 }
 
@@ -79,20 +89,43 @@ func ArxivPDFName(paper string, version int) string {
 	return strings.ReplaceAll(paper, "/", "_") + "v" + strconv.Itoa(version) + ".pdf"
 }
 
-// Arxiv evaluates and downloads one explicit arXiv paper version.
+// Arxiv evaluates and downloads one explicit arXiv paper version. One value
+// is shared by every caller of a service, so its pace and its single
+// connection per host hold across concurrent evaluations and downloads.
 type Arxiv struct {
 	Client *http.Client
 	mu     sync.Mutex
 	next   time.Time
+	// until is when arXiv last asked, by Retry-After, not to be asked again.
+	until time.Time
 }
 
-func NewArxiv() *Arxiv { return &Arxiv{} }
+func NewArxiv() *Arxiv {
+	c := NewFileClient(func(host string) bool { return host == ArxivExportHost || host == ArxivOAIHost })
+	// arXiv's terms allow one connection.
+	c.Transport.(fileTransport).base.(*http.Transport).MaxConnsPerHost = 1
+	return &Arxiv{Client: c}
+}
 
 func (a *Arxiv) client() *http.Client {
-	if a.Client != nil {
-		return a.Client
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	if a.Client == nil {
+		a.Client = NewArxiv().Client
 	}
-	return NewFileClient(func(host string) bool { return host == ArxivExportHost || host == ArxivOAIHost })
+	return a.Client
+}
+
+// later moves the next permitted request to at least t.
+func (a *Arxiv) later(t time.Time) {
+	a.mu.Lock()
+	if t.After(a.next) {
+		a.next = t
+	}
+	if t.After(a.until) {
+		a.until = t
+	}
+	a.mu.Unlock()
 }
 
 // wait spaces every arXiv request by arxivPace.
@@ -123,6 +156,12 @@ func (a *Arxiv) wait(ctx context.Context) error {
 func (a *Arxiv) get(ctx context.Context, method, raw string) (*http.Response, error) {
 	client := a.client()
 	for attempt := 1; ; attempt++ {
+		a.mu.Lock()
+		until := a.until
+		a.mu.Unlock()
+		if wait := time.Until(until); wait > maxRetryWait {
+			return nil, fmt.Errorf("arXiv asked not to be asked again until %s", until.UTC().Format(time.RFC3339))
+		}
 		if err := a.wait(ctx); err != nil {
 			return nil, err
 		}
@@ -138,12 +177,11 @@ func (a *Arxiv) get(ctx context.Context, method, raw string) (*http.Response, er
 		case err != nil:
 			retry = transfer.Transient(err) && ctx.Err() == nil
 		case resp.StatusCode == 429 || resp.StatusCode >= 500:
-			wait := time.Until(retryUntil(resp.Header.Get("Retry-After"), time.Now()))
-			if retry = wait <= maxRetryWait; retry && wait > 0 {
-				a.mu.Lock()
-				a.next = time.Now().Add(wait)
-				a.mu.Unlock()
-			}
+			// The requested wait holds for every later request too, and a
+			// wait longer than a retry allows stops them until it passes.
+			at := retryUntil(resp.Header.Get("Retry-After"), time.Now())
+			retry = time.Until(at) <= maxRetryWait
+			a.later(at)
 		}
 		if !retry || attempt >= downloadAttempts {
 			return resp, err
@@ -278,8 +316,12 @@ func (a *Arxiv) Evaluate(ctx context.Context, id string) (Evaluation, error) {
 		if version > latest {
 			return e, fmt.Errorf("arXiv has no version %d of %s; the latest is %d", version, paper, latest)
 		}
-		if entry, _, err = query(version); err != nil {
+		var got int
+		if entry, got, err = query(version); err != nil {
 			return e, err
+		}
+		if got != version {
+			return e, fmt.Errorf("arXiv answered a request for version %d with version %d", version, got)
 		}
 	}
 	e.ID = "arxiv:" + paper + "v" + strconv.Itoa(version)
