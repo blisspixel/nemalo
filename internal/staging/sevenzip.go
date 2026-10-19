@@ -119,21 +119,42 @@ func Extract7z(ctx context.Context, src *os.Root, name string, dst *os.Root, sup
 	}
 	x, err = extractSnapshot(ctx, exe, kind, filepath.Join(tmp, snapshot), info.Size(), dst, supported, limits)
 	if err == nil {
-		x.Whole = wholeArchive(ctx, exe, kind, filepath.Join(tmp, snapshot), "Physical Size", info.Size())
+		x.Whole = wholeArchive(ctx, exe, kind, filepath.Join(tmp, snapshot), "Physical Size", info.Size(), x.packed)
 	}
 	return x, err
 }
 
 // wholeArchive lists the archive block and reports that it has no comment,
-// warning, offset, or tail, and that key equals size.
-func wholeArchive(ctx context.Context, exe, kind, archive, key string, size int64) bool {
+// warning, offset, or tail, and that key equals size. A RAR is never whole:
+// RAR5 can carry service and unknown blocks 7-Zip skips, which no listed size
+// accounts for. A 7z's physical size is computed from its header position,
+// so bytes can hide between its packed streams and its header; it is whole
+// only when its header size and its members' packed sizes add up to the file.
+func wholeArchive(ctx context.Context, exe, kind, archive, key string, size, packed int64) bool {
+	if kind != "7z" {
+		return false
+	}
 	headerCtx, cancel := context.WithTimeout(ctx, 2*time.Minute)
 	defer cancel()
 	out, code, err := runSeven(headerCtx, exe, nil, "l", "-slt", "-t"+kind, noPassword, "--", archive)
-	if err != nil || code != 0 {
+	if err != nil || code != 0 || !wholeBlock(out, key, size) {
 		return false
 	}
-	return wholeBlock(out, key, size)
+	headers, err := strconv.ParseInt(blockValue(out, "Headers Size"), 10, 64)
+	return err == nil && headers > 0 && headers+packed == size
+}
+
+// blockValue is one key of an archive block wholeBlock accepted.
+func blockValue(out []byte, key string) string {
+	for _, line := range strings.Split(strings.ReplaceAll(string(out), "\r\n", "\n"), "\n") {
+		if v, ok := strings.CutPrefix(line, key+" = "); ok {
+			return v
+		}
+		if line == "----------" {
+			break
+		}
+	}
+	return ""
 }
 
 // wholeBlock reads the archive block line by line up to the member listing.
@@ -187,6 +208,7 @@ func extractSnapshot(ctx context.Context, exe, kind, archive string, size int64,
 	}
 	count, folders := map[string]int{}, map[string]bool{}
 	for _, e := range entries {
+		x.packed += e.packed
 		count[e.raw]++
 		// A name also selects every member under a folder of that name.
 		for dir := path.Dir(e.name); dir != "." && dir != "/" && !folders[dir]; dir = path.Dir(dir) {
@@ -410,6 +432,8 @@ func archiveType(root *os.Root, name, ext string) (string, error) {
 func classifySeven(e sevenEntry, supported func(string) bool, limits Limits) (string, string) {
 	name := e.name
 	switch {
+	case e.folder && (e.size != 0 || e.packed != 0):
+		return "directory_with_data", "a directory entry that holds data; not extracted"
 	case e.folder:
 		return "directory", ""
 	case e.malformed:
@@ -605,7 +629,7 @@ func ExtractSet(ctx context.Context, src *os.Root, names []string, dst *os.Root,
 		}
 		x, err = extractSnapshot(ctx, exe, kind, archive, total, dst, supported, limits)
 		if err == nil {
-			x.Whole = wholeArchive(ctx, exe, kind, archive, "Physical Size", total)
+			x.Whole = wholeArchive(ctx, exe, kind, archive, "Physical Size", total, x.packed)
 		}
 		return x, err
 	}
@@ -638,7 +662,7 @@ func ExtractSet(ctx context.Context, src *os.Root, names []string, dst *os.Root,
 	x, err = extractSnapshot(ctx, exe, kind, archive, total, dst, supported, limits)
 	if err == nil {
 		// A RAR set's block gives the physical size of all its volumes.
-		x.Whole = wholeArchive(ctx, exe, kind, archive, "Total Physical Size", total)
+		x.Whole = wholeArchive(ctx, exe, kind, archive, "Total Physical Size", total, x.packed)
 	}
 	return x, err
 }

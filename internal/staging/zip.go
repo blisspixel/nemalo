@@ -56,6 +56,8 @@ type Extraction struct {
 	// a physical size equal to the bytes read, so the members are all it
 	// holds. Cleanup moves such an archive only when Whole.
 	Whole bool `json:"whole,omitempty"`
+	// packed is the sum of the packed sizes 7-Zip lists for the members.
+	packed int64
 }
 
 var nestedArchive = map[string]bool{".zip": true, ".rar": true, ".7z": true, ".tar": true, ".gz": true, ".bz2": true, ".xz": true, ".zst": true, ".cbz": true}
@@ -126,6 +128,8 @@ func ExtractZip(ctx context.Context, src *os.Root, name string, dst *os.Root, su
 func classify(entry *zip.File, supported func(string) bool, limits Limits) (string, string) {
 	name := entry.Name
 	switch {
+	case (strings.HasSuffix(name, "/") || entry.Mode().IsDir()) && (entry.UncompressedSize64 != 0 || entry.CompressedSize64 != 0):
+		return "directory_with_data", "a directory entry that holds data; not extracted"
 	case strings.HasSuffix(name, "/") || entry.Mode().IsDir():
 		return "directory", ""
 	case len(name) > 1024 || !utf8.ValidString(name) || strings.ContainsAny(name, "\\:\x00") || strings.HasPrefix(name, "/") || !fs.ValidPath(name):

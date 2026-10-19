@@ -356,3 +356,15 @@ func TestWholeBlockNeedsNothingBeyondTheMembers(t *testing.T) {
 		}
 	}
 }
+
+// A member 7-Zip marks as a folder but that holds data is not a directory.
+func TestAFolderWithDataIsNotADirectory(t *testing.T) {
+	for _, e := range []sevenEntry{{name: "hidden", folder: true, size: 1269}, {name: "hidden", folder: true, packed: 9}} {
+		if d, _ := classifySeven(e, books, Defaults()); d != "directory_with_data" {
+			t.Fatal(d)
+		}
+	}
+	if d, _ := classifySeven(sevenEntry{name: "dir", folder: true}, books, Defaults()); d != "directory" {
+		t.Fatal(d)
+	}
+}

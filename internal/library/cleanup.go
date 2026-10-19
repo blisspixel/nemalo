@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/sha256"
+	"encoding/binary"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -123,7 +124,7 @@ func cleanupLimitations() []string {
 	return []string{
 		"Only files whose exact bytes the library holds, with stored bytes verified, move. Everything else stays, with its reason.",
 		"Moved sources go to the library's cleanup holding area and can be restored. library purge removes held copies the library holds, after its own preview.",
-		"An archive moves only when every member is a directory or a held file; a RAR or 7z, or a volume set as a whole, also only when 7-Zip lists it with nothing beyond its members. Intake packets move as their receipt, intent, and content.",
+		"An archive moves only when every member is a directory or a held file; a 7z or split 7z set also only when 7-Zip lists it with nothing beyond its members. A RAR stays. Intake packets move as their receipt, intent, and content.",
 		"Directory-entry durability across power loss depends on the filesystem.",
 	}
 }
@@ -972,6 +973,11 @@ func planArchive(ctx context.Context, src *os.Root, rel string, volumes []string
 	case err != nil:
 		e.Reason = "the archive could not be read; preserved"
 		return nil
+	case !isZip && strings.HasSuffix(strings.ToLower(rel), ".rar"):
+		// A RAR can carry service and unknown blocks that no listing
+		// accounts for, so its members cannot show it holds nothing else.
+		e.Reason = "a RAR can hold blocks 7-Zip does not list, so cleanup keeps it; preserved"
+		return nil
 	case !isZip && !x.Whole:
 		e.Reason = "7-Zip lists a comment, leading data, or bytes beyond the archive's members; preserved"
 		return nil
@@ -1226,7 +1232,64 @@ func zipAccounted(src *os.Root, rel string) (bool, string) {
 	if z.Comment != "" {
 		return false, "the archive carries a comment"
 	}
+	if !zipContiguous(f, info.Size(), z) {
+		return false, "the archive has bytes outside its entries and directory"
+	}
 	return true, ""
+}
+
+// zipContiguous reports that the local entries, read in order from the
+// start, and then the central directory and its end record, cover every byte
+// of the file: nothing sits between entries, before the directory, or after
+// it. ZIP64 archives are not shown contiguous.
+func zipContiguous(r io.ReaderAt, size int64, z *zip.Reader) bool {
+	const end = 22
+	if size < end {
+		return false
+	}
+	eocd := make([]byte, end)
+	if _, err := r.ReadAt(eocd, size-end); err != nil || binary.LittleEndian.Uint32(eocd) != 0x06054b50 {
+		return false
+	}
+	entries := int(binary.LittleEndian.Uint16(eocd[10:]))
+	dirSize, dirOffset := int64(binary.LittleEndian.Uint32(eocd[12:])), int64(binary.LittleEndian.Uint32(eocd[16:]))
+	if entries != len(z.File) || dirOffset == 0xFFFFFFFF || dirOffset+dirSize+end != size {
+		return false
+	}
+	files := append([]*zip.File{}, z.File...)
+	offsets := make(map[*zip.File]int64, len(files))
+	for _, f := range files {
+		off, err := f.DataOffset()
+		if err != nil || f.CompressedSize64 >= 0xFFFFFFFF {
+			return false
+		}
+		offsets[f] = off
+	}
+	sort.Slice(files, func(i, j int) bool { return offsets[files[i]] < offsets[files[j]] })
+	var pos int64
+	header := make([]byte, 30)
+	for _, f := range files {
+		if _, err := r.ReadAt(header, pos); err != nil || binary.LittleEndian.Uint32(header) != 0x04034b50 {
+			return false
+		}
+		data := pos + 30 + int64(binary.LittleEndian.Uint16(header[26:])) + int64(binary.LittleEndian.Uint16(header[28:]))
+		if data != offsets[f] {
+			return false
+		}
+		pos = data + int64(f.CompressedSize64)
+		if f.Flags&0x8 != 0 {
+			// A data descriptor follows: 12 bytes, or 16 with its signature.
+			sig := make([]byte, 4)
+			if _, err := r.ReadAt(sig, pos); err != nil {
+				return false
+			}
+			pos += 12
+			if binary.LittleEndian.Uint32(sig) == 0x08074b50 {
+				pos += 4
+			}
+		}
+	}
+	return pos == dirOffset
 }
 
 // receiptBinds checks that a packet receipt is a completed Nemalo receipt for

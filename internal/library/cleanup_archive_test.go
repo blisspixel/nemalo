@@ -1,7 +1,10 @@
 package library
 
 import (
+	"archive/zip"
+	"bytes"
 	"context"
+	"encoding/binary"
 	"errors"
 	"fmt"
 	"os"
@@ -41,38 +44,46 @@ func entryFor(t *testing.T, plan CleanupResult, path string) CleanupEntry {
 	return CleanupEntry{}
 }
 
-// A RAR whose members are all held moves only when 7-Zip lists it whole:
-// no tail, comment, or offset, and a physical size equal to the file.
-func TestCleanupMovesAWholeHeldRAROnly(t *testing.T) {
+// A 7z whose members are all held moves only when 7-Zip lists it whole: no
+// tail, comment, or offset, a physical size equal to the file, and a header
+// and packed streams that fill it. A RAR never moves.
+func TestCleanupMovesAWholeHeld7zOnly(t *testing.T) {
 	ctx := context.Background()
-	rar := []byte("Rar!\x1a\x07\x01\x00 an archive")
-	root, folder, member := archiveCleanup(t, map[string][]byte{"books.rar": rar})
-	whole := fmt.Sprintf("Path = books.rar\nType = Rar5\nPhysical Size = %d\nMultivolume = -\nVolumes = 1\n", len(rar))
+	// The stand-in's bytes need only be longer than the member they list.
+	archive := append([]byte("7z\xbc\xaf\x27\x1c"), make([]byte, 64<<10)...)
+	root, folder, member := archiveCleanup(t, map[string][]byte{"books.7z": archive, "books.rar": []byte("Rar!\x1a\x07\x01\x00 an archive")})
+	n := len(archive)
+	whole := fmt.Sprintf("Path = books.7z\nType = 7z\nPhysical Size = %d\nHeaders Size = %d\n", n, n-len(member))
 	for name, header := range map[string]string{
-		"tail":    fmt.Sprintf("Path = books.rar\nType = Rar5\nWARNINGS:\nThere are data after the end of archive\nPhysical Size = %d\nTail Size = 4\n", len(rar)-4),
+		"tail":    fmt.Sprintf("Path = books.7z\nType = 7z\nWARNINGS:\nThere are data after the end of archive\nPhysical Size = %d\nTail Size = 4\n", n-4),
 		"comment": whole + "Comment = notes\n",
-		"short":   strings.Replace(whole, fmt.Sprint(len(rar)), fmt.Sprint(len(rar)-1), 1),
+		"short":   strings.Replace(whole, fmt.Sprintf("Physical Size = %d", n), fmt.Sprintf("Physical Size = %d", n-1), 1),
+		"gap":     strings.Replace(whole, fmt.Sprintf("Headers Size = %d", n-len(member)), fmt.Sprintf("Headers Size = %d", n-len(member)-9), 1),
 	} {
-		stagingtest.Install(t, stagingtest.Archive{Kind: "-tRar5", Header: header, Members: map[string][]byte{"book.epub": member}})
+		stagingtest.Install(t, stagingtest.Archive{Kind: "-t7z", Header: header, Members: map[string][]byte{"book.epub": member}})
 		plan, err := Cleanup(ctx, CleanupRequest{Library: root, Folder: folder})
-		if e := entryFor(t, plan, "books.rar"); err != nil || e.Disposition != "keep" || !strings.Contains(e.Reason, "beyond the archive") {
+		if e := entryFor(t, plan, "books.7z"); err != nil || e.Disposition != "keep" || !strings.Contains(e.Reason, "beyond the archive") {
 			t.Fatal(name, e, err)
 		}
 	}
-	stagingtest.Install(t, stagingtest.Archive{Kind: "-tRar5", Header: whole, Members: map[string][]byte{"book.epub": member, "other.txt": []byte("x")}})
-	if plan, err := Cleanup(ctx, CleanupRequest{Library: root, Folder: folder}); err != nil || entryFor(t, plan, "books.rar").Disposition != "keep" {
+	stagingtest.Install(t, stagingtest.Archive{Kind: "-t7z", Header: whole, Members: map[string][]byte{"book.epub": member, "other.txt": []byte("x")}})
+	if plan, err := Cleanup(ctx, CleanupRequest{Library: root, Folder: folder}); err != nil || entryFor(t, plan, "books.7z").Disposition != "keep" {
 		t.Fatal("an archive with an unheld member would move", err)
 	}
-	stagingtest.Install(t, stagingtest.Archive{Kind: "-tRar5", Header: whole, Members: map[string][]byte{"book.epub": member}})
+	stagingtest.Install(t, stagingtest.Archive{Kind: "-tRar5", Header: fmt.Sprintf("Path = books.rar\nType = Rar5\nPhysical Size = 26\nHeaders Size = %d\n", 26-len(member)), Members: map[string][]byte{"book.epub": member}})
+	if plan, err := Cleanup(ctx, CleanupRequest{Library: root, Folder: folder}); err != nil || !strings.Contains(entryFor(t, plan, "books.rar").Reason, "a RAR can hold") {
+		t.Fatal("a RAR would move", err)
+	}
+	stagingtest.Install(t, stagingtest.Archive{Kind: "-t7z", Header: whole, Members: map[string][]byte{"book.epub": member}})
 	plan, err := Cleanup(ctx, CleanupRequest{Library: root, Folder: folder})
-	if e := entryFor(t, plan, "books.rar"); err != nil || e.Disposition != "move" || e.Kind != "archive" || len(e.Holdings) != 1 {
+	if e := entryFor(t, plan, "books.7z"); err != nil || e.Disposition != "move" || e.Kind != "archive" || len(e.Holdings) != 1 {
 		t.Fatal(e, err)
 	}
 	applied, err := Cleanup(ctx, CleanupRequest{Library: root, Folder: folder, Apply: plan.Digest})
 	if err != nil || applied.Moved != 1 {
 		t.Fatal(applied, err)
 	}
-	if _, err := os.Stat(filepath.Join(folder, "books.rar")); !errors.Is(err, os.ErrNotExist) {
+	if _, err := os.Stat(filepath.Join(folder, "books.7z")); !errors.Is(err, os.ErrNotExist) {
 		t.Fatal("the archive stayed")
 	}
 	saved := staging.SevenZip
@@ -89,9 +100,9 @@ func TestCleanupMovesAWholeHeldRAROnly(t *testing.T) {
 // lists the joined volumes whole; a set missing a volume keeps them all.
 func TestCleanupMovesAVolumeSetAsOne(t *testing.T) {
 	ctx := context.Background()
-	v1, v2 := []byte("7z\xbc\xaf\x27\x1c first"), []byte(" second")
+	v1, v2 := append([]byte("7z\xbc\xaf\x27\x1c"), make([]byte, 32<<10)...), make([]byte, 32<<10)
 	root, folder, member := archiveCleanup(t, map[string][]byte{"set.7z.001": v1, "set.7z.002": v2, "gap.7z.001": v1, "gap.7z.003": v2})
-	stagingtest.Install(t, stagingtest.Archive{Kind: "-t7z", Header: fmt.Sprintf("Path = archive.7z\nType = 7z\nPhysical Size = %d\n", len(v1)+len(v2)), Members: map[string][]byte{"book.epub": member}})
+	stagingtest.Install(t, stagingtest.Archive{Kind: "-t7z", Header: fmt.Sprintf("Path = archive.7z\nType = 7z\nPhysical Size = %d\nHeaders Size = %d\n", len(v1)+len(v2), len(v1)+len(v2)-len(member)), Members: map[string][]byte{"book.epub": member}})
 	plan, err := Cleanup(ctx, CleanupRequest{Library: root, Folder: folder})
 	if err != nil {
 		t.Fatal(err)
@@ -121,7 +132,55 @@ func TestCleanupMovesAVolumeSetAsOne(t *testing.T) {
 	if err != nil {
 		t.Fatal(restored, err)
 	}
-	if string(mustRead(t, filepath.Join(folder, "set.7z.002"))) != string(v2) {
+	if !bytes.Equal(mustRead(t, filepath.Join(folder, "set.7z.002")), v2) {
 		t.Fatal("the second volume was not restored")
+	}
+}
+
+// A ZIP with bytes between its entries and its directory, or a directory
+// entry that holds data, stays: those bytes were never checked.
+func TestCleanupKeepsAZIPWithUncheckedBytes(t *testing.T) {
+	ctx := context.Background()
+	book := mustRead(t, writeEPUBParagraph(t, t.TempDir(), "Archived"))
+	build := func(entries map[string][]byte) []byte {
+		var buf bytes.Buffer
+		z := zip.NewWriter(&buf)
+		for name, body := range entries {
+			w, err := z.Create(name)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if _, err := w.Write(body); err != nil {
+				t.Fatal(err)
+			}
+		}
+		if err := z.Close(); err != nil {
+			t.Fatal(err)
+		}
+		return buf.Bytes()
+	}
+	clean := build(map[string][]byte{"book.epub": book})
+	// Insert hidden bytes before the central directory and move its offset.
+	n := len(clean)
+	offset := int(binary.LittleEndian.Uint32(clean[n-6:]))
+	hidden := []byte("hidden bytes nobody listed")
+	gapped := append(append(append([]byte{}, clean[:offset]...), hidden...), clean[offset:]...)
+	binary.LittleEndian.PutUint32(gapped[len(gapped)-6:], uint32(offset+len(hidden)))
+	if _, err := zip.NewReader(bytes.NewReader(gapped), int64(len(gapped))); err != nil {
+		t.Fatal("the crafted archive is not a readable ZIP", err)
+	}
+	root, folder, _ := archiveCleanup(t, map[string][]byte{"clean.zip": clean, "gapped.zip": gapped, "dir.zip": bytes.ReplaceAll(build(map[string][]byte{"book.epub": book, "hiddenx": book}), []byte("hiddenx"), []byte("hidden/"))})
+	plan, err := Cleanup(ctx, CleanupRequest{Library: root, Folder: folder})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if e := entryFor(t, plan, "clean.zip"); e.Disposition != "move" {
+		t.Fatal(e)
+	}
+	if e := entryFor(t, plan, "gapped.zip"); e.Disposition != "keep" || !strings.Contains(e.Reason, "outside its entries") {
+		t.Fatal(e)
+	}
+	if e := entryFor(t, plan, "dir.zip"); e.Disposition != "keep" || !strings.Contains(e.Reason, "hidden/") {
+		t.Fatal(e)
 	}
 }
