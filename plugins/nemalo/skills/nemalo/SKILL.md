@@ -7,7 +7,7 @@ compatibility: Requires the nemalo executable on PATH and an MCP host that start
 
 # Nemalo library
 
-Nemalo keeps a local library of EPUB, PDF, and MP3 files with recorded
+Nemalo keeps a local library of EPUB, PDF, MP3, M4B, and M4A files with recorded
 provenance. Its MCP tools only read. They never import, scan, acquire, move, or
 delete anything.
 
@@ -70,6 +70,9 @@ delete anything.
   offsets, and a cursor; read the cursor back before quoting.
 - MP3 holdings read as `mpeg-audio/1`: probed timing, declared tags and chapters,
   and decodable byte ranges. Nothing is decoded or transcribed.
+- M4B and M4A holdings list as `mp4-audio/1` with `content_units`: timing from
+  the sample tables and declared chapters. There are no ranges to read; a
+  person plays the file with `nemalo library open`.
 - To show a person a book a page at a time, call `content_read` with
   `max_bytes` near 2000, show the text verbatim with any gaps, and continue
   with the returned cursor only when they ask for the next page. For reading

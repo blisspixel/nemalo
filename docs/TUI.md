@@ -45,10 +45,10 @@ item's other files for a new, deliberate review. See
 | F3 in Archive search | Cycle relevance / downloads / identifier order |
 | F3 in Gutenberg search | Cycle relevance / identifier. The website is not queried |
 | F3 in inspect, snapshot, audit | Select bounded 1 GiB / 5 GiB read budget |
-| F4 in holdings | Cycle EPUB / PDF / MP3 / all filename filters |
+| F4 in holdings | Cycle EPUB / PDF / MP3 / M4B / M4A / all filename filters |
 | F7 in State | Review initialization of an explicit existing folder |
 | F8 in State | Review import of the folder and one source; no antivirus scan |
-| Ctrl+R in State | Review a rescan of review EPUBs, PDFs, and MP3s that lack scan evidence |
+| Ctrl+R in State | Review a rescan of review holdings that lack scan evidence |
 | Ctrl+N in two-field forms | Switch between fields, including the Gutenberg catalog and the State source |
 | Ctrl+A in snapshot | Toggle historical health metadata |
 | e in Archive, Gutenberg, or Open Library results | Prepare selected-item evaluation, without requesting it. A Gutenberg catalog row lists no files. An Open Library work lists editions on Enter. e on an edition row selects that edition |
@@ -73,7 +73,7 @@ holdings/audit forms but does not automatically open or audit anything.
 
 State (operation 9) reads local control identity/status on Enter. F7 reviews the
 exact folder and control-file writes; a second Enter initializes it. Ctrl+N sets
-one EPUB, PDF, MP3, or completed intake packet. F8 reviews that import; a second
+one EPUB, PDF, MP3, M4B, M4A, or completed intake packet. F8 reviews that import; a second
 Enter copies it into the library without scanning; a packet whose acquisition
 scan was clean and bound to the same bytes can still be recorded as checked.
 Ctrl+R reviews a rescan; a second Enter scans the review holdings that lack scan
@@ -93,7 +93,10 @@ selected unit. The report preserves lines and escapes terminal control bytes.
 It reports extraction gaps and references outside the delivered range.
 An MP3 holding is read as `mpeg-audio/1`: Enter lists the track's frame index,
 timing, and declared chapters, and a range reports its frames, samples, and file
-bytes without printing or playing audio.
+bytes without printing or playing audio. An M4B or M4A holding is read as
+`mp4-audio/1`: Enter lists its sample table summary and each declared chapter
+with its start and end. It has no ranges; `o` in Holdings opens a verified copy
+in a player.
 
 In focused Read results, `n` requests the returned continuation, `r` repeats the
 last request, and `u` lists units again. `c` lists the book's declared contents.

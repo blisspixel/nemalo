@@ -155,7 +155,7 @@ func Build(ctx context.Context, directory string, limits inventory.Limits, asses
 			name := ""
 			for _, location := range a.Locations {
 				ext := strings.ToLower(filepath.Ext(location.Path))
-				if ext == ".epub" || ext == ".pdf" || ext == ".mp3" {
+				if validFormat(strings.TrimPrefix(ext, ".")) {
 					name = location.Path
 					break
 				}

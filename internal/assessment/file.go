@@ -62,7 +62,7 @@ func (o Options) Validate() error {
 // Check assesses a bounded private snapshot. It never opens a reader, renders a
 // document, extracts to the source tree, or mutates the selected file.
 func Check(ctx context.Context, file string, options Options, av Scanner) (report Report, err error) {
-	report = Report{File: file, CheckedAt: time.Now().UTC(), Status: "incomplete", Findings: []string{}, Antivirus: scanner.Result{Status: "not_scanned", ExitCode: -1}, Limitations: []string{"Limited checks do not establish safety, semantic completeness, or edition quality.", "PDF page trees and active content are examined without reading page content; MP3 frames are indexed but audio is not decoded.", "EPUB text counts are tokenizer measurements, not rendered pages or proof of complete text."}}
+	report = Report{File: file, CheckedAt: time.Now().UTC(), Status: "incomplete", Findings: []string{}, Antivirus: scanner.Result{Status: "not_scanned", ExitCode: -1}, Limitations: []string{"Limited checks do not establish safety, semantic completeness, or edition quality.", "PDF page trees and active content are examined without reading page content; MP3 frames are indexed and M4B and M4A samples located, but audio is not decoded.", "EPUB text counts are tokenizer measurements, not rendered pages or proof of complete text."}}
 	if err := options.Validate(); err != nil {
 		return report, err
 	}
@@ -116,7 +116,7 @@ func CheckInRoot(ctx context.Context, root *os.Root, name string, options Option
 }
 
 func incompleteReport(root *os.Root, name string) Report {
-	return Report{File: filepath.Join(root.Name(), filepath.FromSlash(name)), CheckedAt: time.Now().UTC(), Status: "incomplete", Findings: []string{}, Antivirus: scanner.Result{Status: "not_scanned", ExitCode: -1}, Limitations: []string{"Limited checks do not establish safety, semantic completeness, or edition quality.", "PDF page trees and active content are examined without reading page content; MP3 frames are indexed but audio is not decoded.", "EPUB text counts are tokenizer measurements, not rendered pages or proof of complete text."}}
+	return Report{File: filepath.Join(root.Name(), filepath.FromSlash(name)), CheckedAt: time.Now().UTC(), Status: "incomplete", Findings: []string{}, Antivirus: scanner.Result{Status: "not_scanned", ExitCode: -1}, Limitations: []string{"Limited checks do not establish safety, semantic completeness, or edition quality.", "PDF page trees and active content are examined without reading page content; MP3 frames are indexed and M4B and M4A samples located, but audio is not decoded.", "EPUB text counts are tokenizer measurements, not rendered pages or proof of complete text."}}
 }
 
 // prepared is one private snapshot whose limited checks are complete and whose
@@ -198,8 +198,17 @@ func prepare(ctx context.Context, root *os.Root, name string, options Options) (
 	}
 	format := detect(header)
 	p.report.DetectedFormat = format
-	if format == "zip" {
+	ext := strings.TrimPrefix(strings.ToLower(filepath.Ext(name)), ".")
+	switch format {
+	case "zip":
 		format = "epub"
+	case "mp4":
+		// One container holds both; the extension names an audiobook or a
+		// track, and any other name is assessed as a track and reported.
+		format = "m4a"
+		if ext == "m4b" {
+			format = "m4b"
+		}
 	}
 	checks, inspectErr := InspectContext(ctx, contextAt{ctx, p.f}, n, format)
 	p.report.Checks = checks
@@ -210,7 +219,6 @@ func prepare(ctx context.Context, root *os.Root, name string, options Options) (
 		p.report.Status = "limited_checks_passed"
 		p.report.DetectedFormat = format
 	}
-	ext := strings.TrimPrefix(strings.ToLower(filepath.Ext(name)), ".")
 	if ext != format {
 		p.report.Findings = append(p.report.Findings, fmt.Sprintf("extension %q differs from assessed format %q", ext, format))
 	}
@@ -390,7 +398,7 @@ func CheckManyInRoot(ctx context.Context, root *os.Root, names []string, options
 func safeExtension(name string) string {
 	ext := strings.ToLower(filepath.Ext(name))
 	switch ext {
-	case ".epub", ".pdf", ".mp3":
+	case ".epub", ".pdf", ".mp3", ".m4b", ".m4a":
 		return ext
 	}
 	return ".bin"
@@ -404,6 +412,8 @@ func detect(header []byte) string {
 		return "pdf"
 	case bytes.HasPrefix(header, []byte("ID3")) || (len(header) > 1 && header[0] == 0xff && header[1]&0xe0 == 0xe0):
 		return "mp3"
+	case len(header) >= 8 && string(header[4:8]) == "ftyp":
+		return "mp4"
 	case bytes.HasPrefix(header, []byte("Rar!")):
 		return "rar"
 	case bytes.HasPrefix(header, []byte("MZ")) || bytes.HasPrefix(header, []byte("\x7fELF")):

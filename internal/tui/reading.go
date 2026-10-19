@@ -12,7 +12,8 @@ import (
 type readerState struct {
 	asset string
 	// representation is chosen when an asset is staged from holdings:
-	// mpeg-audio/1 for an MP3, pdf-text/1 for a PDF, otherwise epub-structure/1.
+	// mpeg-audio/1 for an MP3, mp4-audio/1 for an M4B or M4A, pdf-text/1 for
+	// a PDF, otherwise epub-structure/1.
 	representation          string
 	next                    string
 	boundCatalog, boundRoot string
@@ -93,6 +94,14 @@ func (m *model) startRead(units bool, unit int, cursor string, repeat bool) tea.
 	if m.reader.representation == "pdf-text/1" {
 		req.Representation = "pdf-text/1"
 	}
+	if m.reader.representation == "mp4-audio/1" {
+		if !units && !repeat {
+			m.status = "An M4B or M4A lists its chapters only. In Holdings, o opens a verified copy in a player."
+			m.resize()
+			return nil
+		}
+		req.Representation = "mp4-audio/1"
+	}
 	if !units && cursor == "" && !repeat && len(m.entries) > 0 && m.entries[m.selected].nav {
 		req.Representation = "epub-nav/1"
 		req.Navigation = m.entries[m.selected].navEvidence
@@ -147,7 +156,7 @@ func (m *model) listPages() tea.Cmd {
 		m.resize()
 		return nil
 	}
-	if m.reader.representation == "mpeg-audio/1" || m.reader.representation == "pdf-text/1" {
+	if m.reader.representation == "mpeg-audio/1" || m.reader.representation == "mp4-audio/1" || m.reader.representation == "pdf-text/1" {
 		m.status = "Declared page labels are an EPUB page list. A PDF's printed labels are in its units (u)."
 		m.resize()
 		return nil
@@ -183,7 +192,7 @@ func (m *model) listNavigation() tea.Cmd {
 		m.resize()
 		return nil
 	}
-	if m.reader.representation == "mpeg-audio/1" || m.reader.representation == "pdf-text/1" {
+	if m.reader.representation == "mpeg-audio/1" || m.reader.representation == "mp4-audio/1" || m.reader.representation == "pdf-text/1" {
 		m.status = "Declared navigation is an EPUB contents list."
 		m.resize()
 		return nil
@@ -223,6 +232,8 @@ func (m *model) readSelected(speed bool) tea.Cmd {
 		m.status = "Select an asset in Holdings with r and enter its explicit root."
 	case m.reader.representation == "mpeg-audio/1":
 		m.status = "Audio has no text to page. Enter retrieves frame ranges."
+	case m.reader.representation == "mp4-audio/1":
+		m.status = "Audio has no text to page. u lists its chapters."
 	default:
 		representation := "epub-text/2"
 		if m.reader.representation == "pdf-text/1" {

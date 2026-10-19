@@ -20,7 +20,7 @@ func Content(r content.Result) string {
 	field(&b, "Representation", Line(r.Representation))
 	// An audio track is one unit, described by its index below. A page list
 	// lists its markers instead of the spine units.
-	if r.Status == "units_available" && r.Audio == nil && r.Representation != "epub-page-list/1" {
+	if r.Status == "units_available" && r.Audio == nil && r.MP4 == nil && r.Representation != "epub-page-list/1" {
 		writeUnits(&b, r)
 	}
 	if len(r.Navigation) > 0 {
@@ -73,6 +73,25 @@ func Content(r content.Result) string {
 		}
 		notes(&b, "Finding", a.Findings)
 		b.WriteString("Decoded: not decoded; timing comes from frame headers.\n")
+	}
+	if a := r.MP4; a != nil {
+		fmt.Fprintf(&b, "Audio: %s in %s, %d Hz, %d channel(s)\n", words(a.Codec), firstNonEmpty(Line(a.Brand), "MP4"), a.SampleRate, a.Channels)
+		fmt.Fprintf(&b, "Located samples: %d in %d chunk(s) | %d sample bytes | encoded duration: %s\n", a.Samples, a.Chunks, a.SampleBytes, clock(a.EncodedDurationMs))
+		fmt.Fprintf(&b, "Declared media duration: %s | movie duration: %s\n", clock(a.MediaDurationMs), clock(a.MovieDurationMs))
+		field(&b, "Declared title", Line(a.Metadata.Title))
+		field(&b, "Declared artist", Line(a.Metadata.Artist))
+		field(&b, "Declared narrator", Line(a.Metadata.Narrator))
+		for _, c := range a.Chapters {
+			fmt.Fprintf(&b, "Declared chapter %s: %s..%s", Line(c.ID), clock(c.StartMs), clock(c.EndMs))
+			if title := Line(c.Title); title != "" {
+				fmt.Fprintf(&b, " (%s)", title)
+			}
+			b.WriteString("\n")
+		}
+		field(&b, "Chapter source", words(a.ChapterSource))
+		notes(&b, "Finding", a.Findings)
+		notes(&b, "Note", a.Notes)
+		b.WriteString("Decoded: not decoded; timing comes from the sample tables. Play it with library open or export.\n")
 	}
 	if a := r.AudioRange; a != nil {
 		fmt.Fprintf(&b, "Frames %d..%d (%d preroll frame(s), complete: %t) | samples %d..%d at %d Hz | file bytes %d..%d\n", a.FirstFrame, a.FirstFrame+a.Frames, a.PrerollFrames, a.PrerollComplete, a.SampleStart, a.SampleEnd, a.SampleRate, a.ByteStart, a.ByteEnd)

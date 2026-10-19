@@ -6,7 +6,8 @@ contract came from [issue 1](https://github.com/blisspixel/nemalo/issues/1) and
 the remaining OCR, column, narrator, and M4B work moved to milestones 7 and 8. CLI/JSON and TUI use `internal/app.Service.Content` and
 `internal/content`; the read-only MCP `content_*` tools call the same service
 ([decision 0014](decisions/0014-read-only-mcp-server.md)). MP3 tracks have a
-frame index and decodable ranges (`mpeg-audio/1`, below), PDFs have pages,
+frame index and decodable ranges (`mpeg-audio/1`, below), M4B and M4A files
+list their sample tables and chapters (`mp4-audio/1`), PDFs have pages,
 printed labels, text, and located gaps (`pdf-text/1`,
 [decision 0021](decisions/0021-pdf-pages-and-text.md)), exact quotations can be
 located in EPUB or PDF text (`content locate`), and held recordings
@@ -225,6 +226,23 @@ bounds, and evidence. One read covers one track. `library recordings LIBRARY
 exact assets, missing positions, conflicts, and probed per-track timing and
 offsets across a recording ([decision 0020](decisions/0020-recording-manifest.md)).
 
+## M4B and M4A audio: `mp4-audio/1`
+
+```sh
+nemalo content units LIBRARY --root LIBRARY --asset sha256:HASH --representation mp4-audio/1 --json
+```
+
+`units` returns one unit and an `mp4` summary from the movie's sample tables:
+codec, sample rate, channels, sample and chunk counts, sample bytes, encoded
+duration (the sum of sample durations) beside the media and movie headers'
+declared durations, whether an edit list exists, item text (title, artist,
+album, narrator), language, chapters with start and end in milliseconds, and
+their source (`quicktime_chapter_track` or `nero_chpl`). Findings and notes are
+those of `check`. Nothing is decoded, and edit lists and encoder priming are
+not applied. MP4 samples cannot be played apart from their container, so
+there is no `read`: `library open` or `library export` gives a player a
+verified copy. See [decision 0039](decisions/0039-mp4-audio-samples.md).
+
 ## Bounds and failures
 
 - Catalog: existing strict 16 MiB snapshot loader; explicit paths at most 4096 bytes.
@@ -289,8 +307,11 @@ Remaining work, without moving post-1.0 analysis ahead of library delivery:
   column reconstruction, and bibliographic provenance remain later work.
 - Milestone 8: done for MP3 recordings: ordered track hashes, declared versus
   probed timing, bounded source ranges with preroll, explicit gaps, and
-  completeness ([decision 0020](decisions/0020-recording-manifest.md)). Narrator
-  identity, M4B, and decoded timing remain later work.
+  completeness ([decision 0020](decisions/0020-recording-manifest.md)), with
+  LibriVox narrators ([decision 0035](decisions/0035-librivox-readers.md)).
+  M4B and M4A list sample tables and chapters as `mp4-audio/1`
+  ([decision 0039](decisions/0039-mp4-audio-samples.md)). Decoded timing
+  remains later work.
 - External caller: Claude Code on Windows, through `nemalo mcp serve`, read,
   switched works, and resumed from a continuation at the exact stopping byte
   ([decision 0014](decisions/0014-read-only-mcp-server.md)). Other hosts and

@@ -20,6 +20,17 @@ func Health(r assessment.Report) string {
 		field(&b, "Title", list(e.Titles))
 		field(&b, "Language", list(e.Languages))
 	}
+	if m := r.Checks.MP3; m != nil {
+		fmt.Fprintf(&b, "MP3: %s, %d Hz, %d channel(s), %d frames, %s encoded (not decoded)\n", Line(m.Format), m.SampleRate, m.Channels, m.Frames, clock(m.EncodedDurationMs))
+		notes(&b, "Note", m.Notes)
+	}
+	if m := r.Checks.MP4; m != nil {
+		fmt.Fprintf(&b, "MP4 audio: %s, %d Hz, %d channel(s), %d samples, %s encoded (not decoded)\n", words(m.Codec), m.SampleRate, m.Channels, m.Samples, clock(m.EncodedDurationMs))
+		if m.Chapters > 0 {
+			fmt.Fprintf(&b, "Chapters: %d declared (%s)\n", m.Chapters, words(m.ChapterSource))
+		}
+		notes(&b, "Note", m.Notes)
+	}
 	if c := r.Conformance; c != nil {
 		switch c.Status {
 		case "passed", "errors_reported":

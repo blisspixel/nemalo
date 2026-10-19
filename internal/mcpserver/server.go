@@ -144,7 +144,7 @@ func New(service app.Service, opts Options) (*mcp.Server, error) {
 			}
 			return service.Audit(ctx, catalog, root, inventory.Defaults())
 		})
-	add(&r, "file_check", "Run bounded file health checks on one EPUB, PDF, or MP3 through a private snapshot. No antivirus scan runs here; antivirus stays not_scanned.", false,
+	add(&r, "file_check", "Run bounded file health checks on one EPUB, PDF, MP3, M4B, or M4A through a private snapshot. No antivirus scan runs here; antivirus stays not_scanned.", false,
 		func(ctx context.Context, in checkInput) (assessment.Report, error) {
 			file, err := scopes.path(in.File)
 			if err != nil {
@@ -177,7 +177,7 @@ func New(service app.Service, opts Options) (*mcp.Server, error) {
 			return service.Content(ctx, req)
 		})
 	if opts.Write {
-		addWrite(&r, "library_import_preview", "Assess one EPUB, PDF, or MP3 file, or a completed intake packet, for import into an initialized library, without writing. Returns the status it would get and a plan digest. With scan, the installed antivirus scans the file; its cloud and sample-submission settings apply.", true,
+		addWrite(&r, "library_import_preview", "Assess one EPUB, PDF, MP3, M4B, or M4A file, or a completed intake packet, for import into an initialized library, without writing. Returns the status it would get and a plan digest. With scan, the installed antivirus scans the file; its cloud and sample-submission settings apply.", true,
 			func(ctx context.Context, in importInput) (library.ImportResult, error) {
 				req, err := importRequest(scopes, in, false)
 				if err != nil {
@@ -341,7 +341,7 @@ type emptyInput struct{}
 
 type importInput struct {
 	Library string `json:"library" jsonschema:"an initialized library directory inside a configured scope"`
-	Source  string `json:"source" jsonschema:"absolute path of one EPUB, PDF, or MP3 file, or a completed intake packet folder, inside a configured scope and outside the library"`
+	Source  string `json:"source" jsonschema:"absolute path of one EPUB, PDF, MP3, M4B, or M4A file, or a completed intake packet folder, inside a configured scope and outside the library"`
 	Scan    bool   `json:"scan,omitempty" jsonschema:"scan with the installed antivirus; the apply must repeat the preview's choice"`
 	Plan    string `json:"plan,omitempty" jsonschema:"the plan digest library_import_preview returned; required to apply"`
 }
@@ -374,7 +374,7 @@ type listInput struct {
 	Catalog  string `json:"catalog" jsonschema:"an initialized library directory, or a catalog snapshot file, inside a configured scope"`
 	Status   string `json:"status,omitempty" jsonschema:"all (default), checked, or review; managed library only"`
 	Query    string `json:"query,omitempty" jsonschema:"literal text matched against paths, hashes, and recorded metadata"`
-	Format   string `json:"format,omitempty" jsonschema:"all (default), epub, pdf, or mp3; an exact filename suffix filter"`
+	Format   string `json:"format,omitempty" jsonschema:"all (default), epub, pdf, mp3, m4b, or m4a; an exact filename suffix filter"`
 	Language string `json:"language,omitempty" jsonschema:"base language tag or code such as en, en-US, or eng; managed library only"`
 	Limit    int    `json:"limit,omitempty" jsonschema:"page size 1-100, default 10"`
 	Offset   int    `json:"offset,omitempty" jsonschema:"page offset 0-100000"`
@@ -399,7 +399,7 @@ type auditInput struct {
 }
 
 type checkInput struct {
-	File           string `json:"file" jsonschema:"absolute path of one regular EPUB, PDF, or MP3 file inside a configured scope"`
+	File           string `json:"file" jsonschema:"absolute path of one regular EPUB, PDF, MP3, M4B, or M4A file inside a configured scope"`
 	ExpectedBytes  int64  `json:"expected_bytes,omitempty" jsonschema:"known file size to compare"`
 	ExpectedSHA256 string `json:"expected_sha256,omitempty" jsonschema:"known SHA-256, for example from a publisher, to compare"`
 }
@@ -408,7 +408,7 @@ type contentInput struct {
 	Catalog        string `json:"catalog" jsonschema:"catalog snapshot file, or the library directory for a managed holding"`
 	Root           string `json:"root" jsonschema:"explicit source root; for a managed holding, the same library directory"`
 	Asset          string `json:"asset" jsonschema:"exact asset ID, sha256: followed by 64 lowercase hex digits"`
-	Representation string `json:"representation,omitempty" jsonschema:"epub-text/2 (default), epub-text/1, epub-structure/1, epub-nav/1 for one declared contents entry, epub-page-list/1 from one declared page label, pdf-text/1 for PDF, or mpeg-audio/1 for MP3; a cursor keeps its own"`
+	Representation string `json:"representation,omitempty" jsonschema:"epub-text/2 (default), epub-text/1, epub-structure/1, epub-nav/1 for one declared contents entry, epub-page-list/1 from one declared page label, pdf-text/1 for PDF, mpeg-audio/1 for MP3, or mp4-audio/1 for M4B and M4A (units only); a cursor keeps its own"`
 	Unit           int    `json:"unit,omitempty" jsonschema:"zero-based reading-order unit, zero-based physical page index for pdf-text/1, or the declared entry order for epub-nav/1, 0-9999"`
 	TextOffset     int    `json:"text_offset,omitempty" jsonschema:"zero-based UTF-8 byte offset inside the unit, or relative to a declared entry for epub-nav/1"`
 	Navigation     string `json:"navigation,omitempty" jsonschema:"nav-doc or ncx; required when reading epub-nav/1 and the book declares both"`

@@ -224,7 +224,7 @@ func planIngest(folder string, entries []inventory.Entry, result *IngestResult) 
 			continue
 		}
 		dir := path.Dir(e.Path)
-		for _, f := range []string{"content.epub", "content.pdf", "content.mp3"} {
+		for _, f := range packetContents {
 			if has(path.Join(dir, f)) {
 				packets[dir] = true
 				parts[path.Join(dir, f)] = dir
@@ -245,7 +245,7 @@ func planIngest(folder string, entries []inventory.Entry, result *IngestResult) 
 		if path.Base(e.Path) != "intent.json" || packets[dir] {
 			continue
 		}
-		for _, f := range []string{"content.epub", "content.pdf", "content.mp3"} {
+		for _, f := range packetContents {
 			if has(path.Join(dir, f)) {
 				incomplete[path.Join(dir, f)] = true
 				incomplete[e.Path] = true

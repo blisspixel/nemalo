@@ -166,5 +166,5 @@ func FindFormat(c Catalog, query, format string, limit, offset int) (Page, error
 }
 
 func ValidFormatFilter(format string) bool {
-	return format == "all" || format == "epub" || format == "pdf" || format == "mp3"
+	return format == "all" || validFormat(format)
 }

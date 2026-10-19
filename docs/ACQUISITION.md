@@ -40,7 +40,7 @@ does not establish file-level rights or permission to redistribute.
 Archive metadata is resolved again before acquisition. A saved evaluation cannot
 authorize a URL or filesystem write. Only an unrestricted public file candidate
 with a positive declared size and at least one valid source MD5/SHA-1 checksum is
-eligible. Supported suffixes are EPUB, PDF, and MP3. The provider constructs the
+eligible. Supported suffixes are EPUB, PDF, MP3, M4B, and M4A. The provider constructs the
 canonical URL from validated item/file identities. See the official
 [metadata interface](https://archive.org/developers/md-read.html) and
 [source evaluation contract](decisions/0005-provider-search-and-evaluation.md).
@@ -90,7 +90,9 @@ Source MD5/SHA-1 checks establish consistency with metadata, not authenticity.
 The measured SHA-256 identifies local bytes, not a trustworthy publisher.
 
 EPUB checks use the shared bounded parser; PDF checks walk the page tree and
-active content, and MP3 checks index the frames without decoding. Format validity, warnings, antivirus coverage, DRM, licensing,
+active content, MP3 checks index the frames, and M4B and M4A checks place
+every sample from the sample tables, all without decoding. Format validity,
+warnings, antivirus coverage, DRM, licensing,
 and semantic completeness remain separate.
 
 ## Scan, quarantine, and another source

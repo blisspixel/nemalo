@@ -84,13 +84,16 @@ See [decision 0006](docs/decisions/0006-library-control-state.md).
 `doctor` reports configuration paths, tool availability, the directory descriptor
 bridge (`/proc/self/fd` on Linux, `/dev/fd` on macOS), and scanner recommendations
 without executing scanners.
-Single-asset import into that library is implemented: one EPUB, PDF, MP3, or
-completed intake packet, with a separate operations/holdings journal, crash
-resume, and managed audit. Checked status is limited to an EPUB, or a PDF whose
-page tree and active content were fully examined and clean, whose checks passed
-and whose scan reported no detections. See
-[decision 0009](docs/decisions/0009-managed-epub-import.md) and
-[decision 0032](docs/decisions/0032-pdf-checked-policy.md).
+Single-asset import into that library is implemented: one EPUB, PDF, MP3, M4B,
+M4A, or completed intake packet, with a separate operations/holdings journal,
+crash resume, and managed audit. Checked status is limited to an EPUB, a PDF
+whose page tree and active content were fully examined and clean, an MP3 whose
+frames indexed cleanly, or an M4B or M4A whose samples were all located, and
+whose scan reported no detections. See
+[decision 0009](docs/decisions/0009-managed-epub-import.md),
+[decision 0032](docs/decisions/0032-pdf-checked-policy.md),
+[decision 0033](docs/decisions/0033-mp3-checked-policy.md), and
+[decision 0039](docs/decisions/0039-mp4-audio-samples.md).
 
 Milestone 1 remains in progress. Managed holdings record EPUB package
 identifier evidence for an explicit ISBN, DOI, or Open Library work or edition
@@ -256,7 +259,9 @@ its setup command, and signature age. ZIP extraction is in milestone 2 ingest.
 PDFs whose page tree and active content were fully examined and clean can be
 checked ([decision 0032](docs/decisions/0032-pdf-checked-policy.md)). An MP3 whose frames
 index without damage or truncation can be checked
-([decision 0033](docs/decisions/0033-mp3-checked-policy.md)). EPUB font
+([decision 0033](docs/decisions/0033-mp3-checked-policy.md)), as can an M4B
+or M4A whose every sample was located in its media data
+([decision 0039](docs/decisions/0039-mp4-audio-samples.md)). EPUB font
 obfuscation is a recorded fact, not DRM, while other encryption and DRM
 licenses stay restricted ([decision 0036](docs/decisions/0036-epub-font-obfuscation.md)).
 Holdings filter by declared base language without guessing missing tags
@@ -434,7 +439,9 @@ spine boundary is not that end
 Declared EPUB 3 page labels are `epub-page-list/1`, read from one marker by
 reference or exact label ([decision 0031](docs/decisions/0031-epub-page-list.md)).
 Claude Code validated the MCP contract as an external caller. Both issues are
-closed; OCR, column reconstruction, and M4B continue in milestones 7 and 8.
+closed; OCR, column reconstruction, and decoded audio continue in milestones 7 and 8.
+M4B and M4A list their sample tables and chapters as `mp4-audio/1`
+([decision 0039](docs/decisions/0039-mp4-audio-samples.md)).
 
 - Initial local access: resolve a stable library ID to exact assets/provenance,
   export/open in an explicitly configured reader, and report changed/missing files.
@@ -511,8 +518,12 @@ positions, conflicts, and probed timing and offsets
 ([decision 0020](docs/decisions/0020-recording-manifest.md)). Readers come from
 the LibriVox project an item names, linked only when it names the item back
 and credited per track only when sections match tracks by count and length
-([decision 0035](docs/decisions/0035-librivox-readers.md)). M4B and decoded
-timing remain. Depends on shared assessment/publication and recovery milestones.
+([decision 0035](docs/decisions/0035-librivox-readers.md)). M4B and M4A
+files are assessed from their sample tables without decoding: truncation,
+misplaced samples, fragments, and protected audio are findings, chapters come
+from the QuickTime chapter track or a Nero list, and `mp4-audio/1` lists them
+([decision 0039](docs/decisions/0039-mp4-audio-samples.md)). Decoded timing,
+M4B byte ranges, and files above the 256 MiB limit remain. Depends on shared assessment/publication and recovery milestones.
 Can follow milestone 5 independently of paper-provider expansion.
 
 Deliver local MP3/M4B intake and LibriVox acquisition, permitted Archive audio
@@ -737,7 +748,8 @@ also builds and smokes the executable with cgo disabled. Race checks require cgo
    compatibility.
 2. Holding-area retention: held sources are kept until the user removes them;
    any purge needs its own preview and decision (decision 0022).
-3. Decide whether EPUBCheck conformance is required or an optional assessment.
+3. EPUBCheck conformance is an optional assessment, not part of the checked
+   policy ([decision 0038](docs/decisions/0038-optional-epubcheck.md)).
 
 The language is settled. These choices can be refined in their milestones with
 conservative defaults; they do not justify starting additional stacks or services.

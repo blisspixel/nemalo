@@ -456,12 +456,12 @@ func selectSource(source string) (selected, error) {
 	}
 	if info.Mode().IsRegular() {
 		if importFormat(source) == "" || info.Size() < 1 {
-			return selected{}, errors.New("import a regular EPUB, PDF, or MP3 file, or a completed intake packet")
+			return selected{}, errors.New("import a regular EPUB, PDF, MP3, M4B, or M4A file, or a completed intake packet")
 		}
 		return selected{kind: "file", file: source}, nil
 	}
 	if !info.IsDir() || info.Mode()&os.ModeSymlink != 0 {
-		return selected{}, errors.New("import a regular EPUB, PDF, or MP3 file, or a completed intake packet")
+		return selected{}, errors.New("import a regular EPUB, PDF, MP3, M4B, or M4A file, or a completed intake packet")
 	}
 	root, err := safeio.OpenRoot(source)
 	if err != nil {
@@ -469,18 +469,18 @@ func selectSource(source string) (selected, error) {
 	}
 	defer root.Close()
 	found := []string{}
-	for _, name := range []string{"content.epub", "content.pdf", "content.mp3"} {
+	for _, name := range packetContents {
 		entry, err := root.Lstat(name)
 		if errors.Is(err, os.ErrNotExist) {
 			continue
 		}
 		if err != nil || !entry.Mode().IsRegular() || entry.Size() < 1 {
-			return selected{}, errors.New("intake packet content must be one regular EPUB, PDF, or MP3 file")
+			return selected{}, errors.New("intake packet content must be one regular EPUB, PDF, MP3, M4B, or M4A file")
 		}
 		found = append(found, name)
 	}
 	if len(found) != 1 {
-		return selected{}, errors.New("intake packet requires exactly one of content.epub, content.pdf, or content.mp3")
+		return selected{}, errors.New("intake packet requires exactly one content file: content.epub, .pdf, .mp3, .m4b, or .m4a")
 	}
 	receipt, err := readReceipt(root)
 	if err != nil {
@@ -1124,7 +1124,7 @@ func within(root, target string) bool {
 
 func importFormat(name string) string {
 	switch strings.ToLower(filepath.Ext(name)) {
-	case ".epub", ".pdf", ".mp3":
+	case ".epub", ".pdf", ".mp3", ".m4b", ".m4a":
 		return strings.TrimPrefix(strings.ToLower(filepath.Ext(name)), ".")
 	}
 	return ""
@@ -1140,7 +1140,7 @@ func runStage(stage importStage, name string) error {
 func importLimitations() []string {
 	return []string{
 		"Import copies the assessed bytes and preserves the source. Nothing is deleted.",
-		"checked requires an EPUB, a PDF whose page tree was walked and whose active content was fully examined and empty, or an MP3 whose frames were indexed without damage or truncation, with limited checks passed and a scan that reported no detections. Other results stay in review.",
+		"checked requires an EPUB, a PDF whose page tree was walked and whose active content was fully examined and empty, an MP3 whose frames were indexed without damage or truncation, or an M4B or M4A whose every sample was located inside its media data, with limited checks passed and a scan that reported no detections. Other results stay in review.",
 		"Review is not a safety guarantee. PDF page content, audio decoding, archive extraction, and cleanup are not part of this operation.",
 		"An EPUB package identifier is recorded evidence. It does not merge files or assign a recording or track.",
 		"File sync is required. Directory-entry durability across power loss depends on the filesystem.",

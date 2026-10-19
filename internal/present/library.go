@@ -340,6 +340,9 @@ func Recordings(r library.RecordingsResult) string {
 	return b.String()
 }
 
+// Clock formats milliseconds as H:MM:SS.mmm for the terminal interface.
+func Clock(ms int64) string { return clock(ms) }
+
 // clock formats milliseconds as H:MM:SS.mmm.
 func clock(ms int64) string {
 	return fmt.Sprintf("%d:%02d:%02d.%03d", ms/3600000, ms/60000%60, ms/1000%60, ms%1000)

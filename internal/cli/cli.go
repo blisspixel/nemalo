@@ -540,7 +540,7 @@ func Execute(ctx context.Context, args []string, out, errOut io.Writer, service 
 				return write(nil, errors.New("library list requires limit 1-100, offset 0-100000, and query at most 1000 bytes"), 2)
 			}
 			if !library.ValidFormatFilter(*format) {
-				return write(nil, errors.New("format filter must be all, epub, pdf, or mp3"), 2)
+				return write(nil, errors.New("format filter must be all, epub, pdf, mp3, m4b, or m4a"), 2)
 			}
 			// A library directory lists managed holdings; a file is a snapshot.
 			if info, statErr := os.Lstat(flags.Arg(0)); statErr == nil && info.IsDir() && info.Mode()&os.ModeSymlink == 0 {

@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- M4B audiobooks and M4A tracks can be checked, imported, ingested, acquired from Archive with `acquire --file`, and listed with `library list --format m4b`. Their sample tables are read without loading or decoding audio, and every sample must lie inside the file: a cut-short download, misplaced or overlapping samples, a fragmented file, or protected audio keeps it in review, and protection is an access restriction. With a clean scan such a file is `checked`. `content units --representation mp4-audio/1` and the TUI list the timing and the QuickTime or Nero chapters; a player gets the file through `library open`. A library that holds an M4B or M4A needs this version or newer ([decision 0039](docs/decisions/0039-mp4-audio-samples.md)).
+- `check` shows MP3 frame and MP4 sample facts in its text output.
+- The `library import` help and rescan limitations no longer say that only EPUBs can be checked or rescanned.
 - `check --epubcheck` runs an installed EPUBCheck on an EPUB and lists its errors and warnings. Reported errors, or a requested check that could not run, are review findings. It is optional and not part of the checked policy ([decision 0038](docs/decisions/0038-optional-epubcheck.md)).
 - `library list LIBRARY --language TAG` and MCP `library_list` `language` keep holdings that declare that base language, so `en`, `en-US`, and `eng` are one. Free text such as `English` is never read as a language, and holdings without a readable tag are counted ([decision 0037](docs/decisions/0037-base-language-filter.md)).
 - An EPUB whose only encryption is font obfuscation is no longer held for review or refused by content access; the obfuscated fonts are recorded. Other encryption, a wrapped key, an unreadable declaration, or an Adobe or LCP DRM license still keeps it in review, and an obfuscated font is never served as a resource ([decision 0036](docs/decisions/0036-epub-font-obfuscation.md)).

@@ -730,7 +730,7 @@ func planCleanup(ctx context.Context, store, src *os.Root, lines []Holding) ([]C
 		}
 		dir := path.Dir(e.Path)
 		contents := []string{}
-		for _, c := range []string{"content.epub", "content.pdf", "content.mp3"} {
+		for _, c := range packetContents {
 			if regular(path.Join(dir, c)) {
 				contents = append(contents, path.Join(dir, c))
 			}
@@ -758,7 +758,7 @@ func planCleanup(ctx context.Context, store, src *os.Root, lines []Holding) ([]C
 		if path.Base(e.Path) != "intent.json" || packets[dir] != nil {
 			continue
 		}
-		for _, c := range []string{"content.epub", "content.pdf", "content.mp3"} {
+		for _, c := range packetContents {
 			if _, ok := present[path.Join(dir, c)]; ok {
 				incomplete[path.Join(dir, c)] = true
 			}

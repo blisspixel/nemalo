@@ -75,7 +75,7 @@ Options:
   nothing.
 `,
 	"acquire": `nemalo acquire archive:ITEM --file NAME --output NEW_DIRECTORY
-  Download a selected EPUB, PDF, or MP3 into untrusted intake.
+  Download a selected EPUB, PDF, MP3, M4B, or M4A into untrusted intake.
 nemalo acquire gutenberg:NUMBER --file NAME --output NEW_DIRECTORY
   Download one EPUB named by the bibliographic record, such as
   1342.epub.noimages, into untrusted intake.
@@ -135,13 +135,13 @@ published bytes. It does not prove those bytes are safe.
 nemalo library status DIRECTORY
   Read control identity and journal state without creating files.
 nemalo library import LIBRARY SOURCE [--apply] [--scan]
-  Assess one EPUB, PDF, MP3, or intake packet; --apply stores it.
+  Assess one EPUB, PDF, MP3, M4B, M4A, or intake packet; --apply stores it.
 nemalo library ingest LIBRARY FOLDER [--apply] [--scan]
-  Import every EPUB, PDF, MP3, intake packet, and ZIP member in a folder;
+  Import every EPUB, PDF, MP3, M4B, M4A, intake packet, and ZIP member in a folder;
   the folder and its archives are preserved.
 nemalo library list CATALOG|LIBRARY [--query TEXT]
   Browse a snapshot's files, or a managed library's holdings.
-  Options: --format all|epub|pdf|mp3, --limit 10, --offset 0,
+  Options: --format all|epub|pdf|mp3|m4b|m4a, --limit 10, --offset 0,
            --status all|checked|review, --language en (managed library
            only; matches the declared base language, so en, en-US, and
            eng are one; holdings without a readable tag are counted)
@@ -173,9 +173,11 @@ nemalo library snapshot DIRECTORY --output FILE [--assess]
   the inspect max-* limits.
 
 library import copies one assessed file into an initialized library and
-preserves the source. Without --apply it writes nothing. checked requires an
-EPUB whose limited checks passed and whose scan reported no detections. PDF,
-MP3, unscanned, and other results stay in review. Snapshots hash all regular
+preserves the source. Without --apply it writes nothing. checked requires
+limited checks that passed with no finding and a scan that reported no
+detections: a PDF's page tree and active content fully examined, an MP3's
+frames indexed, an M4B's or M4A's samples all located. Unscanned and other
+results stay in review. Snapshots hash all regular
 files, account for excluded links, refuse incomplete inventories, and never
 overwrite. A snapshot audit requires --root; the catalog cannot authorize a
 scan. A library audit compares managed holdings only.
@@ -229,7 +231,7 @@ nemalo content capabilities
 Read options:
   --unit 0, --text-offset 0, --max-bytes 4096, --cursor TOKEN
   --representation epub-text/2|epub-text/1|epub-structure/1|epub-nav/1|
-                   epub-page-list/1|pdf-text/1|mpeg-audio/1
+                   epub-page-list/1|pdf-text/1|mpeg-audio/1|mp4-audio/1
   --navigation nav-doc|ncx, --label LABEL (epub-page-list/1),
   --part ID, --sample N (mpeg-audio/1)
 
@@ -242,7 +244,9 @@ names which one with --navigation. epub-page-list/1 reads from one declared
 page label: --label LABEL by its exact text, --unit by its order, or --cursor
 with its reference; a label that several markers carry lists them instead. A
 page label is the EPUB's own marker, not a screen page or a print-edition
-match. Extraction is not rendered layout or acknowledgement of reading.
+match. mp4-audio/1 lists an M4B's or M4A's located samples, timing, and
+declared chapters, units only; play the file with library open or export.
+Extraction is not rendered layout or acknowledgement of reading.
 `,
 	"read": `nemalo read CATALOG|LIBRARY --root DIRECTORY --asset sha256:HASH [options]
   Read EPUB or PDF text as terminal pages, or one word at a time. For a

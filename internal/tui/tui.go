@@ -436,7 +436,7 @@ func (m *model) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 		switch msg.String() {
 		case "f4":
 			if m.mode == "holdings" && !m.busy {
-				formats := []string{"epub", "pdf", "mp3", "all"}
+				formats := []string{"epub", "pdf", "mp3", "m4b", "m4a", "all"}
 				for i, format := range formats {
 					if format == m.format {
 						m.format = formats[(i+1)%len(formats)]

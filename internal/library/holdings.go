@@ -7,6 +7,7 @@ import (
 	"io"
 	"os"
 	"path"
+	"slices"
 	"strings"
 
 	"github.com/blisspixel/nemalo/internal/assessment"
@@ -126,18 +127,20 @@ func validAssetID(id string) bool {
 
 func classify(report assessment.Report, scan bool) (status, reason string, err error) {
 	format := report.DetectedFormat
-	if format != "epub" && format != "pdf" && format != "mp3" {
-		return "", "", errors.New("import accepts EPUB, PDF, and MP3 assessment results")
+	if !validFormat(format) {
+		return "", "", errors.New("import accepts EPUB, PDF, MP3, M4B, and M4A assessment results")
 	}
 	if report.SHA256 == "" || report.Bytes < 1 || report.Status == "" || report.Status == "incomplete" {
 		return "", "", errors.New("assessment incomplete; source unchanged and nothing imported")
 	}
 	// A PDF is checked like an EPUB, and only when its page tree was walked
 	// and its active content fully examined and empty; an MP3 only when its
-	// frames were indexed. Anything less is a finding that keeps it in review.
+	// frames were indexed, and an M4B or M4A only when every sample was
+	// located. Anything less is a finding that keeps it in review.
 	examined := format == "epub" ||
 		(format == "pdf" && report.Checks.PDF != nil && !report.Checks.PDF.Partial && report.Checks.PDF.ActiveExamined && len(report.Checks.PDF.ActiveContent) == 0) ||
-		(format == "mp3" && report.Checks.MP3 != nil && report.Checks.MP3.Frames > 0)
+		(format == "mp3" && report.Checks.MP3 != nil && report.Checks.MP3.Frames > 0) ||
+		((format == "m4b" || format == "m4a") && report.Checks.MP4 != nil && report.Checks.MP4.Samples > 0)
 	if scan && examined && report.Status == "limited_checks_passed" && report.Antivirus.Status == "no_detections_reported" && len(report.Findings) == 0 {
 		return "checked", "checks_and_scan_recorded", nil
 	}
@@ -349,8 +352,15 @@ func parseHoldings(b []byte, libraryID string) ([]Holding, error) {
 	return out, nil
 }
 
+// heldFormats are the formats a library holds. M4B and M4A share the MP4
+// container; the extension names an audiobook or a track.
+var heldFormats = []string{"epub", "pdf", "mp3", "m4b", "m4a"}
+
+// packetContents are the content names an intake packet may hold, one each.
+var packetContents = []string{"content.epub", "content.pdf", "content.mp3", "content.m4b", "content.m4a"}
+
 func validFormat(format string) bool {
-	return format == "epub" || format == "pdf" || format == "mp3"
+	return slices.Contains(heldFormats, format)
 }
 
 func validHolding(h Holding, libraryID string) bool {

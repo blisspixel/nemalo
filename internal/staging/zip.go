@@ -28,7 +28,7 @@ type Limits struct {
 	Ratio       uint64
 }
 
-// Defaults bound one archive. EPUB, PDF, and MP3 are already compressed, so a
+// Defaults bound one archive. EPUB, PDF, MP3, and MP4 audio are compressed, so a
 // genuine member expands only a few times in the ZIP; 100:1 marks a member as
 // suspicious long before the byte caps, which bind what is actually written.
 func Defaults() Limits {

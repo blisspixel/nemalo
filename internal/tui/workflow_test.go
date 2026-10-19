@@ -167,7 +167,7 @@ func TestHoldingsPaginationAndBudget(t *testing.T) {
 		t.Fatal("format changed during operation")
 	}
 	m.busy = false
-	for _, expected := range []string{"mp3", "all", "epub"} {
+	for _, expected := range []string{"mp3", "m4b", "m4a", "all", "epub"} {
 		m.Update(key(tea.KeyF4))
 		if m.format != expected {
 			t.Fatal("format cycling incomplete")

@@ -25,7 +25,7 @@ AI service. The agent interface (MCP) uses the same application services.
 - Acquire one Gutenberg EPUB named by its bibliographic record, such as
   `1342.epub.noimages`, from gutenberg.pglaf.org. `evaluate --files` lists
   the offers and does not download one. Other formats stay listed.
-- Acquire a selected Archive EPUB, PDF, or MP3 into exclusive untrusted intake,
+- Acquire a selected Archive EPUB, PDF, MP3, M4B, or M4A into exclusive untrusted intake,
   with source checksums, local checks, a scan by the installed antivirus, and a
   provenance receipt. A detection is quarantined and other files are offered.
   Acquire a whole LibriVox recording in declared track order, with each
@@ -39,11 +39,12 @@ AI service. The agent interface (MCP) uses the same application services.
 - List and search a managed library, and open a holding in a reader or player
   through a verified read-only copy, so readers never modify stored files.
 - Initialize library control state with locking and resumable initialization.
-- Import one EPUB, PDF, or MP3, or a completed intake packet, into an initialized
-  library. Preview writes nothing. Checked status requires a passed EPUB check,
-  a PDF whose page tree and active content (scripts, launch and automatic
-  actions, attachments) were examined and clean, or an MP3 whose frames
-  indexed without damage, and a recorded no-detection scan; other assessed files stay in review.
+- Import one EPUB, PDF, MP3, M4B, or M4A, or a completed intake packet, into an
+  initialized library. Preview writes nothing. Checked status requires a passed
+  EPUB check, a PDF whose page tree and active content (scripts, launch and
+  automatic actions, attachments) were examined and clean, an MP3 whose frames
+  indexed without damage, or an M4B or M4A whose every sample lies inside the
+  file, and a recorded no-detection scan; other assessed files stay in review.
   `library ingest` imports a whole folder, including intake packets and ZIP
   members, and preserves the folder. `library cleanup` then moves sources whose
   books the library holds into a recoverable holding area, and `library restore`
@@ -59,7 +60,8 @@ AI service. The agent interface (MCP) uses the same application services.
   unmapped text, and scanned pages located as gaps. Exact quotations can be
   located by page and offset. MP3 tracks report probed and declared timing and
   chapters, and return decodable ranges; held recordings list their tracks in
-  order with missing positions.
+  order with missing positions. M4B and M4A audiobooks list their timing and
+  chapters and open in a player.
 - Read a held EPUB or PDF in the terminal with `nemalo read`: pages sized to
   the screen, or one word at a time at a rate you control. Hard-wrapped
   paragraphs flow as paragraphs. `f` opens a source note or link and Escape

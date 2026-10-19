@@ -73,7 +73,8 @@ controls, budgets, paging, appearance, and application-view captures.
 Content retrieval uses CLI/JSON and the TUI Read operation over shared services.
 The default `epub-text/2` returns readable text with each omitted image, table,
 or other element located as a gap. `mpeg-audio/1` indexes MP3 frames and returns
-decodable frame ranges with decoder preroll; nothing is decoded. Capability negotiation, structured EPUB parts,
+decodable frame ranges with decoder preroll; `mp4-audio/1` lists an M4B's or
+M4A's sample tables and chapters, units only; nothing is decoded. Capability negotiation, structured EPUB parts,
 note references, original markup, and bounded local image bytes are available in
 CLI/JSON, and through the read-only MCP server.
 See [source-bound access](CONTENT-ACCESS.md) and [structured EPUB](STRUCTURED-EPUB.md)
@@ -158,8 +159,11 @@ Font obfuscation alone is recorded, not a finding
 ([decision 0036](decisions/0036-epub-font-obfuscation.md)). PDF checks walk the page
 tree and active content without reading page content
 ([decision 0032](decisions/0032-pdf-checked-policy.md)); MP3 checks index frames
-without decoding ([decision 0033](decisions/0033-mp3-checked-policy.md)). Audio
-decoding remains unsupported.
+without decoding ([decision 0033](decisions/0033-mp3-checked-policy.md)); M4B
+and M4A checks place every sample from the sample tables, reading no media
+data, and find truncation, misplaced samples, fragments, and protected audio
+([decision 0039](decisions/0039-mp4-audio-samples.md)). Audio decoding remains
+unsupported.
 
 `--expected-bytes` and `--expected-sha256` compare known external expectations.
 `--epubcheck` runs an installed EPUBCheck on an EPUB snapshot; reported errors,
@@ -197,7 +201,7 @@ any scan line. A local Gutenberg evaluation names `evaluate gutenberg:N --files`
 an evaluation with an eligible file names `acquire` for the first EPUB, else the
 first PDF, by the same check acquire applies; a complete, undetected acquisition
 names `library import` (the configured library, or `LIBRARY`); an import preview
-names `--apply`; and a held EPUB or PDF names `read`, an MP3 `library open`.
+names `--apply`; and a held EPUB or PDF names `read`, an audio file `library open`.
 Arguments are quoted for a POSIX shell, or PowerShell on Windows, so a pasted
 command interprets nothing from a source name, and a name holding a control or
 format character is left out. `--json` output carries no `Next:` lines.
@@ -298,13 +302,15 @@ label separately, text in content-stream order, and located gaps; `check`
 records its page count and labels and keeps an unreadable page tree in review
 ([decision 0021](decisions/0021-pdf-pages-and-text.md)).
 
-Import requires an initialized library. The source is an EPUB, PDF, or MP3 file
-outside that library, or a completed intake directory with exactly one
-`content.epub`, `content.pdf`, or `content.mp3` and a matching `receipt.json`.
-Without `--apply`, nothing is written. `--apply` copies the assessed bytes and
-leaves the source in place. `--scan` can invoke installed antivirus. `checked`
-requires an EPUB whose limited checks passed and whose scan reported no
-detections. Other results stay in review. For an intake packet, a clean scan
+Import requires an initialized library. The source is an EPUB, PDF, MP3, M4B,
+or M4A file outside that library, or a completed intake directory with exactly
+one `content.epub`, `content.pdf`, `content.mp3`, `content.m4b`, or
+`content.m4a` and a matching `receipt.json`. Without `--apply`, nothing is
+written. `--apply` copies the assessed bytes and leaves the source in place.
+`--scan` can invoke installed antivirus. `checked` requires limited checks
+that passed with no finding and a scan that reported no detections; a PDF,
+MP3, M4B, or M4A also needs its format's examination (decisions 0032, 0033,
+and 0039). Other results stay in review. For an intake packet, a clean scan
 recorded at acquisition and bound to the same SHA-256 counts without scanning
 again, but only where the holding has no usable scan evidence; it never replaces
 a recorded detection. A packet whose receipt records a detection is refused. A later import without `--scan` does
@@ -313,7 +319,7 @@ not downgrade `checked`. A scan gap with no other finding is recorded as
 hard link, or a store path whose parent is not a real directory fails before a
 new intent is written. The existing bytes stay in place.
 
-`library ingest` imports a whole folder: every EPUB, PDF, MP3, intake packet,
+`library ingest` imports a whole folder: every EPUB, PDF, MP3, M4B, M4A, intake packet,
 and supported ZIP member, through the same import and journal, and lists every
 other entry with a reason. ZIP members are extracted into private temporary
 staging with path, size, ratio, and CRC checks and recorded as
@@ -368,10 +374,10 @@ nemalo library rescan /path/to/library
 nemalo library rescan /path/to/library --apply
 ```
 
-Rescan reruns the limited checks and scans each EPUB holding in review only
+Rescan reruns the limited checks and scans each holding in review only
 because scan evidence is missing or unusable. It writes nothing without
 `--apply`. ClamAV receives up to 32 files per invocation, so signatures load once
-per batch rather than once per file. EPUB, PDF, and MP3 holdings are rescanned;
+per batch rather than once per file. Holdings of every held format are rescanned;
 earlier detections and other findings are listed with a reason and not scanned. Stored bytes are
 never changed; bytes that no longer match their holding receive no status.
 Applied changes are journaled as `rescan_intent`, holding line, and
@@ -464,11 +470,13 @@ are in place. Interrupted downloads resume against a strong validator
 selected Gutenberg EPUB can be acquired from gutenberg.pglaf.org
 (decision 0029). An Open Library work lists editions, and one chosen edition
 can name an Archive item through its ocaid before the existing Archive
-acquire runs (decision 0030). Checked publication is still the milestone 3
-gap. Website
-search, other Gutenberg formats, recording identity across hosts, M4B, OCR, and
-column reconstruction stay later. LibriVox readers are credited per track when
-the project links back ([decision 0035](decisions/0035-librivox-readers.md)). MCP remains a scoped read-only adapter over
-the same services. Generated analysis and model/harness integrations remain
-post-1.0. Issues 1 and 2 are closed; their remaining OCR, column, and M4B work
-is milestone 7 and 8.
+acquire runs (decision 0030). EPUB, PDF, MP3, M4B, and M4A holdings can be
+checked (decisions 0009, 0032, 0033, and 0039). LibriVox readers are credited
+per track when the project links back
+([decision 0035](decisions/0035-librivox-readers.md)). MCP is a scoped
+adapter over the same services; `--allow-write` adds only previewed imports
+([decision 0034](decisions/0034-mcp-import-tools.md)). Website search, other
+Gutenberg formats, recording identity across hosts, decoded audio timing, files
+above 256 MiB, OCR, and column reconstruction stay later. Generated analysis
+and model/harness integrations remain post-1.0. Issues 1 and 2 are closed;
+their remaining OCR, column, and decoded audio work is milestone 7 and 8.

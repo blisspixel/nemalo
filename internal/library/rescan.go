@@ -59,8 +59,8 @@ var rescannable = map[string]bool{"unscanned": true, "scan_unavailable": true, "
 // Stored bytes are never modified, moved, or removed.
 func Rescan(ctx context.Context, request RescanRequest) (result RescanResult, err error) {
 	result = RescanResult{SchemaVersion: 1, Library: request.Library, Scanned: []RescanItem{}, Skipped: []RescanItem{}, Limitations: []string{
-		"Only EPUB holdings in review for a missing, unavailable, or incomplete scan are scanned. Their limited checks run again first.",
-		"A previous detection, a PDF or MP3, or other findings stay in review and are not rescanned.",
+		"Only holdings in review for a missing, unavailable, or incomplete scan are scanned. Their limited checks run again first.",
+		"A previous detection or other findings stay in review and are not rescanned.",
 		"A no-detection result is not proof the file is safe. Stored files are never changed.",
 	}}
 	if request.Library == "" {
@@ -117,7 +117,7 @@ func Rescan(ctx context.Context, request RescanRequest) (result RescanResult, er
 		item := RescanItem{AssetID: h.ID, Path: h.Path, Format: h.Format, Before: h.Status, BeforeReason: h.Reason}
 		reason := h.Reason
 		if reason == "format_not_checked_for_publication" {
-			// Held before a PDF or MP3 could become checked; assessed now.
+			// Held before its format could become checked; assessed now.
 			reason = "unscanned"
 		}
 		switch {

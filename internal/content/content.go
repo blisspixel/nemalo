@@ -157,7 +157,9 @@ type Result struct {
 	Breaks     []Break      `json:"breaks,omitempty"`
 	Audio      *audio.Track `json:"audio,omitempty"`
 	AudioRange *audio.Range `json:"audio_range,omitempty"`
-	Matches    []Match      `json:"matches,omitempty"`
+	// MP4 is the mp4-audio/1 sample table summary and declared chapters.
+	MP4     *audio.MP4 `json:"mp4,omitempty"`
+	Matches []Match    `json:"matches,omitempty"`
 	// Navigation is the source-declared table of contents for epub-nav/1.
 	// A read carries the one selected entry. Spine units stay in Units.
 	Navigation []NavDocument `json:"navigation,omitempty"`
@@ -225,7 +227,7 @@ func Get(ctx context.Context, req Request) (result Result, err error) {
 			result.Text, result.Continuation, result.Locator = "", "", nil
 			result.Units = nil
 			result.Parts, result.Coverage, result.Resource, result.Gaps = nil, nil, nil, nil
-			result.Audio, result.AudioRange, result.Matches = nil, nil, nil
+			result.Audio, result.AudioRange, result.Matches, result.MP4 = nil, nil, nil, nil
 			result.Navigation, result.RangeEnd = nil, nil
 			result.PageLists, result.Pagination, result.Page, result.PageEnd = nil, nil, nil, nil
 			result.RangeStatus = ""
@@ -268,6 +270,8 @@ func Get(ctx context.Context, req Request) (result Result, err error) {
 		return getStructured(ctx, req, result)
 	case "mpeg-audio/1":
 		return getAudio(ctx, req, result)
+	case "mp4-audio/1":
+		return getMP4(ctx, req, result)
 	case "pdf-text/1":
 		if req.Part != "" || req.Resource {
 			return result, errors.New("part/resource access is unavailable for pdf-text/1")

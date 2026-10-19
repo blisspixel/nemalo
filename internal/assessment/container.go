@@ -40,6 +40,24 @@ type Checks struct {
 	PDF *pdftext.Facts `json:"pdf,omitempty"`
 	// MP3 holds the frame index facts of an MP3 whose frames were indexed.
 	MP3 *MP3Facts `json:"mp3,omitempty"`
+	// MP4 holds the sample table facts of an M4B or M4A whose samples were
+	// located.
+	MP4 *MP4Facts `json:"mp4,omitempty"`
+}
+
+// MP4Facts summarize the sample tables of one MP4 audio file. Every sample of
+// every track was located inside the file's media data; none was decoded.
+// Notes are measured facts that do not change what plays.
+type MP4Facts struct {
+	Brand             string   `json:"brand"`
+	Codec             string   `json:"codec"`
+	SampleRate        int      `json:"sample_rate"`
+	Channels          int      `json:"channels"`
+	Samples           int      `json:"samples"`
+	EncodedDurationMs int64    `json:"encoded_duration_ms"`
+	Chapters          int      `json:"chapters"`
+	ChapterSource     string   `json:"chapter_source,omitempty"`
+	Notes             []string `json:"notes"`
 }
 
 // MP3Facts summarize the MPEG frame index of one track. Notes are measured
@@ -259,6 +277,28 @@ func inspectContext(ctx context.Context, r io.ReaderAt, size int64, format strin
 				facts.Notes = append(facts.Notes, "mp3_declared_length_differs")
 			}
 			c.MP3 = facts
+		}
+	case "m4b", "m4a":
+		if len(header) < 8 || string(header[4:8]) != "ftyp" {
+			return c, errors.New("MP4 file type box missing")
+		}
+		c.Signature = "mp4_candidate_only"
+		// The sample tables are read through r; media data is never loaded.
+		m, err := audio.ProbeMP4(ctx, r, size)
+		switch {
+		case ctx.Err() != nil:
+			return c, ctx.Err()
+		case err != nil:
+			c.Warnings = append(c.Warnings, "mp4_samples_not_indexed")
+			// A box past the end is measured even when nothing indexed.
+			c.Warnings = append(c.Warnings, m.Findings...)
+		default:
+			c.Signature = "mp4_samples_indexed"
+			c.Warnings = append(c.Warnings, m.Findings...)
+			if m.Encrypted() {
+				c.AccessRestrictions = append(c.AccessRestrictions, audio.MP4Encrypted)
+			}
+			c.MP4 = &MP4Facts{Brand: m.Brand, Codec: m.Codec, SampleRate: m.SampleRate, Channels: m.Channels, Samples: m.Samples, EncodedDurationMs: m.EncodedDurationMs, Chapters: len(m.Chapters), ChapterSource: m.ChapterSource, Notes: m.Notes}
 		}
 	case "epub":
 		if !bytes.HasPrefix(header, []byte("PK\x03\x04")) {

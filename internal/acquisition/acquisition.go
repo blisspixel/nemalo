@@ -51,7 +51,7 @@ func (r Request) Validate() error {
 		return errors.New("acquire requires archive:ITEM or gutenberg:NUMBER, an exact source filename, a new output directory, and a 1-268435456 byte budget")
 	}
 	if archiveID && format(r.File) == "" {
-		return errors.New("acquisition currently supports selected EPUB, PDF, and MP3 files")
+		return errors.New("acquisition currently supports selected EPUB, PDF, MP3, M4B, and M4A files")
 	}
 	if gutenbergID && !discovery.GutenbergEPUBName(r.SourceID, r.File) {
 		return errors.New("gutenberg acquisition supports one EPUB named by the bibliographic record, such as 1342.epub.noimages")
@@ -592,7 +592,7 @@ func contentFormat(file discovery.OfferedFile) string {
 
 func format(name string) string {
 	switch ext := strings.ToLower(path.Ext(name)); ext {
-	case ".epub", ".pdf", ".mp3":
+	case ".epub", ".pdf", ".mp3", ".m4b", ".m4a":
 		return ext[1:]
 	}
 	return ""

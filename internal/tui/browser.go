@@ -16,6 +16,8 @@ import (
 type entry struct {
 	title, summary, detail, sourceID string
 	audio, pdf                       bool
+	// mp4 marks an M4B or M4A, which lists its sample tables and chapters.
+	mp4 bool
 	// managed marks a holding of a library directory, which is read with the
 	// same directory as catalog and root.
 	managed bool
@@ -138,6 +140,7 @@ func (m *model) populate(data any) {
 				sourceID: a.ID,
 				audio:    len(a.Locations) > 0 && strings.HasSuffix(strings.ToLower(a.Locations[0].Path), ".mp3"),
 				pdf:      len(a.Locations) > 0 && strings.HasSuffix(strings.ToLower(a.Locations[0].Path), ".pdf"),
+				mp4:      len(a.Locations) > 0 && (strings.HasSuffix(strings.ToLower(a.Locations[0].Path), ".m4b") || strings.HasSuffix(strings.ToLower(a.Locations[0].Path), ".m4a")),
 			})
 		}
 	case library.ManagedPage:
@@ -170,12 +173,18 @@ func (m *model) populate(data any) {
 			if recording != "" {
 				detail += "t shows the whole recording: declared order, missing tracks, and indexed timing.\n"
 			}
-			m.entries = append(m.entries, entry{title: line(title), summary: joinParts(words(h.Format), words(h.Status), byteSize(h.Bytes), list(h.Languages)), detail: detail, sourceID: h.ID, audio: h.Format == "mp3", pdf: h.Format == "pdf", managed: true, recording: recording})
+			m.entries = append(m.entries, entry{title: line(title), summary: joinParts(words(h.Format), words(h.Status), byteSize(h.Bytes), list(h.Languages)), detail: detail, sourceID: h.ID, audio: h.Format == "mp3", pdf: h.Format == "pdf", mp4: h.Format == "m4b" || h.Format == "m4a", managed: true, recording: recording})
 		}
 	case content.Result:
 		if p.Status == "units_available" && p.Audio != nil {
 			a := p.Audio
 			m.entries = append(m.entries, entry{title: "MP3 track: " + line(a.Format), summary: fmt.Sprintf("%d Hz | %d ch | %d frames | %d ms encoded", a.SampleRate, a.Channels, a.Frames, a.EncodedDurationMs), detail: fmt.Sprintf("MP3 track\n\nFormat: %s\nSample rate: %d Hz\nChannels: %d\nIndexed frames: %d\nEncoded duration: %d ms\nDeclared chapters: %d\nUnindexed regions: %d\n\nEnter retrieves a frame range from the start; n continues.\nAudio bytes are not shown or played here.\nNo listening progress is recorded.", line(a.Format), a.SampleRate, a.Channels, a.Frames, a.EncodedDurationMs, len(a.Chapters), len(a.Gaps))})
+		} else if p.Status == "units_available" && p.MP4 != nil {
+			a := p.MP4
+			m.entries = append(m.entries, entry{title: "MP4 audio: " + words(a.Codec), summary: fmt.Sprintf("%d Hz | %d ch | %d samples | %s encoded", a.SampleRate, a.Channels, a.Samples, present.Clock(a.EncodedDurationMs)), detail: fmt.Sprintf("MP4 audio\n\nCodec: %s\nSample rate: %d Hz\nChannels: %d\nLocated samples: %d\nEncoded duration: %s\nDeclared chapters: %d\nFindings: %s\n\nEvery sample was located in the file; nothing was decoded.\nAudio is not played here: in Holdings, o opens a verified copy in a player.\nNo listening progress is recorded.", words(a.Codec), a.SampleRate, a.Channels, a.Samples, present.Clock(a.EncodedDurationMs), len(a.Chapters), firstOf(list(a.Findings), "none"))})
+			for _, c := range a.Chapters {
+				m.entries = append(m.entries, entry{title: "Chapter: " + firstOf(line(c.Title), line(c.ID)), summary: present.Clock(c.StartMs) + " to " + present.Clock(c.EndMs), detail: fmt.Sprintf("Declared chapter\n\nTitle: %s\nStart: %s\nEnd: %s\nSource: %s\n\nChapter times are the file's own declarations, not checked by decoding.\n", line(c.Title), present.Clock(c.StartMs), present.Clock(c.EndMs), words(a.ChapterSource))})
+			}
 		} else if p.Status == "units_available" && p.Representation == "pdf-text/1" {
 			for _, u := range p.Units {
 				label := pageLabel(u.PageLabel)
@@ -442,6 +451,9 @@ func (m *model) browserKey(key string) (bool, tea.Cmd) {
 			}
 			if selected.pdf {
 				representation = "pdf-text/1"
+			}
+			if selected.mp4 {
+				representation = "mp4-audio/1"
 			}
 			cmd := m.switchMode("read")
 			m.reader = readerState{asset: selected.sourceID, representation: representation}

@@ -276,7 +276,7 @@ func (m *model) resize() {
 	m.input.SetCursor(m.input.Position())
 	m.secondary.SetWidth(max(1, m.width-16))
 	m.secondary.SetCursor(m.secondary.Position())
-	m.secondary.Placeholder = clipWords(map[string]string{"snapshot": "New catalog path outside the source folder", "holdings": "Optional title, language, filename, or hash", "audit": "Source directory for a catalog; leave empty to check a library", "read": "Explicit source directory (required)", "evaluate": "New untrusted intake directory, for d acquire", "state": "EPUB, PDF, MP3, or completed intake packet"}[m.mode], max(1, m.width-16))
+	m.secondary.Placeholder = clipWords(map[string]string{"snapshot": "New catalog path outside the source folder", "holdings": "Optional title, language, filename, or hash", "audit": "Source directory for a catalog; leave empty to check a library", "read": "Explicit source directory (required)", "evaluate": "New untrusted intake directory, for d acquire", "state": "EPUB, PDF, MP3, M4B, M4A, or completed intake packet"}[m.mode], max(1, m.width-16))
 	if m.mode == "search" && m.source == "gutenberg" {
 		if m.catalog != "" {
 			m.secondary.Placeholder = m.catalog
