@@ -195,15 +195,22 @@ func (p *metadataClient) getJSONOnce(ctx context.Context, endpoint string, targe
 }
 
 func (p *metadataClient) deferRetry(raw string, now time.Time) {
-	var until time.Time
-	if seconds, err := strconv.ParseInt(raw, 10, 64); err == nil && seconds >= 0 {
-		until = now.Add(time.Duration(min(seconds, int64(math.MaxInt64/int64(time.Second)))) * time.Second)
-	} else if date, err := http.ParseTime(raw); err == nil {
-		until = date
-	}
+	until := retryUntil(raw, now)
 	p.mu.Lock()
 	p.next = maxTime(p.next, until)
 	p.mu.Unlock()
+}
+
+// retryUntil reads a Retry-After value, in seconds or as an HTTP date; an
+// absent or unreadable value gives the zero time.
+func retryUntil(raw string, now time.Time) time.Time {
+	if seconds, err := strconv.ParseInt(raw, 10, 64); err == nil && seconds >= 0 {
+		return now.Add(time.Duration(min(seconds, int64(math.MaxInt64/int64(time.Second)))) * time.Second)
+	}
+	if date, err := http.ParseTime(raw); err == nil {
+		return date
+	}
+	return time.Time{}
 }
 
 func (p *metadataClient) wait(ctx context.Context) error {

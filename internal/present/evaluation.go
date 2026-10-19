@@ -95,6 +95,18 @@ func Evaluation(e discovery.Evaluation) string {
 			indent("Finding", words(finding))
 		}
 	}
+	if l := e.LibriVox; l != nil {
+		switch l.Status {
+		case "linked":
+			fmt.Fprintf(&b, "\nLibriVox project %s links back to this item: %d section(s)\n", Line(l.ProjectID), len(l.Project.Sections))
+		default:
+			fmt.Fprintf(&b, "\nLibriVox project %s: %s", Line(l.ProjectID), words(l.Status))
+			if l.Detail != "" {
+				fmt.Fprintf(&b, " (%s)", Line(l.Detail))
+			}
+			b.WriteString("; no readers are credited\n")
+		}
+	}
 	for _, r := range e.Recordings {
 		acquirable := "not acquirable"
 		if r.Acquirable {
@@ -106,7 +118,17 @@ func Evaluation(e discovery.Evaluation) string {
 			if title := Line(t.Title); title != "" {
 				fmt.Fprintf(&b, " (%s)", title)
 			}
+			if len(t.Readers) > 0 {
+				names := make([]string, len(t.Readers))
+				for i, reader := range t.Readers {
+					names[i] = Line(reader.Name)
+				}
+				fmt.Fprintf(&b, ", read by %s", strings.Join(names, ", "))
+			}
 			b.WriteString("\n")
+		}
+		if r.ReaderEvidence == discovery.ReadersNotMatched {
+			b.WriteString("   Readers: LibriVox sections did not match these tracks by count and length; none credited\n")
 		}
 		for _, finding := range r.Findings {
 			fmt.Fprintf(&b, "   Finding: %s\n", words(finding))

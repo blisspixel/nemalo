@@ -180,6 +180,14 @@ checks of the audio. See
   command still runs. A refused resume, a size or checksum mismatch, the byte
   budget, a write failure, or cancellation stops at once, keeping the packet.
   A recording track continues in place the same way.
+- A request that fails before any body, with a transport error or a 429, 500,
+  502, 503, or 504 answer, is sent again up to three times in all, honoring a
+  `Retry-After` up to 30 seconds. Nothing has been written then.
+- For a LibriVox item, evaluation reads the LibriVox project its call number
+  names and credits readers per track only when the project names the item
+  back and its sections match the tracks by count and declared length
+  ([decision 0035](decisions/0035-librivox-readers.md)). Track receipts keep
+  those readers.
 
 Keep a failed packet for review. `acquire ... --file NAME --output PACKET
 --resume` continues an interrupted transfer in that packet when `transfer.json`

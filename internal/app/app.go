@@ -197,7 +197,7 @@ func scannerName(kind string) string {
 func New() Service {
 	return Service{Providers: map[string]Searcher{
 		"openlibrary": discovery.NewOpenLibrary(),
-		"archive":     discovery.NewArchive(),
+		"archive":     archiveWithLibriVox(),
 		"gutenberg":   discovery.NewGutenberg(),
 	}}
 }
@@ -551,4 +551,12 @@ func Lookup(name string) (string, error) {
 		return "", errors.New("installed Defender unavailable")
 	}
 	return exec.LookPath(name)
+}
+
+// archiveWithLibriVox is the Archive provider that also reads the LibriVox
+// project an audiobook item names, for its readers.
+func archiveWithLibriVox() *discovery.Archive {
+	a := discovery.NewArchive()
+	a.LibriVox = discovery.NewLibriVox()
+	return a
 }

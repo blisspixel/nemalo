@@ -296,6 +296,13 @@ func Recordings(r library.RecordingsResult) string {
 			fmt.Fprintf(&b, " | probed %s", clock(*m.ProbedMs))
 		}
 		b.WriteString("\n")
+		if len(m.Narrators) > 0 {
+			names := make([]string, len(m.Narrators))
+			for i, n := range m.Narrators {
+				names[i] = Line(n.Name)
+			}
+			fmt.Fprintf(&b, "  Read by: %s (LibriVox)\n", strings.Join(names, ", "))
+		}
 		if len(m.Missing) > 0 {
 			positions := make([]string, len(m.Missing))
 			for i, p := range m.Missing {

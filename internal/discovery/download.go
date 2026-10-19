@@ -3,6 +3,7 @@ package discovery
 import (
 	"context"
 	"errors"
+	"io"
 	"net"
 	"net/http"
 	"net/url"
@@ -10,6 +11,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/blisspixel/nemalo/internal/transfer"
 )
 
 // Archive assigns each item to a numbered data node in one of its delivery
@@ -81,24 +84,19 @@ func (p *Archive) DownloadFrom(ctx context.Context, file OfferedFile, offset int
 	if !ok || !ValidArchiveID("archive:"+item) || name != file.Name {
 		return nil, errors.New("download URL does not match the selected Archive file")
 	}
-	if err := p.wait(ctx); err != nil {
-		return nil, err
-	}
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u.String(), nil)
-	if err != nil {
-		return nil, err
-	}
-	req.Header.Set("User-Agent", "nemalo/0.1 (+https://github.com/blisspixel/nemalo)")
-	req.Header.Set("Accept-Encoding", "identity")
-	if offset > 0 {
-		req.Header.Set("Range", "bytes="+strconv.FormatInt(offset, 10)+"-")
-		req.Header.Set("If-Range", validator)
-	}
-	resp, err := p.fileClient().Do(req)
-	if err == nil && (resp.StatusCode == 429 || resp.StatusCode == 503) {
-		p.deferRetry(resp.Header.Get("Retry-After"), time.Now())
-	}
-	return resp, err
+	return requestFile(ctx, p.fileClient(), p.metadataClient, func() (*http.Request, error) {
+		req, err := http.NewRequestWithContext(ctx, http.MethodGet, u.String(), nil)
+		if err != nil {
+			return nil, err
+		}
+		req.Header.Set("User-Agent", "nemalo/0.1 (+https://github.com/blisspixel/nemalo)")
+		req.Header.Set("Accept-Encoding", "identity")
+		if offset > 0 {
+			req.Header.Set("Range", "bytes="+strconv.FormatInt(offset, 10)+"-")
+			req.Header.Set("If-Range", validator)
+		}
+		return req, nil
+	})
 }
 
 func (p *Archive) fileClient() *http.Client {
@@ -121,4 +119,62 @@ func StrongETag(v string) bool {
 		}
 	}
 	return true
+}
+
+// downloadAttempts bounds the requests for one file response; tests shorten
+// downloadPause. A server that asks to wait longer than maxRetryWait gets its
+// answer returned instead: the caller fails and keeps what it recorded.
+var (
+	downloadAttempts = 3
+	downloadPause    = func(attempt int) time.Duration { return time.Duration(attempt) * 2 * time.Second }
+)
+
+const maxRetryWait = 30 * time.Second
+
+// requestFile sends a file request and repeats it when it fails before any
+// body was read: a transient transport error, or a 429, 500, 502, 503, or 504
+// answer. Nothing has been written then, so the same request again is the
+// whole recovery. limiter, when set, spaces requests and honors Retry-After.
+// Any other answer, and the last attempt's, is returned to the caller.
+func requestFile(ctx context.Context, client *http.Client, limiter *metadataClient, build func() (*http.Request, error)) (*http.Response, error) {
+	for attempt := 1; ; attempt++ {
+		if limiter != nil {
+			if err := limiter.wait(ctx); err != nil {
+				return nil, err
+			}
+		} else if err := ctx.Err(); err != nil {
+			return nil, err
+		}
+		req, err := build()
+		if err != nil {
+			return nil, err
+		}
+		resp, err := client.Do(req)
+		retry, pause := false, downloadPause(attempt)
+		switch {
+		case err != nil:
+			retry = transfer.Transient(err) && ctx.Err() == nil
+		case resp.StatusCode == 429 || resp.StatusCode == 500 || resp.StatusCode == 502 || resp.StatusCode == 503 || resp.StatusCode == 504:
+			after := resp.Header.Get("Retry-After")
+			if limiter != nil && (resp.StatusCode == 429 || resp.StatusCode == 503) {
+				limiter.deferRetry(after, time.Now())
+			}
+			wait := time.Until(retryUntil(after, time.Now()))
+			retry, pause = wait <= maxRetryWait, max(pause, wait)
+		}
+		if !retry || attempt >= downloadAttempts {
+			return resp, err
+		}
+		if resp != nil {
+			_, _ = io.Copy(io.Discard, io.LimitReader(resp.Body, 64<<10))
+			_ = resp.Body.Close()
+		}
+		timer := time.NewTimer(pause)
+		select {
+		case <-ctx.Done():
+			timer.Stop()
+			return nil, ctx.Err()
+		case <-timer.C:
+		}
+	}
 }

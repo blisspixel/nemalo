@@ -168,21 +168,20 @@ func (g *Gutenberg) DownloadFrom(ctx context.Context, file OfferedFile, offset i
 	if !ok || !wantOK || file.DownloadURL != want {
 		return nil, errors.New("download URL does not match the pinned Gutenberg EPUB")
 	}
-	if err := ctx.Err(); err != nil {
-		return nil, err
-	}
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, want, nil)
-	if err != nil {
-		return nil, err
-	}
-	req.Header.Set("User-Agent", "nemalo/0.1 (+https://github.com/blisspixel/nemalo)")
-	req.Header.Set("Accept", "application/epub+zip, application/octet-stream")
-	req.Header.Set("Accept-Encoding", "identity")
-	if offset > 0 {
-		req.Header.Set("Range", "bytes="+strconv.FormatInt(offset, 10)+"-")
-		req.Header.Set("If-Range", validator)
-	}
-	return g.mirrorClient().Do(req)
+	return requestFile(ctx, g.mirrorClient(), nil, func() (*http.Request, error) {
+		req, err := http.NewRequestWithContext(ctx, http.MethodGet, want, nil)
+		if err != nil {
+			return nil, err
+		}
+		req.Header.Set("User-Agent", "nemalo/0.1 (+https://github.com/blisspixel/nemalo)")
+		req.Header.Set("Accept", "application/epub+zip, application/octet-stream")
+		req.Header.Set("Accept-Encoding", "identity")
+		if offset > 0 {
+			req.Header.Set("Range", "bytes="+strconv.FormatInt(offset, 10)+"-")
+			req.Header.Set("If-Range", validator)
+		}
+		return req, nil
+	})
 }
 
 // Files is the acquisition view of a Gutenberg catalog provider. Evaluate

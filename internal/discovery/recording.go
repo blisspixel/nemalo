@@ -22,6 +22,9 @@ type Recording struct {
 	OrderSource string   `json:"order_source"`
 	Acquirable  bool     `json:"acquirable"`
 	Findings    []string `json:"findings"`
+	// ReaderEvidence says whether a linked LibriVox project's sections were
+	// matched to these tracks; empty when no project is linked.
+	ReaderEvidence string `json:"reader_evidence,omitempty"`
 }
 
 // RecordingTrack is one file of a recording in play order. Position is the
@@ -33,6 +36,9 @@ type RecordingTrack struct {
 	Title           string  `json:"title,omitempty"`
 	Bytes           int64   `json:"declared_bytes"`
 	DeclaredSeconds float64 `json:"declared_seconds,omitempty"`
+	// Readers are the readers LibriVox credits for this track's section,
+	// when the sections were matched.
+	Readers []Reader `json:"readers,omitempty"`
 }
 
 const (

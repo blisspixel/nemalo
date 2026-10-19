@@ -59,11 +59,43 @@ type SourceRecording struct {
 	Tracks          int     `json:"tracks"`
 	Title           string  `json:"title,omitempty"`
 	DeclaredSeconds float64 `json:"declared_seconds,omitempty"`
+	// Readers are the readers a linked LibriVox project credits for this
+	// track, as declared at acquisition.
+	Readers []Reader `json:"readers,omitempty"`
+}
+
+// Reader is a LibriVox-credited reader, by its stable reader ID.
+type Reader struct {
+	ID   string `json:"librivox_reader_id"`
+	Name string `json:"name"`
 }
 
 func validRecording(r *SourceRecording) bool {
-	return r == nil || (validNote(r.Format, 200) && r.Position >= 1 && r.Position <= r.Tracks && r.Tracks <= 1000 &&
-		(r.Title == "" || validNote(r.Title, 500)) && r.DeclaredSeconds >= 0 && r.DeclaredSeconds <= 1e6)
+	if r == nil {
+		return true
+	}
+	if len(r.Readers) > 50 {
+		return false
+	}
+	for _, reader := range r.Readers {
+		if !validReaderID(reader.ID) || !validNote(reader.Name, 200) {
+			return false
+		}
+	}
+	return validNote(r.Format, 200) && r.Position >= 1 && r.Position <= r.Tracks && r.Tracks <= 1000 &&
+		(r.Title == "" || validNote(r.Title, 500)) && r.DeclaredSeconds >= 0 && r.DeclaredSeconds <= 1e6
+}
+
+func validReaderID(id string) bool {
+	if len(id) == 0 || len(id) > 9 || id[0] == '0' {
+		return false
+	}
+	for _, c := range id {
+		if c < '0' || c > '9' {
+			return false
+		}
+	}
+	return true
 }
 
 type operation struct {

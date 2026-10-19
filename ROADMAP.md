@@ -428,8 +428,7 @@ spine boundary is not that end
 Declared EPUB 3 page labels are `epub-page-list/1`, read from one marker by
 reference or exact label ([decision 0031](docs/decisions/0031-epub-page-list.md)).
 Claude Code validated the MCP contract as an external caller. Both issues are
-closed; OCR, column reconstruction, narrator identity, and M4B continue in
-milestones 7 and 8.
+closed; OCR, column reconstruction, and M4B continue in milestones 7 and 8.
 
 - Initial local access: resolve a stable library ID to exact assets/provenance,
   export/open in an explicitly configured reader, and report changed/missing files.
@@ -503,8 +502,11 @@ ingest records each track's declared place
 ([decision 0018](docs/decisions/0018-whole-recording-acquisition.md)).
 `recording-manifest/1` reports held tracks in order with exact hashes, missing
 positions, conflicts, and probed timing and offsets
-([decision 0020](docs/decisions/0020-recording-manifest.md)). Narrator identity,
-M4B and decoded timing remain. Depends on shared assessment/publication and recovery milestones.
+([decision 0020](docs/decisions/0020-recording-manifest.md)). Readers come from
+the LibriVox project an item names, linked only when it names the item back
+and credited per track only when sections match tracks by count and length
+([decision 0035](docs/decisions/0035-librivox-readers.md)). M4B and decoded
+timing remain. Depends on shared assessment/publication and recovery milestones.
 Can follow milestone 5 independently of paper-provider expansion.
 
 Deliver local MP3/M4B intake and LibriVox acquisition, permitted Archive audio

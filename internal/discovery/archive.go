@@ -20,6 +20,9 @@ type Archive struct {
 	*metadataClient
 	endpoint       string
 	downloadClient *http.Client
+	// LibriVox, when set, is consulted for an item that names a LibriVox
+	// project. Without it the project is reported as not checked.
+	LibriVox *LibriVox
 }
 
 func NewArchive() *Archive {
@@ -216,6 +219,9 @@ type Evaluation struct {
 	EditionCount int `json:"edition_count,omitempty"`
 	// EditionOffset is the page start requested for that list.
 	EditionOffset int `json:"edition_offset,omitempty"`
+	// LibriVox is the LibriVox project an item with recordings names, with
+	// its readers when the project names this item back.
+	LibriVox *LibriVoxLink `json:"librivox,omitempty"`
 	// OpenLibraryEdition is the edition whose ocaid selected this Archive item.
 	OpenLibraryEdition string   `json:"openlibrary_edition,omitempty"`
 	Limitations        []string `json:"limitations"`
@@ -345,6 +351,13 @@ func (p *Archive) Evaluate(ctx context.Context, id string) (Evaluation, error) {
 		e.Files = append(e.Files, o)
 	}
 	e.Recordings = recordings(*wire.Files, e.Files)
+	if id := librivoxCandidate(wire.Metadata); id != "" && len(e.Recordings) > 0 {
+		e.LibriVox = p.LibriVox.link(ctx, id, item)
+		matchReaders(e.LibriVox, e.Recordings)
+		if err := ctx.Err(); err != nil {
+			return e, err
+		}
+	}
 	e.Complete = true
 	return e, nil
 }

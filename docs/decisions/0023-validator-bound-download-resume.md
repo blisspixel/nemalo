@@ -61,6 +61,15 @@ a weak validator, a non-transport error, a source that keeps dropping (three
 continuations, then the packet is kept), and cancellation during the pause
 each stop with the partial bytes kept and no receipt.
 
+A request that fails before any body (a transient transport error, or a
+429, 500, 502, 503, or 504 answer) is sent again at most three times in all,
+after the longer of 2 or 4 seconds and the server's `Retry-After`, for Archive
+and Gutenberg files alike. Nothing was written, so no packet state changes. A
+`Retry-After` over 30 seconds, any other answer, or a policy failure is
+returned at once. Tests cover a 503 then a reset then success, a 502 that
+stays (three requests), a 404, a one-hour `Retry-After`, a refused
+certificate, and cancellation during the pause.
+
 ## Validation
 
 Synthetic tests cover a transfer cut after 40 bytes and resumed with a scan and

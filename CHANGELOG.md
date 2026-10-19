@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Evaluating a LibriVox item on Archive reads the LibriVox project its call number names. When the project names the item back and its sections match the tracks by count and declared length, each track is credited with its readers; acquisition and ingest keep them, and `library recordings` lists them as narrators. Otherwise no reader is credited ([decision 0035](docs/decisions/0035-librivox-readers.md)).
+- A file request that fails before any body, with a transport error or a 429 or 5xx answer, is sent again up to three times in all, honoring a short `Retry-After`.
 - Tests cover every writer refused as busy while another holds the library, racing imports, and an unwritable store or control folder that recovers once writable.
 - `nemalo mcp serve --allow-write` adds `library_import_preview` and `library_import_apply`. An apply stores only the plan digest its preview returned and writes nothing when the source, its assessment, the scan choice, or the library changed. Sources are never changed, and the plugins stay read-only ([decision 0034](docs/decisions/0034-mcp-import-tools.md)).
 - `library import` previews show a plan digest, and `--apply --plan DIGEST` applies only that plan.

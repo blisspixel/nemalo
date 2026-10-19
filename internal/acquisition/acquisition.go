@@ -296,6 +296,7 @@ func transferPacket(ctx context.Context, provider Provider, parent *os.Root, abs
 	p.alternatives = alternativesFor(evaluation, file, request.MaxBytes)
 	// Keep selected-asset provenance without copying an entire source inventory.
 	evaluation.Files, evaluation.Recordings = []discovery.OfferedFile{file}, nil
+	evaluation.LibriVox = evaluation.LibriVox.Summary()
 	p.evaluation = evaluation
 	request.Output = abs
 	result.Intent = &Intent{SchemaVersion: 1, RequestedAt: time.Now().UTC(), Request: request, Selection: evaluation}

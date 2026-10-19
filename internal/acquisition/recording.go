@@ -26,6 +26,9 @@ type RecordingPosition struct {
 	// Title and DeclaredSeconds are the source's declarations for this track.
 	Title           string  `json:"title,omitempty"`
 	DeclaredSeconds float64 `json:"declared_seconds,omitempty"`
+	// Readers are the readers a linked LibriVox project credits for this
+	// track's section, when its sections matched the tracks.
+	Readers []discovery.Reader `json:"readers,omitempty"`
 }
 
 // samePlace compares the place of a track, not its declared title or length.
@@ -222,7 +225,7 @@ func AcquireRecording(ctx context.Context, provider Provider, request RecordingR
 	plan, trackIndex := []plannedTrack{}, map[int]int{}
 	for i, t := range recording.Tracks {
 		rt := RecordingTrack{Position: t.Position, File: t.File}
-		position := RecordingPosition{Format: recording.Format, Position: t.Position, Tracks: len(recording.Tracks), Title: t.Title, DeclaredSeconds: t.DeclaredSeconds}
+		position := RecordingPosition{Format: recording.Format, Position: t.Position, Tracks: len(recording.Tracks), Title: t.Title, DeclaredSeconds: t.DeclaredSeconds, Readers: t.Readers}
 		packet, reused, resume, findErr := trackPacket(ctx, root, request.SourceID, position, files[i], canResume)
 		switch {
 		case findErr != nil:

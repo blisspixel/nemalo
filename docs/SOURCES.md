@@ -60,6 +60,12 @@ to an older record. Periodic reconciliation is needed if Nemalo keeps an offline
 catalog. An Archive-hosted ZIP and the LibriVox recording are two provenance links
 to one recording, not automatically two audiobooks.
 
+Implemented: one project read by ID during Archive evaluation, for readers
+per section. An Archive LibriVox item's `call_number` names the project, and
+the link holds only when the project's `url_iarchive` names the item back
+([decision 0035](decisions/0035-librivox-readers.md)). Search, `since`
+reconciliation, and an offline LibriVox catalog are not implemented.
+
 Gutenberg's robot policy is more restrictive than the mere existence of an OPDS
 web response suggests. The Go design must use permitted catalog/acquisition
 channels, even where a prototype successfully called another endpoint.

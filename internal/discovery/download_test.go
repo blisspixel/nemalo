@@ -2,10 +2,12 @@ package discovery
 
 import (
 	"context"
+	"errors"
 	"io"
 	"net/http"
 	"net/url"
 	"strings"
+	"syscall"
 	"testing"
 	"time"
 )
@@ -89,5 +91,66 @@ func TestArchiveDownloadSelectionAndQuota(t *testing.T) {
 	p.downloadClient = nil
 	if p.fileClient() == nil {
 		t.Fatal("missing bounded default client")
+	}
+}
+
+// A file request that fails before any body is sent again, within bounds; an
+// answer that cannot improve, or a long requested wait, is returned at once.
+func TestFileRequestsRepeatOnlyFailuresBeforeTheBody(t *testing.T) {
+	saved := downloadPause
+	downloadPause = func(int) time.Duration { return time.Millisecond }
+	t.Cleanup(func() { downloadPause = saved })
+	file := OfferedFile{Name: "a.mp3", Access: "public_file_candidate", DownloadURL: "https://archive.org/download/demo/a.mp3"}
+	run := func(answers ...func() (*http.Response, error)) (*http.Response, int, error) {
+		p := NewArchive()
+		calls := 0
+		p.downloadClient = &http.Client{Transport: downloadRoundTrip(func(r *http.Request) (*http.Response, error) {
+			a := answers[min(calls, len(answers)-1)]
+			calls++
+			resp, err := a()
+			if resp != nil {
+				resp.Request = r
+			}
+			return resp, err
+		})}
+		p.next = time.Time{}
+		resp, err := p.Download(context.Background(), file)
+		return resp, calls, err
+	}
+	status := func(code int, header ...string) func() (*http.Response, error) {
+		return func() (*http.Response, error) {
+			h := http.Header{}
+			if len(header) == 2 {
+				h.Set(header[0], header[1])
+			}
+			return &http.Response{StatusCode: code, Header: h, Body: io.NopCloser(strings.NewReader("body"))}, nil
+		}
+	}
+	reset := func() (*http.Response, error) { return nil, syscall.ECONNRESET }
+	if resp, calls, err := run(status(503), reset, status(200)); err != nil || resp.StatusCode != 200 || calls != 3 {
+		t.Fatal("did not recover", err, calls)
+	}
+	if resp, calls, _ := run(status(502)); resp.StatusCode != 502 || calls != downloadAttempts {
+		t.Fatal("unbounded or no repeat", calls)
+	}
+	if resp, calls, _ := run(status(404), status(200)); resp.StatusCode != 404 || calls != 1 {
+		t.Fatal("repeated a definite answer", calls)
+	}
+	if resp, calls, _ := run(status(429, "Retry-After", "3600"), status(200)); resp.StatusCode != 429 || calls != 1 {
+		t.Fatal("waited out a long Retry-After", calls)
+	}
+	if _, calls, err := run(func() (*http.Response, error) { return nil, errors.New("certificate refused") }, status(200)); err == nil || calls != 1 {
+		t.Fatal("repeated a policy failure", calls)
+	}
+	// Cancellation during the pause stops the requests.
+	p := NewArchive()
+	ctx, cancel := context.WithCancel(context.Background())
+	downloadPause = func(int) time.Duration { return time.Hour }
+	p.downloadClient = &http.Client{Transport: downloadRoundTrip(func(r *http.Request) (*http.Response, error) {
+		cancel()
+		return &http.Response{StatusCode: 503, Header: http.Header{}, Body: io.NopCloser(strings.NewReader("")), Request: r}, nil
+	})}
+	if _, err := p.Download(ctx, file); !errors.Is(err, context.Canceled) {
+		t.Fatal(err)
 	}
 }

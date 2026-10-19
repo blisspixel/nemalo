@@ -28,8 +28,9 @@ AI service. The agent interface (MCP) uses the same application services.
 - Acquire a selected Archive EPUB, PDF, or MP3 into exclusive untrusted intake,
   with source checksums, local checks, a scan by the installed antivirus, and a
   provenance receipt. A detection is quarantined and other files are offered.
-  Acquire a whole LibriVox recording in declared track order, and resume an
-  interrupted download or recording without fetching completed bytes again.
+  Acquire a whole LibriVox recording in declared track order, with each
+  track's readers when its LibriVox project links back to the item, and resume
+  an interrupted download or recording without fetching completed bytes again.
 - Inventory explicit folders; check file structure, size, hashes, and EPUB text
   measurements. A scan is recommended for a file you did not produce and stays
   optional: Defender on Windows, ClamAV on Linux and macOS. Pass a publisher

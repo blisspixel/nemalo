@@ -9,6 +9,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"slices"
 	"sort"
 
 	"github.com/blisspixel/nemalo/internal/audio"
@@ -34,10 +35,11 @@ type RecordingManifest struct {
 	Complete bool             `json:"complete"`
 	Missing  []int            `json:"missing_positions"`
 	Tracks   []RecordingEntry `json:"tracks"`
-	// Narrators are not declared in a form Nemalo reads; the field stays empty
-	// until a source supplies them, and different narrations stay distinct by
-	// source and format.
-	Narrators []string `json:"narrators"`
+	// Narrators are the distinct readers held tracks were credited with, in
+	// first-credited order, from a LibriVox project that linked back to the
+	// source and whose sections matched its tracks. Empty when no track was
+	// credited. Different narrations stay distinct by source and format.
+	Narrators []Reader `json:"narrators"`
 	// ProbedMs is the sum of probed encoded durations when every held track was
 	// probed and the recording is complete; otherwise it is absent.
 	ProbedMs *int64   `json:"probed_duration_ms,omitempty"`
@@ -54,6 +56,7 @@ type RecordingEntry struct {
 	SourceFile        string          `json:"source_file"`
 	Title             string          `json:"declared_title,omitempty"`
 	DeclaredSeconds   float64         `json:"declared_seconds,omitempty"`
+	Readers           []Reader        `json:"readers,omitempty"`
 	Status            string          `json:"status"`
 	Probe             string          `json:"probe"`
 	SampleRate        int             `json:"sample_rate,omitempty"`
@@ -151,7 +154,7 @@ func Recordings(ctx context.Context, directory, source string) (RecordingsResult
 	}
 	budget := int64(maxProbedRecordingBytes)
 	for _, k := range keys {
-		m := RecordingManifest{Schema: RecordingManifestVersion, SourceID: k.source, Format: k.format, Missing: []int{}, Tracks: []RecordingEntry{}, Narrators: []string{}, Findings: []string{}}
+		m := RecordingManifest{Schema: RecordingManifestVersion, SourceID: k.source, Format: k.format, Missing: []int{}, Tracks: []RecordingEntry{}, Narrators: []Reader{}, Findings: []string{}}
 		counts, held := map[int]bool{}, map[string]Holding{}
 		byPosition := map[int][]claim{}
 		for _, c := range groups[k] {
@@ -176,7 +179,12 @@ func Recordings(ctx context.Context, directory, source string) (RecordingsResult
 					continue
 				}
 				assets[c.h.ID] = true
-				m.Tracks = append(m.Tracks, RecordingEntry{Position: position, AssetID: c.h.ID, Bytes: c.h.Bytes, SourceFile: c.src.SourceFile, Title: c.src.Recording.Title, DeclaredSeconds: c.src.Recording.DeclaredSeconds, Status: c.h.Status, Probe: "not_requested"})
+				m.Tracks = append(m.Tracks, RecordingEntry{Position: position, AssetID: c.h.ID, Bytes: c.h.Bytes, SourceFile: c.src.SourceFile, Title: c.src.Recording.Title, DeclaredSeconds: c.src.Recording.DeclaredSeconds, Readers: c.src.Recording.Readers, Status: c.h.Status, Probe: "not_requested"})
+				for _, reader := range c.src.Recording.Readers {
+					if !slices.Contains(m.Narrators, reader) {
+						m.Narrators = append(m.Narrators, reader)
+					}
+				}
 			}
 			if len(assets) > 1 {
 				conflict = true

@@ -455,8 +455,9 @@ selected Gutenberg EPUB can be acquired from gutenberg.pglaf.org
 can name an Archive item through its ocaid before the existing Archive
 acquire runs (decision 0030). Checked publication is still the milestone 3
 gap. Website
-search, other Gutenberg formats, recording identity, narrator, M4B, OCR, and
-column reconstruction stay later. MCP remains a scoped read-only adapter over
+search, other Gutenberg formats, recording identity across hosts, M4B, OCR, and
+column reconstruction stay later. LibriVox readers are credited per track when
+the project links back ([decision 0035](decisions/0035-librivox-readers.md)). MCP remains a scoped read-only adapter over
 the same services. Generated analysis and model/harness integrations remain
-post-1.0. Issues 1 and 2 are closed; their remaining OCR, column, narrator, and
-M4B work is milestone 7 and 8.
+post-1.0. Issues 1 and 2 are closed; their remaining OCR, column, and M4B work
+is milestone 7 and 8.

@@ -29,16 +29,18 @@ over [decision 0015](0015-mpeg-audio-frame-index.md) (one track) and
   bytes report `stored_bytes_changed` and are not indexed. One call indexes at
   most 4 GiB.
 - Without `--source`, manifests come from the journal alone and nothing is read.
-- Narrators are not declared in a form Nemalo reads, so `narrators` stays empty
-  rather than guessed. Track-local ranges and preroll come from `mpeg-audio/1`
+- `narrators` lists the readers held tracks were credited with by a LibriVox
+  project that links back to the item and whose sections match its tracks
+  ([decision 0035](0035-librivox-readers.md)); otherwise it stays empty rather
+  than guessed. Track-local ranges and preroll come from `mpeg-audio/1`
   on each asset; the manifest gives their order and offsets.
 
 ## Consequences
 
 Callers can play or process a recording in declared order, know exactly which
 tracks are missing, and place track-local ranges on one timeline without
-decoding. A recording entity with independent narrator evidence, M4B, and
-decoded timing remain later work.
+decoding. Narrator evidence is [decision 0035](0035-librivox-readers.md); M4B
+and decoded timing remain later work.
 
 ## Validation
 
