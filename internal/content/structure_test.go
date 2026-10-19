@@ -236,6 +236,12 @@ func FuzzStructuredExtraction(f *testing.F) {
 		if len(d.text) > 4096 || !utf8.ValidString(d.text) {
 			t.Fatal("invalid successful text")
 		}
+		// Every structural break is a line feed of the text.
+		for _, b := range rangeBreaks(d.text, d.breaks, 0, len(d.text)) {
+			if d.text[b.Offset] != '\n' || (b.Kind != "block" && b.Kind != "line") {
+				t.Fatal("invalid break", b)
+			}
+		}
 		for _, p := range d.parts {
 			if p.Start < 0 || p.End < p.Start || p.End > len(d.text) || p.SourceStart < 0 || p.SourceEnd < p.SourceStart || p.SourceEnd > len(input) {
 				t.Fatal("invalid part range", p)
