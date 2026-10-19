@@ -122,6 +122,14 @@ type packetReceipt struct {
 		Selection struct {
 			Rights   []string `json:"rights_statements"`
 			Licenses []string `json:"declared_license_urls"`
+			LibriVox *struct {
+				ProjectID string `json:"project_id"`
+				Status    string `json:"status"`
+				Project   *struct {
+					Title       string `json:"title"`
+					ArchiveItem string `json:"archive_item"`
+				} `json:"project"`
+			} `json:"librivox"`
 		} `json:"selection"`
 	} `json:"intent"`
 }
@@ -546,12 +554,30 @@ func sourceRecord(source selected) Source {
 		recording := *r
 		record.Recording = &recording
 	}
+	record.Narration = narrationOf(source.receipt, record.SourceID, importFormat(source.file))
 	if url := source.receipt.FinalURL; strings.HasPrefix(url, "https://") && len(url) <= 2000 && !strings.ContainsAny(url, " \r\n\x00") {
 		record.DeclaredURL = url
 	}
 	record.DeclaredRights, _ = cleanDeclared(source.receipt.Intent.Selection.Rights)
 	record.DeclaredLicenses, _ = cleanDeclared(source.receipt.Intent.Selection.Licenses)
 	return record
+}
+
+// narrationOf reads the narration an audio packet's receipt names: a LibriVox
+// project linked at acquisition, whose record named this same Archive item.
+func narrationOf(receipt *packetReceipt, sourceID, format string) *Narration {
+	if format != "mp3" && format != "m4b" && format != "m4a" {
+		return nil
+	}
+	l := receipt.Intent.Selection.LibriVox
+	if l == nil || l.Status != "linked" || l.Project == nil || "archive:"+l.Project.ArchiveItem != sourceID || !validLibriVoxProject(l.ProjectID) {
+		return nil
+	}
+	n := &Narration{ID: "librivox:" + l.ProjectID, Evidence: NarrationLinkedBack}
+	if title := boundToken(l.Project.Title); validNote(title, 500) {
+		n.Title = title
+	}
+	return n
 }
 
 func omittedDeclared(receipt *packetReceipt) string {

@@ -34,7 +34,8 @@ delete anything.
   missing positions, and conflicts. Add `source` (`archive:ITEM`) to verify each
   held track and get its probed duration, chapters, and `start_ms` offset in the
   recording. `complete` means every declared position is held, not that the
-  audio was checked.
+  audio was checked. `narrations` groups recordings of one LibriVox reading,
+  such as MP3 tracks and an M4B; two readings of one book are two narrations.
 - `library_check` verifies the whole library and lists issues (missing, changed,
   untracked, unfinished work) and review counts with next steps. `library_status`
   and `library_audit` are narrower. Report findings as they are; do not offer to

@@ -123,9 +123,11 @@ declared track order, with `order_source` and an `acquirable` verdict; see
 [decision 0018](decisions/0018-whole-recording-acquisition.md). After ingest,
 `library recordings LIBRARY [--source archive:ITEM]` lists held recordings in
 declared order with missing positions and, with `--source`, verified and indexed
-track timing ([decision 0020](decisions/0020-recording-manifest.md)). Actual
-edition identity, narrator identity, rights policy, and checked publication
-remain planned.
+track timing ([decision 0020](decisions/0020-recording-manifest.md)). A held
+M4B is a single-file recording. Recordings of one LibriVox reading share a
+narration, named only when the LibriVox project names the Archive item back,
+and different readings stay apart ([decision 0044](decisions/0044-narration-identity.md)).
+Edition identity beyond package identifiers and rights policy remain planned.
 
 ## File health and scanning
 

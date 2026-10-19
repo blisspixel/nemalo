@@ -98,8 +98,10 @@ whose scan reported no detections. See
 Milestone 1 remains in progress. Managed holdings record EPUB package
 identifier evidence for an explicit ISBN, DOI, or Open Library work or edition
 key, and they do not merge files on that evidence. See
-[decision 0010](docs/decisions/0010-bibliographic-identity.md). Recording and
-track identities remain outstanding. A scan is recommended for a file the user
+[decision 0010](docs/decisions/0010-bibliographic-identity.md). Recordings of
+one LibriVox reading are related by narration
+([decision 0044](docs/decisions/0044-narration-identity.md)); other providers'
+recording identity remains outstanding. A scan is recommended for a file the user
 did not produce. The default is Microsoft Defender on Windows and installed
 ClamAV on Linux and macOS. `doctor` names that default. A supplied publisher
 SHA-256 confirms the published bytes. Nemalo does not install or update a
@@ -525,7 +527,9 @@ positions, conflicts, and probed timing and offsets
 ([decision 0020](docs/decisions/0020-recording-manifest.md)). Readers come from
 the LibriVox project an item names, linked only when it names the item back
 and credited per track only when sections match tracks by count and length
-([decision 0035](docs/decisions/0035-librivox-readers.md)). M4B and M4A
+([decision 0035](docs/decisions/0035-librivox-readers.md)), and recordings of
+one reading in different formats share a narration while different readings
+stay apart ([decision 0044](docs/decisions/0044-narration-identity.md)). M4B and M4A
 files are assessed from their sample tables without decoding: truncation,
 misplaced samples, fragments, and protected audio are findings, chapters come
 from the QuickTime chapter track or a Nero list, and `mp4-audio/1` lists them

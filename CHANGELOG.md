@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- `library recordings` relates recordings of the same reading. An audio source records a narration (`librivox:PROJECT`) only when its LibriVox project names the same Archive item back, and recordings in different formats of that reading are grouped under it; different readings of one text stay apart, and nothing is grouped by title. A held M4B is now a single-file recording, probed from its sample tables. A library holding a narration record needs this version or newer ([decision 0044](docs/decisions/0044-narration-identity.md)).
+- The MP4 reader is `nemalo.mp4.samples/2`: only audio samples must lie inside media data. Cover art and chapter titles some writers place after the media data are noted, not findings, so such LibriVox M4Bs from Archive are no longer held in review.
 - The installers ask for the release list again, up to three times, when it names no release, since GitHub's list has briefly answered with none while releases existed.
 
 ## 0.1.0-alpha.15

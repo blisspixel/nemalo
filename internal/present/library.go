@@ -303,6 +303,9 @@ func Recordings(r library.RecordingsResult) string {
 			fmt.Fprintf(&b, " | probed %s", clock(*m.ProbedMs))
 		}
 		b.WriteString("\n")
+		if n := m.Narration; n != nil {
+			fmt.Fprintf(&b, "  Narration: %s %s (LibriVox project names this item back)\n", Line(n.ID), Line(n.Title))
+		}
 		if len(m.Narrators) > 0 {
 			names := make([]string, len(m.Narrators))
 			for i, n := range m.Narrators {
@@ -334,6 +337,19 @@ func Recordings(r library.RecordingsResult) string {
 				fmt.Fprintf(&b, " | %d chapter(s)", len(t.Chapters))
 			}
 			fmt.Fprintf(&b, "\n     %s\n", Line(t.AssetID))
+		}
+	}
+	if len(r.Narrations) > 0 {
+		fmt.Fprintf(&b, "\nNarrations: %d\n", len(r.Narrations))
+		for _, g := range r.Narrations {
+			fmt.Fprintf(&b, "%s %s: %d recording(s)\n", Line(g.Narration.ID), Line(g.Narration.Title), len(g.Recordings))
+			for _, ref := range g.Recordings {
+				complete := "incomplete"
+				if ref.Complete {
+					complete = "complete"
+				}
+				fmt.Fprintf(&b, "  %s %s, %s\n", Line(ref.SourceID), Line(ref.Format), complete)
+			}
 		}
 	}
 	notes(&b, "Limitation", r.Limitations)

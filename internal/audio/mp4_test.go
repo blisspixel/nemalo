@@ -39,6 +39,9 @@ type mp4Spec struct {
 	// unreferenced keeps the text track but drops the audio track's
 	// reference to it, so it is not a chapter track.
 	unreferenced bool
+	// trailingText writes the text track's samples after the media data box,
+	// outside any box, as some writers place chapter titles and cover art.
+	trailingText bool
 }
 
 func defaultSpec() mp4Spec {
@@ -172,6 +175,9 @@ func buildMP4(s mp4Spec) []byte {
 	for _, v := range s.sizes {
 		body = append(body, bytes.Repeat([]byte{0xa5}, int(v)))
 	}
+	if s.trailingText {
+		return slices.Concat(ftyp, moov(int64(head)), box("mdat", body...), bytes.Join(chapterSamples, nil))
+	}
 	body = append(body, chapterSamples...)
 	return slices.Concat(ftyp, moov(int64(head)), box("mdat", body...))
 }
@@ -229,6 +235,25 @@ func TestMP4UnreferencedTextTrackIsNotChapters(t *testing.T) {
 	m := probeMP4(t, buildMP4(s))
 	if len(m.Chapters) != 0 || m.ChapterSource != "" || !slices.Equal(m.Notes, []string{MP4OtherTracks}) || len(m.Findings) != 0 || m.Tracks != 2 {
 		t.Fatalf("unreferenced text track: %+v", m)
+	}
+}
+
+// A chapter or other non-audio sample placed in the file but outside media
+// data, as some writers place chapter titles and cover art, is a note; its
+// chapters are still read. Audio outside media data stays a finding.
+func TestMP4OnlyAudioMustBeInMediaData(t *testing.T) {
+	s := defaultSpec()
+	// Its first bytes do not read as a box header, as the real cover art of
+	// such files does not: a printable type would read as a box cut short.
+	s.chapters, s.trailingText = []string{"Chéé opening"}, true
+	m := probeMP4(t, buildMP4(s))
+	if len(m.Findings) != 0 || !slices.Contains(m.Notes, MP4OtherOutsideMedia) || len(m.Chapters) != 1 {
+		t.Fatalf("chapter track: %v %v %v", m.Findings, m.Notes, m.Chapters)
+	}
+	s = defaultSpec()
+	s.offsetBias = -200
+	if m := probeMP4(t, buildMP4(s)); !slices.Contains(m.Findings, MP4SamplesOutsideMediaData) {
+		t.Fatalf("audio: %v", m.Findings)
 	}
 }
 

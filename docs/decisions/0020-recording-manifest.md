@@ -39,8 +39,9 @@ over [decision 0015](0015-mpeg-audio-frame-index.md) (one track) and
 
 Callers can play or process a recording in declared order, know exactly which
 tracks are missing, and place track-local ranges on one timeline without
-decoding. Narrator evidence is [decision 0035](0035-librivox-readers.md); M4B
-and decoded timing remain later work.
+decoding. Narrator evidence is [decision 0035](0035-librivox-readers.md); narrations
+across recordings and single-file M4B recordings are
+[decision 0044](0044-narration-identity.md).
 
 ## Validation
 

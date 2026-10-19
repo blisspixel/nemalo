@@ -51,6 +51,37 @@ type Source struct {
 	// Recording places a track packet in a declared recording, as recorded by
 	// acquire --recording. It is a source declaration of order, not a check.
 	Recording *SourceRecording `json:"recording,omitempty"`
+	// Narration names the reading an audio source belongs to, when evidence
+	// names one: a LibriVox project that names the source item back.
+	Narration *Narration `json:"narration,omitempty"`
+}
+
+// Narration is one reading of a text. Recordings in different formats of the
+// same reading share it; another reading of the same text is another
+// narration. It is never inferred from titles or names.
+type Narration struct {
+	ID       string `json:"id"`
+	Evidence string `json:"evidence"`
+	Title    string `json:"title,omitempty"`
+}
+
+// NarrationLinkedBack is the only narration evidence: the LibriVox project
+// the Archive item's call number names, whose record names that item back.
+const NarrationLinkedBack = "librivox_project_links_back"
+
+func validNarration(n *Narration) bool {
+	if n == nil {
+		return true
+	}
+	id, ok := strings.CutPrefix(n.ID, "librivox:")
+	return ok && n.Evidence == NarrationLinkedBack && validLibriVoxProject(id) && (n.Title == "" || validNote(n.Title, 500))
+}
+
+func validLibriVoxProject(id string) bool {
+	if len(id) == 0 || len(id) > 9 || id[0] == '0' {
+		return false
+	}
+	return strings.Trim(id, "0123456789") == ""
 }
 
 // SourceRecording is a track's declared place in a recording.
@@ -398,6 +429,9 @@ func validHolding(h Holding, libraryID string) bool {
 			return false
 		}
 		if source.Recording != nil && (source.Kind != "packet" || h.Format != "mp3" || !validRecording(source.Recording)) {
+			return false
+		}
+		if source.Narration != nil && (source.Kind != "packet" || (h.Format != "mp3" && h.Format != "m4b" && h.Format != "m4a") || !validNarration(source.Narration)) {
 			return false
 		}
 	}

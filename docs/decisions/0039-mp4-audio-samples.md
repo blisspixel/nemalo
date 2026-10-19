@@ -31,8 +31,11 @@ keep a file in review:
   download was cut short.
 - `mp4_box_extends_past_file`: a top-level box declares more bytes than the
   file holds.
-- `mp4_samples_outside_media_data`, `mp4_samples_overlap`: a sample is not
-  inside a media data box, or two samples share bytes.
+- `mp4_samples_outside_media_data`, `mp4_samples_overlap`: an audio sample is
+  not inside a media data box, or two samples share bytes. Since
+  `nemalo.mp4.samples/2` ([decision 0044](0044-narration-identity.md)), a
+  sample of another track, such as cover art or chapter titles placed after
+  the media data, is a note instead.
 - `mp4_sample_tables_inconsistent`: the tables disagree on the sample count,
   or a table is missing or out of its box.
 - `mp4_fragments_not_indexed`: a fragmented file, whose samples are in movie

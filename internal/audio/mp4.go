@@ -14,7 +14,7 @@ import (
 // MP4Extractor identifies the MP4 sample-table rules: which boxes are read,
 // how samples are located, and what counts as a finding. Changing them
 // requires a new identifier.
-const MP4Extractor = "nemalo.mp4.samples/1"
+const MP4Extractor = "nemalo.mp4.samples/2"
 
 const (
 	maxTopBoxes    = 10_000
@@ -96,6 +96,7 @@ const (
 	MP4DeclaredDiffers      = "mp4_declared_duration_differs"
 	MP4UnreferencedMedia    = "mp4_unreferenced_media_data"
 	MP4OtherTracks          = "mp4_non_audio_tracks"
+	MP4OtherOutsideMedia    = "mp4_non_audio_samples_outside_media_data"
 	MP4ChapterSourcesDiffer = "mp4_chapter_sources_differ"
 )
 
@@ -333,9 +334,16 @@ func ProbeMP4(ctx context.Context, r interface {
 			m.Notes = appendOnce(m.Notes, MP4OtherTracks)
 		}
 	}
-	// Every track's samples must lie in the file, inside media data, and not
-	// overlap another's: a cut-short download places samples past the end.
-	var extents []mp4Location
+	// Every track's samples must lie in the file and not overlap another's: a
+	// cut-short download places samples past the end. Audio samples must also
+	// lie inside media data. Some writers put cover art and chapter titles
+	// after the media data, outside any box; such a sample of another track is
+	// noted, since it does not change what plays and its bytes are still read.
+	type extent struct {
+		mp4Location
+		audio bool
+	}
+	var extents []extent
 	for _, t := range tracks {
 		if t.failed {
 			m.Findings = appendOnce(m.Findings, MP4TablesInconsistent)
@@ -359,7 +367,9 @@ func ProbeMP4(ctx context.Context, r interface {
 				m.SampleBytes += c.size
 			}
 		}
-		extents = append(extents, chunks...)
+		for _, c := range chunks {
+			extents = append(extents, extent{c, t == a})
+		}
 	}
 	// Samples that hold no bytes carry no audio, wherever they are placed.
 	if m.Samples == 0 || m.SampleBytes == 0 {
@@ -377,14 +387,19 @@ func ProbeMP4(ctx context.Context, r interface {
 		if e.offset < 0 || e.offset > size || e.size > size-e.offset {
 			m.Findings = appendOnce(m.Findings, MP4SamplesOutsideFile)
 		}
-		if !within(declaredMedia, e) {
+		inMedia := within(declaredMedia, e.mp4Location)
+		switch {
+		case !inMedia && e.audio:
 			m.Findings = appendOnce(m.Findings, MP4SamplesOutsideMediaData)
+		case !inMedia:
+			m.Notes = appendOnce(m.Notes, MP4OtherOutsideMedia)
+		default:
+			covered += e.size
 		}
 		if e.size > 0 && e.offset < end {
 			m.Findings = appendOnce(m.Findings, MP4SamplesOverlap)
 		}
 		end = max(end, e.offset+e.size)
-		covered += e.size
 	}
 	var media int64
 	for _, d := range m.MediaData {
