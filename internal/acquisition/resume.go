@@ -148,7 +148,7 @@ func resumeTransfer(ctx context.Context, ranged RangeProvider, root *os.Root, ab
 	if err := readRecord(root, "transfer.json", &rec); err != nil || rec.SchemaVersion != 1 || rec.Status != http.StatusOK {
 		return nil, result, refused("this packet has no transfer record, so its bytes cannot be resumed; start a new output")
 	}
-	result.TransferRecorded = true
+	result.TransferRecorded, result.StrongValidator = true, rec.StrongETag && discovery.StrongETag(rec.ETag)
 	if !rec.StrongETag || !discovery.StrongETag(rec.ETag) {
 		return nil, result, refused("the source sent no strong validator for this file, so it cannot be resumed safely; start a new output")
 	}

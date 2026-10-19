@@ -170,8 +170,16 @@ checks of the audio. See
   `gutenberg.pglaf.org`. A redirect to any other host is refused.
   Environment proxies, cookie storage, and automatic decompression are disabled.
 - Existing output is refused before provider access. Failures/cancellation retain
-  intent, partial bytes, and any pending record. They never silently resume, restart,
-  overwrite, clean up, or publish those bytes into a library.
+  intent, partial bytes, and any pending record. They never restart, overwrite,
+  clean up, or publish those bytes into a library.
+- A transfer that drops after some bytes, from a source that sent a strong
+  validator, is continued by the same command up to three times, after 2, 4,
+  and 6 seconds, each exactly as an explicit `--resume` below, and the summary
+  counts the continuations. Only a transport failure continues: an unexpected
+  end of body, a reset, a network timeout, or the transfer deadline while the
+  command still runs. A refused resume, a size or checksum mismatch, the byte
+  budget, a write failure, or cancellation stops at once, keeping the packet.
+  A recording track continues in place the same way.
 
 Keep a failed packet for review. `acquire ... --file NAME --output PACKET
 --resume` continues an interrupted transfer in that packet when `transfer.json`

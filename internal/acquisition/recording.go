@@ -291,6 +291,33 @@ func AcquireRecording(ctx context.Context, provider Provider, request RecordingR
 				}
 			}
 			cancel()
+			// A track that dropped mid-transfer continues in place, as a
+			// single file does, before the recording stops.
+			for attempt := 1; transferErr != nil && canResume && attempt <= maxContinuations && continuable(ctx, transferred, transferErr); attempt++ {
+				select {
+				case <-ctx.Done():
+				case <-time.After(continuationPause(attempt)):
+				}
+				if ctx.Err() != nil {
+					break
+				}
+				packetRoot, err := safeio.OpenRootIn(root, filepath.Base(req.Output))
+				if err != nil {
+					break
+				}
+				retryCtx, retryCancel := context.WithTimeout(ctx, transferDeadline)
+				var next Result
+				state, next, transferErr = resumeTransfer(retryCtx, ranged, packetRoot, req.Output, evaluation, p.file, req, initial)
+				retryCancel()
+				if transferErr != nil {
+					_ = packetRoot.Close()
+				}
+				if next.Transfer.Bytes == 0 {
+					next.Transfer, next.TransferRecorded, next.StrongValidator = transferred.Transfer, transferred.TransferRecorded, transferred.StrongValidator
+				}
+				next.Continuations = transferred.Continuations + 1
+				transferred = next
+			}
 			states[i], results[i] = state, transferred
 			if transferErr != nil {
 				t := &result.Tracks[trackIndex[p.track.Position]]

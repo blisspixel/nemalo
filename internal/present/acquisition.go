@@ -28,6 +28,9 @@ func Acquisition(r acquisition.Result) string {
 		antivirus += ", by " + Line(r.Scan.Tool)
 	}
 	field(&b, "Antivirus", antivirus)
+	if r.Continuations > 0 {
+		fmt.Fprintf(&b, "Continued after %d dropped connection(s), each from the retained bytes with the same validator.\n", r.Continuations)
+	}
 	switch {
 	case r.ResumedFrom > 0 && r.Complete:
 		fmt.Fprintf(&b, "Resumed from byte %d; the whole file was verified.\n", r.ResumedFrom)

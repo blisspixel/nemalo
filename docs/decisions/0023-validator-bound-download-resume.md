@@ -46,6 +46,21 @@ ensures the server serves the same representation. Packets from earlier
 prereleases have no transfer record and cannot be resumed. The TUI keeps
 retained packets for review and does not yet offer resume.
 
+## Automatic continuation
+
+Added 2026-10-19. `acquire` continues its own dropped transfer up to three
+times with growing pauses, through the same resume path: fresh metadata, the
+recorded strong `ETag` in `If-Range`, exactly the missing range, and the
+whole file verified. Only transport failures continue (an unexpected end of
+body, a connection reset, a network error, or the transfer deadline while
+the caller still waits). A refused resume, a mismatch, the budget, another
+error, or cancellation does not. `continuations` in the result counts them.
+Recording tracks continue in place the same way. Tests drop every response
+after 150 bytes and complete after two continuations; a whole-file reply,
+a weak validator, a non-transport error, a source that keeps dropping (three
+continuations, then the packet is kept), and cancellation during the pause
+each stop with the partial bytes kept and no receipt.
+
 ## Validation
 
 Synthetic tests cover a transfer cut after 40 bytes and resumed with a scan and

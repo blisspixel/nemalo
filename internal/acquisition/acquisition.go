@@ -9,11 +9,13 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
+	"net"
 	"net/http"
 	"os"
 	"path"
 	"path/filepath"
 	"strings"
+	"syscall"
 	"time"
 	"unicode"
 
@@ -109,6 +111,9 @@ type Result struct {
 	// StrongValidator is presentation state for this call. Resume is offered
 	// only when the response carried a strong ETag. A receipt does not store it.
 	StrongValidator bool `json:"-"`
+	// Continuations counts how often this call continued its own transfer
+	// after a dropped connection, each as a checked resume.
+	Continuations int `json:"continuations,omitempty"`
 }
 
 // Alternative is another acquirable file from the same evaluation. It carries
@@ -128,7 +133,55 @@ var ErrDetected = errors.New("antivirus reported a detection; the download was n
 // writing. A failed/crashed packet is retained, not resumed, removed, adopted,
 // or mistaken for a completed receipt. A detection moves the bytes to the
 // Nemalo quarantine (or deletes them, if requested) so they never become intake.
-func Acquire(ctx context.Context, provider Provider, request Request) (result Result, err error) {
+//
+// A transfer that drops after some bytes, from a source that sent a strong
+// validator, is continued in its own packet up to maxContinuations times, each
+// exactly as an explicit --resume: fresh metadata, the same validator, only
+// the missing range, and the whole file verified at the end. A refused resume,
+// a checksum or size mismatch, a budget, or cancellation is not retried.
+func Acquire(ctx context.Context, provider Provider, request Request) (Result, error) {
+	result, err := acquireOnce(ctx, provider, request)
+	for attempt := 1; err != nil && attempt <= maxContinuations && continuable(ctx, result, err); attempt++ {
+		select {
+		case <-ctx.Done():
+			return result, err
+		case <-time.After(continuationPause(attempt)):
+		}
+		again := request
+		again.Resume, again.Output = true, result.Output
+		next, nextErr := acquireOnce(ctx, provider, again)
+		if next.Transfer.Bytes == 0 {
+			// The try failed before any body; the packet keeps what it had.
+			next.Transfer, next.TransferRecorded, next.StrongValidator = result.Transfer, result.TransferRecorded, result.StrongValidator
+		}
+		next.Continuations = result.Continuations + 1
+		result, err = next, nextErr
+	}
+	return result, err
+}
+
+// maxContinuations bounds automatic continuation of one acquisition.
+const maxContinuations = 3
+
+// continuationPause waits longer before each continuation; tests shorten it.
+var continuationPause = func(attempt int) time.Duration { return time.Duration(attempt) * 2 * time.Second }
+
+// continuable reports a transfer that stopped for a transport reason with
+// bytes retained in a packet that a strong validator lets continue.
+func continuable(ctx context.Context, r Result, err error) bool {
+	if ctx.Err() != nil || r.Output == "" || r.TransferComplete || !r.TransferRecorded || !r.StrongValidator || r.Transfer.Bytes < 1 {
+		return false
+	}
+	if errors.Is(err, ErrResumeRefused) || errors.Is(err, context.Canceled) {
+		return false
+	}
+	var netErr net.Error
+	// A transfer deadline that passed while the caller still waits is progress
+	// to continue, not a failure of the source.
+	return errors.Is(err, io.ErrUnexpectedEOF) || errors.Is(err, context.DeadlineExceeded) || errors.Is(err, syscall.ECONNRESET) || errors.As(err, &netErr) || strings.Contains(err.Error(), "stream error")
+}
+
+func acquireOnce(ctx context.Context, provider Provider, request Request) (result Result, err error) {
 	result = Result{SchemaVersion: 1, Status: "not_started", Antivirus: "not_scanned", Durability: "files_synced_directory_entries_filesystem_dependent"}
 	if err := request.Validate(); err != nil {
 		return result, err
