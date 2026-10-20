@@ -117,7 +117,7 @@ func zipSegmentProof(ctx context.Context, source io.ReaderAt, starts []int64, en
 	if starts[1] < 4 || size-starts[parts-1] < 22 {
 		return false, refused
 	}
-	r := &zipProofReader{ctx: ctx, source: source, remaining: zipProofBytes}
+	r := &coverageReaderAt{ctx: ctx, source: source, remaining: archiveProofBytes}
 	var marker [4]byte
 	if _, err := r.ReadAt(marker[:], 0); err != nil || string(marker[:]) != "PK\x07\x08" {
 		return false, refused

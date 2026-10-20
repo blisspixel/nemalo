@@ -86,11 +86,11 @@ func TestArchiveTreeCoverageSharesProofReadsAcrossChildren(t *testing.T) {
 	// Measure the exact single-node framing work independently. There is enough
 	// for the outer and one child, never a reset at the second child's start.
 	spent := func(body []byte) int64 {
-		r := &zipProofReader{ctx: context.Background(), source: bytes.NewReader(body), remaining: zipProofBytes}
+		r := &coverageReaderAt{ctx: context.Background(), source: bytes.NewReader(body), remaining: archiveProofBytes}
 		if ok, why := ZIPAccounted(context.Background(), r, int64(len(body))); !ok {
 			t.Fatal(why)
 		}
-		return zipProofBytes - r.remaining
+		return archiveProofBytes - r.remaining
 	}
 	src, dst := treeRoots(t, "outer.zip", outer)
 	limits := Defaults()
@@ -120,7 +120,7 @@ func TestArchiveTree7zCoverageProbesUseSharedRunner(t *testing.T) {
 			src, dst := treeRoots(t, "outer.7z", outer.body)
 			limits := Defaults()
 			limits.Coverage = true
-			limits.tree = &treeBudget{members: 10000, bytes: 1 << 30, processes: 3, reads: allowance{remaining: 8 << 30}, diagnostics: allowance{remaining: 16 << 20}, proofs: allowance{remaining: zipProofBytes}}
+			limits.tree = &treeBudget{members: 10000, bytes: 1 << 30, processes: 3, reads: allowance{remaining: 8 << 30}, diagnostics: allowance{remaining: 16 << 20}, proofs: allowance{remaining: archiveProofBytes}}
 			if diagnostics {
 				limits.tree.processes = 1000
 				limits.tree.diagnostics.remaining = 1

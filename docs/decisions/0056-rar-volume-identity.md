@@ -15,6 +15,9 @@ split and the unrelated member appeared in the listing. Names and counts alone
 do not establish a usable volume set.
 
 Use the maintained installed 7-Zip reader, not a new RAR parser or dependency.
+Later [decision 0064](0064-bounded-rar-framing-accounting.md) permits a separate,
+bounded Go framing accountant beside that reader. It does not replace the
+decoder or enable RAR cleanup before its own verification and integration gates.
 The format and naming evidence was checked against the
 [RAR format description](https://www.rarlab.com/technote.htm) and 7-Zip 26.04's
 [RAR reader properties](https://github.com/ip7z/7zip/blob/26.04/CPP/7zip/Archive/Rar/RarHandler.cpp)

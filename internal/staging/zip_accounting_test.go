@@ -35,8 +35,8 @@ func zipProofFixture(t testing.TB, extra []byte, comment string) []byte {
 
 func zipProofAccepts(data []byte) bool {
 	ctx := context.Background()
-	r := &zipProofReader{ctx: ctx, source: bytes.NewReader(data), remaining: zipProofBytes}
-	z, err := assessment.OpenZIP(ctx, r, int64(len(data)), zipProofBytes, 8<<30, 10000)
+	r := &coverageReaderAt{ctx: ctx, source: bytes.NewReader(data), remaining: archiveProofBytes}
+	z, err := assessment.OpenZIP(ctx, r, int64(len(data)), archiveProofBytes, 8<<30, 10000)
 	return err == nil && zipContiguous(r, int64(len(data)), z)
 }
 
@@ -215,7 +215,7 @@ func TestZIPCleanupProofAcceptsOrdinaryDescriptorAndDirectoryVariants(t *testing
 func TestZIPCleanupProofReadBudgetAndCancellation(t *testing.T) {
 	data := zipProofFixture(t, nil, "")
 	ctx, cancel := context.WithCancel(context.Background())
-	r := &zipProofReader{ctx: ctx, source: bytes.NewReader(data), remaining: 8}
+	r := &coverageReaderAt{ctx: ctx, source: bytes.NewReader(data), remaining: 8}
 	p := make([]byte, 4)
 	if _, err := r.ReadAt(p, 0); err != nil || r.remaining != 4 {
 		t.Fatal(r.remaining, err)
@@ -231,8 +231,8 @@ func TestZIPCleanupProofReadBudgetAndCancellation(t *testing.T) {
 		t.Fatal("cancellation ignored", r.remaining, err)
 	}
 	for _, allowance := range []int64{0, 4, int64(len(data))} {
-		r := &zipProofReader{ctx: context.Background(), source: bytes.NewReader(data), remaining: allowance}
-		z, err := assessment.OpenZIP(r.ctx, r, int64(len(data)), zipProofBytes, 8<<30, 10000)
+		r := &coverageReaderAt{ctx: context.Background(), source: bytes.NewReader(data), remaining: allowance}
+		z, err := assessment.OpenZIP(r.ctx, r, int64(len(data)), archiveProofBytes, 8<<30, 10000)
 		if err == nil && zipContiguous(r, int64(len(data)), z) {
 			t.Fatal("decoder/proof reads did not share allowance", allowance)
 		}
@@ -242,8 +242,8 @@ func TestZIPCleanupProofReadBudgetAndCancellation(t *testing.T) {
 	}
 	active, stop := context.WithCancel(context.Background())
 	defer stop()
-	reader := &zipProofReader{ctx: active, source: cancelZIPRead{ReaderAt: bytes.NewReader(data), cancel: stop}, remaining: zipProofBytes}
-	if n, err := reader.ReadAt(p, 0); n != len(p) || !errors.Is(err, context.Canceled) || reader.remaining != zipProofBytes-int64(n) {
+	reader := &coverageReaderAt{ctx: active, source: cancelZIPRead{ReaderAt: bytes.NewReader(data), cancel: stop}, remaining: archiveProofBytes}
+	if n, err := reader.ReadAt(p, 0); n != len(p) || !errors.Is(err, context.Canceled) || reader.remaining != archiveProofBytes-int64(n) {
 		t.Fatal("active cancellation lost its read accounting", n, reader.remaining, err)
 	}
 }
@@ -271,7 +271,7 @@ func FuzzZIPCleanupProofStaysBounded(f *testing.F) {
 		}
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 		defer cancel()
-		r := &zipProofReader{ctx: ctx, source: bytes.NewReader(data), remaining: 1 << 20}
+		r := &coverageReaderAt{ctx: ctx, source: bytes.NewReader(data), remaining: 1 << 20}
 		z, err := assessment.OpenZIP(ctx, r, int64(len(data)), 1<<20, 1<<20, 100)
 		if err == nil {
 			_ = zipContiguous(r, int64(len(data)), z)

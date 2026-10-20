@@ -196,6 +196,10 @@ removal; resume from the manifest, never a new plan; never replace on restore. A
 split 7z set moves only whole as 7-Zip lists it, header and packed sizes filling the
 file, a set as one entry; a RAR never moves; a directory holding data is not a directory
 (decision 0051).
+Decision 0064 permits an independent bounded Go RAR framing accountant beside
+the maintained reader. It is read-only evidence, not a decoder or cleanup policy.
+Keep RAR cleanup disabled until that proof passes its complete verification,
+then separately verify the versioned application and recovery integration.
 Plain ZIP cleanup and purge share complete local/central/descriptor accounting
 and a 16 MiB proof-read budget (decision 0060). Preserve comments, unknown metadata
 and unsupported layouts. Pending historical purge plans cannot bypass the current

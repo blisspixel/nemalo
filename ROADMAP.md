@@ -136,6 +136,8 @@ verified, not when code exists. No stage has a time estimate.
    `archive-tree/1` and a leaf digest in the recoverable purge intent
    ([decision 0063](docs/decisions/0063-complete-archive-tree-cleanup.md)).
    RAR source cleanup remains unfinished; a RAR child preserves its outer source.
+   A standalone read-only RAR5 framing accountant is under verification;
+   it does not enable cleanup ([decision 0064](docs/decisions/0064-bounded-rar-framing-accounting.md)).
 3. **Audio access** (milestone 8). M4B and M4A byte ranges and decoded timing in
    content access, bounded ranges usable by an external player, and output
    demonstrated with a real audiobook reader or server.

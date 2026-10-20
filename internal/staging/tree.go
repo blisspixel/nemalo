@@ -34,7 +34,7 @@ func ExtractTree(ctx context.Context, src *os.Root, names []string, dst *os.Root
 	defer cancel()
 	limits.tree = &treeBudget{members: limits.Members, bytes: limits.TotalBytes, processes: maxRuns,
 		reads: allowance{remaining: 2 * maxArchiveSnapshot}, diagnostics: allowance{remaining: maxListing},
-		proofs: allowance{remaining: zipProofBytes}}
+		proofs: allowance{remaining: archiveProofBytes}}
 	return extractTree(treeCtx, src, names, dst, supported, limits)
 }
 

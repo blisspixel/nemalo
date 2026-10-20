@@ -11,16 +11,16 @@ import (
 	"sort"
 )
 
-const zipProofBytes = 16 << 20
+const archiveProofBytes = 16 << 20
 
 // ZIPAccounted reports byte coverage, not member eligibility or write permission.
 func ZIPAccounted(ctx context.Context, source io.ReaderAt, size int64) (bool, string) {
-	r := &zipProofReader{ctx: ctx, source: source, remaining: zipProofBytes}
+	r := &coverageReaderAt{ctx: ctx, source: source, remaining: archiveProofBytes}
 	head := make([]byte, 4)
 	if _, err := r.ReadAt(head, 0); err != nil || string(head) != "PK\x03\x04" {
 		return false, "the archive has unreadable or leading data"
 	}
-	z, err := assessment.OpenZIP(ctx, r, size, zipProofBytes, 8<<30, 10000)
+	z, err := assessment.OpenZIP(ctx, r, size, archiveProofBytes, 8<<30, 10000)
 	if err != nil {
 		return false, "the archive could not be read within its proof limits"
 	}
@@ -36,13 +36,13 @@ func ZIPAccounted(ctx context.Context, source io.ReaderAt, size int64) (bool, st
 // This lifetime allowance includes decoder initialization, DataOffset calls,
 // framing reads and failed attempts. The decoder's bounded end-record search
 // can include neighboring payload bytes; the proof never decompresses them.
-type zipProofReader struct {
+type coverageReaderAt struct {
 	ctx       context.Context
 	source    io.ReaderAt
 	remaining int64
 }
 
-func (r *zipProofReader) ReadAt(p []byte, off int64) (int, error) {
+func (r *coverageReaderAt) ReadAt(p []byte, off int64) (int, error) {
 	if err := r.ctx.Err(); err != nil {
 		return 0, err
 	}

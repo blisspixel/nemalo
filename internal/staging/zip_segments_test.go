@@ -184,7 +184,7 @@ func TestZIPSegmentViewPreservesEveryOtherByte(t *testing.T) {
 
 func TestZIPSegmentProofUsesOneLifetimeReadBudgetAndCancellation(t *testing.T) {
 	s, entries := segmentProofFixture(t, true)
-	r := &zipProofReader{ctx: context.Background(), source: bytes.NewReader(s.Raw), remaining: 150}
+	r := &coverageReaderAt{ctx: context.Background(), source: bytes.NewReader(s.Raw), remaining: 150}
 	if ok, _ := zipSegmentProof(context.Background(), r, s.Starts, entries); ok || r.remaining == 150 {
 		t.Fatal("physical reads were uncharged", r.remaining)
 	}
