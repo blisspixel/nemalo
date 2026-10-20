@@ -386,8 +386,12 @@ func TestReceiptScanNeverReplacesLaterScanEvidence(t *testing.T) {
 	if r, err := Import(ctx, ImportRequest{Library: root, Source: dir, Apply: true, Scan: true, Scanner: statusScan{"findings"}}); err != nil || r.Reason != "scan_findings" {
 		t.Fatal(r, err)
 	}
+	preview, err := Import(ctx, ImportRequest{Library: root, Source: dir})
+	if err != nil || preview.Status != "review" || preview.Reason != "scan_findings" || preview.Holding == nil || preview.Holding.Reason != "scan_findings" {
+		t.Fatal("preview replaced later detection with older receipt", preview, err)
+	}
 	// Re-importing the packet without --scan keeps the detection.
-	r, err := Import(ctx, ImportRequest{Library: root, Source: dir, Apply: true})
+	r, err := Import(ctx, ImportRequest{Library: root, Source: dir, Apply: true, Plan: preview.Plan})
 	if err != nil || r.Status != "review" || r.Reason != "scan_findings" {
 		t.Fatal("older receipt evidence replaced a detection", r, err)
 	}

@@ -59,6 +59,12 @@ intent can resume only for the same source path. Another source is refused
 until that import finishes. The intent is synced before the copy. A crash after
 the intent, the partial, the link, or the holding can resume. If the source
 bytes no longer match the intent, the journal is kept and the import fails.
+[Decision 0054](0054-provenance-bound-import-plans.md) also binds normalized
+source metadata and the full resulting holding in new intent/completed pairs.
+Recovery verifies those hashes before materializing bytes or appending records.
+Completed legacy pairs remain readable; unfinished legacy imports must finish
+with their earlier executable and original source before upgrading, or remain
+retained for review. Current metadata cannot establish their original proposal.
 
 Import takes the same exclusive writer lock as initialization. One import runs
 at a time. Readers see busy state. File sync is required. Directory-entry

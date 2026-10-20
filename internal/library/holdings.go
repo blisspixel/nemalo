@@ -134,18 +134,20 @@ func validReaderID(id string) bool {
 }
 
 type operation struct {
-	SchemaVersion int    `json:"schema_version"`
-	Sequence      int    `json:"sequence"`
-	LibraryID     string `json:"library_id"`
-	OperationID   string `json:"operation_id"`
-	Event         string `json:"event"`
-	Source        string `json:"source"`
-	AssetID       string `json:"asset_id"`
-	Format        string `json:"format"`
-	Bytes         int64  `json:"bytes"`
-	Status        string `json:"status"`
-	Reason        string `json:"reason"`
-	At            string `json:"at"`
+	SchemaVersion       int    `json:"schema_version"`
+	Sequence            int    `json:"sequence"`
+	LibraryID           string `json:"library_id"`
+	OperationID         string `json:"operation_id"`
+	Event               string `json:"event"`
+	Source              string `json:"source"`
+	AssetID             string `json:"asset_id"`
+	Format              string `json:"format"`
+	Bytes               int64  `json:"bytes"`
+	Status              string `json:"status"`
+	Reason              string `json:"reason"`
+	At                  string `json:"at"`
+	ImportSourceSHA256  string `json:"import_source_sha256,omitempty"`
+	ImportHoldingSHA256 string `json:"import_holding_sha256,omitempty"`
 }
 
 func assetRel(hash, format string) string {
@@ -336,6 +338,9 @@ func parseOperations(b []byte, libraryID string) ([]operation, error) {
 		if event.Reason == "" || len(event.Reason) > 200 || strings.ContainsAny(event.Reason, "\x00\r\n") {
 			return nil, ErrStateReview
 		}
+		if !validImportBinding(event) {
+			return nil, ErrStateReview
+		}
 		if i%2 == 0 {
 			if completedEvent(event.Event) == "" {
 				return nil, ErrStateReview
@@ -518,7 +523,14 @@ func consistent(events []operation, lines []Holding) error {
 }
 
 func sameFact(h Holding, event operation) bool {
-	return h.ID == event.AssetID && h.Format == event.Format && h.Bytes == event.Bytes && h.Status == event.Status && h.Reason == event.Reason
+	if h.ID != event.AssetID || h.Format != event.Format || h.Bytes != event.Bytes || h.Status != event.Status || h.Reason != event.Reason {
+		return false
+	}
+	if event.ImportHoldingSHA256 != "" {
+		digest, err := canonicalDigest(h)
+		return err == nil && digest == event.ImportHoldingSHA256
+	}
+	return true
 }
 
 func canonical(line []byte, dest any) error {

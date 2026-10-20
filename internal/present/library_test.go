@@ -71,3 +71,25 @@ func TestCollectionDiffPresentationKeepsChangesSeparateAndEscapesText(t *testing
 		t.Fatal(text)
 	}
 }
+
+func TestImportProposalDisplaysIncomingAndRetainedEvidenceSafely(t *testing.T) {
+	incoming := library.Source{Kind: "packet", Path: "packet/content.mp3", SourceID: "archive:new", SourceFile: "new.mp3",
+		DeclaredURL: "https://example.org/new", DeclaredRights: []string{"Rights\x1b\nforged"}, DeclaredLicenses: []string{"License\x00"},
+		Recording:  &library.SourceRecording{Format: "MP3\x1b", Position: 1, Tracks: 2, Title: "Track\nforged", DeclaredSeconds: 3, Readers: []library.Reader{{ID: "1", Name: "Reader\x1b"}}},
+		Narration:  &library.Narration{ID: "librivox:7", Evidence: library.NarrationLinkedBack, Title: "Reading\x1b"},
+		Identities: []library.Identity{{ID: "openlibrary_work:OL1W", Role: "work", Raw: "OL1W", Scheme: "openlibrary_work", Origin: "source_metadata", Confidence: "source_declared"}},
+	}
+	retained := incoming
+	retained.SourceID = "archive:original"
+	retained.SourceFile = "original.mp3"
+	r := library.ImportResult{SourceEvidence: &incoming, Holding: &library.Holding{Sources: []library.Source{retained}}, RecoveredRescan: true}
+	text := Import(r)
+	for _, want := range []string{"Incoming source evidence (declarations):", "Proposed holding sources: 1", "archive:new", "archive:original", "original.mp3", "https://example.org/new", "Declared rights:", "Declared license:", "Track: 1 of 2", "Declared seconds: 3", "Declared reader:", "LibriVox 1", "librivox:7", "Evidence: librivox project links back", "Declared narration title:", "openlibrary_work:OL1W", "Raw: OL1W", "Scheme: openlibrary_work", "Origin: source metadata", "Confidence: source declared", "Completed an earlier pending rescan", "This import has not completed."} {
+		if !strings.Contains(text, want) {
+			t.Fatal("missing proposal evidence", want, text)
+		}
+	}
+	if strings.ContainsAny(text, "\x1b\x00") || strings.Contains(text, "\nforged") || strings.Contains(text, "No library files were written") {
+		t.Fatal("unsafe or misleading evidence", text)
+	}
+}

@@ -158,6 +158,9 @@ whose scan reported no detections. See
 [decision 0032](docs/decisions/0032-pdf-checked-policy.md),
 [decision 0033](docs/decisions/0033-mp3-checked-policy.md), and
 [decision 0039](docs/decisions/0039-mp4-audio-samples.md).
+Import preview and recovery also bind normalized provenance and the full
+proposed holding, including retained declarations and disposition
+([decision 0054](docs/decisions/0054-provenance-bound-import-plans.md)).
 
 Milestone 1 remains in progress. Managed holdings record EPUB package
 identifier evidence for an explicit ISBN, DOI, or Open Library work or edition

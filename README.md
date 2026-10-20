@@ -49,7 +49,8 @@ published prereleases may lag:
   selections leave earlier holdings and annotations intact.
 - Initialize library control state with locking and resumable initialization.
 - Import one EPUB, PDF, MP3, M4B, or M4A, or a completed intake packet, into an
-  initialized library. Preview writes nothing. Checked status requires a passed
+  initialized library. Preview writes nothing and shows the source evidence
+  and proposed holding; a plan token binds both. Checked status requires a passed
   EPUB check, a PDF whose page tree and active content (scripts, launch and
   automatic actions, attachments) were examined and clean, an MP3 whose frames
   indexed without damage, or an M4B or M4A whose every sample lies inside the

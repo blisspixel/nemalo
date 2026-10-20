@@ -515,3 +515,85 @@ func TestImportToolsApplyOnlyAPreviewedPlan(t *testing.T) {
 		t.Fatal(held, err)
 	}
 }
+
+func TestMCPImportRefusesChangedPacketProvenance(t *testing.T) {
+	ctx := context.Background()
+	root, err := filepath.EvalSymlinks(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	intake, err := filepath.EvalSymlinks(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := library.Initialize(ctx, root); err != nil {
+		t.Fatal(err)
+	}
+	source := epub(t, intake, "<p>Metadata-bound import.</p>")
+	body, err := os.ReadFile(source)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Rename(source, filepath.Join(intake, "content.epub")); err != nil {
+		t.Fatal(err)
+	}
+	writeReceipt := func(id string) {
+		t.Helper()
+		b, err := json.Marshal(map[string]any{"complete": true, "status": "untrusted_intake", "transfer": map[string]any{"bytes": len(body), "sha256": fmt.Sprintf("%x", sha256.Sum256(body))}, "intent": map[string]any{"request": map[string]string{"source_id": id, "source_file": "book.epub"}}})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(intake, "receipt.json"), b, 0600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	writeReceipt("archive:before")
+	service := app.Service{Scanner: noScanner{t}}
+	s := connect(t, service, Options{Scopes: []string{root, intake}, Write: true, Version: "test"})
+	res, env := call(t, s, "library_import_preview", map[string]any{"library": root, "source": intake})
+	if res.IsError {
+		t.Fatal(env)
+	}
+	preview := env["data"].(map[string]any)
+	if preview["source_evidence"].(map[string]any)["source_id"] != "archive:before" || preview["holding"] == nil {
+		t.Fatal(env)
+	}
+	writeReceipt("archive:after")
+	res, env = call(t, s, "library_import_apply", map[string]any{"library": root, "source": intake, "plan": preview["plan"]})
+	if !res.IsError {
+		t.Fatal("stale metadata applied", env)
+	}
+	refused := env["data"].(map[string]any)
+	if refused["plan"] != nil || refused["holding"] != nil {
+		t.Fatal("refusal offered unreviewed proposal", env)
+	}
+	for _, name := range []string{"operations.jsonl", "holdings.jsonl"} {
+		if _, err := os.Stat(filepath.Join(root, ".nemalo", name)); !os.IsNotExist(err) {
+			t.Fatal("refusal wrote", name, err)
+		}
+	}
+	res, env = call(t, s, "library_import_preview", map[string]any{"library": root, "source": intake})
+	if res.IsError {
+		t.Fatal(env)
+	}
+	fresh := env["data"].(map[string]any)
+	direct, err := service.Import(ctx, library.ImportRequest{Library: root, Source: intake})
+	if err != nil {
+		t.Fatal(err)
+	}
+	b, err := json.Marshal(direct)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var want any
+	if err := json.Unmarshal(b, &want); err != nil {
+		t.Fatal(err)
+	}
+	if !jsonEqual(want, fresh) {
+		t.Fatal("MCP differs from shared service", want, fresh)
+	}
+	res, env = call(t, s, "library_import_apply", map[string]any{"library": root, "source": intake, "plan": fresh["plan"]})
+	if res.IsError || !jsonEqual(env["data"].(map[string]any)["holding"], fresh["holding"]) {
+		t.Fatal(env)
+	}
+}

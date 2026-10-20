@@ -683,6 +683,11 @@ func TestRescanPromotesAPDFHeldBeforeThePolicy(t *testing.T) {
 	if _, err := Import(ctx, ImportRequest{Library: root, Source: p, Apply: true}); err != nil {
 		t.Fatal(err)
 	}
+	// This is a pre-binding library, not a modified current record whose
+	// journal would correctly reject a different holding hash.
+	rewriteImportOperations(t, root, func(event *operation) {
+		event.ImportSourceSHA256, event.ImportHoldingSHA256 = "", ""
+	})
 	for _, name := range []string{operationsName, holdingsName} {
 		file := filepath.Join(root, ".nemalo", name)
 		b, _ := os.ReadFile(file)

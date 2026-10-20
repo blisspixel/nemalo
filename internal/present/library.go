@@ -90,6 +90,8 @@ func Import(r library.ImportResult) string {
 		state = "Imported, resuming an interrupted import"
 	case r.Applied:
 		state = "Imported"
+	case r.ApplyRequested:
+		state = "Import not completed"
 	}
 	if r.AlreadyHeld {
 		state += "; the library already holds these bytes"
@@ -116,16 +118,60 @@ func Import(r library.ImportResult) string {
 	if r.IdentifiersOmitted > 0 {
 		fmt.Fprintf(&b, "Identifiers omitted: %d\n", r.IdentifiersOmitted)
 	}
+	if r.SourceEvidence != nil {
+		b.WriteString("Incoming source evidence (declarations):\n")
+		importSource(&b, *r.SourceEvidence)
+	}
+	if r.Holding != nil {
+		fmt.Fprintf(&b, "Proposed holding sources: %d\n", len(r.Holding.Sources))
+		for i, source := range r.Holding.Sources {
+			fmt.Fprintf(&b, "Source record %d:\n", i+1)
+			importSource(&b, source)
+		}
+	}
 	field(&b, "Antivirus", words(r.Antivirus))
 	notes(&b, "Finding", r.Findings)
 	notes(&b, "Limitation", r.Limitations)
 	field(&b, "Durability", words(r.Durability))
+	if r.RecoveredRescan {
+		b.WriteString("Completed an earlier pending rescan before this import.\n")
+	}
 	if !r.Applied {
 		field(&b, "Plan", Line(r.Plan))
-		b.WriteString("Preview only. No library files were written.\n")
+		if r.ApplyRequested || r.RecoveredRescan {
+			b.WriteString("This import has not completed. Retained state and errors must be reviewed before retrying.\n")
+		} else {
+			b.WriteString("Preview only. No library files were written.\n")
+		}
 	}
 	b.WriteString("The source was preserved. Review is not a safety guarantee.\n")
 	return b.String()
+}
+
+// importSource shows every normalized source field, including declarations
+// retained from an earlier import rather than replaced by incoming evidence.
+func importSource(b *strings.Builder, source library.Source) {
+	field(b, "  Kind", words(source.Kind))
+	field(b, "  Path", Exact(source.Path))
+	field(b, "  Source ID", Line(source.SourceID))
+	field(b, "  Source file", Exact(source.SourceFile))
+	field(b, "  Declared URL", Line(source.DeclaredURL))
+	notes(b, "  Declared rights", source.DeclaredRights)
+	notes(b, "  Declared license", source.DeclaredLicenses)
+	if r := source.Recording; r != nil {
+		fmt.Fprintf(b, "  Recording: %s | Track: %d of %d | Declared seconds: %g\n", Line(r.Format), r.Position, r.Tracks, r.DeclaredSeconds)
+		field(b, "  Declared track title", Line(r.Title))
+		for _, reader := range r.Readers {
+			fmt.Fprintf(b, "  Declared reader: %s (LibriVox %s)\n", Line(reader.Name), Line(reader.ID))
+		}
+	}
+	if n := source.Narration; n != nil {
+		fmt.Fprintf(b, "  Narration: %s | Evidence: %s\n", Line(n.ID), words(n.Evidence))
+		field(b, "  Declared narration title", Line(n.Title))
+	}
+	for _, id := range source.Identities {
+		fmt.Fprintf(b, "  Declared identifier: %s (%s) | Raw: %s | Scheme: %s | Origin: %s | Confidence: %s\n", Line(id.ID), words(id.Role), Line(id.Raw), Line(id.Scheme), words(id.Origin), words(id.Confidence))
+	}
 }
 
 func ManagedAudit(a library.ManagedAudit) string {

@@ -11,7 +11,6 @@ import (
 	"os"
 	"path"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"time"
 
@@ -38,21 +37,9 @@ type ImportRequest struct {
 }
 
 // ErrPlanChanged means an apply named a plan that the current source,
-// assessment, or library no longer give. Nothing was written.
-var ErrPlanChanged = errors.New("the source, its assessment, or the library changed since the preview; nothing was written; preview again")
-
-// importPlan is the digest of what an import would store: the library, the
-// source as named, the exact bytes, and the status its assessment gives. A
-// preview returns it, and an apply that names it must reproduce it.
-func importPlan(libraryID, source, kind, label, assetID string, bytes int64, format, status, reason string, scan bool) string {
-	h := sha256.New()
-	for _, part := range []string{"nemalo-import-plan/1", libraryID, source, kind, label, assetID, strconv.FormatInt(bytes, 10), format, status, reason, strconv.FormatBool(scan)} {
-		h.Write([]byte(strconv.Itoa(len(part))))
-		h.Write([]byte{':'})
-		h.Write([]byte(part))
-	}
-	return hex.EncodeToString(h.Sum(nil))
-}
+// assessment, or library no longer give. No new import was written; recovery
+// of an earlier rescan is reported separately.
+var ErrPlanChanged = errors.New("the source, its assessment, or the library changed since the preview; this import wrote nothing; preview again")
 
 // provenance is the stable name of the import source: the label for an
 // archive member, otherwise the absolute source path.
@@ -63,10 +50,12 @@ func (r ImportRequest) provenance(source string) string {
 	return source
 }
 
-// ImportResult is the assessed disposition. Applied false means no library write.
+// ImportResult is the proposed disposition. Applied reports this import, while
+// RecoveredRescan reports completion of a previously authorized operation.
 type ImportResult struct {
 	SchemaVersion      int        `json:"schema_version"`
 	Applied            bool       `json:"applied"`
+	ApplyRequested     bool       `json:"apply_requested,omitempty"`
 	Resumed            bool       `json:"resumed"`
 	AlreadyHeld        bool       `json:"already_held"`
 	LibraryID          string     `json:"library_id,omitempty"`
@@ -94,6 +83,13 @@ type ImportResult struct {
 	// includes, so an apply must repeat the choice.
 	Plan          string `json:"plan,omitempty"`
 	ScanRequested bool   `json:"scan_requested,omitempty"`
+	// SourceEvidence is the normalized incoming declaration. Holding is the
+	// actual proposal, including retained provenance and disposition.
+	SourceEvidence *Source  `json:"source_evidence,omitempty"`
+	Holding        *Holding `json:"holding,omitempty"`
+	// RecoveredRescan reports completion of an earlier operation, separately
+	// from whether this import was applied or refused.
+	RecoveredRescan bool `json:"recovered_rescan,omitempty"`
 }
 
 type selected struct {
@@ -146,15 +142,14 @@ type storedObject struct {
 	exclusive bool
 }
 
-// Import preserves the source. Checked status is only an EPUB with passed
-// limited checks and a completed no-detection scan. The initialization journal
-// is not extended.
+// Import preserves the source. Checked status requires passed format checks
+// and a completed no-detection scan. The initialization journal is not extended.
 func Import(ctx context.Context, request ImportRequest) (ImportResult, error) {
 	return importLibrary(ctx, request, nil)
 }
 
 func importLibrary(ctx context.Context, request ImportRequest, stage importStage) (result ImportResult, err error) {
-	result = ImportResult{SchemaVersion: 1, Library: request.Library, Source: request.Source, Titles: []string{}, Languages: []string{}, Findings: []string{}, Limitations: importLimitations(), Durability: "file_synced; directory entry power-loss durability depends on filesystem"}
+	result = ImportResult{SchemaVersion: 1, ApplyRequested: request.Apply, Library: request.Library, Source: request.Source, Titles: []string{}, Languages: []string{}, Findings: []string{}, Limitations: importLimitations(), Durability: "file_synced; directory entry power-loss durability depends on filesystem"}
 	if request.Library == "" || request.Source == "" {
 		return result, errors.New("library import requires an initialized library directory and a source file or intake packet")
 	}
@@ -192,14 +187,22 @@ func importLibrary(ctx context.Context, request ImportRequest, stage importStage
 		return result, err
 	}
 	if !request.Apply {
-		pending, pendingErr := pendingSource(libraryRoot)
-		if pendingErr != nil {
-			return result, pendingErr
+		control, _, err := openControl(libraryRoot, false)
+		if err != nil {
+			return result, err
 		}
-		if pending != "" {
-			return result, pendingError(pending)
+		defer control.close()
+		events, lines, err := lockedManaged(control, state.LibraryID)
+		if err != nil {
+			return result, err
 		}
-		return assessPlan(ctx, result, selected, request)
+		if len(events) > 0 && events[len(events)-1].Event == "import_intent" {
+			if events[len(events)-1].ImportSourceSHA256 == "" {
+				return result, ErrLegacyPendingImport
+			}
+			return result, pendingError(events[len(events)-1].Source)
+		}
+		return assessPlan(ctx, result, selected, request, events, lines)
 	}
 	store, err := safeio.OpenRoot(libraryRoot)
 	if err != nil {
@@ -215,20 +218,24 @@ func importLibrary(ctx context.Context, request ImportRequest, stage importStage
 	if err != nil {
 		return result, err
 	}
+	recoveredRescan := len(events) > 0 && events[len(events)-1].Event == "rescan_intent"
 	if events, lines, err = rollForwardRescan(ctx, control, events, lines); err != nil {
 		return result, err
 	}
+	resume := false
 	if len(events) > 0 && events[len(events)-1].Event == "import_intent" {
 		pending := events[len(events)-1].Source
 		if !sameImportSource(pending, request.provenance(source)) {
 			return result, pendingError(pending)
 		}
-		return finish(ctx, control, store, state.LibraryID, events, lines, selected, request, stage, true)
+		resume = true
 	}
-	return finish(ctx, control, store, state.LibraryID, events, lines, selected, request, stage, false)
+	result, err = finish(ctx, control, store, state.LibraryID, events, lines, selected, request, stage, resume)
+	result.RecoveredRescan = recoveredRescan
+	return result, err
 }
 
-func assessPlan(ctx context.Context, result ImportResult, source selected, request ImportRequest) (ImportResult, error) {
+func assessPlan(ctx context.Context, result ImportResult, source selected, request ImportRequest, events []operation, lines []Holding) (ImportResult, error) {
 	report, err := assessment.Check(ctx, source.file, assessment.Options{Scan: request.Scan}, request.Scanner)
 	report = normalizeFormat(report, source.file)
 	fillReport(&result, report)
@@ -241,26 +248,21 @@ func assessPlan(ctx context.Context, result ImportResult, source selected, reque
 	if err = receiptAgrees(source.receipt, result.SHA256, result.Bytes); err != nil {
 		return result, err
 	}
-	report, scanned := withReceiptScan(report, source.receipt, request.Scan)
-	result.Antivirus = report.Antivirus.Status
-	status, reason, classErr := classify(report, scanned)
-	if classErr != nil {
-		return result, classErr
+	current := latestHoldings(lines)[result.AssetID]
+	// The writer completes this previously authorized rescan before its own
+	// work. Project its disposition here while keeping preview read-only.
+	if len(events) > 0 {
+		pending := events[len(events)-1]
+		if pending.Event == "rescan_intent" && pending.AssetID == current.ID {
+			current.Status, current.Reason = pending.Status, pending.Reason
+		}
 	}
-	result.Status, result.Reason = status, reason
-	result.Plan, result.ScanRequested = importPlan(result.LibraryID, result.Source, result.SourceKind, request.Label, result.AssetID, result.Bytes, result.Format, status, reason, request.Scan), request.Scan
-	result.Path = assetRel(result.SHA256, result.Format)
-	result.Titles = metaList(report)
-	result.Languages = languageList(report)
-	applyIdentities(&result, report)
-	if note := omittedDeclared(source.receipt); note != "" {
-		result.Limitations = append(result.Limitations, note)
-	}
-	return result, nil
+	result, _, err = proposeImport(result, report, source, request, current, nil)
+	return result, err
 }
 
 func finish(ctx context.Context, control *control, store *os.Root, libraryID string, events []operation, lines []Holding, source selected, request ImportRequest, stage importStage, resume bool) (ImportResult, error) {
-	result := ImportResult{SchemaVersion: 1, Library: request.Library, Source: request.Source, SourceKind: source.kind, LibraryID: libraryID, Titles: []string{}, Languages: []string{}, Findings: []string{}, Limitations: importLimitations(), Durability: "file_synced; directory entry power-loss durability depends on filesystem", Resumed: resume}
+	result := ImportResult{SchemaVersion: 1, ApplyRequested: request.Apply, Library: request.Library, Source: request.Source, SourceKind: source.kind, LibraryID: libraryID, Titles: []string{}, Languages: []string{}, Findings: []string{}, Limitations: importLimitations(), Durability: "file_synced; directory entry power-loss durability depends on filesystem", Resumed: resume}
 	libraryRoot, err := filepath.Abs(request.Library)
 	if err != nil {
 		return result, err
@@ -269,7 +271,6 @@ func finish(ctx context.Context, control *control, store *os.Root, libraryID str
 	if err != nil {
 		return result, err
 	}
-	sourceAbs := userSource
 	if request.Label != "" {
 		if len(request.Label) > 4096 || strings.ContainsAny(request.Label, "\x00\r\n") {
 			return result, errors.New("archive member label is outside the record limits")
@@ -280,6 +281,9 @@ func finish(ctx context.Context, control *control, store *os.Root, libraryID str
 	var intent operation
 	if resume {
 		intent = events[len(events)-1]
+		if intent.ImportSourceSHA256 == "" {
+			return result, ErrLegacyPendingImport
+		}
 	}
 	report, err := assessment.Check(ctx, source.file, assessment.Options{Scan: request.Scan && !resume}, request.Scanner)
 	report = normalizeFormat(report, source.file)
@@ -293,50 +297,21 @@ func finish(ctx context.Context, control *control, store *os.Root, libraryID str
 	if err = receiptAgrees(source.receipt, result.SHA256, result.Bytes); err != nil {
 		return result, err
 	}
-	report, scanned := withReceiptScan(report, source.receipt, request.Scan && !resume)
-	result.Antivirus = report.Antivirus.Status
-	status, reason, err := classify(report, scanned)
+	current := latestHoldings(lines)[result.AssetID]
+	var resumeIntent *operation
+	if resume {
+		resumeIntent = &intent
+	}
+	result, proposal, err := proposeImport(result, report, source, request, current, resumeIntent)
 	if err != nil {
 		return result, err
 	}
-	result.Plan, result.ScanRequested = importPlan(libraryID, sourceAbs, source.kind, request.Label, result.AssetID, result.Bytes, result.Format, status, reason, request.Scan), request.Scan
-	if request.Plan != "" && request.Plan != result.Plan {
-		// The new plan is withheld: a refused apply must not hand back a
-		// plan that could be applied without its own preview.
-		result.Plan = ""
-		return result, ErrPlanChanged
+	holding := proposal.holding
+	currentHash, err := canonicalDigest(current)
+	if err != nil {
+		return result, err
 	}
-	if resume {
-		if result.SHA256 != intent.AssetID[7:] || result.Bytes != intent.Bytes || result.Format != intent.Format {
-			return result, errors.New("pending import source changed; the journal was preserved")
-		}
-		status, reason = intent.Status, intent.Reason
-	}
-	result.Titles, result.Languages = metaList(report), languageList(report)
-	applyIdentities(&result, report)
-	current := latestHoldings(lines)[result.AssetID]
-	// A live scan is new evidence and may change a recorded status. A receipt
-	// scan is older evidence: it may only fill a holding that has no scan
-	// evidence, and never replaces a detection or a later scan outcome. An
-	// import without either never changes a recorded holding's status.
-	live := request.Scan && !resume
-	if !resume && current.ID == result.AssetID && !live && (!scanned || !(current.Status == "review" && rescannable[current.Reason])) {
-		status, reason = current.Status, current.Reason
-	}
-	result.Status, result.Reason = status, reason
-	result.Path = assetRel(result.SHA256, result.Format)
-	add := sourceRecord(source)
-	if request.Label != "" {
-		add.Kind, add.Path = "archive_member", request.Label
-	}
-	holding := Holding{SchemaVersion: 1, LibraryID: libraryID, ID: result.AssetID, SHA256: result.SHA256, Bytes: result.Bytes, Format: result.Format, Status: status, Reason: reason, Path: result.Path, Titles: result.Titles, Languages: result.Languages, IdentitiesRecorded: result.IdentitiesRecorded, IdentifiersOmitted: result.IdentifiersOmitted, Identities: result.Identities, Sources: mergeSources(current, add)}
-	if note := omittedDeclared(source.receipt); note != "" {
-		result.Limitations = append(result.Limitations, note)
-	}
-	if !validHolding(holding, libraryID) {
-		return result, errors.New("import record is outside the managed journal limits")
-	}
-	fact := operation{AssetID: holding.ID, Format: holding.Format, Bytes: holding.Bytes, Status: holding.Status, Reason: holding.Reason}
+	writeHolding := currentHash != proposal.holdingHash
 	if err = prepareStore(ctx, store, holding.Path); err != nil {
 		return result, err
 	}
@@ -344,7 +319,7 @@ func finish(ctx context.Context, control *control, store *os.Root, libraryID str
 	if err != nil {
 		return result, err
 	}
-	recorded := !resume && sameFact(current, fact) && sourceKnown(current, add) && sameIdentity(current, holding)
+	recorded := !resume && !writeHolding
 	if obj.present && obj.exclusive && recorded {
 		result.AlreadyHeld, result.Applied = true, true
 		return result, nil
@@ -362,10 +337,9 @@ func finish(ctx context.Context, control *control, store *os.Root, libraryID str
 			return result, err
 		}
 	}
-	writeHolding := !sameFact(current, fact) || !sourceKnown(current, add) || !sameIdentity(current, holding)
 	now := time.Now().UTC().Format(time.RFC3339Nano)
 	if !resume {
-		intent = operation{SchemaVersion: 1, Sequence: len(events) + 1, LibraryID: libraryID, OperationID: newStateID("operation"), Event: "import_intent", Source: userSource, AssetID: holding.ID, Format: holding.Format, Bytes: holding.Bytes, Status: holding.Status, Reason: holding.Reason, At: now}
+		intent = operation{SchemaVersion: 1, Sequence: len(events) + 1, LibraryID: libraryID, OperationID: newStateID("operation"), Event: "import_intent", Source: userSource, AssetID: holding.ID, Format: holding.Format, Bytes: holding.Bytes, Status: holding.Status, Reason: holding.Reason, At: now, ImportSourceSHA256: proposal.sourceHash, ImportHoldingSHA256: proposal.holdingHash}
 		if err = reserveNew(control, intent, holding, writeHolding); err != nil {
 			return result, err
 		}
@@ -509,8 +483,11 @@ func readReceipt(root *os.Root) (*packetReceipt, error) {
 	}
 	defer f.Close()
 	b, err := io.ReadAll(io.LimitReader(f, info.Size()+1))
-	if err != nil || int64(len(b)) != info.Size() {
+	if err != nil {
 		return nil, err
+	}
+	if int64(len(b)) != info.Size() {
+		return nil, errors.New("intake receipt size changed while reading; nothing imported")
 	}
 	var receipt packetReceipt
 	if err := json.Unmarshal(b, &receipt); err != nil || !receipt.Complete || receipt.Status != "untrusted_intake" || receipt.Antivirus == "findings" || receipt.Transfer.Bytes < 1 || !validHash(receipt.Transfer.SHA256) {
@@ -636,17 +613,6 @@ func mergeSources(current Holding, add Source) []Source {
 		}
 	}
 	return append(out, add)
-}
-
-// sourceKnown reports a source already recorded as add would record it, so
-// importing it again writes nothing.
-func sourceKnown(current Holding, add Source) bool {
-	for _, source := range current.Sources {
-		if source.Kind == add.Kind && sameImportSource(source.Path, add.Path) {
-			return (source.Narration != nil || add.Narration == nil) && (source.Identities != nil || add.Identities == nil)
-		}
-	}
-	return false
 }
 
 func sameImportSource(recorded, requested string) bool {

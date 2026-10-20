@@ -384,6 +384,16 @@ not downgrade `checked`. A scan gap with no other finding is recorded as
 hard link, or a store path whose parent is not a real directory fails before a
 new intent is written. The existing bytes stay in place.
 
+Preview exposes normalized incoming `source_evidence` and the full proposed
+`holding`, including any retained source declarations and disposition. `--plan`
+binds both records, byte identity, library identity, and the scan choice. Changing
+stored provenance refuses an old plan before a new import write. A writer first
+completes any previously pending rescan and reports `recovered_rescan` separately.
+New import intents also bind the source and holding for recovery. Completed
+legacy imports remain readable; an unfinished legacy import is retained and
+must finish with its earlier executable and original source before upgrading,
+or remain for review. See [decision 0054](decisions/0054-provenance-bound-import-plans.md).
+
 `library ingest` imports a whole folder: every EPUB, PDF, MP3, M4B, M4A, intake packet,
 and supported ZIP member, through the same import and journal, and lists every
 other entry with a reason. ZIP members are extracted into private temporary
@@ -438,7 +448,8 @@ holdings, audit, file checks without antivirus, and EPUB content retrieval, each
 over the same services and JSON data as the CLI. `--allow-network` adds catalog
 search and Archive evaluation. `--allow-write` adds `library_import_preview`
 and `library_import_apply`; an apply stores only the plan digest its preview
-returned and refuses a changed source, assessment, or scan choice
+returned and refuses a changed source, assessment, normalized provenance,
+proposed holding, or scan choice
 ([decision 0034](decisions/0034-mcp-import-tools.md)). `library import
 --apply --plan DIGEST` gives the CLI the same check. `--allow-write` also adds
 `library_rescan_start`, `job_get`, `job_list`, and `job_cancel`, and with

@@ -14,15 +14,21 @@ server is unchanged: read-only tools, `read_only: true` in capabilities.
   `scan`, the installed antivirus scans the file. It returns the status the
   import would record and a plan digest.
 - `library_import_apply` stores that plan: a journaled, verified copy in the
-  library. It requires the 64-character plan, and refuses, writing nothing,
+  library. It requires the 64-character plan, and refuses a new import write
   when the current source, its assessment, the scan choice, or the library no
   longer give it. A refusal withholds the new plan, so the caller previews
   again rather than applying a plan nobody was shown.
 
-The plan is a SHA-256 over the library ID, the absolute source path, the source
-kind, the asset ID and size, the format, the status and reason the assessment
-gives, and the scan choice. The service layer computes and checks it, so the
-CLI shares it: `library import` previews show `Plan:` and suggest an apply with
+The plan now follows [decision 0054](0054-provenance-bound-import-plans.md):
+SHA-256 over length-prefixed `nemalo-import-plan/2`, library ID, source as named,
+normalized incoming source hash, full proposed holding hash, and scan choice.
+The holding binds byte identity, format, assessment disposition, bibliographic
+metadata, and retained sources. Both hashes use canonical struct JSON without
+a line feed. Preview exposes `source_evidence` and `holding`; apply builds
+the same proposal under the writer lock. A previously pending rescan completes
+first and is reported separately through `recovered_rescan`. The service layer
+computes and checks the plan, so the CLI shares it: `library import` previews
+show `Plan:` and suggest an apply with
 `--plan`, and `--apply --plan DIGEST` refuses a changed source the same way.
 The digest binds an apply to what was shown; it is not authorization. The
 person's decision to start the server with `--allow-write` and with these
@@ -31,7 +37,8 @@ before applying.
 
 Both library and source must resolve inside the configured scopes. Import
 copies: no tool changes, moves, or deletes a source, initializes a library,
-ingests a folder, cleans up, acquires, or rescans. Apply is annotated as not
+ingests a folder, cleans up, acquires, or starts a new rescan. The service still
+finishes a previously pending rescan before any write. Apply is annotated as not
 read-only, not destructive, and idempotent, because a repeated apply records
 the holding already held. Annotations describe; the scope check and the plan
 check enforce. Retrieved text cannot change either. The bundled plugins keep

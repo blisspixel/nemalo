@@ -104,7 +104,7 @@ transport/restart behavior still needs external integration evidence.
 | `content_get` | Bounded supported content with exact asset ID and location references | Local read; derived indexes separately controlled |
 | `intake_inspect` | Inventory configured roots and return a plan | Local read plus bounded staging/state |
 | `intake_apply` | Apply an inspected plan under enabled format policies | Library/state write; source retained |
-| `library_import_preview`, `library_import_apply` | Implemented with `--allow-write`: one file or packet, applied only by its preview's plan digest | Library/state write; source retained |
+| `library_import_preview`, `library_import_apply` | Implemented with `--allow-write`: one file or packet, with normalized source evidence and the full proposed holding bound to its preview digest (decision 0054) | Library/state write; source retained |
 | `acquisition_start` | Acquire selected provider asset IDs into staged intake | Network and library/state write |
 | `cleanup_preview` | Show exact recorded dispositions | Read-only |
 | `cleanup_apply` | Revalidate and apply an authorized plan digest | Source mutation, recoverable by default |

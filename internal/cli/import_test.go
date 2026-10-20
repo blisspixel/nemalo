@@ -3,14 +3,20 @@ package cli
 import (
 	"archive/zip"
 	"bytes"
+	"context"
+	"crypto/sha256"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
+	"reflect"
 	"sort"
 	"strings"
 	"testing"
 
+	"github.com/blisspixel/nemalo/internal/app"
+	"github.com/blisspixel/nemalo/internal/config"
 	"github.com/blisspixel/nemalo/internal/library"
 )
 
@@ -103,4 +109,75 @@ func writeCLIEPUB(t *testing.T, dir string) string {
 		t.Fatal(err)
 	}
 	return path
+}
+
+func TestCLIImportPlanBindsPacketDeclarations(t *testing.T) {
+	state := t.TempDir()
+	service := app.Service{Providers: map[string]app.Searcher{"archive": searcher{nil}, "openlibrary": searcher{nil}}, Scanner: fakeScanner("unavailable")}
+	run := func(args []string) (int, string, string) {
+		t.Helper()
+		var out, stderr bytes.Buffer
+		code := Execute(context.Background(), args, &out, &stderr, service, func(string) string { return "" }, func() (config.Paths, error) {
+			return config.Paths{Config: filepath.Join(state, "missing.json"), State: state}, nil
+		}, nil)
+		return code, out.String(), stderr.String()
+	}
+	root := t.TempDir()
+	packet := t.TempDir()
+	if code, out, _ := run([]string{"library", "init", root}); code != 0 {
+		t.Fatal(out)
+	}
+	source := writeCLIEPUB(t, packet)
+	body, err := os.ReadFile(source)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Rename(source, filepath.Join(packet, "content.epub")); err != nil {
+		t.Fatal(err)
+	}
+	writeReceipt := func(id string) {
+		t.Helper()
+		b, err := json.Marshal(map[string]any{"complete": true, "status": "untrusted_intake", "transfer": map[string]any{"bytes": len(body), "sha256": fmt.Sprintf("%x", sha256.Sum256(body))}, "intent": map[string]any{"request": map[string]string{"source_id": id, "source_file": "book.epub"}}})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(packet, "receipt.json"), b, 0600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	writeReceipt("archive:before")
+	code, out, _ := run([]string{"library", "import", root, packet, "--json"})
+	var env struct {
+		Data library.ImportResult `json:"data"`
+	}
+	if err := json.Unmarshal([]byte(out), &env); err != nil || code != 0 || env.Data.SourceEvidence == nil || env.Data.Holding == nil || env.Data.SourceEvidence.SourceID != "archive:before" {
+		t.Fatal(out, err)
+	}
+	preview := env.Data
+	writeReceipt("archive:after")
+	env.Data = library.ImportResult{}
+	code, out, _ = run([]string{"library", "import", root, packet, "--apply", "--plan", preview.Plan, "--json"})
+	if err := json.Unmarshal([]byte(out), &env); err != nil || code != 1 || env.Data.Plan != "" || env.Data.Applied {
+		t.Fatal(out, err)
+	}
+	for _, name := range []string{"operations.jsonl", "holdings.jsonl"} {
+		if _, err := os.Stat(filepath.Join(root, ".nemalo", name)); !os.IsNotExist(err) {
+			t.Fatal("refusal wrote", name, err)
+		}
+	}
+	code, out, _ = run([]string{"library", "import", root, packet})
+	if code != 0 || !strings.Contains(out, "Incoming source evidence (declarations):") || !strings.Contains(out, "Source ID: archive:after") || !strings.Contains(out, "Proposed holding sources: 1") {
+		t.Fatal(code, out)
+	}
+	code, out, _ = run([]string{"library", "import", root, packet, "--json"})
+	env.Data = library.ImportResult{}
+	if err := json.Unmarshal([]byte(out), &env); err != nil || code != 0 {
+		t.Fatal(out, err)
+	}
+	fresh := env.Data
+	code, out, _ = run([]string{"library", "import", root, packet, "--apply", "--plan", fresh.Plan, "--json"})
+	env.Data = library.ImportResult{}
+	if err := json.Unmarshal([]byte(out), &env); err != nil || code != 0 || !env.Data.Applied || !reflect.DeepEqual(env.Data.Holding, fresh.Holding) {
+		t.Fatal(out, err)
+	}
 }

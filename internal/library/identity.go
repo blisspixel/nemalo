@@ -421,15 +421,3 @@ func validIdentity(item Identity) bool {
 	got, ok := classifyPackageIdentifier(assessment.EPUBIdentifier{Value: item.Raw, Scheme: item.Scheme, PackageUnique: item.PackageUnique})
 	return ok && got == item
 }
-
-func sameIdentity(a, b Holding) bool {
-	if a.IdentitiesRecorded != b.IdentitiesRecorded || a.IdentifiersOmitted != b.IdentifiersOmitted || len(a.Identities) != len(b.Identities) {
-		return false
-	}
-	for i := range a.Identities {
-		if a.Identities[i] != b.Identities[i] {
-			return false
-		}
-	}
-	return true
-}
