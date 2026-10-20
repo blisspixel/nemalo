@@ -22,13 +22,116 @@ func rar5Numbers(values ...uint64) []byte {
 
 // Write stored synthetic records only. No reader or decoder is used in tests.
 func rar5Record(kind, flags uint64, body, data []byte) []byte {
+	return rar5RecordExtra(kind, flags, body, nil, data)
+}
+
+func rar5RecordExtra(kind, flags uint64, body, extra, data []byte) []byte {
 	h := rar5Numbers(kind, flags)
+	if flags&1 != 0 {
+		h = append(h, rar5Numbers(uint64(len(extra)))...)
+	}
 	if flags&2 != 0 {
 		h = append(h, rar5Numbers(uint64(len(data)))...)
 	}
 	h = append(h, body...)
+	h = append(h, extra...)
+	return append(rar5RawHeader(h), data...)
+}
+
+func rar5RawHeader(h []byte) []byte {
 	checked := append(rar5Numbers(uint64(len(h))), h...)
-	return append(append(binary.LittleEndian.AppendUint32(nil, crc32.ChecksumIEEE(checked)), checked...), data...)
+	return append(binary.LittleEndian.AppendUint32(nil, crc32.ChecksumIEEE(checked)), checked...)
+}
+
+func rar5ExtraRecord(kind uint64, fields []byte) []byte {
+	b := append(rar5Numbers(kind), fields...)
+	return append(rar5Numbers(uint64(len(b))), b...)
+}
+
+func rar5TimeFields(flags uint64) []byte {
+	b := rar5Numbers(flags)
+	for _, bit := range []uint64{2, 4, 8} {
+		if flags&bit != 0 {
+			b = binary.LittleEndian.AppendUint32(b, 123)
+			if flags&1 == 0 {
+				b = binary.LittleEndian.AppendUint32(b, 456)
+			}
+		}
+	}
+	if flags&17 == 17 {
+		for _, bit := range []uint64{2, 4, 8} {
+			if flags&bit != 0 {
+				b = binary.LittleEndian.AppendUint32(b, 999_999_999)
+			}
+		}
+	}
+	return b
+}
+
+func TestRAR5KnownMetadataPreservesTheExactHeaderPartition(t *testing.T) {
+	for _, flags := range []uint64{2, 4, 8, 14, 3, 15, 19, 31} {
+		t.Run(fmt.Sprint(flags), func(t *testing.T) {
+			// An extended zero locator is ordinary preallocation, not a
+			// new offset or permission to skip any block in the traversal.
+			locator := rar5ExtraRecord(1, append(rar5Numbers(1), []byte{0x80, 0x80, 0x80, 0}...))
+			b := append([]byte("Rar!\x1a\x07\x01\x00"), rar5RecordExtra(1, 5, rar5Numbers(0), locator, nil)...)
+			payload := []byte("synthetic book")
+			record := rar5RecordExtra(2, 7, rar5FileBody("book.epub", payload, 4, 0100644, 0, 1), rar5ExtraRecord(3, rar5TimeFields(flags)), payload)
+			start := len(b)
+			b = append(b, record...)
+			b = append(b, rar5Record(5, 4, rar5Numbers(0), nil)...)
+			files, err := RAR5Accounted(context.Background(), bytes.NewReader(b), int64(len(b)))
+			if err != nil || len(files) != 1 || files[0].Name != "book.epub" || files[0].HeaderOffset != int64(start) || files[0].DataOffset+files[0].Packed != int64(start+len(record)) {
+				t.Fatal(files, err)
+			}
+		})
+	}
+}
+
+func TestRAR5MetadataNeverSkipsUnknownOrMalformedEvidence(t *testing.T) {
+	goodTime := rar5TimeFields(19)
+	badNanos := append([]byte{}, goodTime...)
+	binary.LittleEndian.PutUint32(badNanos[len(badNanos)-4:], 1_000_000_000)
+	variants := map[string]struct {
+		main  bool
+		extra []byte
+	}{
+		"locator_target":     {true, rar5ExtraRecord(1, rar5Numbers(1, 7))},
+		"locator_recovery":   {true, rar5ExtraRecord(1, rar5Numbers(2, 7))},
+		"locator_flags":      {true, rar5ExtraRecord(1, rar5Numbers(4))},
+		"locator_missing":    {true, rar5ExtraRecord(1, rar5Numbers(1))},
+		"locator_trailing":   {true, rar5ExtraRecord(1, rar5Numbers(0, 0))},
+		"archive_metadata":   {true, rar5ExtraRecord(2, rar5Numbers(0))},
+		"unknown_type":       {false, rar5ExtraRecord(42, []byte("retained metadata"))},
+		"time_flags":         {false, rar5ExtraRecord(3, rar5TimeFields(35))},
+		"time_nanos_windows": {false, rar5ExtraRecord(3, rar5TimeFields(18))},
+		"time_no_field":      {false, rar5ExtraRecord(3, rar5TimeFields(1))},
+		"time_nanos_range":   {false, rar5ExtraRecord(3, badNanos)},
+		"time_short":         {false, rar5ExtraRecord(3, goodTime[:len(goodTime)-1])},
+		"time_duplicate":     {false, append(rar5ExtraRecord(3, goodTime), rar5ExtraRecord(3, goodTime)...)},
+		"short_extra":        {false, []byte{127, 3}},
+		"extra_overflow":     {false, bytes.Repeat([]byte{0xff}, 11)},
+	}
+	for name, v := range variants {
+		t.Run(name, func(t *testing.T) {
+			var b []byte
+			if v.main {
+				b = append([]byte("Rar!\x1a\x07\x01\x00"), rar5RecordExtra(1, 5, rar5Numbers(0), v.extra, nil)...)
+				b = append(b, rar5Book("book.epub")...)
+				b = append(b, rar5Record(5, 0, rar5Numbers(0), nil)...)
+			} else {
+				payload := []byte("synthetic book")
+				b = rar5Archive(rar5RecordExtra(2, 3, rar5FileBody("book.epub", payload, 4, 0100644, 0, 1), v.extra, payload))
+			}
+			if files, err := RAR5Accounted(context.Background(), bytes.NewReader(b), int64(len(b))); !errors.Is(err, ErrRAR5Coverage) || files != nil {
+				t.Fatal("metadata conferred coverage", files, err)
+			}
+		})
+	}
+	bad := append([]byte("Rar!\x1a\x07\x01\x00"), rar5RawHeader(rar5Numbers(1, 1, 1<<40, 0))...)
+	if files, err := RAR5Accounted(context.Background(), bytes.NewReader(bad), int64(len(bad))); err == nil || files != nil {
+		t.Fatal("extra area escaped its header", files, err)
+	}
 }
 
 func rar5FileBody(name string, data []byte, flags, attributes, compression, host uint64) []byte {
@@ -250,6 +353,8 @@ func TestRAR5FramingBoundsFilesAndSourceSize(t *testing.T) {
 
 func FuzzRAR5Accounted(f *testing.F) {
 	f.Add(rar5Archive(rar5Book("book.epub")))
+	payload := []byte("synthetic book")
+	f.Add(rar5Archive(rar5RecordExtra(2, 7, rar5FileBody("book.epub", payload, 4, 0100644, 0, 1), rar5ExtraRecord(3, rar5TimeFields(19)), payload)))
 	f.Add(rar5Archive(rar5Record(3, 0, []byte("service"), nil)))
 	f.Add([]byte("Rar!\x1a\x07\x01\x00"))
 	f.Fuzz(func(t *testing.T, data []byte) {
@@ -269,6 +374,35 @@ func FuzzRAR5Accounted(f *testing.F) {
 				t.Fatal("invalid covered span", file)
 			}
 			last = file.DataOffset + file.Packed
+		}
+	})
+}
+
+// Recompute only the outer header CRC so mutations reach extra-field parsing
+// rather than spending the whole run at the checksum boundary.
+func FuzzRAR5Extras(f *testing.F) {
+	f.Add(true, rar5ExtraRecord(1, rar5Numbers(1, 0)))
+	f.Add(false, rar5ExtraRecord(3, rar5TimeFields(19)))
+	f.Add(false, rar5ExtraRecord(42, []byte("unknown metadata")))
+	f.Fuzz(func(t *testing.T, main bool, extra []byte) {
+		if len(extra) > 4096 {
+			return
+		}
+		var b []byte
+		if main {
+			b = append([]byte("Rar!\x1a\x07\x01\x00"), rar5RecordExtra(1, 5, rar5Numbers(0), extra, nil)...)
+			b = append(b, rar5Book("book.epub")...)
+			b = append(b, rar5Record(5, 4, rar5Numbers(0), nil)...)
+		} else {
+			payload := []byte("synthetic book")
+			b = rar5Archive(rar5RecordExtra(2, 3, rar5FileBody("book.epub", payload, 4, 0100644, 0, 1), extra, payload))
+		}
+		files, err := RAR5Accounted(context.Background(), bytes.NewReader(b), int64(len(b)))
+		if err != nil && files != nil {
+			t.Fatal("partial evidence escaped unsupported metadata")
+		}
+		if err == nil && (len(files) != 1 || files[0].Name != "book.epub" || files[0].Bytes != 14 || files[0].Packed != 14) {
+			t.Fatal("metadata changed the bound selection", files)
 		}
 	})
 }

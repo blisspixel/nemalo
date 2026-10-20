@@ -57,14 +57,19 @@ func RAR5Accounted(ctx context.Context, source io.ReaderAt, size int64) ([]RAR5F
 		}
 		switch kind {
 		case 1:
+			extra := h.extra(flags)
 			archiveFlags := h.number()
-			if main || flags != 0 || archiveFlags&^uint64(4) != 0 || !h.done() {
+			if main || flags&^uint64(5) != 0 || archiveFlags&^uint64(4) != 0 || !h.done() || !rar5Extras(extra, true) {
 				return nil, fmt.Errorf("%w: unsupported main metadata or volume", ErrRAR5Coverage)
 			}
 			main = true
 		case 2:
-			if flags&^uint64(2) != 0 || len(files) >= 10000 {
-				return nil, fmt.Errorf("%w: extra fields, split record, flags or member limit", ErrRAR5Coverage)
+			if flags&^uint64(7) != 0 || len(files) >= 10000 {
+				return nil, fmt.Errorf("%w: unsupported flags, split record or member limit", ErrRAR5Coverage)
+			}
+			extraBytes := uint64(0)
+			if flags&1 != 0 {
+				extraBytes = h.number()
 			}
 			packed := uint64(0)
 			if flags&2 != 0 {
@@ -73,9 +78,13 @@ func RAR5Accounted(ctx context.Context, source io.ReaderAt, size int64) ([]RAR5F
 			if packed > uint64(size-next) {
 				return nil, fmt.Errorf("%w: data span exceeds the source", ErrRAR5Coverage)
 			}
+			extra := h.splitExtra(extraBytes)
 			f, err := readRAR5File(h)
 			if err != nil {
 				return nil, err
+			}
+			if !rar5Extras(extra, false) {
+				return nil, fmt.Errorf("%w: unsupported file extra records", ErrRAR5Coverage)
 			}
 			f.HeaderOffset, f.DataOffset, f.Packed = off, next, int64(packed)
 			if f.Directory && (f.Bytes != 0 || f.Packed != 0 || f.CRC32 != 0) {
@@ -88,7 +97,7 @@ func RAR5Accounted(ctx context.Context, source io.ReaderAt, size int64) ([]RAR5F
 			next += int64(packed)
 		case 5:
 			endFlags := h.number()
-			if flags != 0 || endFlags != 0 || !h.done() || next != size {
+			if flags&^uint64(4) != 0 || endFlags != 0 || !h.done() || next != size {
 				return nil, fmt.Errorf("%w: unsupported end marker or trailing bytes", ErrRAR5Coverage)
 			}
 			if !unambiguousRAR5Names(files) {
@@ -156,6 +165,82 @@ func (h *rar5Fields) fixed32() uint32 {
 }
 
 func (h *rar5Fields) done() bool { return h.ok && len(h.data) == 0 }
+
+func (h *rar5Fields) extra(flags uint64) []byte {
+	if flags&1 == 0 {
+		return nil
+	}
+	return h.splitExtra(h.number())
+}
+
+func (h *rar5Fields) splitExtra(size uint64) []byte {
+	if !h.ok || size > uint64(len(h.data)) {
+		h.ok = false
+		return nil
+	}
+	end := len(h.data) - int(size)
+	extra := h.data[end:]
+	h.data = h.data[:end]
+	return extra
+}
+
+// A header currently admits at most one known extra record. Nothing unknown
+// is skipped, even if a maintained reader might ignore it successfully.
+func rar5Extras(data []byte, main bool) bool {
+	if len(data) == 0 {
+		return true
+	}
+	area := &rar5Fields{data: data, ok: true}
+	size := area.number()
+	if !area.ok || size != uint64(len(area.data)) {
+		return false
+	}
+	kind := area.number()
+	if main {
+		if kind != 1 {
+			return false
+		}
+		flags := area.number()
+		if flags&^uint64(3) != 0 {
+			return false
+		}
+		for _, bit := range []uint64{1, 2} {
+			if flags&bit != 0 && area.number() != 0 {
+				return false
+			}
+		}
+		return area.done()
+	}
+	if kind != 3 {
+		return false
+	}
+	flags := area.number()
+	if !area.ok || flags&^uint64(31) != 0 || flags&14 == 0 || (flags&16 != 0 && flags&1 == 0) {
+		return false
+	}
+	count := 0
+	for _, bit := range []uint64{2, 4, 8} {
+		if flags&bit != 0 {
+			count++
+		}
+	}
+	width, nanos := 8, 0
+	if flags&1 != 0 {
+		width = 4
+		if flags&16 != 0 {
+			nanos = count * 4
+		}
+	}
+	if len(area.data) != count*width+nanos {
+		return false
+	}
+	for offset := count * width; offset < len(area.data); offset += 4 {
+		if binary.LittleEndian.Uint32(area.data[offset:]) >= 1_000_000_000 {
+			return false
+		}
+	}
+	return true
+}
 
 func readRAR5File(h *rar5Fields) (RAR5File, error) {
 	f := RAR5File{}

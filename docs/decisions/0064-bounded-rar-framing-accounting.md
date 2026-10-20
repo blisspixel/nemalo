@@ -33,12 +33,33 @@ cgo requirement or non-Go tooling.
 First implement a strict standalone RAR5 subset. Measure checked header and data
 spans from the initial signature through an exact end marker, bound work and
 allocation, and return the declared file facts. Refuse service/comment/recovery
-records, encryption, volumes and split members, unknown flags or extra records,
+records, encryption, volumes and split members, unknown flags or unsupported extra records,
 unsupported metadata, directory payloads, gaps, tails, malformed framing and
 ambiguous names. Never infer coverage from a successful member extraction.
 The supported field subset and limits belong in code and adversarial fixtures.
 The result establishes framing facts only, not eligibility, integrity, safety,
 completeness or permission to change a source.
+
+The first compressed synthetic reference also carries routine metadata. A
+read-only extension may account for the known skip-on-update common flag on
+recognized block types, main locator records whose declared offsets are zero,
+and file time records with exact flag/width/precision checks. Unknown blocks
+remain refused even when marked skippable. Nonzero locators, archive metadata,
+encryption, hashes, redirection, ownership and other extra records remain outside
+this subset. Reject duplicate records, malformed sizes, unknown flags and invalid
+nanoseconds. This extension must pass its own synthetic, native, fuzz and complete
+local/hosted verification before cleanup can be enabled.
+
+The compressed native reference is libarchive's generated `test.bin` pattern
+[fixture](https://github.com/libarchive/libarchive/blob/03b426003adf12c1eb4c34e72bedb4c2bf1ba8d3/libarchive/test/test_read_format_rar5_compressed.rar.uu), checked against its
+[test source](https://github.com/libarchive/libarchive/blob/03b426003adf12c1eb4c34e72bedb4c2bf1ba8d3/libarchive/test/test_read_format_rar5.c), retained outside
+the checkout with its source and license. Its 436 source bytes have SHA-256
+`68f9d7e2662cd5bc5607ba9c6bf1edbf121cf3b08011a7d8643091791750a7c8`.
+Installed 7-Zip 26.04 returned the exact independently regenerated 1,200 bytes.
+The extended accountant reports the file header at 24, data at 67, 361 packed
+bytes and the same declared size and CRC. This is a framing/reader experiment,
+not a claim of book validity or production cleanup. No upstream fixture or
+decoder is bundled; first-party tests remain synthetic Go builders.
 
 Keep existing RAR preservation in force while that read-only implementation is
 verified. Before any subset can authorize cleanup, bind every physical file
