@@ -262,6 +262,12 @@ func archivePermissions(m cleanupManifest, pm purgeManifest) (map[int]bool, erro
 		if _, ok := archiveEntryParts(e); !ok || expected[start].Path != e.Files[0].Path || len(group.Indices) != len(e.Files) {
 			return nil, bad
 		}
+		switch group.Proof {
+		case zipStreamProof, zipSegmentsProof, archiveTreeProof:
+			if group.Proof != e.ArchiveProof && (e.ArchiveProof == archiveTreeProof || group.Proof == archiveTreeProof) {
+				return nil, bad
+			}
+		}
 		allowed := archiveGroupDigestValid(e, group)
 		if group.Proof == e.ArchiveProof && supportedArchiveProof(e) && !allowed {
 			return nil, bad

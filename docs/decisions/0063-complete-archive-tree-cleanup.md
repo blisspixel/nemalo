@@ -61,6 +61,9 @@ a tree from a partially purged set. Only a validated supported group can authori
 the terminal ZIP segment. Missing or unknown evidence retains remaining bytes;
 malformed bindings stop before any removal. Journaled removals never adopt
 replacements.
+An unknown proof version retains its group. A recognized proof label mismatched
+across the `archive-tree/1` boundary is malformed and stops before any removal.
+Legacy retention for incompatible ZIP stream/segment proofs remains unchanged.
 
 Earlier executables reject unfamiliar canonical leaf fields or unsupported proof
 and group shapes before removal. Keep their manifests readable where possible,

@@ -343,7 +343,7 @@ func changeStreamPurgeManifest(t *testing.T, root string, alter func(*purgeManif
 }
 
 func testZIPPurgeRetainsUnsupportedOrMalformedEvidence(t *testing.T, fixture zipFixtureFactory) {
-	for _, kind := range []string{"unknown", "missing", "duplicate", "wrong_hash", "wrong_holdings", "planned_outcome"} {
+	for _, kind := range []string{"unknown", "missing", "wrong_proof", "duplicate", "wrong_hash", "wrong_holdings", "planned_outcome"} {
 		t.Run(kind, func(t *testing.T) {
 			f := fixture(t, 3, nil)
 			c := f.cleanup(t)
@@ -367,6 +367,11 @@ func testZIPPurgeRetainsUnsupportedOrMalformedEvidence(t *testing.T, fixture zip
 				switch kind {
 				case "unknown":
 					pm.ArchiveGroups[0].Proof = "zip-stream/future"
+				case "wrong_proof":
+					pm.ArchiveGroups[0].Proof = zipStreamProof
+					if f.proof() == zipStreamProof {
+						pm.ArchiveGroups[0].Proof = zipSegmentsProof
+					}
 				case "missing":
 					pm.SchemaVersion = 1
 					pm.ArchiveGroups = nil
@@ -382,7 +387,7 @@ func testZIPPurgeRetainsUnsupportedOrMalformedEvidence(t *testing.T, fixture zip
 			})
 			before := snapshotTree(t, filepath.Join(c.HoldingArea, "files"))
 			r, err := Purge(ctx, PurgeRequest{Library: f.root, CleanupID: c.CleanupID, Apply: digest})
-			if kind == "unknown" || kind == "missing" {
+			if kind == "unknown" || kind == "missing" || (kind == "wrong_proof" && f.proof() != archiveTreeProof) {
 				if err != nil || r.Purged != 0 {
 					t.Fatal(r, err)
 				}
