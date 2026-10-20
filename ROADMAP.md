@@ -113,6 +113,10 @@ verified, not when code exists. No stage has a time estimate.
    diagnostic, process, and deadline limits across each outer archive tree;
    nested sources and volume sets stay preserved
    ([decision 0058](docs/decisions/0058-bounded-nested-intake.md)).
+   Explicit PAR2 metadata inventory groups declared set IDs, preserves conflicting
+   declarations, and distinguishes packet checksums from unverified protected
+   data; ingest and cleanup retain recovery material
+   ([decision 0059](docs/decisions/0059-par2-metadata-inventory.md)).
 3. **Audio access** (milestone 8). M4B and M4A byte ranges and decoded timing in
    content access, bounded ranges usable by an external player, and output
    demonstrated with a real audiobook reader or server.
@@ -361,9 +365,12 @@ cleanup ([decision 0057](docs/decisions/0057-split-zip-intake.md)). Nested stand
 ZIP/RAR/7z archives now traverse through a shared four-level archive-tree budget
 and exact member-chain provenance. Nested volume sets remain preserved; cleanup
 keeps every outer source containing a nested archive
-([decision 0058](docs/decisions/0058-bounded-nested-intake.md)). PAR2 inventory
-and retention remain planned
-([issue 51](https://github.com/blisspixel/nemalo/issues/51)). Depends on milestone 1.
+([decision 0058](docs/decisions/0058-bounded-nested-intake.md)). `inspect --par2`
+now inventories bounded packet metadata and declared sets without verifying or
+repairing protected files. Recovery material stays preserved by ingest and
+cleanup ([decision 0059](docs/decisions/0059-par2-metadata-inventory.md)). Full
+milestone acceptance still needs the remaining platform and cleanup evidence.
+Depends on milestone 1.
 
 Deliver recursive inventory, file-signature checks, ZIP handling, additional archive
 adapters, and private staging. Inventory includes links and unsupported entries as

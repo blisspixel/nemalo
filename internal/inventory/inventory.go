@@ -3,15 +3,12 @@ package inventory
 
 import (
 	"context"
-	"crypto/sha256"
-	"encoding/hex"
 	"errors"
-	"fmt"
-	"io"
 	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/blisspixel/nemalo/internal/safeio"
 )
@@ -22,6 +19,7 @@ type Limits struct {
 	FileBytes  int64
 	TotalBytes int64
 	Hashes     bool
+	PAR2       bool
 }
 
 func Defaults() Limits {
@@ -29,19 +27,21 @@ func Defaults() Limits {
 }
 
 type Entry struct {
-	Path    string `json:"path"`
-	Kind    string `json:"kind"`
-	Bytes   int64  `json:"bytes,omitempty"`
-	SHA256  string `json:"sha256,omitempty"`
-	Finding string `json:"finding,omitempty"`
+	Path    string    `json:"path"`
+	Kind    string    `json:"kind"`
+	Bytes   int64     `json:"bytes,omitempty"`
+	SHA256  string    `json:"sha256,omitempty"`
+	Finding string    `json:"finding,omitempty"`
+	PAR2    *PAR2File `json:"par2_metadata,omitempty"`
 }
 
 type Report struct {
-	Root      string  `json:"root"`
-	Complete  bool    `json:"complete"`
-	Security  string  `json:"security_status"`
-	BytesRead int64   `json:"bytes_read"`
-	Entries   []Entry `json:"entries"`
+	Root      string      `json:"root"`
+	Complete  bool        `json:"complete"`
+	Security  string      `json:"security_status"`
+	BytesRead int64       `json:"bytes_read"`
+	Entries   []Entry     `json:"entries"`
+	PAR2      *PAR2Report `json:"par2_metadata,omitempty"`
 }
 
 // Inspect never extracts archives, scans for malware, publishes, or deletes content.
@@ -70,7 +70,15 @@ func InspectRoot(ctx context.Context, root *os.Root, label string, limits Limits
 	if limits.Entries < 1 || limits.Entries > 100000 || limits.Depth < 1 || limits.Depth > 256 || limits.FileBytes < 1 || limits.TotalBytes < 1 {
 		return r, errors.New("invalid inventory limits")
 	}
-	seen, incomplete := 0, false
+	var recovery *par2Run
+	if limits.PAR2 {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, 2*time.Minute)
+		defer cancel()
+		recovery = newPAR2Run()
+		r.PAR2 = recovery.report
+	}
+	seen, incomplete, traversalIncomplete := 0, false, false
 	err := fs.WalkDir(root.FS(), ".", func(name string, d fs.DirEntry, walkErr error) error {
 		if err := ctx.Err(); err != nil {
 			return err
@@ -85,12 +93,14 @@ func InspectRoot(ctx context.Context, root *os.Root, label string, limits Limits
 		if walkErr != nil {
 			r.Entries = append(r.Entries, Entry{Path: name, Kind: "unreadable", Finding: walkErr.Error()})
 			incomplete = true
+			traversalIncomplete = true
 			return nil
 		}
 		if d.IsDir() {
 			if strings.Count(name, "/")+1 >= limits.Depth {
 				r.Entries = append(r.Entries, Entry{Path: name, Kind: "directory", Finding: "depth_limit"})
 				incomplete = true
+				traversalIncomplete = true
 				return fs.SkipDir
 			}
 			return nil
@@ -108,12 +118,27 @@ func InspectRoot(ctx context.Context, root *os.Root, label string, limits Limits
 			e.Finding = "not_opened"
 		} else {
 			e.Kind, e.Bytes = kind(name), info.Size()
-			if limits.Hashes {
-				if info.Size() > limits.FileBytes || info.Size() > limits.TotalBytes-r.BytesRead {
+			if limits.Hashes || limits.PAR2 {
+				if !limits.PAR2 && (info.Size() > limits.FileBytes || info.Size() > limits.TotalBytes-r.BytesRead) {
 					e.Finding = "byte_limit"
 					incomplete = true
 				} else {
-					e.SHA256, err = hash(ctx, root, name, info, limits.TotalBytes-r.BytesRead, &r.BytesRead)
+					var observations []par2Observation
+					probed := 0
+					if recovery != nil {
+						probed = recovery.report.FilesProbed
+					}
+					e.SHA256, e.PAR2, observations, err = readRegular(ctx, root, name, info, limits, &r, recovery)
+					if recovery != nil {
+						metadataComplete := recovery.report.FilesProbed > probed
+						if e.PAR2 != nil && e.PAR2.State != "source_changed" {
+							recovery.add(name, e.PAR2, observations)
+						}
+						if e.PAR2 != nil {
+							metadataComplete = e.PAR2.completed()
+						}
+						recovery.report.Complete = recovery.report.Complete && metadataComplete
+					}
 					if err != nil {
 						e.Finding = err.Error()
 						incomplete = true
@@ -122,9 +147,16 @@ func InspectRoot(ctx context.Context, root *os.Root, label string, limits Limits
 			}
 		}
 		r.Entries = append(r.Entries, e)
+		if ctx.Err() != nil {
+			return ctx.Err()
+		}
 		return nil
 	})
 	r.Complete = err == nil && !incomplete
+	if recovery != nil {
+		recovery.report.Complete = recovery.report.Complete && err == nil && !traversalIncomplete
+		recovery.finish()
+	}
 	if err == nil && incomplete {
 		err = errors.New("inventory incomplete; see entry findings")
 	}
@@ -146,48 +178,4 @@ func kind(name string) string {
 	default:
 		return "other"
 	}
-}
-
-func hash(ctx context.Context, root *os.Root, name string, before fs.FileInfo, budget int64, read *int64) (string, error) {
-	f, err := safeio.OpenRegular(root, name, before, os.O_RDONLY)
-	if err != nil {
-		return "", err
-	}
-	defer f.Close()
-	opened, err := f.Stat()
-	if err != nil {
-		return "", err
-	}
-	if !opened.Mode().IsRegular() || !os.SameFile(before, opened) {
-		return "", errors.New("file changed before hashing")
-	}
-	h := sha256.New()
-	buf := make([]byte, 32<<10)
-	var size int64
-	for size < before.Size() {
-		if err := ctx.Err(); err != nil {
-			return "", err
-		}
-		n, err := f.Read(buf[:min(int64(len(buf)), budget-size, before.Size()-size)])
-		size += int64(n)
-		*read += int64(n)
-		if size > before.Size() || size > budget {
-			return "", errors.New("file grew or exceeded read budget")
-		}
-		_, _ = h.Write(buf[:n])
-		if err == io.EOF {
-			break
-		}
-		if err != nil {
-			return "", err
-		}
-	}
-	after, err := f.Stat()
-	if err != nil {
-		return "", err
-	}
-	if size != before.Size() || after.Size() != before.Size() || !after.ModTime().Equal(before.ModTime()) {
-		return "", fmt.Errorf("file changed while hashing %q", name)
-	}
-	return hex.EncodeToString(h.Sum(nil)), nil
 }

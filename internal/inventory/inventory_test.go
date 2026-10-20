@@ -125,7 +125,7 @@ func TestSymlinksNeverReadOutsideRoot(t *testing.T) {
 	}
 }
 
-func TestHashRejectsChangedOrMissingFile(t *testing.T) {
+func TestReadRejectsChangedOrMissingFile(t *testing.T) {
 	dir := t.TempDir()
 	fixture(t, dir, "a", "before")
 	root, err := os.OpenRoot(dir)
@@ -138,19 +138,21 @@ func TestHashRejectsChangedOrMissingFile(t *testing.T) {
 		t.Fatal(err)
 	}
 	fixture(t, dir, "a", "after and larger")
-	var read int64
-	if _, err := hash(context.Background(), root, "a", before, 100, &read); err == nil {
+	limits := Defaults()
+	limits.Hashes, limits.FileBytes, limits.TotalBytes = true, 100, 100
+	var report Report
+	if _, _, _, err := readRegular(context.Background(), root, "a", before, limits, &report, nil); err == nil {
 		t.Fatal("changed file accepted")
 	}
-	if _, err := hash(context.Background(), root, "missing", before, 100, &read); err == nil {
+	if _, _, _, err := readRegular(context.Background(), root, "missing", before, limits, &report, nil); err == nil {
 		t.Fatal("missing file accepted")
 	}
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
-	if _, err := hash(ctx, root, "a", before, 100, &read); err == nil {
+	if _, _, _, err := readRegular(ctx, root, "a", before, limits, &report, nil); err == nil {
 		t.Fatal("cancellation ignored")
 	}
-	if _, err := hash(context.Background(), root, ".", before, 100, &read); err == nil {
+	if _, _, _, err := readRegular(context.Background(), root, ".", before, limits, &report, nil); err == nil {
 		t.Fatal("directory accepted")
 	}
 }

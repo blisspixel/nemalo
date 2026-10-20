@@ -123,6 +123,42 @@ func Inventory(r inventory.Report) string {
 		if e.Finding != "" {
 			fmt.Fprintf(&b, "  Finding: %s\n", words(e.Finding))
 		}
+		if e.PAR2 != nil {
+			fmt.Fprintf(&b, "  PAR2 metadata: %s | Header traversal complete: %t | Matching/mismatched/unchecked packet checksums: %d/%d/%d\n", words(e.PAR2.State), e.PAR2.HeadersComplete, e.PAR2.Matching, e.PAR2.Mismatched, e.PAR2.Unchecked)
+			fmt.Fprintf(&b, "  Observed recovery/input-checksum/unknown headers: %d/%d/%d; bodies not verified\n", e.PAR2.ParityHeaders, e.PAR2.InputHeaders, e.PAR2.UnknownHeaders)
+			for _, finding := range e.PAR2.Findings {
+				fmt.Fprintf(&b, "  PAR2 finding at byte %d: %s\n", finding.Offset, words(finding.Detail))
+			}
+		}
+	}
+	if r.PAR2 != nil {
+		fmt.Fprintf(&b, "\nPAR2 packet metadata only | Coverage complete: %t | Files probed: %d | Metadata bytes read: %d\nProtected data: not verified. Recoverability: not assessed.\n", r.PAR2.Complete, r.PAR2.FilesProbed, r.PAR2.BytesRead)
+		for _, set := range r.PAR2.Sets {
+			fmt.Fprintf(&b, "\nDeclared set %s | Observed files: %d | Packet headers: %d | Matching/mismatched/unchecked checksums: %d/%d/%d\n", Line(set.ID), len(set.Files), set.Packets, set.Matching, set.Mismatched, set.Unchecked)
+			for _, file := range set.Files {
+				fmt.Fprintf(&b, "  Source: %s\n", Exact(file))
+			}
+			for _, main := range set.Mains {
+				fmt.Fprintf(&b, "  Declared slice bytes: %d | Recoverable/total file IDs: %d/%d\n", main.SliceBytes, main.RecoverableFiles, len(main.FileIDs))
+			}
+			for _, file := range set.Descriptions {
+				name := Exact(file.Name)
+				if file.NameHex != "" {
+					name = "opaque bytes: " + Line(file.NameHex)
+				}
+				fmt.Fprintf(&b, "  Declared file %s: %s (%d declared bytes; data not verified)\n", Line(file.FileID), name, file.Bytes)
+			}
+			for _, creator := range set.Creators {
+				text := Exact(creator.Text)
+				if creator.TextHex != "" {
+					text = "opaque bytes: " + Line(creator.TextHex)
+				}
+				fmt.Fprintf(&b, "  Declared creator: %s\n", text)
+			}
+			for _, conflict := range set.Conflicts {
+				fmt.Fprintf(&b, "  Conflict: %s\n", words(conflict))
+			}
+		}
 	}
 	return b.String()
 }

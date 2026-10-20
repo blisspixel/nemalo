@@ -92,6 +92,11 @@ Shared operations belong in `internal/app`; CLI and TUI use those services and
 root-scoped inventory is in `internal/inventory`; configuration is in
 `internal/config`. Verification logic is tested in `internal/verify`. Do not
 move domain policy into a terminal update handler or duplicate it for MCP.
+Inventory reads no bodies by default. `inspect --par2` (decision 0059) opts into
+bounded metadata reads through the same file handle and actual budgets as hashes.
+Set IDs and filenames remain declarations, packet MD5 is format evidence only,
+and protected files are never opened from those names. Keep header coverage,
+checksum evidence, hashes and recovery capability separate; recovery material stays.
 `internal/mcpserver` is the MCP adapter (decision 0014): tools call `internal/app`,
 return the CLI data in its envelope, and scope every path. Write tools need
 `--allow-write`; long ones run as durable jobs in `internal/jobs` (decision 0045),

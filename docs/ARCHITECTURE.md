@@ -366,6 +366,14 @@ missing multipart volumes, malformed input, PAR2 files, and unknown types get
 explicit dispositions. Detect traversal, absolute paths, device names, alternate
 data streams, link entries, duplicate paths, and case/normalization collisions.
 
+Optional PAR2 metadata inventory lives in `internal/inventory` and uses the same
+opened regular file and read counters as requested hashes. The default still reads
+no file bodies. Header declarations, checked small-packet bodies, unchecked parity,
+and protected-data verification remain distinct. Declared filenames never become
+I/O paths or write authority, and conflicting metadata remains visible. No verifier,
+repairer or cleanup permission follows from set inventory
+([decision 0059](decisions/0059-par2-metadata-inventory.md)).
+
 Enforce shared per-run budgets for nesting, entry count, compressed/expanded bytes,
 per-file size, memory, time, process output, workers, and disk usage. Budgets span
 nested archives, not just each individual container. Extraction failure preserves

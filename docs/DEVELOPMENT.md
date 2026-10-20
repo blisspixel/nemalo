@@ -68,11 +68,45 @@ Explicit selected-file acquisition has its own
 
 Inventory requires an explicit directory. It uses `os.Root`, skips links/special
 files, and reports filename-based candidates without extracting or validating them.
-Default limits: 10,000 entries, depth 32, 256 MiB per hashed file, and 1 GiB total
-hashed input. Hashing is opt-in. Default inventory reads directory metadata only.
+Default limits: 10,000 entries, depth 32, 256 MiB of reads per file, and 1 GiB
+total input read. Hashing is opt-in. Default inventory reads directory metadata only.
 Limits, errors, and cancellation produce an incomplete result and nonzero exit.
 Inventory performs no security scan; tool availability in `doctor` is not scan evidence.
 Filesystem operations can still block on a stalled device; this is not a sandbox.
+
+`nemalo inspect DIRECTORY --par2 [--hashes] [--json]` additionally probes the first
+eight bytes of inventoried regular files, including renamed recovery files. A
+`.par2` suffix remains a filename candidate when the signature does not match.
+This is an offset-zero probe, with no search or resynchronization inside payloads.
+Recognized streams report bounded packet headers, observed recovery/input-checksum/
+unknown header counts, and matching, mismatched and unchecked packet checksums.
+Only small main, file-description and creator bodies are checksummed and decoded.
+Parity, input-slice-checksum and unknown bodies remain unread and unchecked.
+
+Declarations group by declared set ID, with exact source locations, repeated
+observations and conflicting variants retained. Declared filenames are reporting
+text, never paths to open or permission to verify another file. Invalid UTF-8
+metadata stays as opaque hexadecimal bytes. Packet MD5 checksums are format
+evidence, never security identities; no protected file or recovery capacity is
+verified, and no repair runs. Sources and holdings stay unchanged. Ingest and
+cleanup retain recovery files, including archives with unaccounted recovery members.
+
+Metadata shares the existing actual read budgets with optional SHA-256 hashing.
+It also has 1 MiB per-file and 16 MiB per-run read ceilings, 256 packet attempts
+per file and 4,096 per run, 128 declared set IDs, a two-minute run deadline, and
+bounded declaration sizes (1,024 main IDs, filename bytes or creator bytes).
+Counters span files and failed attempts. A large parity extent is skipped within
+the opened file without loading it. Identity, size and modification time are
+rechecked on the same opened file; changed sources supply no hash or declarations.
+
+Optional `par2_metadata` JSON sections are absent without `--par2`; the grouped
+report has schema version 1 and scope `packet_metadata_only`. Signature-probe
+coverage, header traversal, bounded metadata coverage, packet checksums, requested
+whole-file hashes and unverified protected data remain separate. A known checksum
+mismatch is a finding; malformed/truncated/limited traversal is incomplete.
+A hash refusal makes the overall inventory incomplete without changing metadata
+coverage that finished. Header counts cannot establish missing files or recovery
+completeness. See [decision 0059](decisions/0059-par2-metadata-inventory.md).
 
 The TUI exposes search, evaluation, inventory, checks, and library services with session-scoped forms/results, selectable
 search/holdings, adaptive detail panes, and complete report access. It makes no

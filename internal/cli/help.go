@@ -119,8 +119,13 @@ the same item. Rights remain unresolved.
 Options:
   --hashes, --max-entries 10000, --max-depth 32,
   --max-file-bytes 268435456, --max-total-bytes 1073741824
+  --par2  probe regular files and read bounded PAR2 packet metadata
 
 Inventory does not extract archives, validate books, or scan for malware.
+Default inventory reads no file bodies. --par2 and --hashes share actual
+read budgets; unchecked parity data stays explicit. Declared filenames
+never cause another file to be opened. Protected-file verification and
+repair do not run.
 `,
 	"check": `nemalo check FILE [options]
   Bounded file health assessment, without rendering content.

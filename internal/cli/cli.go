@@ -134,6 +134,7 @@ func Execute(ctx context.Context, args []string, out, errOut io.Writer, service 
 	flags.Int64Var(&checkOptions.ExpectedBytes, "expected-bytes", 0, "known expected file size")
 	flags.StringVar(&checkOptions.ExpectedSHA256, "expected-sha256", "", "known expected SHA-256")
 	flags.BoolVar(&limits.Hashes, "hashes", false, "hash eligible regular files")
+	flags.BoolVar(&limits.PAR2, "par2", false, "read bounded PAR2 packet metadata; no protected-file verification or repair")
 	flags.IntVar(&limits.Entries, "max-entries", limits.Entries, "inventory entry limit")
 	flags.IntVar(&limits.Depth, "max-depth", limits.Depth, "inventory depth limit")
 	flags.Int64Var(&limits.FileBytes, "max-file-bytes", limits.FileBytes, "per-file read limit")
@@ -1061,7 +1062,7 @@ func flagApplies(command, action, name string) bool {
 	case "check":
 		return name == "scan" || name == "epubcheck" || name == "decode" || name == "expected-bytes" || name == "expected-sha256"
 	case "inspect":
-		return name == "hashes" || strings.HasPrefix(name, "max-")
+		return name == "hashes" || name == "par2" || strings.HasPrefix(name, "max-")
 	}
 	return false
 }

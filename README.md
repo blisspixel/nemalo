@@ -37,7 +37,9 @@ published prereleases may lag:
   track's readers when its LibriVox project links back to the item, and resume
   an interrupted download or recording without fetching completed bytes again.
 - Inventory explicit folders; check file structure, size, hashes, and EPUB text
-  measurements. A scan is recommended for a file you did not produce and stays
+  measurements. `inspect --par2` inventories bounded recovery-packet metadata
+  and declared sets while retaining recovery files. A scan is recommended for a
+  file you did not produce and stays
   optional: Defender on Windows, ClamAV on Linux and macOS. Pass a publisher
   SHA-256 when one exists. An installed EPUBCheck can check EPUB conformance,
   and an installed FFmpeg can decode audio in full, both only when asked.
