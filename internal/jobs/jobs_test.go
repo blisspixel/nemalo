@@ -78,6 +78,8 @@ func TestJobsRecordResultsFailuresAndPanics(t *testing.T) {
 func TestJobsQueueCancelAndRefuseWhenFull(t *testing.T) {
 	s, _ := open(t, 1, 1)
 	release := make(chan struct{})
+	// Release the fixture before open's Wait cleanup, even if an assertion fails.
+	t.Cleanup(func() { close(release) })
 	block := func(ctx context.Context, _ func(Progress)) (any, error) {
 		select {
 		case <-release:
@@ -86,10 +88,15 @@ func TestJobsQueueCancelAndRefuseWhenFull(t *testing.T) {
 			return nil, ctx.Err()
 		}
 	}
-	first, err := s.Start("demo", nil, block)
+	started := make(chan struct{})
+	first, err := s.Start("demo", nil, func(ctx context.Context, report func(Progress)) (any, error) {
+		close(started)
+		return block(ctx, report)
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
+	waitStarted(t, started)
 	second, err := s.Start("demo", nil, block)
 	if err != nil {
 		t.Fatal(err)
@@ -97,7 +104,6 @@ func TestJobsQueueCancelAndRefuseWhenFull(t *testing.T) {
 	if _, err := s.Start("demo", nil, block); !errors.Is(err, ErrBusy) {
 		t.Fatal("a third job was accepted", err)
 	}
-	time.Sleep(50 * time.Millisecond)
 	if j, _ := s.Get(second.ID); j.Status != Queued || j.Owner != "this_process" {
 		t.Fatalf("second %+v", j)
 	}
@@ -116,10 +122,20 @@ func TestJobsQueueCancelAndRefuseWhenFull(t *testing.T) {
 	if _, err := s.Cancel(first.ID); err == nil {
 		t.Fatal("a finished job was cancelled again")
 	}
-	close(release)
 	s.Close()
 	if _, err := s.Start("demo", nil, block); err == nil {
 		t.Fatal("a closing store started a job")
+	}
+}
+
+// A slot is occupied only once the callback starts, independent of goroutine
+// scheduling. Starting two jobs does not promise which callback runs first.
+func waitStarted(t *testing.T, started <-chan struct{}) {
+	t.Helper()
+	select {
+	case <-started:
+	case <-time.After(10 * time.Second):
+		t.Fatal("job callback did not start")
 	}
 }
 
@@ -203,17 +219,37 @@ func TestJobsCancelAcrossProcessesAndDoNotStartAfterClose(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	release := make(chan struct{})
+	t.Cleanup(func() {
+		close(release)
+		owner.Close()
+		_ = owner.Wait(context.Background())
+	})
 	other, err := Open(dir, 1, 4)
 	if err != nil {
 		t.Fatal(err)
 	}
 	block := func(ctx context.Context, _ func(Progress)) (any, error) {
-		<-ctx.Done()
-		return nil, ctx.Err()
+		select {
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		case <-release:
+			return nil, nil
+		}
 	}
-	running, _ := owner.Start("demo", nil, block)
-	queued, _ := owner.Start("demo", nil, block)
-	time.Sleep(50 * time.Millisecond)
+	started := make(chan struct{})
+	running, err := owner.Start("demo", nil, func(ctx context.Context, report func(Progress)) (any, error) {
+		close(started)
+		return block(ctx, report)
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	waitStarted(t, started)
+	queued, err := owner.Start("demo", nil, block)
+	if err != nil {
+		t.Fatal(err)
+	}
 	owner.Close()
 	if j, err := other.Cancel(running.ID); err != nil || j.Owner != "another_process" {
 		t.Fatal(j, err)
