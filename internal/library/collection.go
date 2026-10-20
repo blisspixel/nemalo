@@ -226,7 +226,7 @@ func CollectionStatus(ctx context.Context, directory, collection string) (Collec
 	type fileKey struct{ source, file string }
 	type trackKey struct{ source, format string }
 	files := map[fileKey][]Holding{}
-	tracks := map[trackKey]map[int]Holding{}
+	tracks := map[trackKey]map[int][]Holding{}
 	declared := map[trackKey]int{}
 	conflict := map[trackKey]bool{}
 	for _, h := range latestList(lines) {
@@ -241,10 +241,11 @@ func CollectionStatus(ctx context.Context, directory, collection string) (Collec
 			if rec := s.Recording; rec != nil {
 				k := trackKey{s.SourceID, rec.Format}
 				if tracks[k] == nil {
-					tracks[k] = map[int]Holding{}
+					tracks[k] = map[int][]Holding{}
 				}
-				if _, ok := tracks[k][rec.Position]; !ok {
-					tracks[k][rec.Position] = h
+				tracks[k][rec.Position] = appendHolding(tracks[k][rec.Position], h)
+				if len(tracks[k][rec.Position]) > 1 {
+					conflict[k] = true
 				}
 				if declared[k] != 0 && declared[k] != rec.Tracks {
 					conflict[k] = true
@@ -267,14 +268,16 @@ func CollectionStatus(ctx context.Context, directory, collection string) (Collec
 			k := trackKey{item.Source, item.Recording}
 			st.DeclaredTracks = declared[k]
 			for position := 1; position <= st.DeclaredTracks; position++ {
-				if h, ok := tracks[k][position]; ok {
+				if claims := tracks[k][position]; len(claims) > 0 {
 					st.HeldTracks++
-					held = appendHolding(held, h)
+					for _, h := range claims {
+						held = appendHolding(held, h)
+					}
 				}
 			}
 			switch {
 			case conflict[k] && st.HeldTracks > 0:
-				st.Status, st.Detail = CollectionIncomplete, "held tracks of this format declare different track totals; review with library recordings"
+				st.Status, st.Detail = CollectionIncomplete, "held tracks of this format have conflicting positions or track totals; review with library recordings"
 			case st.HeldTracks > 0 && st.HeldTracks < st.DeclaredTracks:
 				st.Status = CollectionIncomplete
 			}

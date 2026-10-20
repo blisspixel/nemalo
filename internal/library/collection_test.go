@@ -111,3 +111,34 @@ func TestCollectionRecordingNeedsEveryTrack(t *testing.T) {
 		t.Fatal("an uninitialized library was accepted")
 	}
 }
+
+func TestCollectionRecordingRetainsConflictingPositionClaims(t *testing.T) {
+	ctx := context.Background()
+	root := t.TempDir()
+	if _, err := Initialize(ctx, root); err != nil {
+		t.Fatal(err)
+	}
+	collection := filepath.Join(t.TempDir(), "c.json")
+	if err := os.WriteFile(collection, []byte(`{"schema_version":1,"name":"Listen","items":[{"source":"archive:demo","recording":"MP3"}]}`), 0600); err != nil {
+		t.Fatal(err)
+	}
+	ingestIdentityTrack(t, root, "demo", "MP3", 1, 2, 41)
+	ingestIdentityTrack(t, root, "demo", "MP3", 2, 2, 42)
+	// A second packet for the same asset and position is just provenance.
+	ingestIdentityTrack(t, root, "demo", "MP3", 1, 2, 41)
+	r, err := CollectionStatus(ctx, root, collection)
+	if err != nil || r.Incomplete != 0 || len(r.Items[0].Holdings) != 2 {
+		t.Fatal(r, err)
+	}
+	// Different bytes claiming an occupied position are an unresolved conflict,
+	// even though every declared position has at least one held asset.
+	ingestIdentityTrack(t, root, "demo", "MP3", 1, 2, 43)
+	r, err = CollectionStatus(ctx, root, collection)
+	if err != nil || r.Incomplete != 1 || r.Items[0].Status != CollectionIncomplete || r.Items[0].HeldTracks != 2 || r.Items[0].DeclaredTracks != 2 || len(r.Items[0].Holdings) != 3 || !strings.Contains(r.Items[0].Detail, "conflicting") {
+		t.Fatal("conflicting recording was treated as resolved", r, err)
+	}
+	m := mustRecording(t, root)
+	if m.Complete || len(m.Tracks) != 3 {
+		t.Fatal("collection and recording manifest disagree", m)
+	}
+}

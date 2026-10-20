@@ -29,6 +29,8 @@ not a production path and is not reused for policy.
   and file, or recording format, recorded at acquisition: held, held in review,
   recording incomplete (some declared positions held), or not held, with the
   holdings that resolve it. Titles and identifiers are never matched.
+  Conflicting assets at one position or conflicting track totals keep a
+  recording incomplete; every conflicting asset stays listed for review.
 - `collection acquire COLLECTION LIBRARY --output INTAKE` previews the items not
   held and the packet each uses, `INTAKE/<source>-<digest>`, named from the
   selection so reordering the file changes nothing. With `--apply` each runs one

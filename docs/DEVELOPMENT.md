@@ -145,6 +145,8 @@ A collection file names exact selections; `collection status` resolves them
 against holdings offline, and `collection acquire` previews and, with `--apply`,
 acquires only the missing ones into an intake directory for `library ingest`
 ([decision 0050](decisions/0050-collections.md)).
+Conflicting track positions or totals keep a collection's recording incomplete,
+with every conflicting asset listed for review.
 Registry confirmation of identifiers and rights policy remain planned.
 
 ## File health and scanning
