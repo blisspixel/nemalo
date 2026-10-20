@@ -66,7 +66,14 @@ func TestWindowsReparseIntakeAndOrdinaryRecovery(t *testing.T) {
 		t.Fatal(r, err)
 	}
 	for _, item := range r.Items {
-		if item.Source != f.name && (item.Kind != "link" || item.Outcome != "not_imported" || item.Detail != "not_followed") {
+		if item.Source == f.name {
+			continue
+		}
+		kind, detail := "link", "not_followed"
+		if item.Source == "junction" {
+			kind, detail = "special", "not_opened"
+		}
+		if item.Kind != kind || item.Outcome != "not_imported" || item.Detail != detail {
 			t.Fatal("intake followed a link", item)
 		}
 	}

@@ -4,10 +4,55 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/blisspixel/nemalo/internal/testfs"
 )
+
+func TestWindowsReparseResolvedParentAndLongAliases(t *testing.T) {
+	parent := t.TempDir()
+	target := filepath.Join(t.TempDir(), strings.Repeat("long", 35), strings.Repeat("path", 35))
+	child := filepath.Join(target, "child")
+	if err := os.MkdirAll(child, 0700); err != nil {
+		t.Fatal(err)
+	}
+	alias := filepath.Join(parent, "alias")
+	testfs.Junction(t, alias, target)
+	// Explicit aliases resolve to a physical path that exceeds MAX_PATH.
+	r, err := OpenResolvedRoot(alias)
+	if err != nil {
+		t.Fatal("long junction target refused", err)
+	}
+	defer r.Close()
+	if err := r.WriteFile("child/bound", []byte("original"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	// A plain final directory selected through a parent alias stays supported.
+	plain, err := OpenRoot(filepath.Join(alias, "child"))
+	if err != nil {
+		t.Fatal("plain child through explicit parent alias refused", err)
+	}
+	defer plain.Close()
+	if got, err := plain.ReadFile("bound"); err != nil || string(got) != "original" {
+		t.Fatal("parent alias lost original child", string(got), err)
+	}
+	chain := filepath.Join(parent, "chain")
+	testfs.Symlink(t, chain, alias)
+	resolved, err := OpenResolvedRoot(chain)
+	if err != nil {
+		t.Fatal("explicit symbolic link to junction refused", err)
+	}
+	resolved.Close()
+	if r, err := OpenResolvedRoot(filepath.Join(alias, "child", "bound")); err == nil {
+		r.Close()
+		t.Fatal("resolved file admitted as directory")
+	}
+	if r, err := OpenResolvedRoot(filepath.Join(alias, "missing")); err == nil {
+		r.Close()
+		t.Fatal("missing resolved path admitted")
+	}
+}
 
 func TestWindowsReparseRootContracts(t *testing.T) {
 	for _, kind := range []string{"junction", "directory_symlink"} {
@@ -20,8 +65,12 @@ func TestWindowsReparseRootContracts(t *testing.T) {
 				testfs.Symlink(t, link, outside)
 			}
 			before, err := Lstat(link)
-			if err != nil || before.Mode()&os.ModeSymlink == 0 {
-				t.Fatal("link not observed as link", before, err)
+			wantMode := os.ModeSymlink
+			if kind == "junction" {
+				wantMode = os.ModeIrregular
+			}
+			if err != nil || before.Mode()&wantMode == 0 || before.IsDir() || before.Mode().IsRegular() {
+				t.Fatal("unexpected native reparse classification", before, err)
 			}
 			if r, err := OpenRoot(link); err == nil {
 				r.Close()

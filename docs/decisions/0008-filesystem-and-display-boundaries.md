@@ -18,6 +18,15 @@ Windows captures path identity through an attributes-only handle before comparin
 the opened directory capability. Regular-file opens are nonblocking on Unix and
 validated immediately on every platform. No extra module or subprocess is needed.
 
+The pinned Go toolchain reports a junction as `ModeIrregular`; inventory therefore
+reports it as `special`/`not_opened`, while symbolic links are `link`/`not_followed`.
+Both are excluded from traversal and strict directory roots. Explicitly selected
+Windows aliases resolve through `GetFinalPathNameByHandleW` on an attributes-only
+target handle, because `filepath.EvalSymlinks` leaves junctions unresolved. The
+resolved root must still match the identity captured before resolution. No mutable
+pathname fallback is used if the native query fails or exceeds its fixed buffer.
+This follows Microsoft's [final-path handle contract](https://learn.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-getfinalpathnamebyhandlew).
+
 These controls do not freeze directory locations, defeat hostile mounts, sandbox
 same-user processes, or make stalled storage cancellable. User-facing source paths
 are retained separately from descriptor bridge names.

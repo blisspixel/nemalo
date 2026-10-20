@@ -31,7 +31,7 @@ func OpenResolvedRoot(name string) (*os.Root, error) {
 	if err != nil {
 		return nil, err
 	}
-	physical, err := filepath.EvalSymlinks(abs)
+	physical, err := resolvedRootPath(abs)
 	if err != nil {
 		return nil, err
 	}

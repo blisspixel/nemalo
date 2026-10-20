@@ -44,7 +44,11 @@ func TestWindowsReparseInventoryServices(t *testing.T) {
 					}
 					continue
 				}
-				if e.Kind != "link" || e.Finding != "not_followed" || e.SHA256 != "" || e.PAR2 != nil {
+				kind, finding := "link", "not_followed"
+				if e.Path == "junction" || e.Path == "loop" {
+					kind, finding = "special", "not_opened"
+				}
+				if e.Kind != kind || e.Finding != finding || e.SHA256 != "" || e.PAR2 != nil {
 					t.Fatal("reparse point was followed", e)
 				}
 			}

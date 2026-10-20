@@ -55,9 +55,24 @@ func Junction(t testing.TB, link, target string) {
 		t.Fatalf("create required native junction %q: %v", link, err)
 	}
 	RequireTag(t, link, windows.IO_REPARSE_TAG_MOUNT_POINT)
-	got, err := filepath.EvalSymlinks(link)
+	got, err := os.Readlink(link)
 	if err != nil || !strings.EqualFold(filepath.Clean(got), abs) {
 		t.Fatalf("junction fixture target = %q, want %q: %v", got, abs, err)
+	}
+	linked, err := os.Open(link)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer linked.Close()
+	targetFile, err := os.Open(abs)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer targetFile.Close()
+	linkedInfo, linkErr := linked.Stat()
+	targetInfo, targetErr := targetFile.Stat()
+	if linkErr != nil || targetErr != nil || !os.SameFile(linkedInfo, targetInfo) {
+		t.Fatalf("junction fixture did not open its exact target: %v, %v", linkErr, targetErr)
 	}
 }
 
