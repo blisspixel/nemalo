@@ -167,7 +167,9 @@ func TestWindowsReparseStoredAssetCannotAuthorizeCleanup(t *testing.T) {
 	plan, err := Cleanup(context.Background(), CleanupRequest{Library: f.root, Folder: f.folder})
 	// A stored-byte verification error aborts the plan before mutation. It
 	// does not turn the redirected holding into a per-source keep result.
-	if !errors.Is(err, os.ErrPathEscapes) || plan.Move != 0 || plan.Applied || len(plan.Entries) != 0 {
+	var pathError *os.PathError
+	if !errors.As(err, &pathError) || pathError.Path != filepath.FromSlash(f.imported.Path) || pathError.Err.Error() != "path escapes from parent" ||
+		plan.Move != 0 || plan.Applied || len(plan.Entries) != 0 {
 		t.Fatal("outside stored bytes authorized cleanup", plan, err)
 	}
 	if _, err := Import(context.Background(), ImportRequest{Library: f.root, Source: filepath.Join(f.folder, filepath.FromSlash(f.name)), Apply: true, Scanner: cleanScan{}}); err == nil {
