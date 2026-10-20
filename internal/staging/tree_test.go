@@ -403,3 +403,35 @@ func TestArchiveTreeCancellationStopsAnActiveChildReader(t *testing.T) {
 		t.Fatal("cancellation changed source bytes")
 	}
 }
+
+func TestArchiveTreeMemberLimitRefusalStopsFurtherChildListings(t *testing.T) {
+	for _, kind := range []string{"zip", "7z"} {
+		for _, count := range []int{2, 4} {
+			t.Run(fmt.Sprintf("%s/%d", kind, count), func(t *testing.T) {
+				body := []byte(fmt.Sprintf("7z\xbc\xaf\x27\x1c member limit fixture %d", count))
+				var zipMembers []member
+				var sevenMembers []sevenMember
+				for i := 0; i < count; i++ {
+					name := fmt.Sprintf("book-%d.epub", i)
+					zipMembers = append(zipMembers, member{name: name, body: []byte("book")})
+					sevenMembers = append(sevenMembers, sevenMember{name: name, body: []byte("book")})
+				}
+				if kind == "zip" {
+					body = treeZIP(t, zipMembers...)
+				}
+				outer := treeZIP(t, member{name: "one." + kind, body: body}, member{name: "two." + kind, body: body})
+				dir := treeProfiles(t, treeProfile{body: body, kind: "-t" + kind, members: sevenMembers})
+				src, dst := treeRoots(t, "outer.zip", outer)
+				limits := Defaults()
+				limits.Members = 3 // Two outer entries leave less than one child lists.
+				x, err := ExtractTree(context.Background(), src, []string{"outer.zip"}, dst, books, limits)
+				if err != nil || x.Complete || len(x.Members) != 2 {
+					t.Fatal(x, err)
+				}
+				if calls, err := os.ReadFile(filepath.Join(dir, "calls")); err != nil || len(calls) != 1 {
+					t.Fatal("a rejected listing reused its unspent member allowance", string(calls), err)
+				}
+			})
+		}
+	}
+}

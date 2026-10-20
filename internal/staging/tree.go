@@ -44,6 +44,9 @@ func extractTree(ctx context.Context, src *os.Root, names []string, dst *os.Root
 		if err := ctx.Err(); err != nil {
 			return err
 		}
+		if limits.memberLimit() <= 0 {
+			return errTreeBudget
+		}
 		dir := fmt.Sprintf("node-%05d", node)
 		node++
 		if err := dst.Mkdir(dir, 0o700); err != nil {

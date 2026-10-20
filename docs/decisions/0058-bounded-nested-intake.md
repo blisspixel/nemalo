@@ -29,6 +29,9 @@ executable, network operation, repair, or source-removal permission is added.
   extracted stdout uses the reserved member allowance. Retain the 256 MiB
   per-member and 100:1 declared expansion limits. Each standard ZIP directory
   still has its existing bounded parser and ZIP64 preallocation checks.
+  A listing that exceeds the remaining member allowance, or a standard ZIP
+  directory that reaches its parser limit, exhausts that allowance before any
+  later child starts. An unresolved entry count cannot refund parsing work.
 - Start one deadline from the outer source size using the existing archive
   deadline policy, capped at an hour. Descendants and probes inherit it; shorter
   operation deadlines still apply. Extraction is sequential. Aggregate staged

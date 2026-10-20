@@ -225,7 +225,7 @@ func extractSnapshot(ctx context.Context, exe, kind, archive string, size int64,
 			return x, errors.New("7-Zip lists an unresolved split member; the entire archive set is preserved")
 		}
 	}
-	if len(entries) > limits.Members {
+	if len(entries) > limits.Members && limits.tree == nil {
 		return x, fmt.Errorf("archive has %d members; the limit is %d", len(entries), limits.Members)
 	}
 	if err := limits.countMembers(len(entries)); err != nil {

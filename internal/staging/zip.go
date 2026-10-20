@@ -89,6 +89,11 @@ func ExtractZip(ctx context.Context, src *os.Root, name string, dst *os.Root, su
 	defer cancel()
 	z, err := assessment.OpenZIP(archiveCtx, limits.reader(f), info.Size(), maxListing, 2*maxArchiveSnapshot, limits.memberLimit())
 	if err != nil {
+		if limits.tree != nil && errors.Is(err, assessment.ErrLimit) {
+			// A limited directory cannot establish its remaining entry count.
+			// Later children must not retry parsing under that old allowance.
+			limits.tree.members = 0
+		}
 		return x, fmt.Errorf("not a readable ZIP archive: %w", err)
 	}
 	if len(z.File) > limits.Members {

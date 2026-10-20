@@ -362,7 +362,8 @@ ZIP/RAR/7z archives now traverse through a shared four-level archive-tree budget
 and exact member-chain provenance. Nested volume sets remain preserved; cleanup
 keeps every outer source containing a nested archive
 ([decision 0058](docs/decisions/0058-bounded-nested-intake.md)). PAR2 inventory
-and retention remain planned. Depends on milestone 1.
+and retention remain planned
+([issue 51](https://github.com/blisspixel/nemalo/issues/51)). Depends on milestone 1.
 
 Deliver recursive inventory, file-signature checks, ZIP handling, additional archive
 adapters, and private staging. Inventory includes links and unsupported entries as

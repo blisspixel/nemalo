@@ -72,6 +72,9 @@ func (l Limits) memberLimit() int {
 
 func (l Limits) countMembers(n int) error {
 	if n > l.memberLimit() {
+		if l.tree != nil {
+			l.tree.members = 0
+		}
 		return errTreeBudget
 	}
 	if l.tree != nil {
