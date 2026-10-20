@@ -163,8 +163,11 @@ func TestWindowsReparseStoredAssetCannotAuthorizeCleanup(t *testing.T) {
 	}
 	before := snapshotTree(t, outside)
 	testfs.Junction(t, parent, outside)
+	controlBefore := snapshotTree(t, filepath.Join(f.root, ".nemalo"))
 	plan, err := Cleanup(context.Background(), CleanupRequest{Library: f.root, Folder: f.folder})
-	if err != nil || plan.Move != 0 || dispositions(plan)[f.name] != "keep" {
+	// A stored-byte verification error aborts the plan before mutation. It
+	// does not turn the redirected holding into a per-source keep result.
+	if !errors.Is(err, os.ErrPathEscapes) || plan.Move != 0 || plan.Applied || len(plan.Entries) != 0 {
 		t.Fatal("outside stored bytes authorized cleanup", plan, err)
 	}
 	if _, err := Import(context.Background(), ImportRequest{Library: f.root, Source: filepath.Join(f.folder, filepath.FromSlash(f.name)), Apply: true, Scanner: cleanScan{}}); err == nil {
@@ -172,6 +175,9 @@ func TestWindowsReparseStoredAssetCannotAuthorizeCleanup(t *testing.T) {
 	}
 	if !reflect.DeepEqual(snapshotTree(t, outside), before) {
 		t.Fatal("redirected stored assets changed")
+	}
+	if !reflect.DeepEqual(snapshotTree(t, filepath.Join(f.root, ".nemalo")), controlBefore) {
+		t.Fatal("refused store traversal changed control journals")
 	}
 	if got := mustRead(t, filepath.Join(f.folder, filepath.FromSlash(f.name))); string(got) != string(f.book) {
 		t.Fatal("source lost after stored-asset refusal")
