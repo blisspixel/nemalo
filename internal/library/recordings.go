@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"slices"
 	"sort"
+	"strings"
 
 	"github.com/blisspixel/nemalo/internal/audio"
 	"github.com/blisspixel/nemalo/internal/safeio"
@@ -83,8 +84,24 @@ type RecordingsResult struct {
 	// Narrations group the recordings that name the same reading. A
 	// recording without narration evidence is in none, and is never grouped
 	// by title.
-	Narrations  []NarrationGroup `json:"narrations"`
-	Limitations []string         `json:"limitations"`
+	Narrations []NarrationGroup `json:"narrations"`
+	// ByteIdentities relate complete declared recordings by their ordered asset
+	// hashes, independently of source, format labels, or narration declarations.
+	ByteIdentities []RecordingByteIdentity `json:"byte_identities"`
+	Limitations    []string                `json:"limitations"`
+}
+
+// RecordingByteIdentityVersion fixes the ordered-asset hash construction.
+const RecordingByteIdentityVersion = "recording-bytes/1"
+
+// RecordingByteIdentity identifies one exact sequence of held track assets.
+// Repeated assets retain every position. This is journal evidence, not a fresh
+// integrity check or evidence that different encodings carry the same reading.
+type RecordingByteIdentity struct {
+	Schema     string         `json:"schema"`
+	ID         string         `json:"id"`
+	Assets     []string       `json:"ordered_assets"`
+	Recordings []RecordingRef `json:"recordings"`
 }
 
 // NarrationGroup is one reading and the recordings held of it, such as a
@@ -94,7 +111,7 @@ type NarrationGroup struct {
 	Recordings []RecordingRef `json:"recordings"`
 }
 
-// RecordingRef names one recording of a narration.
+// RecordingRef names one source's declaration of a recording.
 type RecordingRef struct {
 	SourceID string `json:"source_id"`
 	Format   string `json:"source_format"`
@@ -115,10 +132,11 @@ const (
 // for timing and chapters. Without it, recordings are listed from the journal
 // alone. Nothing is written.
 func Recordings(ctx context.Context, directory, source string) (RecordingsResult, error) {
-	r := RecordingsResult{SchemaVersion: 1, Recordings: []RecordingManifest{}, Narrations: []NarrationGroup{}, Limitations: []string{
+	r := RecordingsResult{SchemaVersion: 1, Recordings: []RecordingManifest{}, Narrations: []NarrationGroup{}, ByteIdentities: []RecordingByteIdentity{}, Limitations: []string{
 		"Track order, titles, and declared durations are source declarations. Complete means every declared position is held, not that the audio was checked.",
 		"Probed timing indexes MPEG frames or MP4 sample tables without decoding. Narrators and narrations come only from a LibriVox project that names the Archive item back; nothing is inferred from titles.",
 		"Listing a recording is not evidence that anyone listened to it.",
+		"Byte identities compare complete declared track sequences by the asset hashes in the journal, not a fresh integrity check. They preserve source and narration declarations and do not relate different encodings or track divisions.",
 	}}
 	if len(source) > 1000 {
 		return r, errors.New("source filter is at most 1000 bytes")
@@ -175,7 +193,10 @@ func Recordings(ctx context.Context, directory, source string) (RecordingsResult
 		if keys[i].source != keys[j].source {
 			return keys[i].source < keys[j].source
 		}
-		return keys[i].format < keys[j].format
+		if keys[i].format != keys[j].format {
+			return keys[i].format < keys[j].format
+		}
+		return keys[i].kind < keys[j].kind
 	})
 	var store *os.Root
 	if source != "" {
@@ -322,7 +343,37 @@ func Recordings(ctx context.Context, directory, source string) (RecordingsResult
 		r.Narrations[i].Recordings = append(r.Narrations[i].Recordings, RecordingRef{SourceID: m.SourceID, Format: m.Format, Kind: m.Kind, Complete: m.Complete})
 	}
 	sort.Slice(r.Narrations, func(i, j int) bool { return r.Narrations[i].Narration.ID < r.Narrations[j].Narration.ID })
+	r.ByteIdentities = recordingByteIdentities(r.Recordings)
 	return r, nil
+}
+
+// recordingByteIdentities groups only complete declarations, retaining the
+// existing recording and narration records. The digest input is the schema and
+// each positional asset ID, each followed by LF. Asset IDs have fixed syntax;
+// source labels and titles cannot affect or inject bytes into this construction.
+func recordingByteIdentities(recordings []RecordingManifest) []RecordingByteIdentity {
+	groups := []RecordingByteIdentity{}
+	byID := map[string]int{}
+	for _, m := range recordings {
+		if !m.Complete {
+			continue
+		}
+		assets := make([]string, len(m.Tracks))
+		for i, track := range m.Tracks {
+			assets[i] = track.AssetID
+		}
+		sum := sha256.Sum256([]byte(RecordingByteIdentityVersion + "\n" + strings.Join(assets, "\n") + "\n"))
+		id := "recording-sha256:" + hex.EncodeToString(sum[:])
+		i, ok := byID[id]
+		if !ok {
+			i = len(groups)
+			byID[id] = i
+			groups = append(groups, RecordingByteIdentity{Schema: RecordingByteIdentityVersion, ID: id, Assets: assets, Recordings: []RecordingRef{}})
+		}
+		groups[i].Recordings = append(groups[i].Recordings, RecordingRef{SourceID: m.SourceID, Format: m.Format, Kind: m.Kind, Complete: m.Complete})
+	}
+	sort.Slice(groups, func(i, j int) bool { return groups[i].ID < groups[j].ID })
+	return groups
 }
 
 // probeMP4Holding reads one stored M4B or M4A at offsets, then hashes the

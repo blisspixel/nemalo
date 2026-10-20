@@ -380,6 +380,15 @@ func Recordings(r library.RecordingsResult) string {
 			}
 		}
 	}
+	for _, g := range r.ByteIdentities {
+		if len(g.Recordings) < 2 {
+			continue
+		}
+		fmt.Fprintf(&b, "\nSame ordered track bytes: %s (%d recording declarations)\n", Line(g.ID), len(g.Recordings))
+		for _, ref := range g.Recordings {
+			fmt.Fprintf(&b, "  %s %s (%s)\n", Line(ref.SourceID), Line(ref.Format), Line(ref.Kind))
+		}
+	}
 	notes(&b, "Limitation", r.Limitations)
 	return b.String()
 }

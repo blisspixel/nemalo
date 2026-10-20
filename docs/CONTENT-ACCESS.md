@@ -226,6 +226,10 @@ bounds, and evidence. One read covers one track. `library recordings LIBRARY
 --source archive:ITEM` (MCP `library_recordings`) gives the declared track order,
 exact assets, missing positions, conflicts, and probed per-track timing and
 offsets across a recording ([decision 0020](decisions/0020-recording-manifest.md)).
+The result also lists `recording-bytes/1` identities of complete declared
+recordings with identical ordered assets across source items. Identity uses
+journal hashes, independently of probing and narration declarations
+([decision 0052](decisions/0052-recording-byte-identities.md)).
 
 ## M4B and M4A audio: `mp4-audio/1`
 

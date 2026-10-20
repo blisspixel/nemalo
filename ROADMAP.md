@@ -81,7 +81,11 @@ verified, not when code exists. No stage has a time estimate.
    source-declared edition and work identifiers and `library related`
    ([decision 0049](docs/decisions/0049-declared-identifiers-and-related-holdings.md)),
    and collections resolved by holdings with idempotent acquisition
-   ([decision 0050](docs/decisions/0050-collections.md)).
+   ([decision 0050](docs/decisions/0050-collections.md)). Complete recordings
+   with identical ordered asset hashes now share a byte identity across source
+   items, including without LibriVox evidence
+   ([decision 0052](docs/decisions/0052-recording-byte-identities.md)); relating
+   different encodings beyond LibriVox remains in this stage.
 2. **Intake completeness** (milestones 2 and 4). Old-style RAR volume names
    (`.rar`, `.r00`), split ZIPs, nested archives within the existing bounds,
    PAR2 sets inventoried and retained without repair, cleanup of RAR and 7z
@@ -256,7 +260,10 @@ recovery are implemented. Single-file managed import is a separate journal; see
 [decision 0009](docs/decisions/0009-managed-epub-import.md). EPUB package
 identifier evidence is recorded on those holdings; see
 [decision 0010](docs/decisions/0010-bibliographic-identity.md). Recording, track,
-and cross-file work relationships remain outstanding.
+and cross-file relationships now include declared positions, related holdings,
+LibriVox narrations, and exact ordered recording byte identities (decisions
+0020, 0044, 0049, and 0052). Recording relationships across different encodings
+beyond LibriVox remain outstanding.
 
 Deliver `doctor`, configuration loading, explicit library/review paths, a versioned
 catalog schema, and a durable run journal. Use JSON metadata initially; the catalog
@@ -597,7 +604,10 @@ the LibriVox project an item names, linked only when it names the item back
 and credited per track only when sections match tracks by count and length
 ([decision 0035](docs/decisions/0035-librivox-readers.md)), and recordings of
 one reading in different formats share a narration while different readings
-stay apart ([decision 0044](docs/decisions/0044-narration-identity.md)). M4B and M4A
+stay apart ([decision 0044](docs/decisions/0044-narration-identity.md)). Complete
+recordings with identical ordered asset hashes share a byte identity across
+source items without changing their narration declarations
+([decision 0052](docs/decisions/0052-recording-byte-identities.md)). M4B and M4A
 files are assessed from their sample tables without decoding: truncation,
 misplaced samples, fragments, and protected audio are findings, chapters come
 from the QuickTime chapter track or a Nero list, and `mp4-audio/1` lists them

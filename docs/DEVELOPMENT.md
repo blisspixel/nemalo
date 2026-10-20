@@ -131,6 +131,11 @@ track timing ([decision 0020](decisions/0020-recording-manifest.md)). A held
 M4B is a single-file recording. Recordings of one LibriVox reading share a
 narration, named only when the LibriVox project names the Archive item back,
 and different readings stay apart ([decision 0044](decisions/0044-narration-identity.md)).
+The result's `byte_identities` relates complete declared recordings with the
+same ordered asset hashes across source items, even without LibriVox metadata;
+repeated positions are retained. It uses journal evidence, not a fresh integrity
+check, and preserves every narration declaration. Different encodings and track
+divisions stay distinct ([decision 0052](decisions/0052-recording-byte-identities.md)).
 An Archive evaluation copies the ISBN and Open Library edition and work keys the
 item declares, import records them on the source, and `library related LIBRARY
 [--asset ID]` groups holdings that share a stated work, edition, or version, an
@@ -526,7 +531,8 @@ per track when the project links back
 adapter over the same services; `--allow-write` adds previewed imports
 ([decision 0034](decisions/0034-mcp-import-tools.md)) and durable acquisition
 and rescan jobs ([decision 0045](decisions/0045-durable-mcp-jobs.md)). Website search, other
-Gutenberg formats, recording identity across hosts, decoded timing in content
+Gutenberg formats, recording relationships across different encodings beyond
+LibriVox, decoded timing in content
 access, files above 2 GiB, OCR, and column reconstruction stay later. The remaining 1.0 work is
 ordered by dependency in the [roadmap](../ROADMAP.md#order-of-work-to-10), starting
 with identity and collections. Cited evidence for agent-led reading is milestone 9

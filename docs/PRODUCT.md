@@ -136,7 +136,7 @@ scanners.
 temporary staging it needs is bounded and reported. `organize` stages and imports
 eligible assets under enabled format policies. `cleanup` shows or applies recorded
 dispositions from a completed run. Current `check FILE` assesses one file;
-library-wide preservation checks remain planned. An
+`library check LIBRARY` reports whole-library integrity read-only. An
 agent must use the same validated plans and configured filesystem scope.
 
 ## Catalogs and collection growth

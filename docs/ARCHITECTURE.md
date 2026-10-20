@@ -141,6 +141,13 @@ storage, duplicate, and retrieval identity. Recording, track, and cross-file
 relationships are not created from titles or filenames. Snapshots do not carry
 these identifiers.
 
+Managed recording manifests also return `recording-bytes/1` identities for
+complete declared sequences of asset hashes. Identical ordered assets relate
+across source items without altering source or narration declarations. This is
+journal evidence rather than a fresh integrity check, and neither encoding nor
+track-division equivalence is inferred
+([decision 0052](decisions/0052-recording-byte-identities.md)).
+
 Keep bibliographic language separate from the language of a specific asset or
 recording. Preserve raw provider values alongside normalized language tags. Unknown
 language does not satisfy a requested language filter. Multilingual recordings and

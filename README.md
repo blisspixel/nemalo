@@ -67,7 +67,9 @@ AI service. The agent interface (MCP) uses the same application services.
   unmapped text, and scanned pages located as gaps. Exact quotations can be
   located by page and offset. MP3 tracks report probed and declared timing and
   chapters, and return decodable ranges; held recordings list their tracks in
-  order with missing positions. M4B and M4A audiobooks list their timing and
+  order with missing positions. Recordings from different source items relate
+  by exact asset hashes in declared track order, independently of LibriVox.
+  M4B and M4A audiobooks list their timing and
   chapters and open in a player.
 - Read a held EPUB or PDF in the terminal with `nemalo read`: pages sized to
   the screen, or one word at a time at a rate you control. Hard-wrapped
@@ -90,8 +92,8 @@ AI service. The agent interface (MCP) uses the same application services.
   import tools that store only the plan a preview returned, and acquisition
   and rescan as durable jobs that outlive the connection.
 
-Old-style RAR volume names, cleanup of RAR and 7z archives,
-recording identity beyond LibriVox, and a TUI view of jobs are planned. Single-file import is not
+Old-style RAR volume names, cleanup of RAR archives,
+recording relationships across different encodings beyond LibriVox, and a TUI view of jobs are planned. Single-file import is not
 a full checked-library policy.
 File checks report limited evidence, never a safety or completeness guarantee.
 See [current capabilities and limits](docs/DEVELOPMENT.md) and the [roadmap](ROADMAP.md).

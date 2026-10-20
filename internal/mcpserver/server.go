@@ -123,7 +123,7 @@ func New(service app.Service, opts Options) (*mcp.Server, error) {
 			}
 			return service.CheckLibrary(ctx, dir)
 		})
-	add(&r, "library_recordings", "List audiobook recordings held in an initialized library, with tracks in declared order, missing positions, and conflicts. With source (archive:ITEM), each held track's stored bytes are verified and indexed for timing and chapters, without decoding.", false,
+	add(&r, "library_recordings", "List audiobook recordings held in an initialized library, with tracks in declared order, missing positions, conflicts, and byte identities relating complete ordered asset sequences across sources. Byte identities use journal hashes, not a fresh integrity check or inferred narration. With source (archive:ITEM), each held track's stored bytes are verified and indexed for timing and chapters, without decoding.", false,
 		func(ctx context.Context, in recordingsInput) (any, error) {
 			dir, err := scopes.path(in.Library)
 			if err != nil {

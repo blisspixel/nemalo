@@ -33,3 +33,17 @@ func TestLibraryEvidenceAndTerminalEscaping(t *testing.T) {
 		t.Fatal(planned)
 	}
 }
+
+func TestRecordingByteIdentityPresentationEscapesSourceLabels(t *testing.T) {
+	r := library.RecordingsResult{ByteIdentities: []library.RecordingByteIdentity{
+		{ID: "recording-sha256:single", Recordings: []library.RecordingRef{{SourceID: "archive:single"}}},
+		{ID: "recording-sha256:shared", Recordings: []library.RecordingRef{
+			{SourceID: "archive:first\x1b", Format: "MP3\nforged line", Kind: "tracks"},
+			{SourceID: "archive:mirror", Format: "MP3", Kind: "tracks"},
+		}},
+	}}
+	text := Recordings(r)
+	if strings.Contains(text, "\x1b") || strings.Contains(text, "\nforged line") || strings.Contains(text, "recording-sha256:single") || !strings.Contains(text, "Same ordered track bytes: recording-sha256:shared (2 recording declarations)") || !strings.Contains(text, "archive:mirror MP3 (tracks)") {
+		t.Fatal(text)
+	}
+}

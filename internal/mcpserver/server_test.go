@@ -4,7 +4,9 @@ import (
 	"archive/zip"
 	"bytes"
 	"context"
+	"crypto/sha256"
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"slices"
@@ -154,6 +156,49 @@ func TestToolsAreReadOnlyAndNetworkIsExplicit(t *testing.T) {
 	data := env["data"].(map[string]any)
 	if data["read_only"] != true || data["network"] != true || len(data["tools"].([]any)) != 19 {
 		t.Fatal("capabilities", data)
+	}
+}
+
+func TestRecordingByteIdentitiesThroughReadOnlyMCP(t *testing.T) {
+	ctx := context.Background()
+	root := t.TempDir()
+	if _, err := library.Initialize(ctx, root); err != nil {
+		t.Fatal(err)
+	}
+	service := app.Service{Scanner: noScanner{t}}
+	body := []byte("ID3 synthetic track")
+	for _, item := range []string{"first", "mirror"} {
+		packet := t.TempDir()
+		receipt := fmt.Sprintf(`{"complete":true,"status":"untrusted_intake","antivirus":"not_scanned","transfer":{"bytes":%d,"sha256":"%x"},"intent":{"request":{"source_id":"archive:%s","source_file":"track.mp3","recording":{"source_format":"MP3","position":1,"tracks":1}}}}`, len(body), sha256.Sum256(body), item)
+		for name, data := range map[string][]byte{"content.mp3": body, "receipt.json": []byte(receipt)} {
+			if err := os.WriteFile(filepath.Join(packet, name), data, 0600); err != nil {
+				t.Fatal(err)
+			}
+		}
+		if _, err := service.Import(ctx, library.ImportRequest{Library: root, Source: packet, Apply: true}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	direct, err := service.Recordings(ctx, root, "")
+	if err != nil || len(direct.ByteIdentities) != 1 || len(direct.ByteIdentities[0].Recordings) != 2 {
+		t.Fatal(direct, err)
+	}
+	session := connect(t, service, Options{Scopes: []string{root}, Version: "test"})
+	res, env := call(t, session, "library_recordings", map[string]any{"library": root})
+	if res.IsError || env["error"] != nil {
+		t.Fatal(env)
+	}
+	want, _ := json.Marshal(direct)
+	got, _ := json.Marshal(env["data"])
+	var a, b any
+	_ = json.Unmarshal(want, &a)
+	_ = json.Unmarshal(got, &b)
+	if !jsonEqual(a, b) {
+		t.Fatalf("MCP recording identities differ from the service\n%s\n%s", want, got)
+	}
+	res, _ = call(t, session, "library_recordings", map[string]any{"library": t.TempDir()})
+	if !res.IsError {
+		t.Fatal("recording listing escaped the configured scope")
 	}
 }
 

@@ -238,6 +238,9 @@ func TestAcquireRecordingCommandResumesAndIngestsInOrder(t *testing.T) {
 	if code, out := run("library", "recordings", library, "--source", "archive:demo", "--json"); code != 0 || !strings.Contains(out, `"probe":"failed"`) || !strings.Contains(out, `"schema":"recording-manifest/1"`) {
 		t.Fatal("probed recordings", code, out)
 	}
+	if code, out := run("library", "recordings", library, "--json"); code != 0 || !strings.Contains(out, `"byte_identities":[{"schema":"recording-bytes/1","id":"recording-sha256:`) || !strings.Contains(out, `"ordered_assets":["sha256:`) {
+		t.Fatal("recording byte identity missing from JSON", code, out)
+	}
 	if code, _ := run("library", "recordings", library, "--query", "x"); code != 2 {
 		t.Fatal("recordings accepted an unrelated flag")
 	}

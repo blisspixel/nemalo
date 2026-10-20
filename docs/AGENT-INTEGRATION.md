@@ -43,6 +43,11 @@ Implemented tools are all read-only: `nemalo_capabilities`, `library_status`,
 `content_capabilities`, `content_units`, `content_navigation`, `content_pages`, `content_read`, `content_locate`, `content_source`,
 `content_resource`. `content_navigation` lists source-declared EPUB contents;
 a read of one entry uses `content_read` with representation `epub-nav/1`.
+`library_recordings` includes `byte_identities` (`recording-bytes/1`) for
+complete declared recordings with identical ordered asset hashes across source
+items. These use journal evidence, retain narration declarations, and do not
+assert a fresh integrity check or equivalence of different encodings
+([decision 0052](decisions/0052-recording-byte-identities.md)).
 `content_pages` lists the EPUB's declared page labels; a read from one uses
 `content_read` with representation `epub-page-list/1` and its cursor or exact `label`.
 `catalog_search` and `catalog_evaluate` exist only with
