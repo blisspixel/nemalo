@@ -380,6 +380,16 @@ adapter; inconclusive boundaries preserve all sources. RAR cleanup remains
 refused because unlisted blocks are unaccounted for
 ([decision 0056](decisions/0056-rar-volume-identity.md)).
 
+Split ZIP byte chunks and true disk segments share this staging service and
+Import. Byte chunks are joined for the Go ZIP reader after a maintained-reader
+extent check. True segments must expose consistent member tables and exact
+sizes/ordinals through every private part. Both use the installed 7-Zip for
+container evidence; cleanup preserves all parts. The standard ZIP opener shares
+assessment's directory and lifetime compressed-reader guards, with operation
+limits selected by the caller. Source-set evidence, member-level failures, and
+per-member journal recovery remain separate
+([decision 0057](decisions/0057-split-zip-intake.md)).
+
 Private staging and a subprocess are not sandboxes. Go's
 [root-scoped filesystem APIs](https://go.dev/blog/osroot) are useful building blocks;
 external extraction needs a separately tested containment strategy. Linux isolation

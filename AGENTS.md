@@ -159,7 +159,14 @@ beside a packet; ingest reuses Import. RAR volume sets require isolated format,
 role, ordinal, and size evidence plus matching split members across every
 boundary and an error-free assembled listing. Preserve aliases, overlapping
 families, unlinked boundaries, and unknown ordinals; never infer set identity
-from names/counts alone. RAR cleanup remains refused.
+from names/counts alone. RAR cleanup remains refused. Split ZIPs are decision
+0057: byte chunks join privately, true segments require consistent reader
+evidence through every part, and all split ZIP cleanup sources stay. Resolve
+`.zNN` RAR/ZIP naming only from explicit sibling anchors; preserve ambiguity.
+The shared `assessment.OpenZIP` bounds directory parsing, ZIP64 count-driven
+preallocation, and lifetime compressed reads; retain EPUB's tighter budgets.
+An extraction failure marks ingest incomplete while separately verified members
+can still import; do not claim archive-wide publication atomicity.
 `library check` (decision 0024) is the read-only whole-library report; it never repairs.
 Source cleanup is `library/cleanup.go` and `restore.go` (decision 0022): move only held,
 verified bytes into the holding area via verified copy, hard-link publish, then source

@@ -607,7 +607,7 @@ func (s Service) doctor(paths config.Paths, cfg config.Config, lookup func(strin
 	}{
 		{"clamscan", "Recommended on Linux and macOS for a file you did not produce. Windows uses Microsoft Defender instead. A no-detection result is not proof the file is safe."},
 		{"MpCmdRun.exe", "Recommended on Windows for a file you did not produce. This is the built-in Microsoft Defender scanner. A no-detection result is not proof the file is safe."},
-		{"7z", "reads RAR and 7z archives for library ingest; 7zz and 7za also work"},
+		{"7z", "reads RAR, 7z, and split ZIP archives for library ingest; 7zz and 7za also work"},
 		{"epubcheck", "optional EPUB conformance check for check --epubcheck"},
 		{"ffmpeg", "optional full audio decode for check --decode, with ffprobe"},
 		{"ffprobe", "reads the decoder's output rate for check --decode"},

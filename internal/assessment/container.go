@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/sha256"
+	"encoding/binary"
 	"encoding/hex"
 	"encoding/xml"
 	"errors"
@@ -316,9 +317,7 @@ func inspectContext(ctx context.Context, r io.ReaderAt, size int64, format strin
 
 func inspectEPUB(ctx context.Context, r io.ReaderAt, size int64, c *Checks, visit func(EPUBDocument) error, resource *memberRequest, nav *EPUBNavigation) error {
 	// Bound directory parsing before zip.NewReader can allocate per-member state.
-	metadata := &metadataReader{r: r, ctx: ctx, remaining: 2 << 20, workRemaining: 1 << 30, limited: true}
-	z, err := zip.NewReader(metadata, size)
-	metadata.limited = false
+	z, err := OpenZIP(ctx, r, size, 2<<20, 1<<30, 10000)
 	if err != nil {
 		return err
 	}
@@ -584,12 +583,26 @@ func oneIdentifierScheme(plain, namespaced string) (string, bool) {
 	return plain, true
 }
 
+// OpenZIP opens the standard ZIP reader with a directory-read budget before
+// allocation and a compressed-read budget that remains bound to every member
+// reader for its lifetime. Callers select their existing operation's limits.
+func OpenZIP(ctx context.Context, r io.ReaderAt, size int64, metadataBytes int, workBytes int64, maxMembers int) (*zip.Reader, error) {
+	metadata := &metadataReader{r: r, ctx: ctx, remaining: metadataBytes, workRemaining: workBytes, limited: true, maxMembers: maxMembers}
+	z, err := zip.NewReader(metadata, size)
+	metadata.limited = false
+	if z != nil && len(z.File) > maxMembers {
+		return nil, errors.Join(ErrLimit, errors.New("ZIP member count outside limits"))
+	}
+	return z, err
+}
+
 type metadataReader struct {
 	r             io.ReaderAt
 	ctx           context.Context
 	remaining     int
 	workRemaining int64
 	limited       bool
+	maxMembers    int
 }
 
 func (r *metadataReader) ReadAt(p []byte, off int64) (int, error) {
@@ -599,16 +612,23 @@ func (r *metadataReader) ReadAt(p []byte, off int64) (int, error) {
 		}
 	}
 	if int64(len(p)) > r.workRemaining {
-		return 0, errors.Join(ErrLimit, errors.New("EPUB compressed read budget exceeded"))
+		return 0, errors.Join(ErrLimit, errors.New("ZIP compressed read budget exceeded"))
 	}
 	r.workRemaining -= int64(len(p))
 	if r.limited {
 		if len(p) > r.remaining {
-			return 0, errors.Join(ErrLimit, errors.New("EPUB ZIP metadata read budget exceeded"))
+			return 0, errors.Join(ErrLimit, errors.New("ZIP metadata read budget exceeded"))
 		}
 		r.remaining -= len(p)
 	}
-	return r.r.ReadAt(p, off)
+	n, err := r.r.ReadAt(p, off)
+	// The standard reader's ZIP64 count can trigger preallocation before
+	// directory reads spend their budget. Its fixed 56-byte end-record read
+	// must pass the same member bound before those bytes reach the decoder.
+	if r.limited && len(p) == 56 && n == 56 && string(p[:4]) == "PK\x06\x06" && binary.LittleEndian.Uint64(p[32:40]) > uint64(max(r.maxMembers, 0)) {
+		return 0, errors.Join(ErrLimit, errors.New("ZIP64 declared member count exceeds limit"))
+	}
+	return n, err
 }
 
 // Validate all compressed ranges before opening a decompressor. Central-directory

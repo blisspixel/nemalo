@@ -106,6 +106,9 @@ verified, not when code exists. No stage has a time estimate.
    split continuity before reading an assembled set; inconclusive sets and all
    RAR cleanup sources stay preserved
    ([decision 0056](docs/decisions/0056-rar-volume-identity.md)).
+   Split ZIP intake now handles byte chunks and true disk segments through
+   checked private snapshots; all split ZIP cleanup sources stay preserved
+   ([decision 0057](docs/decisions/0057-split-zip-intake.md)).
 3. **Audio access** (milestone 8). M4B and M4A byte ranges and decoded timing in
    content access, bounded ranges usable by an external player, and output
    demonstrated with a real audiobook reader or server.
@@ -346,7 +349,13 @@ checked in isolation, adjacent split-member evidence must agree, and the
 assembled listing must account for every volume without errors or unresolved
 splits ([decision 0056](docs/decisions/0056-rar-volume-identity.md)). Gaps,
 ambiguous names, overlapping families, and unlinked boundaries preserve the
-set. Split ZIPs, nested archives, and PAR2 remain planned. Depends on milestone 1.
+set. Split ZIP byte streams (`.zip.001`) are joined and read through the Go ZIP
+extractor after a maintained-reader extent check. True `.z01`/`.zip` segments
+must present compatible sizes, ordinals, counts, and member tables through every
+part before exact-name extraction through 7-Zip. All split ZIP sources stay in
+cleanup ([decision 0057](docs/decisions/0057-split-zip-intake.md)). Nested archives
+([issue 50](https://github.com/blisspixel/nemalo/issues/50)) and PAR2 remain
+planned. Depends on milestone 1.
 
 Deliver recursive inventory, file-signature checks, ZIP handling, additional archive
 adapters, and private staging. Inventory includes links and unsupported entries as

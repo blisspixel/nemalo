@@ -56,9 +56,9 @@ published prereleases may lag:
   indexed without damage, or an M4B or M4A whose every sample lies inside the
   file, and a recorded no-detection scan; other assessed files stay in review.
   `library ingest` imports a whole folder, including intake packets and the
-  members of ZIP archives, and of RAR and 7z archives and their volume sets
-  (including old-style `.rar`/`.r00` names)
-  through an installed 7-Zip, and preserves the folder. `library cleanup` then moves sources whose
+  members of ZIP, RAR, and 7z archives and their volume sets. RAR, 7z, and split
+  ZIP intake use an installed 7-Zip. The folder stays intact.
+  `library cleanup` then moves sources whose
   books the library holds into a recoverable holding area, and `library restore`
   undoes it. `library purge` frees that space once the library holds the
   same verified bytes, after its own preview. `library rescan` scans review holdings in
@@ -100,7 +100,7 @@ published prereleases may lag:
   import tools that store only the plan a preview returned, and acquisition
   and rescan as durable jobs that outlive the connection.
 
-Old-style RAR volume names, cleanup of RAR archives,
+Nested archive intake, cleanup of RAR and split ZIP sources,
 and a TUI view of jobs are planned. Single-file import is not
 a full checked-library policy.
 File checks report limited evidence, never a safety or completeness guarantee.

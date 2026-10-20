@@ -16,6 +16,7 @@ import (
 	"strings"
 	"unicode/utf8"
 
+	"github.com/blisspixel/nemalo/internal/assessment"
 	"github.com/blisspixel/nemalo/internal/safeio"
 )
 
@@ -78,7 +79,9 @@ func ExtractZip(ctx context.Context, src *os.Root, name string, dst *os.Root, su
 		return x, err
 	}
 	defer f.Close()
-	z, err := zip.NewReader(f, info.Size())
+	archiveCtx, cancel := context.WithTimeout(ctx, archiveDeadline(info.Size()))
+	defer cancel()
+	z, err := assessment.OpenZIP(archiveCtx, f, info.Size(), maxListing, 2*maxArchiveSnapshot, limits.Members)
 	if err != nil {
 		return x, fmt.Errorf("not a readable ZIP archive: %w", err)
 	}
@@ -90,7 +93,7 @@ func ExtractZip(ctx context.Context, src *os.Root, name string, dst *os.Root, su
 	// A member name is its provenance, so a repeated name extracts only once.
 	seen := map[string]bool{}
 	for i, entry := range z.File {
-		if err := ctx.Err(); err != nil {
+		if err := archiveCtx.Err(); err != nil {
 			return x, err
 		}
 		m := Member{Name: displayName(entry.Name), Bytes: int64(min(entry.UncompressedSize64, 1<<62))}
@@ -109,7 +112,7 @@ func ExtractZip(ctx context.Context, src *os.Root, name string, dst *os.Root, su
 					// Too little space: the member stays in the archive.
 					m.Disposition, m.Detail, m.Staged = "failed", err.Error(), ""
 					x.Complete = false
-				} else if err := extract(ctx, entry, dst, m.Staged, limits.MemberBytes); err != nil {
+				} else if err := extract(archiveCtx, entry, dst, m.Staged, limits.MemberBytes); err != nil {
 					m.Disposition, m.Detail, m.Staged = "failed", err.Error(), ""
 					_ = dst.Remove(fmt.Sprintf("%05d%s", i, strings.ToLower(path.Ext(entry.Name))))
 					x.Complete = false

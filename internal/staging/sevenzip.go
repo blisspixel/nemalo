@@ -69,6 +69,9 @@ type sevenEntry struct {
 	raw, name                      string
 	size, packed                   int64
 	packedKnown                    bool
+	sizeKnown                      bool
+	volume, offset                 int64
+	volumeKnown, offsetKnown       bool
 	crc                            uint32
 	crcKnown                       bool
 	folder, link, encrypted        bool
@@ -330,10 +333,20 @@ func parseListing(out []byte) ([]sevenEntry, error) {
 						e.malformed = true
 					}
 					e.size = n
+					e.sizeKnown = err == nil && n >= 0
 				}
 			case "Packed Size":
 				if n, err := strconv.ParseInt(value, 10, 64); err == nil && n >= 0 {
 					e.packed, e.packedKnown = n, true
+				}
+			case "Volume Index", "Offset":
+				n, err := strconv.ParseInt(value, 10, 64)
+				valid := err == nil && n >= 0
+				e.malformed = e.malformed || !valid
+				if key == "Volume Index" {
+					e.volume, e.volumeKnown = n, valid
+				} else {
+					e.offset, e.offsetKnown = n, valid
 				}
 			case "Attributes":
 				// Windows attribute letters, a Unix mode, or both: "A
@@ -561,11 +574,11 @@ func runSevenLimit(ctx context.Context, exe string, out io.Writer, limit int64, 
 	return buf.Bytes(), code, err
 }
 
-// Volume sets. A split 7z (NAME.7z.001, .002, ...) is a byte split of one
-// archive; a multi-volume RAR (NAME.part1.rar, ...) is a set of archives
-// that 7-Zip reads through the first.
+// Volume sets. Split 7z and .zip.NNN streams are byte chunks. RAR and PKZIP
+// segments have container relationships checked through the installed reader.
 var (
 	splitSeven = regexp.MustCompile(`(?i)^(.+)\.7z\.([0-9]{3})$`)
+	splitZIP   = regexp.MustCompile(`(?i)^(.+)\.zip\.([0-9]{3,4})$`)
 	rarPart    = regexp.MustCompile(`(?i)^(.+)\.part([0-9]{1,4})\.rar$`)
 )
 
@@ -573,6 +586,10 @@ var (
 // kind, and its number, or ok false for any other name.
 func VolumeOf(name string) (set string, number int, ok bool) {
 	base := filepath.Base(name)
+	if m := splitZIP.FindStringSubmatch(base); m != nil {
+		n, _ := strconv.Atoi(m[2])
+		return filepath.Join(filepath.Dir(name), m[1]) + ".zip", n, true
+	}
 	if m := splitSeven.FindStringSubmatch(base); m != nil {
 		n, _ := strconv.Atoi(m[2])
 		return filepath.Join(filepath.Dir(name), m[1]) + ".7z", n, true
@@ -600,8 +617,12 @@ func ExtractSet(ctx context.Context, src *os.Root, names []string, dst *os.Root,
 		return x, ErrNoArchiveTool
 	}
 	set, _, _ := VolumeOf(names[0])
+	zipSet, _, segmentedZIP := ZIPSegmentOf(names[0])
+	if segmentedZIP {
+		set = zipSet
+	}
 	oldSet, _, old := OldRARVolumeOf(names[1])
-	if old {
+	if old && !segmentedZIP {
 		set = oldSet
 	}
 	split := strings.HasSuffix(strings.ToLower(set), ".7z")
@@ -609,7 +630,12 @@ func ExtractSet(ctx context.Context, src *os.Root, names []string, dst *os.Root,
 	infos := make([]fs.FileInfo, len(names))
 	for i, name := range names {
 		gotSet, n, ok := VolumeOf(name)
-		if old {
+		if segmentedZIP {
+			gotSet, n, ok = ZIPSegmentOf(name)
+			if i+1 == len(names) {
+				gotSet, n, ok = name, i+1, strings.EqualFold(filepath.Ext(name), ".zip")
+			}
+		} else if old {
 			gotSet, n, ok = OldRARVolumeOf(name)
 			if i == 0 {
 				gotSet, n, ok = name, 1, strings.EqualFold(filepath.Ext(name), ".rar")
@@ -637,6 +663,9 @@ func ExtractSet(ctx context.Context, src *os.Root, names []string, dst *os.Root,
 		return x, err
 	}
 	defer tmpRoot.Close()
+	if segmentedZIP || strings.HasSuffix(strings.ToLower(set), ".zip") {
+		return extractZIPSet(ctx, exe, src, names, infos, tmpRoot, tmp, dst, supported, limits, !segmentedZIP, total)
+	}
 	if split {
 		if err := joinVolumes(ctx, src, names, infos, tmpRoot, "archive.7z", total); err != nil {
 			return x, err

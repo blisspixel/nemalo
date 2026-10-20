@@ -919,6 +919,14 @@ func planCleanup(ctx context.Context, store, src *os.Root, lines []Holding) ([]C
 // a RAR or 7z must be whole as 7-Zip lists it, with no comment, offset, or
 // bytes outside its members. Members are staged privately and removed.
 func planArchive(ctx context.Context, src *os.Root, rel string, volumes []string, held func(string) (Holding, bool, error), hashFile func(string) (CleanupFile, error), e *CleanupEntry) error {
+	if volumes != nil {
+		set, _, stream := staging.VolumeOf(volumes[0])
+		_, _, segmented := staging.ZIPSegmentOf(volumes[0])
+		if segmented || (stream && strings.EqualFold(filepath.Ext(set), ".zip")) {
+			e.Reason = "split ZIP byte accounting is not established for cleanup; preserved"
+			return nil
+		}
+	}
 	// The archive's own bytes are fixed first; the same bytes must remain
 	// after its members were checked.
 	files := volumes
@@ -939,7 +947,7 @@ func planArchive(ctx context.Context, src *os.Root, rel string, volumes []string
 	}
 	isZip := volumes == nil && strings.EqualFold(path.Ext(rel), ".zip")
 	if isZip {
-		if accounted, why := zipAccounted(src, rel); !accounted {
+		if accounted, why := zipAccounted(ctx, src, rel); !accounted {
 			e.Reason = why + "; the archive is preserved"
 			return nil
 		}
@@ -1210,7 +1218,7 @@ var errTooLarge = errors.New("file over the 256 MiB limit, or 2 GiB for an M4B o
 
 // zipAccounted requires a ZIP whose bytes are its entries: it starts with a
 // local file header and carries no archive comment.
-func zipAccounted(src *os.Root, rel string) (bool, string) {
+func zipAccounted(ctx context.Context, src *os.Root, rel string) (bool, string) {
 	name := filepath.FromSlash(rel)
 	info, err := src.Lstat(name)
 	if err != nil {
@@ -1225,7 +1233,7 @@ func zipAccounted(src *os.Root, rel string) (bool, string) {
 	if _, err := f.ReadAt(head, 0); err != nil || string(head) != "PK\x03\x04" {
 		return false, "the archive has data before its first entry"
 	}
-	z, err := zip.NewReader(f, info.Size())
+	z, err := assessment.OpenZIP(ctx, f, info.Size(), 16<<20, 8<<30, 10000)
 	if err != nil {
 		return false, "the archive could not be read"
 	}

@@ -1,6 +1,7 @@
 package staging
 
 import (
+	"bytes"
 	"context"
 	"encoding/hex"
 	"errors"
@@ -34,12 +35,29 @@ func fakeSeven() {
 	if len(args) == 0 || !slices.Contains(args, noPassword) || !slices.Contains(args, "--") || !slices.Contains(args, kind) {
 		os.Exit(7)
 	}
+	if copies, err := os.ReadFile(filepath.Join(dir, "copies.list")); err == nil {
+		archive := args[slices.Index(args, "--")+1]
+		for _, name := range strings.Fields(string(copies)) {
+			want, readErr := os.ReadFile(filepath.Join(dir, "copy-"+name))
+			got, copyErr := os.ReadFile(filepath.Join(filepath.Dir(archive), name))
+			if readErr != nil || copyErr != nil || !bytes.Equal(want, got) {
+				os.Exit(7)
+			}
+		}
+	}
 	switch args[0] {
 	case "l":
+		listingName := "listing.txt"
+		if _, err := os.Stat(filepath.Join(dir, "listing-"+filepath.Base(args[len(args)-1]))); err == nil {
+			listingName = "listing-" + filepath.Base(args[len(args)-1])
+		}
 		if !slices.Contains(args, "-ba") {
 			// Without -ba 7-Zip prints the archive's own block first.
 			header, exit := "header.txt", "list.code"
 			archive := args[len(args)-1]
+			if _, err := os.Stat(filepath.Join(dir, "header-"+filepath.Base(archive))); err == nil {
+				header = "header-" + filepath.Base(archive)
+			}
 			if sub := filepath.Base(filepath.Dir(archive)); strings.HasPrefix(sub, "volume-") {
 				entries, err := os.ReadDir(filepath.Dir(archive))
 				if err != nil || len(entries) != 1 {
@@ -61,7 +79,7 @@ func fakeSeven() {
 				os.Exit(code(exit))
 			}
 		}
-		b, _ := os.ReadFile(filepath.Join(dir, "listing.txt"))
+		b, _ := os.ReadFile(filepath.Join(dir, listingName))
 		os.Stdout.Write(b)
 		os.Exit(code("list.code"))
 	case "e":

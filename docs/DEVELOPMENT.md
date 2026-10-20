@@ -487,6 +487,32 @@ The set is at most 4 GiB and 1,000 volumes (901 in the old letter naming range).
 RAR and RAR sets are never moved by cleanup. See
 [decision 0046](decisions/0046-archive-volume-sets.md) and
 [decision 0056](decisions/0056-rar-volume-identity.md).
+
+Split ZIP byte chunks (`NAME.zip.001`, `.002`, ...; three or four numeric digits)
+are joined privately, checked as exactly one ordinary ZIP through installed
+7-Zip, and extracted by the existing Go ZIP reader. True ZIP segments
+(`NAME.z01`, `.z02`, ..., `NAME.zip`; two to four numeric digits) are copied
+under fixed private names. The complete set must list successfully through every
+part with matching count/total size/member tables and the opened part's exact
+size/ordinal. Member disk/offset/packed extents must fit the snapshots. The first
+segment must carry the standard split marker; archive comments, stubs beyond
+that marker, tails, warnings, errors, or contradictory evidence preserve the set.
+Old RAR rollover also uses `.zNN`: conflicting or absent RAR/ZIP anchors preserve
+the ambiguous paths. A set has 2 to 1,000 volumes and at most 4 GiB. Preparation
+shares two minutes and 16 MiB of reader output. Both ZIP layouts require installed
+7-Zip for container evidence; missing tools preserve every part. Split ZIP cleanup
+always keeps the sources. See [decision 0057](decisions/0057-split-zip-intake.md).
+
+Go ZIP directory parsing has a 16 MiB read budget before member processing,
+with ZIP64 counts bounded before decoder preallocation, a persistent 8 GiB
+compressed-read budget, and the shared archive deadline. EPUB assessment retains
+its separate 2 MiB directory/1 GiB compressed-read budgets. These limits are not
+antivirus or semantic-completeness evidence. A volume-evidence refusal happens
+before extraction. Later member extraction failures make ingest incomplete;
+independently verified extracted members can still be imported. This is the
+existing per-member recovery model, not archive-wide publication atomicity.
+An interrupted member previously read from a standalone terminal `.zip` resumes
+first under that original source label when its segments are now grouped.
 The folder and its archives are never changed. See
 [decision 0017](decisions/0017-folder-and-zip-ingest.md).
 

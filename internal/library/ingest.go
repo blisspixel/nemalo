@@ -68,6 +68,9 @@ type ingestUnit struct {
 	// volumes are a volume set's folder-relative paths in order; file is
 	// the first, which names its members' provenance.
 	volumes []string
+	// resumeSource is the current folder-relative part matching an older
+	// pending label when that part was previously read as a standalone ZIP.
+	resumeSource string
 }
 
 // Ingest inventories the folder once, then imports each candidate through the
@@ -131,11 +134,21 @@ func Ingest(ctx context.Context, request IngestRequest) (result IngestResult, er
 	if err != nil {
 		return result, err
 	}
-	pendingArchive, pendingMember, pendingLabel := strings.Cut(pending, "!/")
+	pendingArchive, _, pendingLabel := strings.Cut(pending, "!/")
 	if pending != "" {
 		at := -1
 		for i, u := range units {
-			if pendingLabel && u.archive && sameImportSource(pendingArchive, u.file) || !pendingLabel && !u.archive && sameImportSource(pending, u.file) {
+			archiveMatches := pendingLabel && u.archive && sameImportSource(pendingArchive, u.file)
+			if pendingLabel && u.archive && !archiveMatches {
+				for _, v := range u.volumes {
+					if sameImportSource(pendingArchive, filepath.Join(folder, v)) {
+						archiveMatches = true
+						units[i].resumeSource = filepath.ToSlash(v)
+						break
+					}
+				}
+			}
+			if archiveMatches || !pendingLabel && !u.archive && sameImportSource(pending, u.file) {
 				at = i
 				break
 			}
@@ -183,7 +196,7 @@ func Ingest(ctx context.Context, request IngestRequest) (result IngestResult, er
 		}
 		resume := ""
 		if n == 0 && pendingLabel {
-			resume = pendingMember
+			resume = pending
 		}
 		dir := filepath.Join(tmp, fmt.Sprintf("%05d", n))
 		if err := ingestArchive(ctx, src, folder, dir, u, resume, request.Scan, av, cache, &result, importOne); err != nil {
@@ -264,10 +277,9 @@ func planIngest(folder string, entries []inventory.Entry, result *IngestResult) 
 	for _, dir := range dirs {
 		units = append(units, ingestUnit{item: IngestItem{Source: dir, Kind: "packet"}, file: filepath.Join(folder, filepath.FromSlash(dir)), packet: true})
 	}
-	// Volume sets: NAME.7z.001, .002, ... and NAME.part1.rar, .part2.rar, ...
-	// A complete set, numbered from 1 without gaps, is one archive read
-	// through its first volume; the others are its parts. A set with a gap,
-	// or a lone split volume, is preserved.
+	// Shared grouping accounts for every supported volume family. A complete
+	// set, numbered from 1 without gaps, is one archive read through its first
+	// volume; the others are its parts. Gaps and ambiguity preserve the set.
 	var candidates []string
 	for _, e := range entries {
 		if e.Finding != "" || e.Kind == "link" || e.Kind == "special" || e.Kind == "unreadable" || e.Kind == "directory" || parts[e.Path] != "" {
@@ -347,8 +359,9 @@ func planIngest(folder string, entries []inventory.Entry, result *IngestResult) 
 // directory, imports the
 // extracted members with "ARCHIVE!/MEMBER" provenance, and removes the staging
 // directory before returning, so staging never holds more than one archive's
-// extraction budget. resume names a pending member to import before any other.
-func ingestArchive(ctx context.Context, src *os.Root, folder, dir string, u ingestUnit, resume string, scan bool, av assessment.Scanner, cache map[string]scanner.Result, result *IngestResult, importOne func(IngestItem, string, string)) (err error) {
+// extraction budget. resumeLabel binds the original pending member provenance.
+func ingestArchive(ctx context.Context, src *os.Root, folder, dir string, u ingestUnit, resumeLabel string, scan bool, av assessment.Scanner, cache map[string]scanner.Result, result *IngestResult, importOne func(IngestItem, string, string)) (err error) {
+	_, resume, _ := strings.Cut(resumeLabel, "!/")
 	if err := os.Mkdir(dir, 0o700); err != nil {
 		return err
 	}
@@ -379,7 +392,7 @@ func ingestArchive(ctx context.Context, src *os.Root, folder, dir string, u inge
 		item.Outcome, item.Detail = "not_imported", extractErr.Error()
 		result.Items = append(result.Items, item)
 		if resume != "" {
-			return pendingError(u.file + "!/" + resume)
+			return pendingError(resumeLabel)
 		}
 		return nil
 	}
@@ -391,7 +404,7 @@ func ingestArchive(ctx context.Context, src *os.Root, folder, dir string, u inge
 		result.Complete = false
 		result.Items = append(result.Items, item)
 		if resume != "" {
-			return pendingError(u.file + "!/" + resume)
+			return pendingError(resumeLabel)
 		}
 		return nil
 	}
@@ -421,7 +434,7 @@ func ingestArchive(ctx context.Context, src *os.Root, folder, dir string, u inge
 			}
 		}
 		if at < 0 {
-			return pendingError(u.file + "!/" + resume)
+			return pendingError(resumeLabel)
 		}
 		extracted = append([]staging.Member{extracted[at]}, append(extracted[:at:at], extracted[at+1:]...)...)
 	}
@@ -436,7 +449,14 @@ func ingestArchive(ctx context.Context, src *os.Root, folder, dir string, u inge
 		if err := ctx.Err(); err != nil {
 			return err
 		}
-		importOne(IngestItem{Source: u.item.Source + "!/" + m.Name, Kind: "archive_member"}, filepath.Join(dir, m.Staged), u.file+"!/"+m.Name)
+		source, label := u.item.Source+"!/"+m.Name, u.file+"!/"+m.Name
+		if resume != "" && m.Name == resume {
+			label = resumeLabel
+			if u.resumeSource != "" {
+				source = u.resumeSource + "!/" + m.Name
+			}
+		}
+		importOne(IngestItem{Source: source, Kind: "archive_member"}, filepath.Join(dir, m.Staged), label)
 	}
 	return nil
 }

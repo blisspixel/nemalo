@@ -25,6 +25,11 @@ type Archive struct {
 	// Header is the archive block 7-Zip prints without -ba, one key per line.
 	Header  string
 	Members map[string][]byte
+	// Headers override the archive block by private snapshot name. Fields add
+	// member metadata; Served injects bytes different from the listed members.
+	Headers map[string]string
+	Fields  map[string]string
+	Served  map[string][]byte
 	// Volumes, when present, require isolated probes and exact assembled copies.
 	Volumes []Volume
 }
@@ -77,13 +82,17 @@ func Main() {
 		}
 		if !slices.Contains(args, "-ba") {
 			os.Stdout.WriteString("Listing archive: x\n\n--\n")
-			os.Stdout.Write(read("header"))
+			header := "header"
+			if _, err := os.Stat(filepath.Join(dir, "header-"+filepath.Base(archive))); err == nil {
+				header = "header-" + filepath.Base(archive)
+			}
+			os.Stdout.Write(read(header))
 			os.Stdout.WriteString("\n----------\n")
 		}
 		os.Stdout.Write(read("listing"))
 		os.Exit(0)
 	case "e":
-		if !slices.Contains(args, "-so") {
+		if !slices.Contains(args, "-so") || !slices.Contains(args, "-spd") || !slices.Contains(args, "-ssc") {
 			os.Exit(7)
 		}
 		os.Stdout.Write(read(filepath.Join("members", fmt.Sprintf("%x", args[len(args)-1]))))
@@ -107,8 +116,16 @@ func Install(t testing.TB, a Archive) {
 	var listing strings.Builder
 	for _, name := range names {
 		body := a.Members[name]
-		fmt.Fprintf(&listing, "Path = %s\nSize = %d\nPacked Size = %d\nModified = 2026-10-19 07:47:40\nAttributes = A -rw-r--r--\nCRC = %08X\nEncrypted = -\nMethod = LZMA2:24\nBlock = 0\n\n", name, len(body), len(body), crc32.ChecksumIEEE(body))
+		fmt.Fprintf(&listing, "Path = %s\nSize = %d\nPacked Size = %d\nModified = 2026-10-19 07:47:40\nAttributes = A -rw-r--r--\nCRC = %08X\nEncrypted = -\nMethod = LZMA2:24\nBlock = 0\n%s\n", name, len(body), len(body), crc32.ChecksumIEEE(body), a.Fields[name])
+		if served, ok := a.Served[name]; ok {
+			body = served
+		}
 		if err := os.WriteFile(filepath.Join(dir, "members", fmt.Sprintf("%x", name)), body, 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	for name, header := range a.Headers {
+		if err := os.WriteFile(filepath.Join(dir, "header-"+name), []byte(header), 0o600); err != nil {
 			t.Fatal(err)
 		}
 	}

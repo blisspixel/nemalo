@@ -48,10 +48,15 @@ left untouched and any unaccounted material preserved.
 
 ## Consequences
 
-Split downloads become importable, and an incomplete set never imports part
-of its contents. Old-style RAR volume names (`.rar`, `.r00`, `.r01`), split
-ZIP sets, and cleanup of RAR and 7z archives or sets remain later work; their
-volumes stay listed and preserved.
+Split downloads become importable. Missing or incompatible volume evidence
+refuses the set before member extraction. A later member extraction failure
+makes ingest incomplete, while independently verified extracted members may
+still be imported through the existing per-member service; publication is not
+an archive-wide transaction. Old-style RAR names now follow
+[decision 0056](0056-rar-volume-identity.md), and split ZIPs follow
+[decision 0057](0057-split-zip-intake.md). Cleanup of 7z and split 7z follows
+[decision 0051](0051-cleanup-of-7z-and-split-sets.md); all RAR and split ZIP
+sources remain preserved.
 
 ## Validation
 

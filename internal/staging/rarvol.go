@@ -96,7 +96,7 @@ func snapshotRARSet(ctx context.Context, exe string, src *os.Root, names []strin
 	}
 	archive := filepath.Join(dir, rarSnapshotName(old, 0))
 	out, code, err := runSevenLimit(probeCtx, exe, nil, remaining, "l", "-slt", "-t"+kind, noPassword, "--", archive)
-	keys, ok := strictRARBlock(out)
+	keys, ok := strictArchiveBlock(out)
 	_, hasError := keys["ERROR"]
 	if err != nil || code != 0 || !ok || hasError {
 		return "", "", errors.New("7-Zip could not read the complete RAR volume set; it is preserved")
@@ -112,7 +112,7 @@ func snapshotRARSet(ctx context.Context, exe string, src *os.Root, names []strin
 }
 
 func rarVolumeHeader(out []byte, code int, kind string, size int64, index int, old bool, next string, splitDiagnostic bool) bool {
-	keys, ok := strictRARBlock(out)
+	keys, ok := strictArchiveBlock(out)
 	if !ok || keys["Type"] != kind || keys["Physical Size"] != strconv.FormatInt(size, 10) || keys["Multivolume"] != "+" || keys["Volume Index"] != strconv.Itoa(index) || keys["Volumes"] != "1" {
 		return false
 	}
@@ -178,9 +178,9 @@ func rarBoundary(entries []sevenEntry, previous *sevenEntry, more bool) bool {
 	return last.splitAfter == more
 }
 
-// strictRARBlock requires an unambiguous, terminated archive block. A comment
+// strictArchiveBlock requires an unambiguous, terminated archive block. A comment
 // can contain forged keys, so even a comment after otherwise valid keys refuses.
-func strictRARBlock(out []byte) (map[string]string, bool) {
+func strictArchiveBlock(out []byte) (map[string]string, bool) {
 	text := strings.ReplaceAll(string(out), "\r\n", "\n")
 	start := strings.Index(text, "\n--\n")
 	if start < 0 {
