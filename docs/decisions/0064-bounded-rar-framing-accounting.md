@@ -69,6 +69,26 @@ source size and SHA-256. Require every leaf held with currently verified stored
 bytes and unchanged final originals. Share existing tree proof/read/member/output,
 diagnostic/process and deadline allowances, including failed work.
 
+Verify the maintained-reader binding as a separate read-only step while the
+library still refuses every RAR cleanup. Only a requested standalone root RAR5
+may receive coverage evidence; child RARs remain refused. Probe the opened private
+snapshot before listing, use one UTF-8 technical listing, and bind every unique
+raw name to known size, packed size, directory state and file CRC. The complete
+record set must agree, without normalized aliases, duplicate names, links,
+special files, encryption or split records. Reader ordering confers no authority:
+the existing reader selects members by exact name. Successful extraction and
+physical coverage remain independent. Other formats and default intake keep
+their existing paths. Require complete verification of this binding before a
+later application decision enables source cleanup.
+
+Preserve historical RAR entries too: a missing proof cannot authorize resuming
+an earlier cleanup or purging its held archive copies. Guard every file of a
+RAR archive entry, including old-style continuation names, through the same
+versioned archive checks. Fresh previews retain these copies; pending unversioned
+purge intents cannot remove them. A supported proof is required before any later
+permission. Restore still returns recorded original bytes without replacing a
+target. This restriction does not enable RAR cleanup or migrate old manifests.
+
 An enabled subset needs its own explicit versioned proof and the reviewed,
 recoverable cleanup/restore and grouped-purge contracts of decisions 0022, 0041
 and 0063. Fresh purge repeats complete accounting. Partial recovery binds the

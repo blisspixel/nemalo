@@ -122,8 +122,27 @@ func Extract7z(ctx context.Context, src *os.Root, name string, dst *os.Root, sup
 	if err != nil {
 		return x, err
 	}
-	if limits.Coverage && kind != "7z" {
+	if limits.Coverage && kind != "7z" && (kind != "Rar5" || limits.child) {
 		return x, errors.New("RAR container bytes are not completely accounted for; the archive is preserved")
+	}
+	var rar5Files []RAR5File
+	if limits.Coverage && kind == "Rar5" {
+		privateInfo, err := tmpRoot.Lstat(snapshot)
+		if err != nil {
+			return x, err
+		}
+		if privateInfo.Size() != info.Size() {
+			return x, fmt.Errorf("%w: private snapshot size changed", ErrRAR5Coverage)
+		}
+		private, err := safeio.OpenRegular(tmpRoot, snapshot, privateInfo, os.O_RDONLY)
+		if err != nil {
+			return x, err
+		}
+		defer private.Close()
+		rar5Files, err = RAR5Accounted(ctx, limits.proofReader(private), privateInfo.Size())
+		if err != nil {
+			return x, err
+		}
 	}
 	if limits.child && (kind == "Rar" || kind == "Rar5") {
 		probeCtx, cancel := context.WithTimeout(ctx, 2*time.Minute)
@@ -137,8 +156,8 @@ func Extract7z(ctx context.Context, src *os.Root, name string, dst *os.Root, sup
 			return x, errors.New("the nested RAR does not establish one standalone container; volume or ambiguous evidence stays preserved")
 		}
 	}
-	x, err = extractSnapshot(ctx, exe, kind, filepath.Join(tmp, snapshot), info.Size(), dst, supported, limits)
-	if err == nil && (limits.tree == nil || limits.Coverage) {
+	x, err = extractSnapshot(ctx, exe, kind, filepath.Join(tmp, snapshot), info.Size(), dst, supported, limits, rar5Files)
+	if err == nil && kind == "7z" && (limits.tree == nil || limits.Coverage) {
 		x.Whole = wholeArchive(ctx, exe, kind, filepath.Join(tmp, snapshot), "Physical Size", info.Size(), x.packed, limits)
 	}
 	return x, err
@@ -205,11 +224,20 @@ func wholeBlock(out []byte, key string, size int64) bool {
 
 // extractSnapshot lists a snapshot already typed by its signature and
 // extracts its eligible members.
-func extractSnapshot(ctx context.Context, exe, kind, archive string, size int64, dst *os.Root, supported func(string) bool, limits Limits) (Extraction, error) {
+func extractSnapshot(ctx context.Context, exe, kind, archive string, size int64, dst *os.Root, supported func(string) bool, limits Limits, rar5Files []RAR5File) (Extraction, error) {
 	x := Extraction{Members: []Member{}}
+	rar5Coverage := limits.Coverage && kind == "Rar5"
+	if rar5Coverage && rar5Files == nil {
+		return x, fmt.Errorf("%w: missing private framing evidence", ErrRAR5Coverage)
+	}
 	listCtx, cancel := context.WithTimeout(ctx, 2*time.Minute+time.Duration(size>>27)*time.Minute)
 	defer cancel()
-	listing, code, err := limits.run(listCtx, exe, nil, maxListing, "l", "-slt", "-ba", "-t"+kind, noPassword, "--", archive)
+	args := []string{"l", "-slt", "-ba", "-t" + kind, noPassword}
+	if rar5Coverage {
+		args = append(args, "-sccUTF-8")
+	}
+	args = append(args, "--", archive)
+	listing, code, err := limits.run(listCtx, exe, nil, maxListing, args...)
 	if listCtx.Err() != nil {
 		return x, errors.New("7-Zip did not list the archive within its deadline")
 	}
@@ -223,7 +251,12 @@ func extractSnapshot(ctx context.Context, exe, kind, archive string, size int64,
 	if err != nil {
 		return x, err
 	}
-	return extractListedSnapshot(ctx, exe, kind, archive, size, dst, supported, limits, entries)
+	if rar5Coverage && !rar5TableMatches(rar5Files, entries) {
+		return x, fmt.Errorf("%w: maintained reader table does not match every physical file record", ErrRAR5Coverage)
+	}
+	x, err = extractListedSnapshot(ctx, exe, kind, archive, size, dst, supported, limits, entries)
+	x.Whole = rar5Coverage
+	return x, err
 }
 
 // Extract only the table already checked against these private snapshots.
@@ -735,7 +768,7 @@ func ExtractSet(ctx context.Context, src *os.Root, names []string, dst *os.Root,
 		if err != nil || code != 0 || !ok || keys["Physical Size"] != strconv.FormatInt(total, 10) {
 			return x, errors.New("the joined volumes are not exactly one 7z archive; the set is preserved")
 		}
-		x, err = extractSnapshot(ctx, exe, kind, archive, total, dst, supported, limits)
+		x, err = extractSnapshot(ctx, exe, kind, archive, total, dst, supported, limits, nil)
 		if err == nil && (limits.tree == nil || limits.Coverage) {
 			x.Whole = wholeArchive(ctx, exe, kind, archive, "Physical Size", total, x.packed, limits)
 		}
@@ -745,7 +778,7 @@ func ExtractSet(ctx context.Context, src *os.Root, names []string, dst *os.Root,
 	if err != nil {
 		return x, err
 	}
-	return extractSnapshot(ctx, exe, kind, archive, total, dst, supported, limits)
+	return extractSnapshot(ctx, exe, kind, archive, total, dst, supported, limits, nil)
 }
 
 // archiveBlock reads the keys of the archive block of a listing without

@@ -396,6 +396,15 @@ adapter; inconclusive boundaries preserve all sources. RAR cleanup remains
 refused because unlisted blocks are unaccounted for
 ([decision 0056](decisions/0056-rar-volume-identity.md)).
 
+Requested standalone RAR5 coverage now measures bounded physical framing from
+the opened private snapshot, then matches every raw file name, size, packed size,
+directory state and CRC to one UTF-8 reader table before extraction. This is
+read-only evidence; default intake and RAR cleanup preservation remain unchanged.
+Child RAR coverage is refused. Historical RAR-named archive entries, including old
+continuations, cannot resume cleanup or purge without a supported versioned proof.
+Their recorded bytes remain restorable
+([decision 0064](decisions/0064-bounded-rar-framing-accounting.md)).
+
 Split ZIP byte chunks and true disk segments share this staging service and
 Import. Byte chunks are joined for the Go ZIP reader after a maintained-reader
 extent check. True segments must expose consistent member tables and exact

@@ -200,6 +200,11 @@ Decision 0064 permits an independent bounded Go RAR framing accountant beside
 the maintained reader. It is read-only evidence, not a decoder or cleanup policy.
 Keep RAR cleanup disabled until that proof passes its complete verification,
 then separately verify the versioned application and recovery integration.
+Requested standalone RAR5 coverage binds every physical file record to one UTF-8
+reader table before exact-name extraction; child RAR coverage remains refused.
+Historical RAR-named archive entries and old continuations without a supported
+proof cannot resume cleanup or purge, including pending purge intents. Preserve
+their recorded bytes for restore; member holdings alone confer no permission.
 Plain ZIP cleanup and purge share complete local/central/descriptor accounting
 and a 16 MiB proof-read budget (decision 0060). Preserve comments, unknown metadata
 and unsupported layouts. Pending historical purge plans cannot bypass the current

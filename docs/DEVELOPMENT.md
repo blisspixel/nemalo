@@ -649,6 +649,12 @@ versions retain remaining bytes, while malformed bindings stop for review.
 An unreferenced manifest cannot authorize a retry. Older executables cannot read
 these cleanup entries or purge manifests; use this source version or newer to
 recover them. Ordinary-file/ZIP/7z legacy manifests retain their existing contract.
+Historical RAR-named archive entries and old continuation names without a supported
+proof stay for restore. Cleanup resume stops for review; fresh and pending purge
+plans report `archive_not_accounted` and retain every file of the entry. This does
+not authorize new RAR cleanup. The read-only standalone RAR5 coverage path now
+binds physical framing to the installed reader's exact table; child RAR coverage
+remains refused ([decision 0064](decisions/0064-bounded-rar-framing-accounting.md)).
 For nested cleanup, fresh purge rechecks every held container and leaf through the
 same tree. Its schema-2 group also includes `leaf_digest`, binding the canonical
 leaf evidence to that reviewed purge and durable intent. Single-file trees and

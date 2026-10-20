@@ -122,7 +122,7 @@ func extractZIPSet(ctx context.Context, exe string, src *os.Root, names []string
 		return x, err
 	}
 	cancel()
-	return extractSnapshot(ctx, exe, "zip", filepath.Join(dir, privateNames[0]), total, dst, supported, limits)
+	return extractSnapshot(ctx, exe, "zip", filepath.Join(dir, privateNames[0]), total, dst, supported, limits, nil)
 }
 
 // ordinaryZIP supplies the maintained reader's extent and volume facts before

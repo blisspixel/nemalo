@@ -76,6 +76,9 @@ func fakeSeven() {
 	}
 	switch args[0] {
 	case "l":
+		if _, err := os.Stat(filepath.Join(dir, "require-utf8")); err == nil && !slices.Contains(args, "-sccUTF-8") {
+			os.Exit(7)
+		}
 		listingName := "listing.txt"
 		if _, err := os.Stat(filepath.Join(dir, "listing-"+filepath.Base(args[len(args)-1]))); err == nil {
 			listingName = "listing-" + filepath.Base(args[len(args)-1])

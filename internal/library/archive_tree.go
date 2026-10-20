@@ -10,6 +10,8 @@ import (
 	"slices"
 	"strings"
 	"unicode/utf8"
+
+	"github.com/blisspixel/nemalo/internal/staging"
 )
 
 const archiveTreeProof = "archive-tree/1"
@@ -24,7 +26,24 @@ type CleanupArchiveLeaf struct {
 }
 
 func versionedArchive(e CleanupEntry) bool {
-	return entryHasZIPParts(e) || e.ArchiveProof != "" || len(e.ArchiveLeaves) != 0
+	return entryHasZIPParts(e) || entryHasRARFiles(e) || e.ArchiveProof != "" || len(e.ArchiveLeaves) != 0
+}
+
+// Historical manifests can name RAR sources without proof. A member-holding
+// list never authorizes their encoded bytes, including old continuations.
+func entryHasRARFiles(e CleanupEntry) bool {
+	if e.Kind != "archive" {
+		return false
+	}
+	for _, f := range e.Files {
+		if strings.EqualFold(path.Ext(f.Path), ".rar") {
+			return true
+		}
+		if _, _, old := staging.OldRARVolumeOf(f.Path); old {
+			return true
+		}
+	}
+	return false
 }
 
 func validArchiveLeaves(e CleanupEntry) bool {
