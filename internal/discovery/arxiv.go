@@ -98,55 +98,110 @@ type Arxiv struct {
 	next   time.Time
 	// until is when arXiv last asked, by Retry-After, not to be asked again.
 	until time.Time
+	// dispatch serializes requests through their response headers. Bodies keep
+	// the transport's per-host connection bound and their own read budgets.
+	dispatch chan struct{}
 }
 
 func NewArxiv() *Arxiv {
+	a := &Arxiv{}
+	a.Client = a.newClient()
+	return a
+}
+
+func (a *Arxiv) newClient() *http.Client {
 	c := NewFileClient(func(host string) bool { return host == ArxivExportHost || host == ArxivOAIHost })
 	// arXiv's terms allow one connection.
 	c.Transport.(fileTransport).base.(*http.Transport).MaxConnsPerHost = 1
-	return &Arxiv{Client: c}
+	checkRedirect := c.CheckRedirect
+	c.CheckRedirect = func(req *http.Request, via []*http.Request) error {
+		if err := checkRedirect(req, via); err != nil {
+			return err
+		}
+		// A followed redirect sends another request and shares this owner's
+		// quota with evaluations, downloads, and retries on either fixed host.
+		a.afterResponse(req.Response)
+		return a.wait(req.Context())
+	}
+	return c
 }
 
 func (a *Arxiv) client() *http.Client {
 	a.mu.Lock()
 	defer a.mu.Unlock()
 	if a.Client == nil {
-		a.Client = NewArxiv().Client
+		a.Client = a.newClient()
 	}
 	return a.Client
 }
 
-// later moves the next permitted request to at least t.
-func (a *Arxiv) later(t time.Time) {
+// afterResponse publishes the local interval and any source quota together.
+func (a *Arxiv) afterResponse(resp *http.Response) time.Time {
+	now := time.Now()
+	var retryAt time.Time
+	if resp != nil && (resp.StatusCode == http.StatusTooManyRequests || resp.StatusCode >= 500) {
+		retryAt = retryUntil(resp.Header.Get("Retry-After"), now)
+	}
 	a.mu.Lock()
-	if t.After(a.next) {
-		a.next = t
-	}
-	if t.After(a.until) {
-		a.until = t
-	}
+	a.next = maxTime(maxTime(a.next, now.Add(arxivPace)), retryAt)
+	a.until = maxTime(a.until, retryAt)
 	a.mu.Unlock()
+	return retryAt
+}
+
+func (a *Arxiv) do(client *http.Client, req *http.Request) (*http.Response, time.Time, error) {
+	a.mu.Lock()
+	if a.dispatch == nil {
+		a.dispatch = make(chan struct{}, 1)
+	}
+	gate := a.dispatch
+	a.mu.Unlock()
+	select {
+	case gate <- struct{}{}:
+		defer func() { <-gate }()
+	case <-req.Context().Done():
+		return nil, time.Time{}, req.Context().Err()
+	}
+	if err := a.wait(req.Context()); err != nil {
+		return nil, time.Time{}, err
+	}
+	resp, err := client.Do(req)
+	// Dispatch or header delivery can be delayed after the grant. Starting
+	// the next interval here prevents that delay from compressing requests.
+	// Publish a source quota before releasing the dispatch gate, too.
+	retryAt := a.afterResponse(resp)
+	return resp, retryAt, err
 }
 
 // wait spaces every arXiv request by arxivPace.
 func (a *Arxiv) wait(ctx context.Context) error {
-	a.mu.Lock()
-	delay := time.Until(a.next)
-	if delay < 0 {
-		delay = 0
-	}
-	a.next = time.Now().Add(delay + arxivPace)
-	a.mu.Unlock()
-	if delay == 0 {
-		return ctx.Err()
-	}
-	t := time.NewTimer(delay)
-	defer t.Stop()
-	select {
-	case <-ctx.Done():
-		return ctx.Err()
-	case <-t.C:
-		return nil
+	for {
+		if err := ctx.Err(); err != nil {
+			return err
+		}
+		a.mu.Lock()
+		now := time.Now()
+		if a.until.Sub(now) > maxRetryWait {
+			until := a.until
+			a.mu.Unlock()
+			return fmt.Errorf("arXiv asked not to be asked again until %s", until.UTC().Format(time.RFC3339))
+		}
+		if !now.Before(a.next) {
+			a.next = now.Add(arxivPace)
+			a.mu.Unlock()
+			return nil
+		}
+		delay := a.next.Sub(now)
+		a.mu.Unlock()
+		timer := time.NewTimer(delay)
+		select {
+		case <-ctx.Done():
+			timer.Stop()
+			return ctx.Err()
+		case <-timer.C:
+			// Recheck the deadline: another caller may take the slot, or
+			// Retry-After may extend it while this timer waits.
+		}
 	}
 }
 
@@ -156,22 +211,13 @@ func (a *Arxiv) wait(ctx context.Context) error {
 func (a *Arxiv) get(ctx context.Context, method, raw string) (*http.Response, error) {
 	client := a.client()
 	for attempt := 1; ; attempt++ {
-		a.mu.Lock()
-		until := a.until
-		a.mu.Unlock()
-		if wait := time.Until(until); wait > maxRetryWait {
-			return nil, fmt.Errorf("arXiv asked not to be asked again until %s", until.UTC().Format(time.RFC3339))
-		}
-		if err := a.wait(ctx); err != nil {
-			return nil, err
-		}
 		req, err := http.NewRequestWithContext(ctx, method, raw, nil)
 		if err != nil {
 			return nil, err
 		}
 		req.Header.Set("User-Agent", "nemalo/0.1 (+https://github.com/blisspixel/nemalo)")
 		req.Header.Set("Accept-Encoding", "identity")
-		resp, err := client.Do(req)
+		resp, retryAt, err := a.do(client, req)
 		retry := false
 		switch {
 		case err != nil:
@@ -179,9 +225,7 @@ func (a *Arxiv) get(ctx context.Context, method, raw string) (*http.Response, er
 		case resp.StatusCode == 429 || resp.StatusCode >= 500:
 			// The requested wait holds for every later request too, and a
 			// wait longer than a retry allows stops them until it passes.
-			at := retryUntil(resp.Header.Get("Retry-After"), time.Now())
-			retry = time.Until(at) <= maxRetryWait
-			a.later(at)
+			retry = time.Until(retryAt) <= maxRetryWait
 		}
 		if !retry || attempt >= downloadAttempts {
 			return resp, err

@@ -2,11 +2,13 @@ package discovery
 
 import (
 	"context"
+	"errors"
 	"io"
 	"net/http"
 	"strings"
 	"sync"
 	"testing"
+	"testing/synctest"
 	"time"
 )
 
@@ -69,33 +71,112 @@ func testArxiv(t *testing.T, tr *arxivTransport) *Arxiv {
 // An unversioned identifier resolves to the latest version, whose license
 // applies; an older version keeps its own record and no license.
 func TestArxivEvaluateResolvesVersionsAndLicenses(t *testing.T) {
-	tr := &arxivTransport{feeds: map[string]string{"1706.03762": feed("1706.03762", 7, "Attention"), "1706.03762v1": feed("1706.03762", 1, "Attention, first")}, oai: oaiFor("1706.03762", "http://arxiv.org/licenses/nonexclusive-distrib/1.0/"), head: 2215244}
-	a := testArxiv(t, tr)
-	e, err := a.Evaluate(context.Background(), "arxiv:1706.03762")
-	if err != nil || !e.Complete || e.ID != "arxiv:1706.03762v7" || len(e.LicenseURLs) != 1 || len(e.Files) != 1 {
-		t.Fatalf("%+v %v", e, err)
-	}
-	f := e.Files[0]
-	if f.Name != "1706.03762v7.pdf" || f.Bytes == nil || *f.Bytes != 2215244 || f.MD5 != "" || f.DownloadURL != "https://export.arxiv.org/pdf/1706.03762v7" {
-		t.Fatalf("%+v", f)
-	}
-	for _, r := range tr.requests {
-		if !strings.Contains(r, ArxivExportHost) && !strings.Contains(r, ArxivOAIHost) {
-			t.Fatal("request outside arXiv's hosts", r)
+	synctest.Test(t, func(t *testing.T) {
+		tr := &arxivTransport{feeds: map[string]string{"1706.03762": feed("1706.03762", 7, "Attention"), "1706.03762v1": feed("1706.03762", 1, "Attention, first")}, oai: oaiFor("1706.03762", "http://arxiv.org/licenses/nonexclusive-distrib/1.0/"), head: 2215244}
+		a := &Arxiv{Client: &http.Client{Transport: tr}}
+		e, err := a.Evaluate(context.Background(), "arxiv:1706.03762")
+		if err != nil || !e.Complete || e.ID != "arxiv:1706.03762v7" || len(e.LicenseURLs) != 1 || len(e.Files) != 1 {
+			t.Fatalf("%+v %v", e, err)
 		}
-	}
-	for i := 1; i < len(tr.at); i++ {
-		if tr.at[i].Sub(tr.at[i-1]) < 90*time.Millisecond {
-			t.Fatal("requests were not paced")
+		f := e.Files[0]
+		if f.Name != "1706.03762v7.pdf" || f.Bytes == nil || *f.Bytes != 2215244 || f.MD5 != "" || f.DownloadURL != "https://export.arxiv.org/pdf/1706.03762v7" {
+			t.Fatalf("%+v", f)
 		}
-	}
-	old, err := a.Evaluate(context.Background(), "arxiv:1706.03762v1")
-	if err != nil || old.ID != "arxiv:1706.03762v1" || len(old.LicenseURLs) != 0 || !strings.Contains(strings.Join(old.Rights, " "), "version 1 is not established") || old.Title[0] != "Attention, first" {
-		t.Fatalf("%+v %v", old, err)
-	}
-	if _, err := a.Evaluate(context.Background(), "arxiv:1706.03762v9"); err == nil || !strings.Contains(err.Error(), "latest is 7") {
-		t.Fatal(err)
-	}
+		for _, r := range tr.requests {
+			if !strings.Contains(r, ArxivExportHost) && !strings.Contains(r, ArxivOAIHost) {
+				t.Fatal("request outside arXiv's hosts", r)
+			}
+		}
+		for i := 1; i < len(tr.at); i++ {
+			if gap := tr.at[i].Sub(tr.at[i-1]); gap < 3*time.Second {
+				t.Fatalf("request gap %s is less than the three-second product pace", gap)
+			}
+		}
+		old, err := a.Evaluate(context.Background(), "arxiv:1706.03762v1")
+		if err != nil || old.ID != "arxiv:1706.03762v1" || len(old.LicenseURLs) != 0 || !strings.Contains(strings.Join(old.Rights, " "), "version 1 is not established") || old.Title[0] != "Attention, first" {
+			t.Fatalf("%+v %v", old, err)
+		}
+		if _, err := a.Evaluate(context.Background(), "arxiv:1706.03762v9"); err == nil || !strings.Contains(err.Error(), "latest is 7") {
+			t.Fatal(err)
+		}
+	})
+}
+
+func TestArxivWaitingCallRechecksAnExtendedRetryAfter(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		start := time.Now()
+		a := &Arxiv{next: start.Add(arxivPace)}
+		granted := make(chan time.Time, 1)
+		go func() {
+			if err := a.wait(context.Background()); err != nil {
+				t.Error(err)
+			}
+			granted <- time.Now()
+		}()
+		synctest.Wait()
+		postponed := start.Add(9 * time.Second)
+		a.afterResponse(&http.Response{StatusCode: http.StatusServiceUnavailable, Header: http.Header{"Retry-After": {"9"}}})
+		time.Sleep(arxivPace)
+		synctest.Wait()
+		select {
+		case at := <-granted:
+			t.Fatalf("waiting call granted at %s before extended Retry-After %s", at, postponed)
+		default:
+		}
+		if at := <-granted; at.Before(postponed) {
+			t.Fatal("extended Retry-After was bypassed", at, postponed)
+		}
+	})
+}
+
+func TestArxivWaitingRequestRefusesANewLongRetryAfter(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		tr := &statusTransport{codes: []int{200}}
+		a := &Arxiv{Client: &http.Client{Transport: tr}, next: time.Now().Add(arxivPace)}
+		result := make(chan error, 1)
+		go func() {
+			_, err := a.get(context.Background(), http.MethodGet, "https://export.arxiv.org/api/query")
+			result <- err
+		}()
+		synctest.Wait()
+		a.afterResponse(&http.Response{StatusCode: http.StatusServiceUnavailable, Header: http.Header{"Retry-After": {"120"}}})
+		if err := <-result; err == nil || !strings.Contains(err.Error(), "not to be asked again") || tr.calls != 0 {
+			t.Fatal("waiting request ignored a new long Retry-After", tr.calls, err)
+		}
+	})
+}
+
+func TestArxivConcurrentWaitersAndCancelledCallsRespectSlots(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		a := &Arxiv{}
+		start := time.Now()
+		ctx, cancel := context.WithCancel(context.Background())
+		cancel()
+		if err := a.wait(ctx); !errors.Is(err, context.Canceled) {
+			t.Fatal(err)
+		}
+		if err := a.wait(context.Background()); err != nil || !time.Now().Equal(start) {
+			t.Fatal("cancelled call consumed the available slot", err)
+		}
+		granted := make(chan time.Time, 3)
+		for range 3 {
+			go func() {
+				if err := a.wait(context.Background()); err != nil {
+					t.Error(err)
+				}
+				granted <- time.Now()
+			}()
+		}
+		synctest.Wait()
+		prior := start
+		for range 3 {
+			at := <-granted
+			if gap := at.Sub(prior); gap < 3*time.Second {
+				t.Fatal("concurrent grants bypassed the product pace", gap)
+			}
+			prior = at
+		}
+	})
 }
 
 func TestArxivRefusesWhatItCannotVouchFor(t *testing.T) {
@@ -142,6 +223,152 @@ func TestArxivIdentifiersAndNames(t *testing.T) {
 type statusTransport struct {
 	codes []int
 	calls int
+}
+
+type arxivRedirectTransport struct {
+	target string
+	at     []time.Time
+}
+
+type delayedArxivTransport struct {
+	at []time.Time
+}
+
+type heldArxivTransport struct {
+	started chan struct{}
+	release chan struct{}
+	calls   int
+}
+
+func (h *heldArxivTransport) RoundTrip(req *http.Request) (*http.Response, error) {
+	h.calls++
+	if h.calls == 1 {
+		close(h.started)
+		select {
+		case <-h.release:
+		case <-req.Context().Done():
+			return nil, req.Context().Err()
+		}
+	}
+	return &http.Response{StatusCode: http.StatusOK, Header: http.Header{}, Body: io.NopCloser(strings.NewReader("")), Request: req}, nil
+}
+
+func TestArxivDispatchWaitsForHeadersAndQueuedCancellation(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		tr := &heldArxivTransport{started: make(chan struct{}), release: make(chan struct{})}
+		unblock := sync.OnceFunc(func() { close(tr.release) })
+		defer unblock()
+		a := &Arxiv{Client: &http.Client{Transport: tr}}
+		first := make(chan error, 1)
+		go func() {
+			resp, err := a.get(context.Background(), http.MethodGet, "https://export.arxiv.org/api/query")
+			if resp != nil {
+				resp.Body.Close()
+			}
+			first <- err
+		}()
+		<-tr.started
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+		second := make(chan error, 1)
+		go func() {
+			resp, err := a.get(ctx, http.MethodGet, "https://oaipmh.arxiv.org/oai")
+			if resp != nil {
+				resp.Body.Close()
+			}
+			second <- err
+		}()
+		synctest.Wait()
+		time.Sleep(2 * arxivPace)
+		synctest.Wait()
+		if tr.calls != 1 {
+			t.Fatal("another request started before the first returned headers", tr.calls)
+		}
+		cancel()
+		if err := <-second; !errors.Is(err, context.Canceled) {
+			t.Fatal("queued dispatch ignored cancellation", err)
+		}
+		unblock()
+		if err := <-first; err != nil {
+			t.Fatal(err)
+		}
+	})
+}
+
+func (d *delayedArxivTransport) RoundTrip(req *http.Request) (*http.Response, error) {
+	// Model a scheduler or transport delay after a permit was granted but
+	// before the actual request starts. The next interval must not shrink.
+	if len(d.at) == 0 {
+		time.Sleep(time.Second)
+	}
+	d.at = append(d.at, time.Now())
+	return &http.Response{StatusCode: http.StatusOK, Header: http.Header{}, Body: io.NopCloser(strings.NewReader("")), Request: req}, nil
+}
+
+func TestArxivLateDispatchDoesNotCompressTheNextRequest(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		tr := &delayedArxivTransport{}
+		a := &Arxiv{Client: &http.Client{Transport: tr}}
+		for range 2 {
+			resp, err := a.get(context.Background(), http.MethodGet, "https://export.arxiv.org/api/query")
+			if err != nil {
+				t.Fatal(err)
+			}
+			resp.Body.Close()
+		}
+		if len(tr.at) != 2 || tr.at[1].Sub(tr.at[0]) < 3*time.Second {
+			t.Fatal("late dispatch shortened the product interval", tr.at)
+		}
+	})
+}
+
+func (r *arxivRedirectTransport) RoundTrip(req *http.Request) (*http.Response, error) {
+	r.at = append(r.at, time.Now())
+	status, header := http.StatusOK, http.Header{}
+	if len(r.at) == 1 {
+		status = http.StatusFound
+		header.Set("Location", r.target)
+	}
+	return &http.Response{StatusCode: status, Header: header, Body: io.NopCloser(strings.NewReader("")), Request: req}, nil
+}
+
+func TestArxivRedirectsShareThePaceAndKeepFixedHosts(t *testing.T) {
+	for _, test := range []struct {
+		name, target string
+		lazy         bool
+	}{
+		{"same host", "https://export.arxiv.org/api/query?normalized=1", false},
+		{"other allowed host", "https://oaipmh.arxiv.org/oai", false},
+		{"lazy client shares owner", "https://oaipmh.arxiv.org/oai", true},
+		{"off host", "https://other.example/query", false},
+		{"insecure scheme", "http://export.arxiv.org/api/query", false},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			synctest.Test(t, func(t *testing.T) {
+				tr := &arxivRedirectTransport{target: test.target}
+				a := NewArxiv()
+				if test.lazy {
+					a = &Arxiv{}
+				}
+				// Keep the production client's redirect policy; substitute only I/O.
+				a.client().Transport = tr
+				resp, err := a.get(context.Background(), http.MethodGet, "https://export.arxiv.org/api/query")
+				if resp != nil {
+					_ = resp.Body.Close()
+				}
+				allowed := strings.HasPrefix(test.target, "https://export.arxiv.org/") || strings.HasPrefix(test.target, "https://oaipmh.arxiv.org/")
+				if !allowed {
+					if err == nil || len(tr.at) != 1 {
+						t.Fatal("redirect left the fixed hosts or scheme", len(tr.at), err)
+					}
+					return
+				}
+				if err != nil || len(tr.at) != 2 || tr.at[1].Sub(tr.at[0]) < 3*time.Second {
+					t.Fatal("redirect bypassed the product pace", tr.at, err)
+				}
+			})
+		})
+	}
 }
 
 func (s *statusTransport) RoundTrip(req *http.Request) (*http.Response, error) {

@@ -91,3 +91,19 @@ resolve; and a dropped transfer from a source that cannot resume reported
 the resume refusal instead of its own error. In the TUI an unversioned
 evaluation acquires the version it resolved, and the review screen describes
 arXiv rather than Archive.
+
+On 2026-10-20, hosted Windows CI exposed the wall-clock pacing assertion again.
+The test now uses Go's virtual clock to check the full
+three-second product interval. Further deterministic regressions showed that a
+waiting call ignored an extended Retry-After and that allowed redirects bypassed
+the pace. The gate now rechecks clock and quota after every wake, grants slots
+when due rather than reserving future ones, and refuses a newly long Retry-After
+even for an already waiting call. Cancelled waiters do not consume slots. Followed
+redirects retain the checked-host policy and share the same owner's pace, including
+on a lazily initialized client. Tests cover concurrent waiters, cancellation,
+quota extensions, and redirects without network access or reduced intervals.
+Request dispatch is serialized through response headers, and the next interval
+starts after those headers arrive, so scheduling or header delays cannot compress
+the pace. This is a conservative minimum interval; body reading keeps its own
+bounds and the existing per-host connection limit. A delayed-dispatch regression
+checks this separately from virtual timer and quota behavior.
