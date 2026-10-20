@@ -142,6 +142,11 @@ func InstallMany(t testing.TB, archives ...Archive) {
 // Install makes staging run this test binary as 7-Zip, reporting a.
 func Install(t testing.TB, a Archive) {
 	t.Helper()
+	// These synchronous fixture children start no application goroutines.
+	// Retain race instrumentation/reporting while avoiding the default one
+	// second exit sleep on every simulated archiver invocation. The running
+	// parent test process already initialized its own race settings.
+	t.Setenv("GORACE", strings.TrimSpace(os.Getenv("GORACE")+" atexit_sleep_ms=0"))
 	dir := t.TempDir()
 	if err := os.MkdirAll(filepath.Join(dir, "members"), 0o700); err != nil {
 		t.Fatal(err)

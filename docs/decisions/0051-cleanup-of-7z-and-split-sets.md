@@ -58,7 +58,8 @@ read by ingest under [decision 0056](0056-rar-volume-identity.md), but cleanup
 still keeps every RAR volume. Split ZIP intake follows
 [decision 0057](0057-split-zip-intake.md). The later
 [decision 0061](0061-split-zip-stream-cleanup.md) adds whole-set cleanup of
-accounted byte chunks; true disk segments stay preserved.
+accounted byte chunks. Later [decision 0062](0062-segmented-zip-cleanup.md)
+adds completely accounted disk segments under a distinct proof contract.
 
 ## Validation
 

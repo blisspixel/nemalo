@@ -220,6 +220,12 @@ func extractSnapshot(ctx context.Context, exe, kind, archive string, size int64,
 	if err != nil {
 		return x, err
 	}
+	return extractListedSnapshot(ctx, exe, kind, archive, size, dst, supported, limits, entries)
+}
+
+// Extract only the table already checked against these private snapshots.
+func extractListedSnapshot(ctx context.Context, exe, kind, archive string, size int64, dst *os.Root, supported func(string) bool, limits Limits, entries []sevenEntry) (Extraction, error) {
+	x := Extraction{Members: []Member{}}
 	for _, e := range entries {
 		if e.split && (kind == "Rar" || kind == "Rar5") {
 			return x, errors.New("7-Zip lists an unresolved split member; the entire archive set is preserved")

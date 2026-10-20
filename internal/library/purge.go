@@ -189,7 +189,7 @@ func Purge(ctx context.Context, request PurgeRequest) (result PurgeResult, err e
 	if err != nil {
 		return result, err
 	}
-	groups, err := planZIPStreamPurge(ctx, store, m, lines, files, verified)
+	groups, err := planZIPSetPurge(ctx, store, m, lines, files, verified)
 	if err != nil {
 		return result, err
 	}
@@ -326,7 +326,7 @@ func planPurge(ctx context.Context, store *os.Root, m cleanupManifest, lines []H
 			p.Disposition, p.Holdings = "not_in_library", e.Holdings
 			if ok && (e.Kind == "archive" || (len(e.Holdings) == 1 && current[e.Holdings[0]].SHA256 == f.SHA256)) {
 				p.Disposition = "purge"
-				if strings.EqualFold(path.Ext(f.Path), ".zip") {
+				if strings.EqualFold(path.Ext(f.Path), ".zip") && !entryHasZIPParts(e) && e.ArchiveProof == "" {
 					parent, base, err := heldParent(store, path.Join(holding, "files", f.Path))
 					if err != nil {
 						return nil, nil, err
@@ -366,7 +366,7 @@ func purgeDigest(cleanupID string, files []PurgeFile) string {
 // runPurge removes each planned file not yet journaled. verified holds the
 // stored-byte checks the plan just made; a resumed purge checks again.
 func runPurge(ctx context.Context, control *control, store *os.Root, records []cleanupRecord, started cleanupRecord, pm purgeManifest, m cleanupManifest, current map[string]Holding, verified map[string]bool, result PurgeResult) (PurgeResult, error) {
-	permissions, err := zipStreamPermissions(m, pm)
+	permissions, err := zipSetPermissions(m, pm)
 	if err != nil {
 		return result, err
 	}
@@ -395,10 +395,10 @@ func runPurge(ctx context.Context, control *control, store *os.Root, records []c
 			return result, err
 		}
 		outcome, err := "archive_not_accounted", error(nil)
-		if allowed, stream := permissions[f.Index]; (!stream && !isZIPChunk(f.Path)) || allowed {
-			outcome, err = purgeFile(ctx, store, path.Join(holding, "files", f.Path), f, current, verified)
+		if allowed, grouped := permissions[f.Index]; (!grouped && !isZIPPart(f.Path)) || allowed {
+			outcome, err = purgeFile(ctx, store, path.Join(holding, "files", f.Path), f, current, verified, allowed)
 		} else {
-			outcome = retainedStreamOutcome(store, path.Join(holding, "files", f.Path), f)
+			outcome = retainedZIPSetOutcome(store, path.Join(holding, "files", f.Path), f)
 		}
 		if err != nil {
 			return result, err
@@ -433,7 +433,7 @@ func runPurge(ctx context.Context, control *control, store *os.Root, records []c
 // name still refers to the file that was hashed. Every folder on the way is
 // opened without following links. A copy that cannot be read, verified, or
 // removed stays with its outcome; only cancellation stops the purge.
-func purgeFile(ctx context.Context, store *os.Root, held string, f PurgeFile, current map[string]Holding, verified map[string]bool) (string, error) {
+func purgeFile(ctx context.Context, store *os.Root, held string, f PurgeFile, current map[string]Holding, verified map[string]bool, groupedZIP bool) (string, error) {
 	for _, id := range f.Holdings {
 		h, ok := current[id]
 		if !ok {
@@ -485,8 +485,9 @@ func purgeFile(ctx context.Context, store *os.Root, held string, f PurgeFile, cu
 		return "held_copy_changed", nil
 	}
 	// Pending purge manifests can predate the current proof. Check the same
-	// opened, rehashed ZIP before every removal, including resumed operations.
-	if strings.EqualFold(path.Ext(f.Path), ".zip") {
+	// opened, rehashed ordinary ZIP before removal. A segmented terminal needs
+	// the supported whole-set permission validated before this function runs.
+	if strings.EqualFold(path.Ext(f.Path), ".zip") && !groupedZIP {
 		if accounted, _ := staging.ZIPAccounted(ctx, h, before.Size()); !accounted {
 			return "archive_not_accounted", ctx.Err()
 		}

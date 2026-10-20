@@ -403,9 +403,9 @@ func stopCleanup(ctx context.Context, control *control, records []cleanupRecord,
 // runCleanup moves each planned entry not yet journaled, then completes.
 func runCleanup(ctx context.Context, control *control, store *os.Root, records []cleanupRecord, m cleanupManifest, result CleanupResult) (CleanupResult, error) {
 	for _, e := range m.Entries {
-		if e.Disposition == "move" && (entryHasZIPChunks(e) || e.ArchiveProof != "") {
-			if _, ok := zipStreamParts(e); !ok || e.ArchiveProof != zipStreamProof {
-				return result, fmt.Errorf("%w: unsupported ZIP stream cleanup proof", ErrStateReview)
+		if e.Disposition == "move" && (entryHasZIPParts(e) || e.ArchiveProof != "") {
+			if _, ok := zipSetParts(e); !ok || !supportedZIPSet(e) {
+				return result, fmt.Errorf("%w: unsupported split ZIP cleanup proof", ErrStateReview)
 			}
 		}
 	}
@@ -925,19 +925,19 @@ func planCleanup(ctx context.Context, store, src *os.Root, lines []Holding) ([]C
 // a RAR or 7z must be whole as 7-Zip lists it, with no comment, offset, or
 // bytes outside its members. Members are staged privately and removed.
 func planArchive(ctx context.Context, src *os.Root, rel string, volumes []string, held func(string) (Holding, bool, error), hashFile func(string) (CleanupFile, error), e *CleanupEntry) error {
-	zipStream := false
+	zipProof := ""
 	if volumes != nil {
 		set, _, stream := staging.VolumeOf(volumes[0])
 		_, _, segmented := staging.ZIPSegmentOf(volumes[0])
 		if segmented {
-			e.Reason = "segmented ZIP byte accounting is not established for cleanup; preserved"
-			return nil
+			zipProof = zipSegmentsProof
+		} else if stream && strings.EqualFold(filepath.Ext(set), ".zip") {
+			zipProof = zipStreamProof
 		}
-		zipStream = stream && strings.EqualFold(filepath.Ext(set), ".zip")
-		if zipStream {
+		if zipProof != "" {
 			for _, v := range volumes {
 				if path.Dir(v) != path.Dir(volumes[0]) {
-					e.Reason = "ZIP chunks do not share one exact parent; preserved"
+					e.Reason = "ZIP parts do not share one exact parent; preserved"
 					return nil
 				}
 			}
@@ -988,7 +988,7 @@ func planArchive(ctx context.Context, src *os.Root, rel string, volumes []string
 			names[i] = filepath.FromSlash(v)
 		}
 		limits := staging.Defaults()
-		limits.ZIPCoverage = zipStream
+		limits.ZIPCoverage = zipProof != ""
 		x, err = staging.ExtractSet(ctx, src, names, stage, supportedImport, limits)
 	} else {
 		x, err = staging.Extract(ctx, src, filepath.FromSlash(rel), stage, supportedImport, staging.Defaults())
@@ -1051,9 +1051,7 @@ func planArchive(ctx context.Context, src *os.Root, rel string, volumes []string
 		}
 	}
 	e.Disposition, e.Reason, e.Files, e.Holdings = "move", "every member is held with verified stored bytes", before, ids
-	if zipStream {
-		e.ArchiveProof = zipStreamProof
-	}
+	e.ArchiveProof = zipProof
 	return nil
 }
 

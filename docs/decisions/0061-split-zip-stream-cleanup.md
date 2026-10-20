@@ -54,6 +54,9 @@ files, ZIPs and 7z sets retain their existing digest and recovery contract. A
 schema-1 intent cannot authorize ZIP byte chunks without the new bound evidence.
 The initialization and cleanup journal record shapes stay unchanged.
 
+Later [decision 0062](0062-segmented-zip-cleanup.md) adds true disk segments under
+`zip-segments/1`, using this same protocol without reinterpreting stream evidence.
+
 ## Bounds and verification
 
 Keep 2 to 1,000 parts, at most 4 GiB joined, the existing per-file and 64 GiB

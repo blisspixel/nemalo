@@ -401,14 +401,22 @@ Import. Byte chunks are joined for the Go ZIP reader after a maintained-reader
 extent check. True segments must expose consistent member tables and exact
 sizes/ordinals through every private part. Both use the installed 7-Zip for
 container evidence. Complete byte chunks can move as one recoverable cleanup
-entry after the shared `staging.ZIPAccounted` proof and held-member checks; true
-disk segments stay preserved. The standard ZIP opener shares
+entry after the shared `staging.ZIPAccounted` proof and held-member checks.
+True segments additionally validate raw disk references/counts, record boundaries
+and the initial marker. A read-only view overlays only validated disk/offset fields,
+then reuses the same maintained ZIP parser and full framing/metadata proof.
+It preserves every other byte, supports a directory spanning segments and shares
+one 16 MiB physical-read allowance across preflight and view checks. At most one
+private part handle is open at a time; no converted archive is written. The checked
+reader table must match central names, sizes, CRCs, types and disk-relative offsets,
+and that exact table drives extraction
+([decision 0062](decisions/0062-segmented-zip-cleanup.md)). The standard ZIP opener shares
 assessment's directory and lifetime compressed-reader guards, with operation
 limits selected by the caller. Source-set evidence, member-level failures, and
 per-member journal recovery remain separate
 ([decision 0057](decisions/0057-split-zip-intake.md)).
 
-Byte-stream cleanup entries bind `zip-stream/1` evidence to exact part identities
+Split ZIP cleanup entries bind `zip-stream/1` or `zip-segments/1` evidence to exact part identities
 and holdings. A fresh purge repeats the complete check. Its schema-2 manifest
 binds versioned archive groups into the reviewed digest and durable intent.
 Partial recovery checks each remaining original part and current holdings against
@@ -416,6 +424,10 @@ that supported proof, without pretending missing chunks form a whole archive.
 Unsupported evidence retains bytes; malformed bindings require review. Earlier
 executables refuse the new cleanup field and purge manifest version
 ([decision 0061](decisions/0061-split-zip-stream-cleanup.md)).
+Only a valid supported whole-set group authorizes a terminal `.zip` as a segment;
+ordinary ZIP copies still need their own current coverage proof. Unsupported groups
+retain every remaining part, including the terminal segment. Earlier builds refuse
+the new segment proof instead of interpreting it as byte-stream evidence.
 
 Nested standalone archives traverse through `staging.ExtractTree`, with one
 shared depth/member/output/read/diagnostic/process/deadline budget. Child copies

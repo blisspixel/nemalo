@@ -166,7 +166,10 @@ boundary and an error-free assembled listing. Preserve aliases, overlapping
 families, unlinked boundaries, and unknown ordinals; never infer set identity
 from names/counts alone. RAR cleanup remains refused. Split ZIPs are decision
 0057: byte chunks join privately, true segments require consistent reader
-evidence through every part. True disk segments stay in cleanup. Resolve
+evidence through every part. Segment cleanup is decision 0062: validate raw disk
+records and complete header boundaries, then reuse shared framing over a view
+that excludes only the initial marker and overlays only validated references.
+Raw/view reads share one allowance; preserve unsupported bytes. Resolve
 `.zNN` RAR/ZIP naming only from explicit sibling anchors; preserve ambiguity.
 The shared `assessment.OpenZIP` bounds directory parsing, ZIP64 count-driven
 preallocation, and lifetime compressed reads; retain EPUB's tighter budgets.
@@ -189,7 +192,11 @@ and a 16 MiB proof-read budget (decision 0060). Preserve comments, unknown metad
 and unsupported layouts. Pending historical purge plans cannot bypass the current
 proof; `archive_not_accounted` keeps the bytes available to restore.
 The shared proof is `staging.ZIPAccounted`. ZIP byte-chunk cleanup (decision 0061)
-binds `zip-stream/1` to all exact parts and holdings. Fresh purge checks the full
+binds `zip-stream/1` to all exact parts and holdings. Disk segments bind
+`zip-segments/1`, including the terminal `.zip`, under the same whole-set protocol.
+The checked reader table must match raw central records and drive exact-name
+extraction. No ordinary-ZIP proof can authorize a lone terminal segment.
+Fresh purge checks the full
 set and binds archive groups in a schema-2 manifest before removal; partial resume
 checks remaining original hashes and current holdings against that supported proof.
 Unknown evidence retains bytes, malformed binding requires review, and completed

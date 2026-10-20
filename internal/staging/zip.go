@@ -27,7 +27,7 @@ type Limits struct {
 	MemberBytes int64
 	TotalBytes  int64
 	Ratio       uint64
-	// ZIPCoverage requests independent coverage evidence for a byte-chunk set.
+	// ZIPCoverage requests independent coverage evidence for a split ZIP set.
 	// It does not change intake eligibility or authorize source mutation.
 	ZIPCoverage bool
 	// Only ExtractTree enables traversal and shares its work across nodes.
@@ -62,7 +62,7 @@ type Extraction struct {
 	Members  []Member `json:"members"`
 	Complete bool     `json:"complete"`
 	// Whole is independent container-byte evidence: the 7z header/packed-size
-	// proof, or requested ZIP coverage on a joined byte stream. It does not
+	// proof, or requested ZIP coverage on joined chunks or disk segments. It does not
 	// establish member eligibility, successful extraction, or write permission.
 	Whole bool `json:"whole,omitempty"`
 	// packed is the sum of the packed sizes 7-Zip lists for the members.

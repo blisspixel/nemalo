@@ -79,6 +79,7 @@ func extractZIPSet(ctx context.Context, exe string, src *os.Root, names []string
 		return x, errors.New("the first ZIP segment lacks the split marker; the set is preserved")
 	}
 	var table []byte
+	var entries []sevenEntry
 	for i, name := range privateNames {
 		out, code, err := limits.run(prepCtx, exe, nil, remaining, "l", "-slt", "-tzip", noPassword, "--", filepath.Join(dir, name))
 		remaining -= int64(len(out))
@@ -97,7 +98,8 @@ func extractZIPSet(ctx context.Context, exe string, src *os.Root, names []string
 		}
 		body = bytes.TrimSpace(body)
 		if i == 0 {
-			entries, err := parseListing(body)
+			var err error
+			entries, err = parseListing(body)
 			if err != nil || len(entries) > limits.memberLimit() || !zipMemberBounds(entries, infos, total) {
 				return x, errors.New("the ZIP member table has inconclusive or out-of-range disk, offset, or size evidence; the set is preserved")
 			}
@@ -105,6 +107,15 @@ func extractZIPSet(ctx context.Context, exe string, src *os.Root, names []string
 		} else if !bytes.Equal(body, table) {
 			return x, errors.New("the ZIP segments disagree on the member table; the set is preserved")
 		}
+	}
+	if limits.ZIPCoverage {
+		if accounted, why := zipSegmentsAccounted(prepCtx, snapshots, privateNames, entries); !accounted {
+			return x, fmt.Errorf("%w: %s", ErrZIPCoverage, why)
+		}
+		cancel()
+		x, err := extractListedSnapshot(ctx, exe, "zip", filepath.Join(dir, privateNames[0]), total, dst, supported, limits, entries)
+		x.Whole = err == nil
+		return x, err
 	}
 	cancel()
 	return extractSnapshot(ctx, exe, "zip", filepath.Join(dir, privateNames[0]), total, dst, supported, limits)

@@ -125,8 +125,13 @@ verified, not when code exists. No stage has a time estimate.
    ([decision 0060](docs/decisions/0060-complete-zip-cleanup-accounting.md)).
    Complete ZIP byte chunks now move as one recoverable set after the shared
    coverage and held-member checks. Purge binds a current whole-set proof before
-   removing any part and rehashes remaining parts on resume; true ZIP disk
-   segments stay preserved ([decision 0061](docs/decisions/0061-split-zip-stream-cleanup.md)).
+   removing any part and rehashes remaining parts on resume
+   ([decision 0061](docs/decisions/0061-split-zip-stream-cleanup.md)).
+   True ZIP disk segments now qualify after raw disk/count/offset/header checks
+   and the shared framing proof over a byte-preserving view, including directories
+   spanning segments. Their distinct version-bound group includes the terminal
+   `.zip` ([decision 0062](docs/decisions/0062-segmented-zip-cleanup.md)).
+   RAR and nested source cleanup remain unfinished.
 3. **Audio access** (milestone 8). M4B and M4A byte ranges and decoded timing in
    content access, bounded ranges usable by an external player, and output
    demonstrated with a real audiobook reader or server.
@@ -372,8 +377,11 @@ extractor after a maintained-reader extent check. True `.z01`/`.zip` segments
 must present compatible sizes, ordinals, counts, and member tables through every
 part before exact-name extraction through 7-Zip
 ([decision 0057](docs/decisions/0057-split-zip-intake.md)). Complete byte chunks now
-qualify for recoverable whole-set cleanup; true disk segments stay preserved
-([decision 0061](docs/decisions/0061-split-zip-stream-cleanup.md)). Nested standalone
+qualify for recoverable whole-set cleanup
+([decision 0061](docs/decisions/0061-split-zip-stream-cleanup.md)). True segments
+also require independent raw disk references, header boundaries, directory counts
+and full-byte coverage before whole-set cleanup
+([decision 0062](docs/decisions/0062-segmented-zip-cleanup.md)). Nested standalone
 ZIP/RAR/7z archives now traverse through a shared four-level archive-tree budget
 and exact member-chain provenance. Nested volume sets remain preserved; cleanup
 keeps every outer source containing a nested archive
@@ -465,6 +473,10 @@ ZIP byte streams move as one set only with complete byte coverage and every
 member held. Purge binds the full set and its current proof to a durable intent,
 then verifies each remaining part independently during partial recovery
 ([decision 0061](docs/decisions/0061-split-zip-stream-cleanup.md)).
+True disk segments use `zip-segments/1`, including the terminal `.zip`, under
+the same recovery protocol. Raw disk/header checks precede shared framing checks
+through a read-only view; the installed reader's table is bound to central records
+before extraction ([decision 0062](docs/decisions/0062-segmented-zip-cleanup.md)).
 Disk-full and scanner-failure faults are injected in tests: a full disk
 during an import copy, a journal line, a cleanup copy, and an export, and a
 scanner that is unavailable, incomplete, failing, or timing out. Each leaves

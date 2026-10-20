@@ -80,7 +80,9 @@ Count alone cannot establish a set. No reference code is incorporated.
 
 The later [decision 0061](0061-split-zip-stream-cleanup.md) adds recoverable cleanup
 and version-bound purge of completely accounted byte chunks. The retention rule
-above remains in force for true disk segments and unproven sets.
+above remains in force for unproven sets. Later
+[decision 0062](0062-segmented-zip-cleanup.md) adds independent disk/header and
+full-byte accounting before whole-set cleanup and bound purge of true segments.
 
 Self-extracting, spanned removable-media, header-encrypted, ambiguous, or otherwise
 unproven variants stay for review. In particular, raw archive comments cannot

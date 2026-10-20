@@ -144,6 +144,9 @@ type sevenMember struct {
 // sevenFixture writes a fake 7-Zip state and an archive file to read.
 func sevenFixture(t *testing.T, members []sevenMember) (*os.Root, *os.Root) {
 	t.Helper()
+	// Only synchronous fake-archiver children read this at startup. Race
+	// instrumentation and failure reporting remain enabled for every process.
+	t.Setenv("GORACE", strings.TrimSpace(os.Getenv("GORACE")+" atexit_sleep_ms=0"))
 	dir := t.TempDir()
 	if err := os.MkdirAll(filepath.Join(dir, "members"), 0o700); err != nil {
 		t.Fatal(err)

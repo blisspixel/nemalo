@@ -38,7 +38,7 @@ func streamZIPBytes(t *testing.T, book []byte, notes bool, comment string) []byt
 		t.Fatal(err)
 	}
 	if notes {
-		f, err := w.Create("notes.txt")
+		f, err := w.CreateHeader(&zip.FileHeader{Name: "notes.txt", Method: zip.Store})
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -83,7 +83,7 @@ func (f streamFixture) cleanup(t *testing.T) CleanupResult {
 	t.Helper()
 	ctx := context.Background()
 	p, err := Cleanup(ctx, CleanupRequest{Library: f.root, Folder: f.folder})
-	if err != nil || p.Move != 1 || p.Keep != 0 || len(p.Entries) != 1 || p.Entries[0].ArchiveProof != zipStreamProof || len(p.Entries[0].Files) != len(f.parts) {
+	if err != nil || p.Move != 1 || p.Keep != 0 || len(p.Entries) != 1 || p.Entries[0].ArchiveProof != f.proof() || len(p.Entries[0].Files) != len(f.parts) {
 		t.Fatal(p, err)
 	}
 	r, err := Cleanup(ctx, CleanupRequest{Library: f.root, Folder: f.folder, Apply: p.Digest})
@@ -102,8 +102,8 @@ func (f streamFixture) assertParts(t *testing.T, parent string) {
 	}
 }
 
-func TestZIPStreamCleanupRestoreAndPurge(t *testing.T) {
-	f := newStreamFixture(t, 3, nil)
+func testZIPCleanupRestoreAndPurge(t *testing.T, fixture zipFixtureFactory) {
+	f := fixture(t, 3, nil)
 	ctx := context.Background()
 	before := snapshotTree(t, f.folder)
 	p, err := Cleanup(ctx, CleanupRequest{Library: f.root, Folder: f.folder})
@@ -123,7 +123,7 @@ func TestZIPStreamCleanupRestoreAndPurge(t *testing.T) {
 	c = f.cleanup(t)
 	stored := snapshotTree(t, filepath.Join(f.root, "assets"))
 	preview, err := Purge(ctx, PurgeRequest{Library: f.root, CleanupID: c.CleanupID})
-	if err != nil || preview.Purge != 3 || len(preview.ArchiveGroups) != 1 || preview.ArchiveGroups[0].Proof != zipStreamProof || !reflect.DeepEqual(preview.ArchiveGroups[0].Indices, []int{0, 1, 2}) {
+	if err != nil || preview.Purge != 3 || len(preview.ArchiveGroups) != 1 || preview.ArchiveGroups[0].Proof != f.proof() || !reflect.DeepEqual(preview.ArchiveGroups[0].Indices, []int{0, 1, 2}) {
 		t.Fatal(preview, err)
 	}
 	if preview.Digest == purgeDigest(c.CleanupID, preview.Files) {
@@ -142,7 +142,7 @@ func TestZIPStreamCleanupRestoreAndPurge(t *testing.T) {
 	}
 }
 
-func TestZIPStreamCleanupRefusesUnaccountedSources(t *testing.T) {
+func testZIPCleanupRefusesUnaccountedSources(t *testing.T, fixture zipFixtureFactory) {
 	for _, kind := range []string{"notes", "member_comment", "directory_gap", "crc", "missing", "changed", "alias", "missing_tool"} {
 		t.Run(kind, func(t *testing.T) {
 			build := func(book []byte) []byte {
@@ -163,7 +163,7 @@ func TestZIPStreamCleanupRefusesUnaccountedSources(t *testing.T) {
 				}
 				return b
 			}
-			f := newStreamFixture(t, 3, build)
+			f := fixture(t, 3, build)
 			switch kind {
 			case "missing":
 				if err := os.Remove(filepath.Join(f.folder, filepath.FromSlash(f.names[1]))); err != nil {
@@ -174,7 +174,11 @@ func TestZIPStreamCleanupRefusesUnaccountedSources(t *testing.T) {
 					t.Fatal(err)
 				}
 			case "alias":
-				writeTree(t, f.folder, map[string][]byte{"books/STREAM.ZIP.0001": f.parts[0]})
+				alias := "books/STREAM.ZIP.0001"
+				if f.proof() == zipSegmentsProof {
+					alias = "books/SEGMENTS.Z001"
+				}
+				writeTree(t, f.folder, map[string][]byte{alias: f.parts[0]})
 			case "missing_tool":
 				saved := staging.SevenZip
 				staging.SevenZip = func() (string, error) { return "", errors.New("unavailable") }
@@ -195,14 +199,14 @@ func TestZIPStreamCleanupRefusesUnaccountedSources(t *testing.T) {
 	}
 }
 
-func TestZIPStreamCleanupRecoversEachPartWithoutAReader(t *testing.T) {
+func testZIPCleanupRecoversEachPartWithoutAReader(t *testing.T, fixture zipFixtureFactory) {
 	for _, stage := range []string{"manifest", "partial", "linked", "held"} {
 		for stop := 1; stop <= 3; stop++ {
 			if stage == "manifest" && stop != 1 {
 				continue
 			}
 			t.Run(fmt.Sprintf("%s/%d", stage, stop), func(t *testing.T) {
-				f := newStreamFixture(t, 3, nil)
+				f := fixture(t, 3, nil)
 				ctx := context.Background()
 				p, err := Cleanup(ctx, CleanupRequest{Library: f.root, Folder: f.folder})
 				if err != nil {
@@ -245,10 +249,10 @@ func TestZIPStreamCleanupRecoversEachPartWithoutAReader(t *testing.T) {
 	}
 }
 
-func TestZIPStreamPurgeResumesEveryPartFromItsBoundProof(t *testing.T) {
+func testZIPPurgeResumesEveryPartFromItsBoundProof(t *testing.T, fixture zipFixtureFactory) {
 	for stop := 1; stop <= 3; stop++ {
 		t.Run(fmt.Sprint(stop), func(t *testing.T) {
-			f := newStreamFixture(t, 3, nil)
+			f := fixture(t, 3, nil)
 			c := f.cleanup(t)
 			ctx := context.Background()
 			p, err := Purge(ctx, PurgeRequest{Library: f.root, CleanupID: c.CleanupID})
@@ -328,10 +332,10 @@ func changeStreamPurgeManifest(t *testing.T, root string, alter func(*purgeManif
 	return pm.Digest
 }
 
-func TestZIPStreamPurgeRetainsUnsupportedOrMalformedEvidence(t *testing.T) {
+func testZIPPurgeRetainsUnsupportedOrMalformedEvidence(t *testing.T, fixture zipFixtureFactory) {
 	for _, kind := range []string{"unknown", "missing", "duplicate", "wrong_hash", "wrong_holdings", "planned_outcome"} {
 		t.Run(kind, func(t *testing.T) {
-			f := newStreamFixture(t, 3, nil)
+			f := fixture(t, 3, nil)
 			c := f.cleanup(t)
 			ctx := context.Background()
 			p, err := Purge(ctx, PurgeRequest{Library: f.root, CleanupID: c.CleanupID})
@@ -382,10 +386,10 @@ func TestZIPStreamPurgeRetainsUnsupportedOrMalformedEvidence(t *testing.T) {
 	}
 }
 
-func TestZIPStreamFreshPurgeRequiresEveryPartAndCurrentHolding(t *testing.T) {
+func testZIPFreshPurgeRequiresEveryPartAndCurrentHolding(t *testing.T, fixture zipFixtureFactory) {
 	for _, kind := range []string{"missing", "changed", "holding", "missing_tool"} {
 		t.Run(kind, func(t *testing.T) {
-			f := newStreamFixture(t, 3, nil)
+			f := fixture(t, 3, nil)
 			c := f.cleanup(t)
 			switch kind {
 			case "missing":
@@ -460,10 +464,10 @@ func (c *cancelStreamHash) Err() error {
 	return c.Context.Err()
 }
 
-func TestZIPStreamPurgeBindsIndependentGroupsAtTheirActualIndices(t *testing.T) {
-	f := newStreamFixture(t, 3, nil)
+func testZIPPurgeBindsIndependentGroupsAtTheirActualIndices(t *testing.T, fixture zipFixtureFactory) {
+	f := fixture(t, 3, nil)
 	for i, part := range f.parts {
-		writeTree(t, f.folder, map[string][]byte{fmt.Sprintf("other/stream.zip.%03d", i+1): part})
+		writeTree(t, f.folder, map[string][]byte{"other/" + filepath.Base(f.names[i]): part})
 	}
 	ctx := context.Background()
 	p, err := Cleanup(ctx, CleanupRequest{Library: f.root, Folder: f.folder})
@@ -500,14 +504,14 @@ func TestZIPStreamPurgeBindsIndependentGroupsAtTheirActualIndices(t *testing.T) 
 		}
 	}
 	for i := 0; i < 3; i++ {
-		if _, err := os.Stat(filepath.Join(c.HoldingArea, "files", "other", fmt.Sprintf("stream.zip.%03d", i+1))); !os.IsNotExist(err) {
+		if _, err := os.Stat(filepath.Join(c.HoldingArea, "files", "other", filepath.Base(f.names[i]))); !os.IsNotExist(err) {
 			t.Fatal("independent supported group not completed", err)
 		}
 	}
 }
 
-func TestZIPStreamCancelledCleanupAndStalePlansPreserveSources(t *testing.T) {
-	f := newStreamFixture(t, 3, nil)
+func testZIPCancelledCleanupAndStalePlansPreserveSources(t *testing.T, fixture zipFixtureFactory) {
+	f := fixture(t, 3, nil)
 	p, err := Cleanup(context.Background(), CleanupRequest{Library: f.root, Folder: f.folder})
 	if err != nil {
 		t.Fatal(err)
@@ -549,9 +553,9 @@ func TestZIPStreamCancelledCleanupAndStalePlansPreserveSources(t *testing.T) {
 	f.assertParts(t, filepath.Join(done.HoldingArea, "files"))
 }
 
-func TestZIPStreamPurgeBeforeIntentRechecksAndResumesKeepChanges(t *testing.T) {
+func testZIPPurgeBeforeIntentRechecksAndResumesKeepChanges(t *testing.T, fixture zipFixtureFactory) {
 	t.Run("unreferenced_manifest", func(t *testing.T) {
-		f := newStreamFixture(t, 3, nil)
+		f := fixture(t, 3, nil)
 		c := f.cleanup(t)
 		ctx := context.Background()
 		p, err := Purge(ctx, PurgeRequest{Library: f.root, CleanupID: c.CleanupID})
@@ -586,7 +590,7 @@ func TestZIPStreamPurgeBeforeIntentRechecksAndResumesKeepChanges(t *testing.T) {
 	})
 	for _, kind := range []string{"changed_part", "changed_holding", "replacement_after_journal"} {
 		t.Run(kind, func(t *testing.T) {
-			f := newStreamFixture(t, 3, nil)
+			f := fixture(t, 3, nil)
 			c := f.cleanup(t)
 			ctx := context.Background()
 			p, err := Purge(ctx, PurgeRequest{Library: f.root, CleanupID: c.CleanupID})

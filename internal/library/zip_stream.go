@@ -16,11 +16,12 @@ import (
 	"github.com/blisspixel/nemalo/internal/staging"
 )
 
-// Increment this identifier when the accepted whole-stream evidence changes.
+// Increment an identifier when its accepted whole-set evidence changes.
 // A partial purge must never silently apply different coverage rules.
 const zipStreamProof = "zip-stream/1"
+const zipSegmentsProof = "zip-segments/1"
 
-func retainedStreamOutcome(store *os.Root, held string, f PurgeFile) string {
+func retainedZIPSetOutcome(store *os.Root, held string, f PurgeFile) string {
 	parent, base, err := heldParent(store, held)
 	if errors.Is(err, os.ErrNotExist) {
 		return "not_held"
@@ -52,20 +53,43 @@ func isZIPChunk(name string) bool {
 	return ok && n > 0 && strings.EqualFold(filepath.Ext(set), ".zip")
 }
 
-func entryHasZIPChunks(e CleanupEntry) bool {
+func isZIPPart(name string) bool {
+	_, _, segmented := staging.ZIPSegmentOf(name)
+	return isZIPChunk(name) || segmented
+}
+
+func entryHasZIPParts(e CleanupEntry) bool {
 	for _, f := range e.Files {
-		if isZIPChunk(f.Path) {
+		if isZIPPart(f.Path) {
 			return true
 		}
 	}
 	return false
 }
 
-func zipStreamParts(e CleanupEntry) ([]string, bool) {
+func zipProofFor(e CleanupEntry) string {
+	if _, _, ok := staging.ZIPSegmentOf(e.Path); ok {
+		return zipSegmentsProof
+	}
+	if isZIPChunk(e.Path) {
+		return zipStreamProof
+	}
+	return ""
+}
+
+func supportedZIPSet(e CleanupEntry) bool {
+	return e.ArchiveProof != "" && e.ArchiveProof == zipProofFor(e)
+}
+
+func zipSetParts(e CleanupEntry) ([]string, bool) {
 	if e.Kind != "archive" || len(e.Files) < 2 || len(e.Files) > 1000 || e.Path != e.Files[0].Path {
 		return nil, false
 	}
 	set, n, ok := staging.VolumeOf(e.Files[0].Path)
+	segmented := zipProofFor(e) == zipSegmentsProof
+	if segmented {
+		set, n, ok = staging.ZIPSegmentOf(e.Path)
+	}
 	if !ok || n != 1 || !strings.EqualFold(filepath.Ext(set), ".zip") {
 		return nil, false
 	}
@@ -73,6 +97,12 @@ func zipStreamParts(e CleanupEntry) ([]string, bool) {
 	parts := make([]string, len(e.Files))
 	for i, f := range e.Files {
 		other, ordinal, ok := staging.VolumeOf(f.Path)
+		if segmented {
+			other, ordinal, ok = staging.ZIPSegmentOf(f.Path)
+			if i+1 == len(e.Files) {
+				other, ordinal, ok = f.Path, i+1, strings.EqualFold(path.Ext(f.Path), ".zip")
+			}
+		}
 		if !ok || ordinal != i+1 || !strings.EqualFold(other, set) || path.Dir(f.Path) != path.Dir(e.Path) || f.Bytes < 1 || f.Bytes > 256<<20 || total > (4<<30)-f.Bytes {
 			return nil, false
 		}
@@ -84,7 +114,7 @@ func zipStreamParts(e CleanupEntry) ([]string, bool) {
 
 // Fresh authorization requires the complete set. Later partial recovery uses
 // only the immutable, supported proof bound into its already durable intent.
-func planZIPStreamPurge(ctx context.Context, store *os.Root, m cleanupManifest, lines []Holding, files []PurgeFile, verified map[string]bool) ([]PurgeArchiveGroup, error) {
+func planZIPSetPurge(ctx context.Context, store *os.Root, m cleanupManifest, lines []Holding, files []PurgeFile, verified map[string]bool) ([]PurgeArchiveGroup, error) {
 	groups := []PurgeArchiveGroup{}
 	current := latestHoldings(lines)
 	byHash := map[string]Holding{}
@@ -101,19 +131,19 @@ func planZIPStreamPurge(ctx context.Context, store *os.Root, m cleanupManifest, 
 		}
 		start := index
 		index += len(e.Files)
-		if !entryHasZIPChunks(e) && e.ArchiveProof == "" {
+		if !entryHasZIPParts(e) && e.ArchiveProof == "" {
 			continue
 		}
-		ready := e.ArchiveProof == zipStreamProof
+		ready := supportedZIPSet(e)
 		for _, f := range files[start:index] {
 			ready = ready && f.Disposition == "purge"
 		}
-		if _, ok := zipStreamParts(e); !ok {
+		if _, ok := zipSetParts(e); !ok {
 			ready = false
 		}
 		if ready {
 			var err error
-			ready, err = checkHeldZIPStream(ctx, store, m.CleanupID, e, byHash, &remaining)
+			ready, err = checkHeldZIPSet(ctx, store, m.CleanupID, e, byHash, &remaining)
 			if err != nil {
 				return nil, err
 			}
@@ -126,7 +156,7 @@ func planZIPStreamPurge(ctx context.Context, store *os.Root, m cleanupManifest, 
 			}
 			continue
 		}
-		group := PurgeArchiveGroup{Proof: zipStreamProof}
+		group := PurgeArchiveGroup{Proof: e.ArchiveProof}
 		for i := start; i < index; i++ {
 			group.Indices = append(group.Indices, i)
 		}
@@ -135,8 +165,8 @@ func planZIPStreamPurge(ctx context.Context, store *os.Root, m cleanupManifest, 
 	return groups, nil
 }
 
-func checkHeldZIPStream(ctx context.Context, store *os.Root, cleanupID string, e CleanupEntry, byHash map[string]Holding, remaining *int64) (bool, error) {
-	parts, ok := zipStreamParts(e)
+func checkHeldZIPSet(ctx context.Context, store *os.Root, cleanupID string, e CleanupEntry, byHash map[string]Holding, remaining *int64) (bool, error) {
+	parts, ok := zipSetParts(e)
 	if !ok {
 		return false, nil
 	}
@@ -156,7 +186,7 @@ func checkHeldZIPStream(ctx context.Context, store *os.Root, cleanupID string, e
 	if err := planArchive(ctx, parent, first, parts, held, hashFile, &candidate); err != nil {
 		return false, ctx.Err()
 	}
-	if candidate.Disposition != "move" || candidate.ArchiveProof != zipStreamProof || !slices.Equal(candidate.Holdings, e.Holdings) || len(candidate.Files) != len(e.Files) {
+	if candidate.Disposition != "move" || candidate.ArchiveProof != e.ArchiveProof || !slices.Equal(candidate.Holdings, e.Holdings) || len(candidate.Files) != len(e.Files) {
 		return false, nil
 	}
 	for i, f := range candidate.Files {
@@ -177,20 +207,20 @@ func purgePlanDigest(cleanupID string, files []PurgeFile, groups []PurgeArchiveG
 	return hex.EncodeToString(sum[:])
 }
 
-// The returned map includes false entries for stream parts without supported
+// The returned map includes false entries for ZIP parts without supported
 // evidence. Validate every binding before any removal, including legacy intents.
-func zipStreamPermissions(m cleanupManifest, pm purgeManifest) (map[int]bool, error) {
+func zipSetPermissions(m cleanupManifest, pm purgeManifest) (map[int]bool, error) {
 	expected, entries := cleanupFiles(m)
 	permissions := map[int]bool{}
 	for i, e := range entries {
-		if entryHasZIPChunks(e) || e.ArchiveProof != "" {
+		if entryHasZIPParts(e) || e.ArchiveProof != "" {
 			permissions[i] = false
 		}
 	}
 	if len(permissions) == 0 && len(pm.ArchiveGroups) == 0 {
 		return permissions, nil
 	}
-	bad := fmt.Errorf("%w: invalid ZIP stream purge binding", ErrStateReview)
+	bad := fmt.Errorf("%w: invalid split ZIP purge binding", ErrStateReview)
 	if len(expected) != len(pm.Files) || pm.Digest != purgePlanDigest(pm.CleanupID, pm.Files, pm.ArchiveGroups) {
 		return nil, bad
 	}
@@ -210,7 +240,7 @@ func zipStreamPermissions(m cleanupManifest, pm purgeManifest) (map[int]bool, er
 			return nil, bad
 		}
 		e := entries[start]
-		if _, ok := zipStreamParts(e); !ok || expected[start].Path != e.Files[0].Path || len(group.Indices) != len(e.Files) {
+		if _, ok := zipSetParts(e); !ok || expected[start].Path != e.Files[0].Path || len(group.Indices) != len(e.Files) {
 			return nil, bad
 		}
 		for j, i := range group.Indices {
@@ -218,7 +248,7 @@ func zipStreamPermissions(m cleanupManifest, pm purgeManifest) (map[int]bool, er
 				return nil, bad
 			}
 			seen[i] = true
-			permissions[i] = group.Proof == zipStreamProof && e.ArchiveProof == zipStreamProof
+			permissions[i] = group.Proof == e.ArchiveProof && supportedZIPSet(e)
 		}
 	}
 	return permissions, nil

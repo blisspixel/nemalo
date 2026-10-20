@@ -534,12 +534,20 @@ that marker, tails, warnings, errors, or contradictory evidence preserve the set
 Old RAR rollover also uses `.zNN`: conflicting or absent RAR/ZIP anchors preserve
 the ambiguous paths. A set has 2 to 1,000 volumes and at most 4 GiB. Preparation
 shares two minutes and 16 MiB of reader output. Both ZIP layouts require installed
-7-Zip for container evidence; missing tools preserve every part. True disk segments
-stay in cleanup. Complete byte chunks can move as one recoverable set after the
-shared coverage proof and held-member checks; all parts must share one exact
-parent. Source rehashes share the cleanup's 64 GiB hash-work limit. See decisions
+7-Zip for container evidence; missing tools preserve every part. Complete byte
+chunks and true disk segments can move as one recoverable set after independent
+byte coverage and held-member checks; all parts must share one exact parent.
+Segments additionally require raw disk/count/offset and header-boundary checks.
+A read-only view translates only validated references and excludes only the first
+four-byte marker, preserving all other bytes for the shared ZIP framing proof.
+Directories can span segments, but individual local/central headers cannot.
+Raw and view proof reads share 16 MiB; one private file handle is open at a time.
+The exact central names, sizes, CRCs, types and disk offsets must match the installed
+reader's table before that table drives extraction. Unknown or unaccounted layouts
+stay. Source rehashes share the cleanup's 64 GiB hash-work limit. See decisions
 [0057](decisions/0057-split-zip-intake.md) and
-[0061](decisions/0061-split-zip-stream-cleanup.md).
+[0061](decisions/0061-split-zip-stream-cleanup.md), extended by
+[0062](decisions/0062-segmented-zip-cleanup.md).
 
 Go ZIP directory parsing has a 16 MiB read budget before member processing,
 with ZIP64 counts bounded before decoder preallocation, a persistent 8 GiB
@@ -612,10 +620,12 @@ does not change intake. Purge rechecks ZIPs, including historical cleanup copies
 and pending purge manifests, and reports `archive_not_accounted` when the proof
 fails. Those bytes remain available to restore. See
 [decision 0060](decisions/0060-complete-zip-cleanup-accounting.md).
-For ZIP byte chunks, a fresh purge verifies the entire held set again. Its JSON
+For split ZIPs, a fresh purge verifies the entire held set again. Its JSON
 preview includes `archive_groups`, with the supported proof and ordered file
 indices bound to the plan digest. A schema-2 purge manifest records that proof
-before removal. Resume rehashes remaining parts and checks current holdings;
+before removal: `zip-stream/1` for chunks and `zip-segments/1` for disk segments.
+The terminal `.zip` is included in its segment group, never independently cleared
+by an ordinary-ZIP claim. Resume rehashes remaining parts and checks current holdings;
 changed parts stay and recorded removals never adopt replacements. Unknown proof
 versions retain remaining bytes, while malformed bindings stop for review.
 An unreferenced manifest cannot authorize a retry. Older executables cannot read
@@ -746,6 +756,10 @@ first-party packages instrumented, an enforced 80% aggregate statement threshold
 and `go tool govulncheck`. Exact tool modules/checksums are in `go.mod`/`go.sum`.
 Vulnerability checking accesses the Go vulnerability database. Normal unit tests
 use local synthetic fixtures/HTTP servers and do not access public providers.
+Synchronous synthetic archiver children set only `atexit_sleep_ms=0` in their
+inherited `GORACE` options, avoiding a one-second sleep per invocation. They remain
+race-instrumented with failure reporting; the running parent keeps its startup
+settings. See [Go's race options](https://go.dev/doc/articles/race_detector#Options).
 
 Race instrumentation needs cgo and a C compiler. Cgo-free release builds do not.
 On Windows with MSYS2 installed, put its compiler directory on PATH for race tests
