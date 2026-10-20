@@ -730,6 +730,14 @@ On Windows with MSYS2 installed, put its compiler directory on PATH for race tes
 and set `CGO_ENABLED=1`. CI runs native Linux, macOS, and Windows checks, followed
 by a `CGO_ENABLED=0` binary smoke. Review actual runs before claiming platform support.
 
+Windows CI also runs `TestWindowsReparse` verbosely in `internal/safeio`,
+`internal/app`, and `internal/library`. These synthetic fixtures require real
+directory junctions and file/directory symbolic links, verify their native tags,
+and fail if creation is unavailable. They test root and opened-identity boundaries,
+inventory with hashes/PAR2 metadata, and source, store and recovery paths through
+ingest/cleanup/restore/purge. They invoke no shell, scanner or network. A cross-build
+does not satisfy this gate; see [decision 0008](decisions/0008-filesystem-and-display-boundaries.md).
+
 ## Next bounded work
 
 Import, ingest, scanned acquisition, recording manifests, cleanup, restore,

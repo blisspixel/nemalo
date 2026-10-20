@@ -30,6 +30,9 @@ jobs:
         run: go run ./cmd/verify
       - name: Race detection
         run: go test -race ./...
+      - name: Exercise native Windows reparse-point boundaries
+        if: runner.os == 'Windows'
+        run: go test -count=1 -v -run '^TestWindowsReparse' ./internal/safeio ./internal/app ./internal/library
       - name: Build and smoke-test native release binary
         env:
           CGO_ENABLED: '0'

@@ -22,6 +22,23 @@ These controls do not freeze directory locations, defeat hostile mounts, sandbox
 same-user processes, or make stalled storage cancellable. User-facing source paths
 are retained separately from descriptor bridge names.
 
+Windows boundary fixtures create local directory junctions through the existing
+`golang.org/x/sys/windows` adapter and symbolic links through Go, without a shell
+or installed tool. The fixture verifies each native reparse tag before testing it.
+`TestWindowsReparse` cases require actual creation, with no privilege-based skip.
+Native Windows CI runs them verbosely as well as in the verifier and race suite.
+They cover strict versus explicitly resolved roots, opened file/directory identity,
+inventory hash/PAR2 reads, ingest, stored assets, cleanup, restore, purge, and a
+pending cleanup whose recovery parent was replaced. Outside canaries and retained
+recovery copies must stay unchanged. Ordinary cleanup/restore/purge is exercised
+beside link refusals. These tests establish the tested local filesystem and tags;
+they do not establish every Windows filesystem, remote share or reparse filter.
+
+Fixture format references (reviewed 2026-10-20): Microsoft's
+[mount-point buffer specification](https://learn.microsoft.com/en-us/openspecs/windows_protocols/ms-fscc/ca069dad-ed16-42aa-b057-b6b207f447cc),
+[reparse operation](https://learn.microsoft.com/en-us/windows/win32/api/winioctl/ni-winioctl-fsctl_set_reparse_point),
+and [junction overview](https://learn.microsoft.com/en-us/windows/win32/fileio/hard-links-and-junctions).
+
 ## Parsing and presentation
 
 The shared EPUB parser preflights compressed-data bounds and overlap before

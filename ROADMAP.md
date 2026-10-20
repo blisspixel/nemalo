@@ -117,6 +117,9 @@ verified, not when code exists. No stage has a time estimate.
    declarations, and distinguishes packet checksums from unverified protected
    data; ingest and cleanup retain recovery material
    ([decision 0059](docs/decisions/0059-par2-metadata-inventory.md)).
+   Native Windows reparse-point fixtures now require real junctions and symbolic
+   links for root, inventory and library recovery boundaries, with an explicit
+   hosted execution gate ([decision 0008](docs/decisions/0008-filesystem-and-display-boundaries.md)).
 3. **Audio access** (milestone 8). M4B and M4A byte ranges and decoded timing in
    content access, bounded ranges usable by an external player, and output
    demonstrated with a real audiobook reader or server.
