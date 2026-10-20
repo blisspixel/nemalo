@@ -1,6 +1,6 @@
 # 0062: complete disk-segmented ZIP cleanup
 
-Status: implemented, 2026-10-20. Hosted acceptance pending in
+Status: accepted and implemented, 2026-10-20. Acceptance evidence is tracked in
 [issue 55](https://github.com/blisspixel/nemalo/issues/55), stage 2.
 
 ## Decision
