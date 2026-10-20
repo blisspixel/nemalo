@@ -7,6 +7,7 @@ import (
 
 	"github.com/blisspixel/nemalo/internal/app"
 	"github.com/blisspixel/nemalo/internal/library"
+	"github.com/blisspixel/nemalo/internal/textsafe"
 )
 
 func Snapshot(s library.Snapshot) string {
@@ -493,6 +494,10 @@ func Cleanup(r library.CleanupResult) string {
 		b.WriteString(line + "\n")
 		if reason := words(e.Reason); reason != "" {
 			fmt.Fprintf(&b, "  %s\n", reason)
+		}
+		for _, leaf := range e.ArchiveLeaves {
+			chain, _ := textsafe.MarshalJSON(leaf.Chain, false)
+			fmt.Fprintf(&b, "  Held member %s (%s): %s\n", chain, byteCount(leaf.Bytes), Line(leaf.Holding))
 		}
 	}
 	notes(&b, "Limitation", r.Limitations)

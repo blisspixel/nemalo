@@ -66,6 +66,10 @@ item's other files for a new, deliberate review. See
 | Escape | Back; cancel active work |
 | Ctrl+C | Quit |
 
+Cleanup review shows the exact member chains and held byte identities for a
+nested archive. Spaces and literal separators inside names stay distinct; control
+characters are shown as escapes. A changed source or selection refuses the plan.
+
 Holdings accept a snapshot catalog file or an initialized library directory; a
 library lists managed holdings, and `r` stages Read with that directory as both
 catalog and root. Edited queries require Enter before paging. Holdings start with EPUB filenames;

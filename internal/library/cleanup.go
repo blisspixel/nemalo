@@ -21,6 +21,7 @@ import (
 	"github.com/blisspixel/nemalo/internal/inventory"
 	"github.com/blisspixel/nemalo/internal/safeio"
 	"github.com/blisspixel/nemalo/internal/staging"
+	"github.com/blisspixel/nemalo/internal/textsafe"
 )
 
 // Cleanup moves source files whose exact bytes the library already holds out
@@ -51,14 +52,15 @@ type CleanupFile struct {
 // CleanupEntry is one folder entry: a loose file, an intake packet's parts, an
 // archive, or anything else. Only "move" entries are changed.
 type CleanupEntry struct {
-	Path         string        `json:"path"`
-	Kind         string        `json:"kind"`
-	Disposition  string        `json:"disposition"`
-	Reason       string        `json:"reason"`
-	Files        []CleanupFile `json:"files,omitempty"`
-	Holdings     []string      `json:"holdings,omitempty"`
-	ArchiveProof string        `json:"archive_proof,omitempty"`
-	Outcome      string        `json:"outcome,omitempty"`
+	Path          string               `json:"path"`
+	Kind          string               `json:"kind"`
+	Disposition   string               `json:"disposition"`
+	Reason        string               `json:"reason"`
+	Files         []CleanupFile        `json:"files,omitempty"`
+	Holdings      []string             `json:"holdings,omitempty"`
+	ArchiveProof  string               `json:"archive_proof,omitempty"`
+	ArchiveLeaves []CleanupArchiveLeaf `json:"archive_leaves,omitempty"`
+	Outcome       string               `json:"outcome,omitempty"`
 }
 
 type CleanupRequest struct {
@@ -403,9 +405,9 @@ func stopCleanup(ctx context.Context, control *control, records []cleanupRecord,
 // runCleanup moves each planned entry not yet journaled, then completes.
 func runCleanup(ctx context.Context, control *control, store *os.Root, records []cleanupRecord, m cleanupManifest, result CleanupResult) (CleanupResult, error) {
 	for _, e := range m.Entries {
-		if e.Disposition == "move" && (entryHasZIPParts(e) || e.ArchiveProof != "") {
-			if _, ok := zipSetParts(e); !ok || !supportedZIPSet(e) {
-				return result, fmt.Errorf("%w: unsupported split ZIP cleanup proof", ErrStateReview)
+		if e.Disposition == "move" && versionedArchive(e) {
+			if _, ok := archiveEntryParts(e); !ok || !supportedArchiveProof(e) {
+				return result, fmt.Errorf("%w: unsupported archive cleanup proof", ErrStateReview)
 			}
 		}
 	}
@@ -866,7 +868,7 @@ func planCleanup(ctx context.Context, store, src *os.Root, lines []Holding) ([]C
 			e.Reason = "the name differs only by case from another entry; preserved"
 		case setVolumes[ie.Path] != nil:
 			e.Kind = "archive"
-			if err := planArchive(ctx, src, ie.Path, setVolumes[ie.Path], held, hashFile, &e); err != nil {
+			if err := planArchive(ctx, src, ie.Path, setVolumes[ie.Path], held, hashFile, &remainingHashes, &e); err != nil {
 				return nil, err
 			}
 		case setOf[ie.Path] != "":
@@ -875,7 +877,7 @@ func planCleanup(ctx context.Context, store, src *os.Root, lines []Holding) ([]C
 			e.Reason = brokenSet[ie.Path]
 		case staging.Supported(ie.Path):
 			e.Kind = "archive"
-			if err := planArchive(ctx, src, ie.Path, nil, held, hashFile, &e); err != nil {
+			if err := planArchive(ctx, src, ie.Path, nil, held, hashFile, &remainingHashes, &e); err != nil {
 				return nil, err
 			}
 		case importFormat(ie.Path) != "":
@@ -919,12 +921,10 @@ func planCleanup(ctx context.Context, store, src *os.Root, lines []Holding) ([]C
 	return entries, nil
 }
 
-// planArchive moves an archive, or a volume set read through its first
-// volume, only when every member is a directory or extracts to bytes the
-// library holds. A ZIP must start with its first entry and carry no comment;
-// a RAR or 7z must be whole as 7-Zip lists it, with no comment, offset, or
-// bytes outside its members. Members are staged privately and removed.
-func planArchive(ctx context.Context, src *os.Root, rel string, volumes []string, held func(string) (Holding, bool, error), hashFile func(string) (CleanupFile, error), e *CleanupEntry) error {
+// planArchive moves a completely accounted archive tree or outer volume set
+// only when every leaf is held. Snapshots bind to the planned source bytes;
+// final hashes recheck every original. RAR and unproven containers stay.
+func planArchive(ctx context.Context, src *os.Root, rel string, volumes []string, held func(string) (Holding, bool, error), hashFile func(string) (CleanupFile, error), hashRemaining *int64, e *CleanupEntry) error {
 	zipProof := ""
 	if volumes != nil {
 		set, _, stream := staging.VolumeOf(volumes[0])
@@ -961,15 +961,9 @@ func planArchive(ctx context.Context, src *os.Root, rel string, volumes []string
 		}
 		before[i] = h
 	}
-	isZip := volumes == nil && strings.EqualFold(path.Ext(rel), ".zip")
-	if isZip {
-		if accounted, why := zipAccounted(ctx, src, rel); !accounted {
-			if err := ctx.Err(); err != nil {
-				return err
-			}
-			e.Reason = why + "; the archive is preserved"
-			return nil
-		}
+	if strings.EqualFold(path.Ext(rel), ".rar") {
+		e.Reason = "a RAR can hold blocks 7-Zip does not list, so cleanup keeps it; preserved"
+		return nil
 	}
 	tmp, err := os.MkdirTemp("", "nemalo-cleanup-")
 	if err != nil {
@@ -981,18 +975,18 @@ func planArchive(ctx context.Context, src *os.Root, rel string, volumes []string
 		return err
 	}
 	defer stage.Close()
-	var x staging.Extraction
-	if volumes != nil {
-		names := make([]string, len(volumes))
-		for i, v := range volumes {
-			names[i] = filepath.FromSlash(v)
-		}
-		limits := staging.Defaults()
-		limits.ZIPCoverage = zipProof != ""
-		x, err = staging.ExtractSet(ctx, src, names, stage, supportedImport, limits)
-	} else {
-		x, err = staging.Extract(ctx, src, filepath.FromSlash(rel), stage, supportedImport, staging.Defaults())
+	names := make([]string, len(files))
+	for i, v := range files {
+		names[i] = filepath.FromSlash(v)
 	}
+	limits := staging.Defaults()
+	limits.Coverage = true
+	limits.ExpectedSources = make(map[string]staging.SnapshotIdentity, len(before))
+	limits.SourceHashRemaining = hashRemaining
+	for i, f := range before {
+		limits.ExpectedSources[names[i]] = staging.SnapshotIdentity{Bytes: f.Bytes, SHA256: f.SHA256}
+	}
+	x, err := staging.ExtractTree(ctx, src, names, stage, supportedImport, limits)
 	switch {
 	case err != nil && ctx.Err() != nil:
 		return ctx.Err()
@@ -1002,22 +996,31 @@ func planArchive(ctx context.Context, src *os.Root, rel string, volumes []string
 	case errors.Is(err, staging.ErrZIPCoverage):
 		e.Reason = err.Error() + "; preserved"
 		return nil
+	case errors.Is(err, staging.ErrSnapshotBudget):
+		return errors.New("the folder requires more than 64 GiB of source-hash work; plan a smaller folder")
+	case errors.Is(err, staging.ErrSourceChanged):
+		e.Reason = "the archive changed before its private snapshot was verified; preserved"
+		return nil
 	case err != nil:
 		e.Reason = "the archive could not be read; preserved"
 		return nil
-	case !isZip && strings.HasSuffix(strings.ToLower(rel), ".rar"):
-		// A RAR can carry service and unknown blocks that no listing
-		// accounts for, so its members cannot show it holds nothing else.
-		e.Reason = "a RAR can hold blocks 7-Zip does not list, so cleanup keeps it; preserved"
-		return nil
-	case !isZip && !x.Whole:
-		e.Reason = "7-Zip lists a comment, leading data, or bytes beyond the archive's members; preserved"
+	}
+	if x.CoverageGap != nil {
+		encoded, _ := textsafe.MarshalJSON(x.CoverageGap.Chain, false)
+		e.Reason = "container " + string(encoded) + " is not completely accounted for: " + textsafe.Visible(x.CoverageGap.Detail) + "; the archive is preserved"
 		return nil
 	}
 	ids := []string{}
+	leaves := []CleanupArchiveLeaf{}
+	nested := false
 	for _, m := range x.Members {
 		switch m.Disposition {
 		case "directory":
+			continue
+		case "nested_archive":
+			// This is traversal bookkeeping; only the whole-tree checks below
+			// and every held leaf can grant source-removal permission.
+			nested = true
 			continue
 		case "extracted":
 			f, err := fileIdentity(ctx, stage, m.Staged)
@@ -1030,15 +1033,36 @@ func planArchive(ctx context.Context, src *os.Root, rel string, volumes []string
 			}
 			if ok {
 				ids = append(ids, h.ID)
+				leaves = append(leaves, CleanupArchiveLeaf{Chain: append([]string{}, m.Chain...), Bytes: f.Bytes, SHA256: f.SHA256, Holding: h.ID})
 				continue
 			}
 		}
-		e.Reason = "member " + m.Name + " is not held; the archive is preserved"
+		selection := textsafe.Visible(m.Name)
+		if len(m.Chain) > 1 || m.Disposition == "nested_archive" || m.Disposition == "failed" {
+			encoded, _ := textsafe.MarshalJSON(m.Chain, false)
+			selection = string(encoded)
+		}
+		e.Reason = "member " + selection + " is not held or completely accounted for; the archive is preserved"
+		if m.Detail != "" {
+			e.Reason += ": " + textsafe.Visible(m.Detail)
+		}
+		return nil
+	}
+	if !x.Whole || !x.Complete {
+		e.Reason = "a comment, leading data, bytes beyond the archive's members, or incomplete traversal prevent complete accounting; the archive is preserved"
 		return nil
 	}
 	if len(ids) == 0 {
 		e.Reason = "the archive holds no book the library has; preserved"
 		return nil
+	}
+	if nested {
+		for _, f := range files {
+			if path.Dir(f) != path.Dir(rel) {
+				e.Reason = "archive tree parts do not share one exact parent; preserved"
+				return nil
+			}
+		}
 	}
 	for i, f := range files {
 		after, err := hashFile(f)
@@ -1052,6 +1076,10 @@ func planArchive(ctx context.Context, src *os.Root, rel string, volumes []string
 	}
 	e.Disposition, e.Reason, e.Files, e.Holdings = "move", "every member is held with verified stored bytes", before, ids
 	e.ArchiveProof = zipProof
+	if nested {
+		e.ArchiveProof = archiveTreeProof
+		e.ArchiveLeaves = leaves
+	}
 	return nil
 }
 

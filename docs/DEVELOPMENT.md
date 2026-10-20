@@ -576,8 +576,26 @@ declare one non-volume container. Recognized nested sets, unsupported archive
 types, and missing reader capabilities stay preserved with reasons. Tree intake
 refuses every occurrence of a duplicate member name; it never cites an ambiguous
 first occurrence. Depth/work limits or corrupt children make ingest incomplete,
-while separately verified leaves can still import. Cleanup retains outer sources
-with nested material.
+while separately verified leaves can still import. Cleanup can move a complete
+nested ZIP/7z tree only when every container's original bytes are accounted for
+and every non-directory leaf is held with currently verified stored bytes.
+RAR children, nested sets, comments, unknown metadata, unheld notes and incomplete
+trees preserve the whole outer source/set.
+
+Cleanup requests coverage through the same tree. ZIP proof work shares 16 MiB
+across every node, also consuming the existing 8 GiB reader allowance; 7z coverage
+probes use the same process and diagnostic budgets. Failed work stays charged.
+Default intake keeps its existing behavior. Refusals identify the exact first
+unproven container or leaf chain. The CLI/TUI preview and JSON `archive_leaves`
+show each held selection, byte count, SHA-256 and holding ID, bound into the plan
+and canonical cleanup manifest with `archive-tree/1`. All outer parts must share
+one exact parent. See [decision 0063](decisions/0063-complete-archive-tree-cleanup.md).
+All cleanup root snapshots must match the plan's original sizes and SHA-256 values
+while copying. Covered ordinary ZIPs are also snapshotted, keeping their outer
+check Go-only. Initial hashes, copy-hash reads and final rehashes share the 64 GiB
+source-hash allowance, including failed reads. Extraction never uses different
+bytes that merely changed back before the final rehash. Default intake does not
+add these snapshots or hash work.
 
 Direct labels remain `OUTER!/MEMBER`, even when a literal member name contains
 `!/`. A nested selection is `OUTER!//["inner.zip","book.epub"]`, using a canonical
@@ -631,6 +649,14 @@ versions retain remaining bytes, while malformed bindings stop for review.
 An unreferenced manifest cannot authorize a retry. Older executables cannot read
 these cleanup entries or purge manifests; use this source version or newer to
 recover them. Ordinary-file/ZIP/7z legacy manifests retain their existing contract.
+For nested cleanup, fresh purge rechecks every held container and leaf through the
+same tree. Its schema-2 group also includes `leaf_digest`, binding the canonical
+leaf evidence to that reviewed purge and durable intent. Single-file trees and
+supported outer sets use the same recovery protocol. Resume checks the supported
+original-tree proof, each remaining source part and current holdings; it never
+reconstructs a partial tree. Unknown evidence retains bytes and malformed bindings
+stop before removal. Earlier executables refuse the new canonical leaf fields;
+use this source version or newer to restore or finish recovery.
 `library audit` on the library directory reports missing, changed, and review
 holdings and does not repair them. Snapshot audit still requires `--root`.
 An EPUB package identifier is recorded when it is an explicit ISBN, DOI, or

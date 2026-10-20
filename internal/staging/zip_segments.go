@@ -61,7 +61,7 @@ func (s *snapshotSegments) ReadAt(p []byte, off int64) (int, error) {
 	return n, nil
 }
 
-func zipSegmentsAccounted(ctx context.Context, root *os.Root, names []string, entries []sevenEntry) (bool, string) {
+func zipSegmentsAccounted(ctx context.Context, root *os.Root, names []string, entries []sevenEntry, limits Limits) (bool, string) {
 	s := &snapshotSegments{root: root, names: names, starts: []int64{0}}
 	for _, name := range names {
 		info, err := root.Lstat(name)
@@ -71,7 +71,7 @@ func zipSegmentsAccounted(ctx context.Context, root *os.Root, names []string, en
 		s.infos = append(s.infos, info)
 		s.starts = append(s.starts, s.starts[len(s.starts)-1]+info.Size())
 	}
-	return zipSegmentProof(ctx, s, s.starts, entries)
+	return zipSegmentProof(ctx, limits.proofReader(s), s.starts, entries)
 }
 
 type zipPatch struct {

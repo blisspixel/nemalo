@@ -56,6 +56,8 @@ The initialization and cleanup journal record shapes stay unchanged.
 
 Later [decision 0062](0062-segmented-zip-cleanup.md) adds true disk segments under
 `zip-segments/1`, using this same protocol without reinterpreting stream evidence.
+Later [decision 0063](0063-complete-archive-tree-cleanup.md) adds complete nested
+trees under `archive-tree/1` and independently bound leaf evidence.
 
 ## Bounds and verification
 

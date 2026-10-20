@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/blisspixel/nemalo/internal/safeio"
 )
@@ -32,12 +33,18 @@ func ExtractTree(ctx context.Context, src *os.Root, names []string, dst *os.Root
 	treeCtx, cancel := context.WithTimeout(ctx, archiveDeadline(size))
 	defer cancel()
 	limits.tree = &treeBudget{members: limits.Members, bytes: limits.TotalBytes, processes: maxRuns,
-		reads: allowance{remaining: 2 * maxArchiveSnapshot}, diagnostics: allowance{remaining: maxListing}}
+		reads: allowance{remaining: 2 * maxArchiveSnapshot}, diagnostics: allowance{remaining: maxListing},
+		proofs: allowance{remaining: zipProofBytes}}
 	return extractTree(treeCtx, src, names, dst, supported, limits)
 }
 
 func extractTree(ctx context.Context, src *os.Root, names []string, dst *os.Root, supported func(string) bool, limits Limits) (Extraction, error) {
-	result := Extraction{Members: []Member{}, Complete: true}
+	result := Extraction{Members: []Member{}, Complete: true, Whole: limits.Coverage}
+	gap := func(chain []string, detail string) {
+		if limits.Coverage && result.CoverageGap == nil {
+			result.CoverageGap = &CoverageGap{Chain: append([]string{}, chain...), Detail: detail}
+		}
+	}
 	var visit func(*os.Root, []string, []string, int) error
 	node := 0
 	visit = func(source *os.Root, files, chain []string, depth int) error {
@@ -54,6 +61,8 @@ func extractTree(ctx context.Context, src *os.Root, names []string, dst *os.Root
 		}
 		stage, err := dst.OpenRoot(dir)
 		if err != nil {
+			result.Whole = false
+			gap(chain, err.Error())
 			return err
 		}
 		defer stage.Close()
@@ -69,18 +78,27 @@ func extractTree(ctx context.Context, src *os.Root, names []string, dst *os.Root
 			x, err = Extract(ctx, source, files[0], stage, accept, nodeLimits)
 		}
 		if err != nil {
+			gap(chain, err.Error())
 			if ctx.Err() != nil {
 				return ctx.Err()
 			}
 			return err
 		}
 		result.Complete = result.Complete && x.Complete
+		result.Whole = result.Whole && x.Whole
+		if !x.Whole {
+			gap(chain, "a comment, leading data, or bytes beyond the archive's members prevent complete accounting")
+		}
 		for _, m := range x.Members {
 			if err := ctx.Err(); err != nil {
 				return err
 			}
 			m.Chain = append(append([]string{}, chain...), m.Name)
 			if m.Disposition != "extracted" {
+				if limits.Coverage && (Supported(m.Name) || m.Disposition == "nested_volume" || m.Disposition == "nested_archive") {
+					result.Whole = false
+					gap(m.Chain, m.Detail)
+				}
 				result.Members = append(result.Members, m)
 				continue
 			}
@@ -106,6 +124,8 @@ func extractTree(ctx context.Context, src *os.Root, names []string, dst *os.Root
 				return ctx.Err()
 			}
 			if err != nil {
+				result.Whole = false
+				gap(m.Chain, err.Error())
 				result.Members[at].Detail = err.Error()
 				if !errors.Is(err, ErrNoArchiveTool) {
 					result.Members[at].Disposition = "failed"
@@ -118,22 +138,34 @@ func extractTree(ctx context.Context, src *os.Root, names []string, dst *os.Root
 	err := visit(src, names, nil, 1)
 	if err != nil {
 		result.Complete = false
+		result.Whole = false
 	}
 	return result, err
 }
 
 func extractNestedZIP(ctx context.Context, src *os.Root, name string, dst *os.Root, supported func(string) bool, limits Limits) (x Extraction, err error) {
+	return extractZIPSnapshot(ctx, src, name, dst, supported, limits, true)
+}
+
+func extractZIPSnapshot(ctx context.Context, src *os.Root, name string, dst *os.Root, supported func(string) bool, limits Limits, requireExtent bool) (x Extraction, err error) {
 	x = Extraction{Members: []Member{}}
-	exe, err := SevenZip()
-	if err != nil {
-		return x, ErrNoArchiveTool
+	var exe string
+	if requireExtent {
+		exe, err = SevenZip()
+		if err != nil {
+			return x, ErrNoArchiveTool
+		}
 	}
 	info, err := src.Lstat(name)
 	if err != nil {
 		return x, err
 	}
-	if !info.Mode().IsRegular() || info.Size() < 1 || info.Size() > limits.MemberBytes {
-		return x, errors.New("a nested ZIP must be a regular staged file within the member budget")
+	maxBytes := int64(maxArchiveSnapshot)
+	if requireExtent {
+		maxBytes = limits.MemberBytes
+	}
+	if !info.Mode().IsRegular() || info.Size() < 1 || info.Size() > maxBytes {
+		return x, errors.New("a ZIP snapshot must be a regular file within its source or member budget")
 	}
 	dir, err := os.MkdirTemp("", "nemalo-nested-zip-")
 	if err != nil {
@@ -149,16 +181,24 @@ func extractNestedZIP(ctx context.Context, src *os.Root, name string, dst *os.Ro
 		return x, err
 	}
 	defer snapshot.Close()
-	if err := snapshotArchive(ctx, src, name, info, snapshot, "archive.zip"); err != nil {
+	prepCtx, cancel := ctx, func() {}
+	if limits.Coverage {
+		prepCtx, cancel = context.WithTimeout(ctx, 2*time.Minute)
+	}
+	defer cancel()
+	if err := snapshotArchive(prepCtx, src, name, info, snapshot, "archive.zip", limits); err != nil {
 		return x, err
 	}
 	if !zipSignature(snapshot, "archive.zip", false) {
 		return x, errors.New("the nested ZIP lacks an ordinary ZIP signature; original sources are preserved")
 	}
-	if err := ordinaryZIP(ctx, exe, filepath.Join(dir, "archive.zip"), info.Size(), maxListing, limits); err != nil {
-		return x, err
+	if requireExtent {
+		if err := ordinaryZIP(prepCtx, exe, filepath.Join(dir, "archive.zip"), info.Size(), maxListing, limits); err != nil {
+			return x, err
+		}
 	}
-	return ExtractZip(ctx, snapshot, "archive.zip", dst, supported, limits)
+	cancel()
+	return extractZipFile(ctx, snapshot, "archive.zip", dst, supported, limits)
 }
 
 // Nested sets are preserved, not resolved. Include possible first/terminal

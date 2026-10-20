@@ -44,8 +44,9 @@ func retainedZIPSetOutcome(store *os.Root, held string, f PurgeFile) string {
 }
 
 type PurgeArchiveGroup struct {
-	Proof   string `json:"proof"`
-	Indices []int  `json:"file_indices"`
+	Proof      string `json:"proof"`
+	Indices    []int  `json:"file_indices"`
+	LeafDigest string `json:"leaf_digest,omitempty"`
 }
 
 func isZIPChunk(name string) bool {
@@ -82,15 +83,19 @@ func supportedZIPSet(e CleanupEntry) bool {
 }
 
 func zipSetParts(e CleanupEntry) ([]string, bool) {
+	return archiveSetParts(e, ".zip")
+}
+
+func archiveSetParts(e CleanupEntry, extension string) ([]string, bool) {
 	if e.Kind != "archive" || len(e.Files) < 2 || len(e.Files) > 1000 || e.Path != e.Files[0].Path {
 		return nil, false
 	}
 	set, n, ok := staging.VolumeOf(e.Files[0].Path)
-	segmented := zipProofFor(e) == zipSegmentsProof
+	segmented := extension == ".zip" && zipProofFor(e) == zipSegmentsProof
 	if segmented {
 		set, n, ok = staging.ZIPSegmentOf(e.Path)
 	}
-	if !ok || n != 1 || !strings.EqualFold(filepath.Ext(set), ".zip") {
+	if !ok || n != 1 || !strings.EqualFold(filepath.Ext(set), extension) {
 		return nil, false
 	}
 	// Staging names are native paths; manifests always use portable slashes.
@@ -105,7 +110,7 @@ func zipSetParts(e CleanupEntry) ([]string, bool) {
 				other, ordinal, ok = f.Path, i+1, strings.EqualFold(path.Ext(f.Path), ".zip")
 			}
 		}
-		if !ok || ordinal != i+1 || !strings.EqualFold(filepath.ToSlash(other), set) || path.Dir(f.Path) != path.Dir(e.Path) || f.Bytes < 1 || f.Bytes > 256<<20 || total > (4<<30)-f.Bytes {
+		if !ok || ordinal != i+1 || !sameArchiveFamily(other, set) || path.Dir(f.Path) != path.Dir(e.Path) || f.Bytes < 1 || f.Bytes > 256<<20 || total > (4<<30)-f.Bytes {
 			return nil, false
 		}
 		total += f.Bytes
@@ -116,7 +121,7 @@ func zipSetParts(e CleanupEntry) ([]string, bool) {
 
 // Fresh authorization requires the complete set. Later partial recovery uses
 // only the immutable, supported proof bound into its already durable intent.
-func planZIPSetPurge(ctx context.Context, store *os.Root, m cleanupManifest, lines []Holding, files []PurgeFile, verified map[string]bool) ([]PurgeArchiveGroup, error) {
+func planArchivePurge(ctx context.Context, store *os.Root, m cleanupManifest, lines []Holding, files []PurgeFile, verified map[string]bool) ([]PurgeArchiveGroup, error) {
 	groups := []PurgeArchiveGroup{}
 	current := latestHoldings(lines)
 	byHash := map[string]Holding{}
@@ -133,19 +138,19 @@ func planZIPSetPurge(ctx context.Context, store *os.Root, m cleanupManifest, lin
 		}
 		start := index
 		index += len(e.Files)
-		if !entryHasZIPParts(e) && e.ArchiveProof == "" {
+		if !versionedArchive(e) {
 			continue
 		}
-		ready := supportedZIPSet(e)
+		ready := supportedArchiveProof(e)
 		for _, f := range files[start:index] {
 			ready = ready && f.Disposition == "purge"
 		}
-		if _, ok := zipSetParts(e); !ok {
+		if _, ok := archiveEntryParts(e); !ok {
 			ready = false
 		}
 		if ready {
 			var err error
-			ready, err = checkHeldZIPSet(ctx, store, m.CleanupID, e, byHash, &remaining)
+			ready, err = checkHeldArchive(ctx, store, m.CleanupID, e, byHash, &remaining)
 			if err != nil {
 				return nil, err
 			}
@@ -159,6 +164,9 @@ func planZIPSetPurge(ctx context.Context, store *os.Root, m cleanupManifest, lin
 			continue
 		}
 		group := PurgeArchiveGroup{Proof: e.ArchiveProof}
+		if e.ArchiveProof == archiveTreeProof {
+			group.LeafDigest = archiveLeafDigest(e)
+		}
 		for i := start; i < index; i++ {
 			group.Indices = append(group.Indices, i)
 		}
@@ -167,8 +175,8 @@ func planZIPSetPurge(ctx context.Context, store *os.Root, m cleanupManifest, lin
 	return groups, nil
 }
 
-func checkHeldZIPSet(ctx context.Context, store *os.Root, cleanupID string, e CleanupEntry, byHash map[string]Holding, remaining *int64) (bool, error) {
-	parts, ok := zipSetParts(e)
+func checkHeldArchive(ctx context.Context, store *os.Root, cleanupID string, e CleanupEntry, byHash map[string]Holding, remaining *int64) (bool, error) {
+	parts, ok := archiveEntryParts(e)
 	if !ok {
 		return false, nil
 	}
@@ -185,10 +193,14 @@ func checkHeldZIPSet(ctx context.Context, store *os.Root, cleanupID string, e Cl
 		return h, ok, nil
 	}
 	candidate := CleanupEntry{Path: first, Kind: "archive"}
-	if err := planArchive(ctx, parent, first, parts, held, hashFile, &candidate); err != nil {
+	volumes := parts
+	if len(parts) == 1 {
+		volumes = nil
+	}
+	if err := planArchive(ctx, parent, first, volumes, held, hashFile, remaining, &candidate); err != nil {
 		return false, ctx.Err()
 	}
-	if candidate.Disposition != "move" || candidate.ArchiveProof != e.ArchiveProof || !slices.Equal(candidate.Holdings, e.Holdings) || len(candidate.Files) != len(e.Files) {
+	if candidate.Disposition != "move" || candidate.ArchiveProof != e.ArchiveProof || !slices.Equal(candidate.Holdings, e.Holdings) || !equalArchiveLeaves(candidate.ArchiveLeaves, e.ArchiveLeaves) || len(candidate.Files) != len(e.Files) {
 		return false, nil
 	}
 	for i, f := range candidate.Files {
@@ -211,18 +223,23 @@ func purgePlanDigest(cleanupID string, files []PurgeFile, groups []PurgeArchiveG
 
 // The returned map includes false entries for ZIP parts without supported
 // evidence. Validate every binding before any removal, including legacy intents.
-func zipSetPermissions(m cleanupManifest, pm purgeManifest) (map[int]bool, error) {
+func archivePermissions(m cleanupManifest, pm purgeManifest) (map[int]bool, error) {
 	expected, entries := cleanupFiles(m)
 	permissions := map[int]bool{}
+	bad := fmt.Errorf("%w: invalid archive purge binding", ErrStateReview)
+	for _, e := range m.Entries {
+		if e.Disposition == "move" && len(e.ArchiveLeaves) != 0 && !validArchiveLeaves(e) {
+			return nil, bad
+		}
+	}
 	for i, e := range entries {
-		if entryHasZIPParts(e) || e.ArchiveProof != "" {
+		if versionedArchive(e) {
 			permissions[i] = false
 		}
 	}
 	if len(permissions) == 0 && len(pm.ArchiveGroups) == 0 {
 		return permissions, nil
 	}
-	bad := fmt.Errorf("%w: invalid split ZIP purge binding", ErrStateReview)
 	if len(expected) != len(pm.Files) || pm.Digest != purgePlanDigest(pm.CleanupID, pm.Files, pm.ArchiveGroups) {
 		return nil, bad
 	}
@@ -234,7 +251,7 @@ func zipSetPermissions(m cleanupManifest, pm purgeManifest) (map[int]bool, error
 	}
 	seen := map[int]bool{}
 	for _, group := range pm.ArchiveGroups {
-		if pm.SchemaVersion != 2 || len(group.Proof) > 64 || group.Proof == "" || len(group.Indices) < 2 || len(group.Indices) > 1000 {
+		if pm.SchemaVersion != 2 || len(group.Proof) > 64 || group.Proof == "" || len(group.Indices) < 1 || len(group.Indices) > 1000 {
 			return nil, bad
 		}
 		start := group.Indices[0]
@@ -242,7 +259,11 @@ func zipSetPermissions(m cleanupManifest, pm purgeManifest) (map[int]bool, error
 			return nil, bad
 		}
 		e := entries[start]
-		if _, ok := zipSetParts(e); !ok || expected[start].Path != e.Files[0].Path || len(group.Indices) != len(e.Files) {
+		if _, ok := archiveEntryParts(e); !ok || expected[start].Path != e.Files[0].Path || len(group.Indices) != len(e.Files) {
+			return nil, bad
+		}
+		allowed := archiveGroupDigestValid(e, group)
+		if group.Proof == e.ArchiveProof && supportedArchiveProof(e) && !allowed {
 			return nil, bad
 		}
 		for j, i := range group.Indices {
@@ -250,7 +271,7 @@ func zipSetPermissions(m cleanupManifest, pm purgeManifest) (map[int]bool, error
 				return nil, bad
 			}
 			seen[i] = true
-			permissions[i] = group.Proof == e.ArchiveProof && supportedZIPSet(e)
+			permissions[i] = allowed
 		}
 	}
 	return permissions, nil

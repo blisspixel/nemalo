@@ -189,7 +189,7 @@ func Purge(ctx context.Context, request PurgeRequest) (result PurgeResult, err e
 	if err != nil {
 		return result, err
 	}
-	groups, err := planZIPSetPurge(ctx, store, m, lines, files, verified)
+	groups, err := planArchivePurge(ctx, store, m, lines, files, verified)
 	if err != nil {
 		return result, err
 	}
@@ -326,7 +326,7 @@ func planPurge(ctx context.Context, store *os.Root, m cleanupManifest, lines []H
 			p.Disposition, p.Holdings = "not_in_library", e.Holdings
 			if ok && (e.Kind == "archive" || (len(e.Holdings) == 1 && current[e.Holdings[0]].SHA256 == f.SHA256)) {
 				p.Disposition = "purge"
-				if strings.EqualFold(path.Ext(f.Path), ".zip") && !entryHasZIPParts(e) && e.ArchiveProof == "" {
+				if strings.EqualFold(path.Ext(f.Path), ".zip") && !versionedArchive(e) {
 					parent, base, err := heldParent(store, path.Join(holding, "files", f.Path))
 					if err != nil {
 						return nil, nil, err
@@ -366,7 +366,7 @@ func purgeDigest(cleanupID string, files []PurgeFile) string {
 // runPurge removes each planned file not yet journaled. verified holds the
 // stored-byte checks the plan just made; a resumed purge checks again.
 func runPurge(ctx context.Context, control *control, store *os.Root, records []cleanupRecord, started cleanupRecord, pm purgeManifest, m cleanupManifest, current map[string]Holding, verified map[string]bool, result PurgeResult) (PurgeResult, error) {
-	permissions, err := zipSetPermissions(m, pm)
+	permissions, err := archivePermissions(m, pm)
 	if err != nil {
 		return result, err
 	}

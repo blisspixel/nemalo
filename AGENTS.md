@@ -179,7 +179,16 @@ Nested intake is `staging.ExtractTree` (decision 0058): shared budgets include
 failed attempts, reader work, diagnostic stdout/stderr, subprocess calls, and
 the outer deadline. Keep four archive levels, exact chain provenance distinct
 from literal historical `!/` member names, and pending recovery first. Nested
-sets stay preserved. Cleanup must keep using single-container extraction.
+sets stay preserved. Cleanup uses the same tree only with requested complete
+coverage (decision 0063): one shared 16 MiB proof allowance, also charged to reader
+work, and bounded 7z coverage probes through the shared runner. Default intake
+does not request coverage. RAR at any depth preserves the whole outer source.
+Every leaf must be held with verified stored bytes; container markers alone
+confer no permission. Keep exact-chain refusals and parse-equivalent previews.
+Bind every cleanup root snapshot to the plan's expected size/hash while copying.
+Covered ordinary ZIPs use the same snapshot mechanism without an installed reader.
+Charge actual copy-hash reads, including failures, to the existing 64 GiB source
+hash budget. Before/final hashes alone cannot bind intervening extraction bytes.
 `library check` (decision 0024) is the read-only whole-library report; it never repairs.
 Source cleanup is `library/cleanup.go` and `restore.go` (decision 0022): move only held,
 verified bytes into the holding area via verified copy, hard-link publish, then source
@@ -201,6 +210,12 @@ set and binds archive groups in a schema-2 manifest before removal; partial resu
 checks remaining original hashes and current holdings against that supported proof.
 Unknown evidence retains bytes, malformed binding requires review, and completed
 removals never adopt replacement files. Earlier builds refuse these new manifests.
+Nested moves bind `archive-tree/1` and exact `archive_leaves` to the manifest and
+plan. Fresh purge repeats the entire proof; schema-2 groups bind `leaf_digest`
+as well as proof and indices. Validate all bindings before any source write or
+purge removal, once per entry/group rather than once per part. Unknown proofs
+retain bytes; malformed bindings require review. Restore uses recorded source
+bytes without re-extracting or replacing. Never reconstruct a partially purged tree.
 `library/purge.go` (decision 0041) removes only held copies a current, verified holding
 also has, through its own previewed plan and manifest; receipts and intents stay.
 Readers and players get verified copies (`library open`/`export`), never stored

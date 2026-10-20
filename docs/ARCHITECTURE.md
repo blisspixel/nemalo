@@ -433,9 +433,33 @@ Nested standalone archives traverse through `staging.ExtractTree`, with one
 shared depth/member/output/read/diagnostic/process/deadline budget. Child copies
 are checked before traversal, and exact member-chain labels distinguish nested
 selections from historical direct names. Ingest still calls Import for every
-leaf; unavailable or changed pending selections stop new imports. Cleanup keeps
-the single-container extractor, so nested extraction grants no source-removal
-permission ([decision 0058](decisions/0058-bounded-nested-intake.md)).
+leaf; unavailable or changed pending selections stop new imports
+([decision 0058](decisions/0058-bounded-nested-intake.md)). Cleanup requests complete
+coverage through this same tree. ZIP proof reads use the checked opened bytes and
+share one 16 MiB allowance across all nodes, also charged to the existing reader
+budget. 7z whole-container probes use the shared process/diagnostic runner. Default
+intake does not request this evidence. Untraversed containers cannot make a tree
+covered, and unknown directory sizes remain unaccounted in cleanup. Refusals locate
+the exact first container chain.
+
+Every root copy is checked against the application's planned source size and
+SHA-256 while it is written. Covered ordinary ZIPs use the same private snapshot
+mechanism without requiring an installed reader for the outer container. Actual
+copy-hash reads, including failures, share the 64 GiB source-hash allowance with
+the initial and final source hashes. This binds extraction to the selected bytes
+even if an original changes and changes back during planning.
+
+Library services additionally require every leaf held with currently verified
+stored bytes and unchanged final source hashes. A nested cleanup binds exact
+chains, sizes, hashes and holding IDs in `archive_leaves` under `archive-tree/1`.
+CLI and TUI reviews show these exact selections with parse-equivalent escaping.
+Fresh purge repeats the complete tree check; its schema-2 archive group binds
+the leaf digest as well as proof and file indices. Partial recovery checks that
+immutable original-tree evidence, remaining part identities and current holdings.
+It never reconstructs a tree after a part was removed. Unsupported proofs retain
+bytes; malformed bindings stop before removal. RAR children and all unproven
+trees stay. Earlier executables refuse unfamiliar canonical leaf fields; restore
+with this source version or newer ([decision 0063](decisions/0063-complete-archive-tree-cleanup.md)).
 
 Private staging and a subprocess are not sandboxes. Go's
 [root-scoped filesystem APIs](https://go.dev/blog/osroot) are useful building blocks;

@@ -60,6 +60,10 @@ No journal record shape, ordinary-file recovery or initialization protocol chang
 
 ## Acceptance
 
+Later [decision 0063](0063-complete-archive-tree-cleanup.md) accounts for nested
+trees under the distinct `archive-tree/1` proof. It does not reinterpret the
+non-nested `zip-segments/1` contract or permit standalone terminal-part cleanup.
+
 Use synthetic Go fixtures and injected readers/scanners for cross-segment payloads,
 directories spanning segments, record boundaries, corrupt disk/count/offset fields,
 unaccounted bytes, unknown metadata, extraction CRC failures, budgets, cancellation,

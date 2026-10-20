@@ -34,6 +34,18 @@ func TestLibraryEvidenceAndTerminalEscaping(t *testing.T) {
 	}
 }
 
+func TestCleanupShowsExactNestedLeavesInTheSharedReview(t *testing.T) {
+	text := Cleanup(library.CleanupResult{Digest: strings.Repeat("ab", 32), Move: 1,
+		Entries: []library.CleanupEntry{{Path: "outer.zip", Kind: "archive", Disposition: "move", ArchiveLeaves: []library.CleanupArchiveLeaf{
+			{Chain: []string{"inner.zip", "part!/book.epub"}, Bytes: 123, Holding: "sha256:held"},
+			{Chain: []string{"control\x1b.zip", "line\nbook.epub"}, Bytes: 456, Holding: "sha256:other"},
+			{Chain: []string{"inner  archive.zip", "book\u202etext.epub"}, Bytes: 789, Holding: "sha256:spaced"},
+		}}}})
+	if !strings.Contains(text, `Held member ["inner.zip","part!/book.epub"]`) || !strings.Contains(text, `["inner  archive.zip","book\u202etext.epub"]`) || !strings.Contains(text, "sha256:held") || strings.Contains(text, "\x1b") || strings.Contains(text, "line\nbook.epub") || strings.Contains(text, "\u202e") {
+		t.Fatal("nested selections were hidden, changed, or emitted controls", text)
+	}
+}
+
 func TestRecordingByteIdentityPresentationEscapesSourceLabels(t *testing.T) {
 	r := library.RecordingsResult{ByteIdentities: []library.RecordingByteIdentity{
 		{ID: "recording-sha256:single", Recordings: []library.RecordingRef{{SourceID: "archive:single"}}},

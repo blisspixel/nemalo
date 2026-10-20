@@ -131,7 +131,11 @@ verified, not when code exists. No stage has a time estimate.
    and the shared framing proof over a byte-preserving view, including directories
    spanning segments. Their distinct version-bound group includes the terminal
    `.zip` ([decision 0062](docs/decisions/0062-segmented-zip-cleanup.md)).
-   RAR and nested source cleanup remain unfinished.
+   Nested ZIP/7z cleanup now requires complete coverage of every container,
+   one shared proof-read budget and verified held leaves. Exact chains bind to
+   `archive-tree/1` and a leaf digest in the recoverable purge intent
+   ([decision 0063](docs/decisions/0063-complete-archive-tree-cleanup.md)).
+   RAR source cleanup remains unfinished; a RAR child preserves its outer source.
 3. **Audio access** (milestone 8). M4B and M4A byte ranges and decoded timing in
    content access, bounded ranges usable by an external player, and output
    demonstrated with a real audiobook reader or server.
@@ -383,9 +387,11 @@ also require independent raw disk references, header boundaries, directory count
 and full-byte coverage before whole-set cleanup
 ([decision 0062](docs/decisions/0062-segmented-zip-cleanup.md)). Nested standalone
 ZIP/RAR/7z archives now traverse through a shared four-level archive-tree budget
-and exact member-chain provenance. Nested volume sets remain preserved; cleanup
-keeps every outer source containing a nested archive
-([decision 0058](docs/decisions/0058-bounded-nested-intake.md)). `inspect --par2`
+and exact member-chain provenance
+([decision 0058](docs/decisions/0058-bounded-nested-intake.md)). Cleanup now reuses
+that tree with requested per-container coverage, a shared 16 MiB proof allowance
+and exact held-leaf bindings. RAR children, nested volume sets and every unproven
+tree remain preserved ([decision 0063](docs/decisions/0063-complete-archive-tree-cleanup.md)). `inspect --par2`
 now inventories bounded packet metadata and declared sets without verifying or
 repairing protected files. Recovery material stays preserved by ingest and
 cleanup ([decision 0059](docs/decisions/0059-par2-metadata-inventory.md)). Native
@@ -477,6 +483,11 @@ True disk segments use `zip-segments/1`, including the terminal `.zip`, under
 the same recovery protocol. Raw disk/header checks precede shared framing checks
 through a read-only view; the installed reader's table is bound to central records
 before extraction ([decision 0062](docs/decisions/0062-segmented-zip-cleanup.md)).
+Complete nested ZIP/7z trees bind exact member chains, byte identities and holdings
+in `archive_leaves`. Fresh purge repeats the whole-tree proof; its schema-2 group
+also binds the canonical `leaf_digest`. Recovery never adopts changed leaf evidence
+or tries to reconstruct a partially purged tree
+([decision 0063](docs/decisions/0063-complete-archive-tree-cleanup.md)).
 Disk-full and scanner-failure faults are injected in tests: a full disk
 during an import copy, a journal line, a cleanup copy, and an export, and a
 scanner that is unavailable, incomplete, failing, or timing out. Each leaves

@@ -36,7 +36,7 @@ func extractZIPSet(ctx context.Context, exe string, src *os.Root, names []string
 	defer cancel()
 	remaining := int64(maxListing)
 	if stream {
-		if err := joinVolumes(prepCtx, src, names, infos, snapshots, "archive.zip", total); err != nil {
+		if err := joinVolumes(prepCtx, src, names, infos, snapshots, "archive.zip", total, limits); err != nil {
 			return x, err
 		}
 		if !zipSignature(snapshots, "archive.zip", false) {
@@ -45,7 +45,7 @@ func extractZIPSet(ctx context.Context, exe string, src *os.Root, names []string
 		if err := ordinaryZIP(prepCtx, exe, filepath.Join(dir, "archive.zip"), total, remaining, limits); err != nil {
 			return x, err
 		}
-		if limits.ZIPCoverage {
+		if limits.Coverage {
 			info, err := snapshots.Lstat("archive.zip")
 			if err != nil {
 				return x, err
@@ -54,15 +54,19 @@ func extractZIPSet(ctx context.Context, exe string, src *os.Root, names []string
 			if err != nil {
 				return x, err
 			}
-			accounted, why := ZIPAccounted(prepCtx, f, total)
+			accounted, why := ZIPAccounted(prepCtx, limits.proofReader(f), total)
 			f.Close()
 			if !accounted {
 				return x, fmt.Errorf("%w: %s", ErrZIPCoverage, why)
 			}
 		}
 		cancel()
-		x, err := ExtractZip(ctx, snapshots, "archive.zip", dst, supported, limits)
-		x.Whole = limits.ZIPCoverage && err == nil
+		// The exact private stream was covered under the preparation deadline.
+		// Keep that evidence without spending a second proof allowance.
+		extractLimits := limits
+		extractLimits.Coverage = false
+		x, err := extractZipFile(ctx, snapshots, "archive.zip", dst, supported, extractLimits)
+		x.Whole = limits.Coverage && err == nil
 		return x, err
 	}
 	privateNames := make([]string, len(names))
@@ -71,7 +75,7 @@ func extractZIPSet(ctx context.Context, exe string, src *os.Root, names []string
 		if i+1 == len(names) {
 			privateNames[i] = "archive.zip"
 		}
-		if err := snapshotArchive(prepCtx, src, name, infos[i], snapshots, privateNames[i]); err != nil {
+		if err := snapshotArchive(prepCtx, src, name, infos[i], snapshots, privateNames[i], limits); err != nil {
 			return x, err
 		}
 	}
@@ -108,8 +112,8 @@ func extractZIPSet(ctx context.Context, exe string, src *os.Root, names []string
 			return x, errors.New("the ZIP segments disagree on the member table; the set is preserved")
 		}
 	}
-	if limits.ZIPCoverage {
-		if accounted, why := zipSegmentsAccounted(prepCtx, snapshots, privateNames, entries); !accounted {
+	if limits.Coverage {
+		if accounted, why := zipSegmentsAccounted(prepCtx, snapshots, privateNames, entries, limits); !accounted {
 			return x, fmt.Errorf("%w: %s", ErrZIPCoverage, why)
 		}
 		cancel()

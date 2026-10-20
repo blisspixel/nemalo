@@ -61,6 +61,7 @@ type treeBudget struct {
 	members, processes int
 	bytes              int64
 	reads, diagnostics allowance
+	proofs             allowance
 }
 
 func (l Limits) memberLimit() int {
@@ -99,6 +100,15 @@ func (l Limits) reader(r io.ReaderAt) io.ReaderAt {
 		return r
 	}
 	return budgetReaderAt{r, &l.tree.reads}
+}
+
+// Coverage work is bounded once for the entire tree, and is also part of
+// the tree's existing reader-work allowance. Failed requests stay charged.
+func (l Limits) proofReader(r io.ReaderAt) io.ReaderAt {
+	if l.tree == nil {
+		return r
+	}
+	return budgetReaderAt{l.reader(r), &l.tree.proofs}
 }
 
 func (l Limits) run(ctx context.Context, exe string, out io.Writer, limit int64, args ...string) ([]byte, int, error) {

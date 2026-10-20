@@ -27,9 +27,13 @@ type Limits struct {
 	MemberBytes int64
 	TotalBytes  int64
 	Ratio       uint64
-	// ZIPCoverage requests independent coverage evidence for a split ZIP set.
+	// Coverage requests independent container-byte evidence for cleanup.
 	// It does not change intake eligibility or authorize source mutation.
-	ZIPCoverage bool
+	Coverage bool
+	// ExpectedSources binds coverage snapshots to the application's root plan.
+	// SourceHashRemaining, when set, charges actual copy-hash reads to its budget.
+	ExpectedSources     map[string]SnapshotIdentity
+	SourceHashRemaining *int64
 	// Only ExtractTree enables traversal and shares its work across nodes.
 	tree          *treeBudget
 	child         bool
@@ -62,11 +66,19 @@ type Extraction struct {
 	Members  []Member `json:"members"`
 	Complete bool     `json:"complete"`
 	// Whole is independent container-byte evidence: the 7z header/packed-size
-	// proof, or requested ZIP coverage on joined chunks or disk segments. It does not
+	// proof, or requested coverage of a ZIP, split set or complete archive tree. It does not
 	// establish member eligibility, successful extraction, or write permission.
 	Whole bool `json:"whole,omitempty"`
+	// CoverageGap locates the first container without requested byte evidence.
+	// An empty chain names the outer container, not an archive member.
+	CoverageGap *CoverageGap `json:"coverage_gap,omitempty"`
 	// packed is the sum of the packed sizes 7-Zip lists for the members.
 	packed int64
+}
+
+type CoverageGap struct {
+	Chain  []string `json:"chain"`
+	Detail string   `json:"detail"`
 }
 
 var nestedArchive = map[string]bool{".zip": true, ".rar": true, ".7z": true, ".tar": true, ".gz": true, ".bz2": true, ".xz": true, ".zst": true, ".cbz": true}
@@ -77,6 +89,13 @@ var nestedArchive = map[string]bool{".zip": true, ".rar": true, ".7z": true, ".t
 // oversized or suspiciously compressed members, and unsupported formats are
 // recorded and left in the archive.
 func ExtractZip(ctx context.Context, src *os.Root, name string, dst *os.Root, supported func(string) bool, limits Limits) (Extraction, error) {
+	if limits.Coverage && !limits.child {
+		return extractZIPSnapshot(ctx, src, name, dst, supported, limits, false)
+	}
+	return extractZipFile(ctx, src, name, dst, supported, limits)
+}
+
+func extractZipFile(ctx context.Context, src *os.Root, name string, dst *os.Root, supported func(string) bool, limits Limits) (Extraction, error) {
 	x := Extraction{Members: []Member{}}
 	info, err := src.Lstat(name)
 	if err != nil {
@@ -89,6 +108,12 @@ func ExtractZip(ctx context.Context, src *os.Root, name string, dst *os.Root, su
 	defer f.Close()
 	archiveCtx, cancel := context.WithTimeout(ctx, archiveDeadline(info.Size()))
 	defer cancel()
+	if limits.Coverage {
+		if accounted, why := ZIPAccounted(archiveCtx, limits.proofReader(f), info.Size()); !accounted {
+			return x, fmt.Errorf("%w: %s", ErrZIPCoverage, why)
+		}
+		x.Whole = true
+	}
 	z, err := assessment.OpenZIP(archiveCtx, limits.reader(f), info.Size(), maxListing, 2*maxArchiveSnapshot, limits.memberLimit())
 	if err != nil {
 		if limits.tree != nil && errors.Is(err, assessment.ErrLimit) {

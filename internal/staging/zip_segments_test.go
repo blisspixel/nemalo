@@ -247,13 +247,13 @@ func TestZIPSegmentPrivateReaderBoundsAndChangedIdentity(t *testing.T) {
 	if _, err := s.ReadAt(p[:1], 3); err == nil {
 		t.Fatal("changed original adopted")
 	}
-	if ok, _ := zipSegmentsAccounted(context.Background(), root, []string{"absent"}, nil); ok {
+	if ok, _ := zipSegmentsAccounted(context.Background(), root, []string{"absent"}, nil, Defaults()); ok {
 		t.Fatal("missing private part accepted")
 	}
 	if err := os.Mkdir(filepath.Join(dir, "folder"), 0700); err != nil {
 		t.Fatal(err)
 	}
-	if ok, _ := zipSegmentsAccounted(context.Background(), root, []string{"folder"}, nil); ok {
+	if ok, _ := zipSegmentsAccounted(context.Background(), root, []string{"folder"}, nil, Defaults()); ok {
 		t.Fatal("directory private part accepted")
 	}
 }
@@ -355,7 +355,7 @@ func TestZIPSegmentCoveragePrecedesAnyMemberExtraction(t *testing.T) {
 			}
 			zipSetCopies(t, copies)
 			limits := Defaults()
-			limits.ZIPCoverage = true
+			limits.Coverage = true
 			x, err := ExtractSet(context.Background(), src, names, dst, books, limits)
 			if corrupt {
 				if !errors.Is(err, ErrZIPCoverage) || len(x.Members) != 0 {

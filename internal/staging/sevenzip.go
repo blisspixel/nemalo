@@ -112,7 +112,7 @@ func Extract7z(ctx context.Context, src *os.Root, name string, dst *os.Root, sup
 	}
 	defer tmpRoot.Close()
 	snapshot := "archive" + strings.ToLower(filepath.Ext(name))
-	if err := snapshotArchive(ctx, src, name, info, tmpRoot, snapshot); err != nil {
+	if err := snapshotArchive(ctx, src, name, info, tmpRoot, snapshot, limits); err != nil {
 		return x, err
 	}
 	// 7-Zip opens whatever format a file's bytes name. The type is fixed
@@ -121,6 +121,9 @@ func Extract7z(ctx context.Context, src *os.Root, name string, dst *os.Root, sup
 	kind, err := archiveType(tmpRoot, snapshot, strings.ToLower(filepath.Ext(name)))
 	if err != nil {
 		return x, err
+	}
+	if limits.Coverage && kind != "7z" {
+		return x, errors.New("RAR container bytes are not completely accounted for; the archive is preserved")
 	}
 	if limits.child && (kind == "Rar" || kind == "Rar5") {
 		probeCtx, cancel := context.WithTimeout(ctx, 2*time.Minute)
@@ -135,8 +138,8 @@ func Extract7z(ctx context.Context, src *os.Root, name string, dst *os.Root, sup
 		}
 	}
 	x, err = extractSnapshot(ctx, exe, kind, filepath.Join(tmp, snapshot), info.Size(), dst, supported, limits)
-	if err == nil && limits.tree == nil {
-		x.Whole = wholeArchive(ctx, exe, kind, filepath.Join(tmp, snapshot), "Physical Size", info.Size(), x.packed)
+	if err == nil && (limits.tree == nil || limits.Coverage) {
+		x.Whole = wholeArchive(ctx, exe, kind, filepath.Join(tmp, snapshot), "Physical Size", info.Size(), x.packed, limits)
 	}
 	return x, err
 }
@@ -147,13 +150,13 @@ func Extract7z(ctx context.Context, src *os.Root, name string, dst *os.Root, sup
 // accounts for. A 7z's physical size is computed from its header position,
 // so bytes can hide between its packed streams and its header; it is whole
 // only when its header size and its members' packed sizes add up to the file.
-func wholeArchive(ctx context.Context, exe, kind, archive, key string, size, packed int64) bool {
+func wholeArchive(ctx context.Context, exe, kind, archive, key string, size, packed int64, limits Limits) bool {
 	if kind != "7z" {
 		return false
 	}
 	headerCtx, cancel := context.WithTimeout(ctx, 2*time.Minute)
 	defer cancel()
-	out, code, err := runSeven(headerCtx, exe, nil, "l", "-slt", "-t"+kind, noPassword, "--", archive)
+	out, code, err := limits.run(headerCtx, exe, nil, maxListing, "l", "-slt", "-t"+kind, noPassword, "--", archive)
 	if err != nil || code != 0 || !wholeBlock(out, key, size) {
 		return false
 	}
@@ -267,6 +270,9 @@ func extractListedSnapshot(ctx context.Context, exe, kind, archive string, size 
 		}
 		m := Member{Name: displayName(e.name), Bytes: e.size}
 		m.Disposition, m.Detail = classifySeven(e, supported, limits)
+		if limits.Coverage && e.folder && (!e.sizeKnown || !e.packedKnown) {
+			m.Disposition, m.Detail = "directory_unknown_size", "directory bytes are not completely stated; preserved in the archive"
+		}
 		if m.Disposition == "eligible" && (count[e.raw] > 1 || folders[e.name]) {
 			// Extraction by name would return every member of that name.
 			m.Disposition, m.Detail = "duplicate_name", "another member has this name, or a folder of it; preserved in the archive"
@@ -306,7 +312,7 @@ func extractListedSnapshot(ctx context.Context, exe, kind, archive string, size 
 	return x, nil
 }
 
-func snapshotArchive(ctx context.Context, src *os.Root, name string, info fs.FileInfo, dst *os.Root, snapshot string) error {
+func snapshotArchive(ctx context.Context, src *os.Root, name string, info fs.FileInfo, dst *os.Root, snapshot string, limits Limits) error {
 	if err := safeio.EnsureSpaceIn(dst, info.Size()); err != nil {
 		return err
 	}
@@ -319,7 +325,7 @@ func snapshotArchive(ctx context.Context, src *os.Root, name string, info fs.Fil
 	if err != nil {
 		return err
 	}
-	n, copyErr := io.Copy(out, io.LimitReader(contextReader{ctx, in}, info.Size()+1))
+	n, copyErr := copyArchiveBytes(ctx, limits, name, info, in, out)
 	closeErr := out.Close()
 	if err := errors.Join(copyErr, closeErr); err != nil {
 		return err
@@ -580,12 +586,8 @@ func (c *cappedWriter) Write(p []byte) (int, error) {
 	return n, err
 }
 
-// runSeven runs 7-Zip with no input, so it can never wait for a password.
-// Without out, standard output is returned, up to 16 MiB.
-func runSeven(ctx context.Context, exe string, out io.Writer, args ...string) ([]byte, int, error) {
-	return runSevenLimit(ctx, exe, out, maxListing, args...)
-}
-
+// Run with no input, so the reader can never wait for a password. Without
+// out, standard output is returned within the requested listing allowance.
 func runSevenLimit(ctx context.Context, exe string, out io.Writer, limit int64, args ...string) ([]byte, int, error) {
 	return runSevenBounded(ctx, exe, out, limit, nil, args...)
 }
@@ -715,7 +717,7 @@ func ExtractSet(ctx context.Context, src *os.Root, names []string, dst *os.Root,
 		return extractZIPSet(ctx, exe, src, names, infos, tmpRoot, tmp, dst, supported, limits, !segmentedZIP, total)
 	}
 	if split {
-		if err := joinVolumes(ctx, src, names, infos, tmpRoot, "archive.7z", total); err != nil {
+		if err := joinVolumes(ctx, src, names, infos, tmpRoot, "archive.7z", total, limits); err != nil {
 			return x, err
 		}
 		kind, err := archiveType(tmpRoot, "archive.7z", ".7z")
@@ -734,8 +736,8 @@ func ExtractSet(ctx context.Context, src *os.Root, names []string, dst *os.Root,
 			return x, errors.New("the joined volumes are not exactly one 7z archive; the set is preserved")
 		}
 		x, err = extractSnapshot(ctx, exe, kind, archive, total, dst, supported, limits)
-		if err == nil && limits.tree == nil {
-			x.Whole = wholeArchive(ctx, exe, kind, archive, "Physical Size", total, x.packed)
+		if err == nil && (limits.tree == nil || limits.Coverage) {
+			x.Whole = wholeArchive(ctx, exe, kind, archive, "Physical Size", total, x.packed, limits)
 		}
 		return x, err
 	}
@@ -773,7 +775,7 @@ func archiveBlock(out []byte) (map[string]string, bool) {
 
 // joinVolumes writes the volumes of a split archive in order into one
 // snapshot, each checked unchanged after it is copied.
-func joinVolumes(ctx context.Context, src *os.Root, names []string, infos []fs.FileInfo, dst *os.Root, snapshot string, total int64) error {
+func joinVolumes(ctx context.Context, src *os.Root, names []string, infos []fs.FileInfo, dst *os.Root, snapshot string, total int64, limits Limits) error {
 	if err := safeio.EnsureSpaceIn(dst, total); err != nil {
 		return err
 	}
@@ -787,7 +789,7 @@ func joinVolumes(ctx context.Context, src *os.Root, names []string, infos []fs.F
 			_ = out.Close()
 			return err
 		}
-		n, copyErr := io.Copy(out, io.LimitReader(contextReader{ctx, in}, infos[i].Size()+1))
+		n, copyErr := copyArchiveBytes(ctx, limits, name, infos[i], in, out)
 		after, statErr := in.Stat()
 		_ = in.Close()
 		if copyErr != nil || statErr != nil || n != infos[i].Size() || after.Size() != infos[i].Size() || !after.ModTime().Equal(infos[i].ModTime()) {

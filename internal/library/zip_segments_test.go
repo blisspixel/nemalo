@@ -32,6 +32,9 @@ func TestZIPSegmentManifestFamilyUsesPortablePaths(t *testing.T) {
 }
 
 func (f streamFixture) proof() string {
+	if f.archiveProof != "" {
+		return f.archiveProof
+	}
 	return zipProofFor(CleanupEntry{Path: f.names[0]})
 }
 

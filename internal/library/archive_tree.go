@@ -1,0 +1,111 @@
+package library
+
+import (
+	"crypto/sha256"
+	"encoding/hex"
+	"encoding/json"
+	"io/fs"
+	"path"
+	"path/filepath"
+	"slices"
+	"strings"
+	"unicode/utf8"
+)
+
+const archiveTreeProof = "archive-tree/1"
+
+// CleanupArchiveLeaf binds an exact nested selection to verified held bytes.
+// Chain components are archive member names, never filesystem paths to open.
+type CleanupArchiveLeaf struct {
+	Chain   []string `json:"chain"`
+	Bytes   int64    `json:"bytes"`
+	SHA256  string   `json:"sha256"`
+	Holding string   `json:"holding"`
+}
+
+func versionedArchive(e CleanupEntry) bool {
+	return entryHasZIPParts(e) || e.ArchiveProof != "" || len(e.ArchiveLeaves) != 0
+}
+
+func validArchiveLeaves(e CleanupEntry) bool {
+	if len(e.ArchiveLeaves) < 1 || len(e.ArchiveLeaves) > 10000 || len(e.ArchiveLeaves) != len(e.Holdings) {
+		return false
+	}
+	seen := map[string]bool{}
+	for i, leaf := range e.ArchiveLeaves {
+		if len(leaf.Chain) < 1 || len(leaf.Chain) > 4 || leaf.Bytes < 1 || leaf.Bytes > 256<<20 ||
+			!validHash(leaf.SHA256) || leaf.Holding != "sha256:"+leaf.SHA256 || leaf.Holding != e.Holdings[i] {
+			return false
+		}
+		for j, name := range leaf.Chain {
+			if len(name) > 1024 || !utf8.ValidString(name) || !fs.ValidPath(name) || strings.ContainsAny(name, "\\:\x00") {
+				return false
+			}
+			if j+1 == len(leaf.Chain) {
+				if !supportedImport(name) {
+					return false
+				}
+			} else if ext := strings.ToLower(path.Ext(name)); ext != ".zip" && ext != ".7z" {
+				return false
+			}
+		}
+		key, _ := json.Marshal(leaf.Chain)
+		if seen[string(key)] {
+			return false
+		}
+		seen[string(key)] = true
+	}
+	return true
+}
+
+func archiveLeafDigest(e CleanupEntry) string {
+	data, _ := json.Marshal(e.ArchiveLeaves)
+	sum := sha256.Sum256(append([]byte("nemalo-archive-leaves/1\n"), data...))
+	return hex.EncodeToString(sum[:])
+}
+
+func equalArchiveLeaves(a, b []CleanupArchiveLeaf) bool {
+	return slices.EqualFunc(a, b, func(a, b CleanupArchiveLeaf) bool {
+		return a.Bytes == b.Bytes && a.SHA256 == b.SHA256 && a.Holding == b.Holding && slices.Equal(a.Chain, b.Chain)
+	})
+}
+
+func supportedArchiveProof(e CleanupEntry) bool {
+	if e.ArchiveProof == archiveTreeProof {
+		return validArchiveLeaves(e)
+	}
+	return len(e.ArchiveLeaves) == 0 && supportedZIPSet(e)
+}
+
+// Validate only supported outer layouts, including the exact parent of every
+// part. Unknown proof versions can still preserve an otherwise valid layout.
+func archiveEntryParts(e CleanupEntry) ([]string, bool) {
+	if len(e.Files) == 1 {
+		f := e.Files[0]
+		ext := strings.ToLower(path.Ext(f.Path))
+		if e.Kind != "archive" || e.Path != f.Path || (ext != ".zip" && ext != ".7z") || f.Bytes < 1 || f.Bytes > 256<<20 {
+			return nil, false
+		}
+		return []string{path.Base(f.Path)}, true
+	}
+	if zipProofFor(e) != "" {
+		return zipSetParts(e)
+	}
+	return archiveSetParts(e, ".7z")
+}
+
+func archiveGroupDigestValid(e CleanupEntry, group PurgeArchiveGroup) bool {
+	if group.Proof != e.ArchiveProof || !supportedArchiveProof(e) {
+		return false
+	}
+	if e.ArchiveProof == archiveTreeProof {
+		return group.LeafDigest == archiveLeafDigest(e)
+	}
+	return group.LeafDigest == ""
+}
+
+// Canonical manifest paths are portable even when a platform adapter uses
+// native separators for its family key.
+func sameArchiveFamily(a, b string) bool {
+	return strings.EqualFold(filepath.ToSlash(a), filepath.ToSlash(b))
+}

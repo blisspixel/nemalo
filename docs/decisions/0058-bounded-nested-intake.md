@@ -73,6 +73,11 @@ executable, network operation, repair, or source-removal permission is added.
 
 ## Provenance and recovery
 
+Later [decision 0063](0063-complete-archive-tree-cleanup.md) requests complete
+container coverage through this same tree before recoverable cleanup. It adds
+independent proof/leaf bindings and shared proof limits without changing default
+intake or permitting cleanup of RAR children and unproven trees.
+
 Direct members keep `OUTER!/MEMBER`, including literal `!/` inside a valid
 member name. Nested leaves use `OUTER!//["inner.zip","book.epub"]`: the suffix
 after the first `!/` is a slash followed by the canonical, parse-equivalent JSON

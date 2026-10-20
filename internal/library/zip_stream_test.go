@@ -24,6 +24,7 @@ type streamFixture struct {
 	root, folder string
 	names        []string
 	parts        [][]byte
+	archiveProof string
 }
 
 func streamZIPBytes(t *testing.T, book []byte, notes bool, comment string) []byte {
@@ -177,6 +178,15 @@ func testZIPCleanupRefusesUnaccountedSources(t *testing.T, fixture zipFixtureFac
 				alias := "books/STREAM.ZIP.0001"
 				if f.proof() == zipSegmentsProof {
 					alias = "books/SEGMENTS.Z001"
+				}
+				if f.proof() == archiveTreeProof {
+					base := strings.ToUpper(filepath.Base(f.names[0]))
+					if isZIPChunk(f.names[0]) {
+						base = strings.TrimSuffix(base, ".001") + ".0001"
+					} else {
+						base = strings.TrimSuffix(base, ".Z01") + ".Z001"
+					}
+					alias = filepath.ToSlash(filepath.Join(filepath.Dir(f.names[0]), base))
 				}
 				writeTree(t, f.folder, map[string][]byte{alias: f.parts[0]})
 			case "missing_tool":

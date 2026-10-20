@@ -56,7 +56,7 @@ func snapshotRARSet(ctx context.Context, exe string, src *os.Root, names []strin
 			return "", "", err
 		}
 		snapshot := filepath.Join(sub, rarSnapshotName(old, i))
-		if err := snapshotArchive(probeCtx, src, name, infos[i], dst, snapshot); err != nil {
+		if err := snapshotArchive(probeCtx, src, name, infos[i], dst, snapshot, limits); err != nil {
 			return "", "", err
 		}
 		got, err := archiveType(dst, snapshot, ".rar")
