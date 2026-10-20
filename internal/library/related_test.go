@@ -154,3 +154,54 @@ func TestSourceIdentitiesFailClosed(t *testing.T) {
 		t.Fatal(id, ok)
 	}
 }
+
+// Work relationships span distinct declared editions while each edition and
+// each set of bytes remains identifiable. Equal titles are not work evidence.
+func TestRelatedPreservesDifferentEditionsOfOneDeclaredWork(t *testing.T) {
+	ctx := context.Background()
+	root := t.TempDir()
+	if _, err := Initialize(ctx, root); err != nil {
+		t.Fatal(err)
+	}
+	folder := t.TempDir()
+	files := map[string][]byte{}
+	for i, edition := range []string{"OL1M", "OL1M", "OL2M", "OL2M", ""} {
+		item := fmt.Sprintf("edition-%d", i)
+		body := pdftest.Pages("Same title", fmt.Sprintf("Distinct edition bytes %d.", i))
+		var ids [][2]string
+		if edition != "" {
+			ids = [][2]string{{"openlibrary_work", "OL1W"}, {"openlibrary_edition", edition}}
+		}
+		files[item+"/content.pdf"] = body
+		files[item+"/receipt.json"] = identifiedReceipt(t, body, "archive:"+item, "book.pdf", ids)
+	}
+	writeTree(t, folder, files)
+	if r, err := Ingest(ctx, IngestRequest{Library: root, Folder: folder, Apply: true}); err != nil || !r.Complete {
+		t.Fatal(r, err)
+	}
+	held, err := FindManaged(ctx, root, "", "all", "all", 10, 0)
+	if err != nil || held.Total != 5 {
+		t.Fatal("declared relationships merged bytes", held, err)
+	}
+	related, err := Related(ctx, RelatedRequest{Directory: root, Limit: 20})
+	if err != nil {
+		t.Fatal(err)
+	}
+	groups := map[string]RelatedGroup{}
+	for _, group := range related.Groups {
+		groups[group.Key] = group
+	}
+	work, first, second := groups["openlibrary_work:OL1W"], groups["openlibrary_edition:OL1M"], groups["openlibrary_edition:OL2M"]
+	if len(work.Members) != 4 || len(first.Members) != 2 || len(second.Members) != 2 || len(related.Groups) != 3 {
+		t.Fatal("distinct editions or unsupported equal title related incorrectly", related)
+	}
+	editionAssets := map[string]bool{}
+	for _, member := range first.Members {
+		editionAssets[member.Holding] = true
+	}
+	for _, member := range second.Members {
+		if editionAssets[member.Holding] {
+			t.Fatal("edition membership collapsed", member)
+		}
+	}
+}

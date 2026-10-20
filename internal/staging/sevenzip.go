@@ -66,13 +66,15 @@ func Supported(name string) bool {
 
 // sevenEntry is one member of a 7-Zip technical listing.
 type sevenEntry struct {
-	raw, name                 string
-	size, packed              int64
-	packedKnown               bool
-	crc                       uint32
-	crcKnown                  bool
-	folder, link, encrypted   bool
-	special, malformed, valid bool
+	raw, name                      string
+	size, packed                   int64
+	packedKnown                    bool
+	crc                            uint32
+	crcKnown                       bool
+	folder, link, encrypted        bool
+	split, splitBefore, splitAfter bool
+	splitFields                    uint8
+	special, malformed, valid      bool
 }
 
 // Extract7z copies the archive to a private snapshot, lists it with
@@ -202,6 +204,11 @@ func extractSnapshot(ctx context.Context, exe, kind, archive string, size int64,
 	entries, err := parseListing(listing)
 	if err != nil {
 		return x, err
+	}
+	for _, e := range entries {
+		if e.split && (kind == "Rar" || kind == "Rar5") {
+			return x, errors.New("7-Zip lists an unresolved split member; the entire archive set is preserved")
+		}
 	}
 	if len(entries) > limits.Members {
 		return x, fmt.Errorf("archive has %d members; the limit is %d", len(entries), limits.Members)
@@ -359,6 +366,14 @@ func parseListing(out []byte) ([]sevenEntry, error) {
 				}
 			case "Encrypted":
 				e.encrypted = value == "+"
+			case "Split Before", "Split After":
+				e.split = e.split || value != "-"
+				e.malformed = e.malformed || (value != "-" && value != "+")
+				if key == "Split Before" {
+					e.splitBefore, e.splitFields = value == "+", e.splitFields|1
+				} else {
+					e.splitAfter, e.splitFields = value == "+", e.splitFields|2
+				}
 			}
 		}
 		if !e.valid {
@@ -517,10 +532,14 @@ func (c *cappedWriter) Write(p []byte) (int, error) {
 // runSeven runs 7-Zip with no input, so it can never wait for a password.
 // Without out, standard output is returned, up to 16 MiB.
 func runSeven(ctx context.Context, exe string, out io.Writer, args ...string) ([]byte, int, error) {
+	return runSevenLimit(ctx, exe, out, maxListing, args...)
+}
+
+func runSevenLimit(ctx context.Context, exe string, out io.Writer, limit int64, args ...string) ([]byte, int, error) {
 	cmd := exec.CommandContext(ctx, exe, args...)
 	cmd.WaitDelay = 2 * time.Second
 	var buf bytes.Buffer
-	listing := &cappedWriter{w: &buf, limit: maxListing}
+	listing := &cappedWriter{w: &buf, limit: limit}
 	if out == nil {
 		cmd.Stdout = listing
 	} else {
@@ -537,7 +556,7 @@ func runSeven(ctx context.Context, exe string, out io.Writer, args ...string) ([
 		code = exit.ExitCode()
 	}
 	if out == nil && listing.over {
-		return nil, code, errors.New("7-Zip's listing exceeds 16 MiB")
+		return nil, -1, errors.New("7-Zip's listing exceeds its output budget")
 	}
 	return buf.Bytes(), code, err
 }
@@ -568,9 +587,9 @@ func VolumeOf(name string) (set string, number int, ok bool) {
 // ExtractSet reads a volume set whose names, root-relative and in volume
 // order from 1, are all its volumes, with the same member accounting as one
 // archive. A split 7z is joined in order into one snapshot. A RAR set is
-// copied volume by volume and read only when 7-Zip's own header names it
-// multi-volume with exactly as many volumes as were found; otherwise the set
-// is refused and every volume preserved.
+// checked in isolated snapshots for matching roles, ordinals, and split-member
+// continuity before an error-free assembled listing must account for all
+// volumes; otherwise the set is refused and every volume preserved.
 func ExtractSet(ctx context.Context, src *os.Root, names []string, dst *os.Root, supported func(string) bool, limits Limits) (Extraction, error) {
 	x := Extraction{Members: []Member{}}
 	if len(names) < 2 || len(names) > 1000 {
@@ -581,12 +600,22 @@ func ExtractSet(ctx context.Context, src *os.Root, names []string, dst *os.Root,
 		return x, ErrNoArchiveTool
 	}
 	set, _, _ := VolumeOf(names[0])
+	oldSet, _, old := OldRARVolumeOf(names[1])
+	if old {
+		set = oldSet
+	}
 	split := strings.HasSuffix(strings.ToLower(set), ".7z")
 	var total int64
 	infos := make([]fs.FileInfo, len(names))
 	for i, name := range names {
 		gotSet, n, ok := VolumeOf(name)
-		if !ok || gotSet != set || n != i+1 {
+		if old {
+			gotSet, n, ok = OldRARVolumeOf(name)
+			if i == 0 {
+				gotSet, n, ok = name, 1, strings.EqualFold(filepath.Ext(name), ".rar")
+			}
+		}
+		if !ok || !sameVolumeSet(gotSet, set) || n != i+1 {
 			return x, errors.New("the volumes are not one set numbered from 1 without gaps; they are preserved")
 		}
 		info, err := src.Lstat(name)
@@ -633,38 +662,11 @@ func ExtractSet(ctx context.Context, src *os.Root, names []string, dst *os.Root,
 		}
 		return x, err
 	}
-	// RAR volumes keep their number, so 7-Zip finds each next one by name.
-	first := ""
-	for i, name := range names {
-		number := rarPart.FindStringSubmatch(filepath.Base(name))[2]
-		snapshot := "archive.part" + number + ".rar"
-		if i == 0 {
-			first = snapshot
-		}
-		if err := snapshotArchive(ctx, src, name, infos[i], tmpRoot, snapshot); err != nil {
-			return x, err
-		}
-	}
-	kind, err := archiveType(tmpRoot, first, ".rar")
+	kind, archive, err := snapshotRARSet(ctx, exe, src, names, infos, tmpRoot, tmp, old, total, limits.Members)
 	if err != nil {
 		return x, err
 	}
-	archive := filepath.Join(tmp, first)
-	headerCtx, cancel := context.WithTimeout(ctx, 2*time.Minute)
-	defer cancel()
-	out, code, err := runSeven(headerCtx, exe, nil, "l", "-slt", "-t"+kind, noPassword, "--", archive)
-	if err != nil || code != 0 {
-		return x, errors.New("7-Zip could not read the volume set, which may be damaged, encrypted, or missing a volume; it is preserved")
-	}
-	if volumes, multi := setHeader(out); !multi || volumes != len(names) {
-		return x, fmt.Errorf("7-Zip reads this set as %d volume(s), not the %d found; it is preserved", volumes, len(names))
-	}
-	x, err = extractSnapshot(ctx, exe, kind, archive, total, dst, supported, limits)
-	if err == nil {
-		// A RAR set's block gives the physical size of all its volumes.
-		x.Whole = wholeArchive(ctx, exe, kind, archive, "Total Physical Size", total, x.packed)
-	}
-	return x, err
+	return extractSnapshot(ctx, exe, kind, archive, total, dst, supported, limits)
 }
 
 // archiveBlock reads the keys of the archive block of a listing without
@@ -690,17 +692,6 @@ func archiveBlock(out []byte) (map[string]string, bool) {
 		keys[key] = value
 	}
 	return keys, true
-}
-
-// setHeader reports whether 7-Zip calls the archive multi-volume, and how
-// many volumes it names, from its archive block.
-func setHeader(out []byte) (int, bool) {
-	keys, ok := archiveBlock(out)
-	if !ok {
-		return 0, false
-	}
-	volumes, _ := strconv.Atoi(keys["Volumes"])
-	return volumes, keys["Multivolume"] == "+"
 }
 
 // joinVolumes writes the volumes of a split archive in order into one

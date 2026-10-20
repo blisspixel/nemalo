@@ -91,6 +91,10 @@ verified, not when code exists. No stage has a time estimate.
    LibriVox, bound to held selections and ordered asset identities, with visible
    unresolved evidence and withdrawal
    ([decision 0055](docs/decisions/0055-user-narration-declarations.md)).
+   Status: implemented and verified for this stage's declared-evidence and
+   collection contracts. The acceptance audit below records the evidence and
+   remaining release/platform limits; registry confirmation and broader provider
+   coverage do not replace unknown evidence with inferred identities.
 2. **Intake completeness** (milestones 2 and 4). Old-style RAR volume names
    (`.rar`, `.r00`), split ZIPs, nested archives within the existing bounds,
    PAR2 sets inventoried and retained without repair, cleanup of RAR and 7z
@@ -98,6 +102,10 @@ verified, not when code exists. No stage has a time estimate.
    point tests. These close the ingest and cleanup acceptance for messy folders.
    Progress: cleanup of 7z archives and split 7z sets
    ([decision 0051](docs/decisions/0051-cleanup-of-7z-and-split-sets.md)).
+   Old-style RAR intake now checks each volume's role/ordinal and cross-volume
+   split continuity before reading an assembled set; inconclusive sets and all
+   RAR cleanup sources stay preserved
+   ([decision 0056](docs/decisions/0056-rar-volume-identity.md)).
 3. **Audio access** (milestone 8). M4B and M4A byte ranges and decoded timing in
    content access, bounded ranges usable by an external player, and output
    demonstrated with a real audiobook reader or server.
@@ -260,7 +268,8 @@ Go application or change the user's collection.
 
 ## Milestone 1: portable CLI and durable state
 
-Status: in progress. Depends on milestone 0; see implementation status above.
+Status: implemented and verified for the Go foundation and initial identity
+contracts. Depends on milestone 0. This is not a 1.0 release signoff.
 
 Delivered increment: versioned immutable byte-asset snapshots, duplicate locations,
 holdings queries, and preservation audits. See the
@@ -300,6 +309,26 @@ Acceptance:
 - Pinned Go verification tools, enforced coverage, and native CI replace prototype checks.
 - Establish work, edition, publication-version, recording, track, and asset identities.
 
+Acceptance audit, 2026-10-20: configuration path/precedence and CLI envelope,
+usage, cancellation, initialization/locking/recovery, and identity tests exercise
+the implemented contracts over synthetic fixtures. `library related` preserves
+distinct editions and paper versions under declared work/version evidence;
+recording manifests, exact ordered byte identities, and explicit user statements
+preserve assets and distinguish readings. Collection tests cover exact resolution,
+partial/conflicting recordings, retained attempts, idempotent acquisition, revision
+diffs, and preservation of earlier holdings and bookmark notes after an update.
+See decisions 0004, 0006, 0010, 0018, 0044, 0049, 0050, and 0052 through 0055.
+
+At `ea94da3`, [hosted CI](https://github.com/blisspixel/nemalo/actions/runs/39451688512)
+passed the canonical verifier, race detector, and cgo-free executable smokes on
+Linux, macOS, and Windows, plus installers on each OS. Local packaging of that
+clean revision produced all six target archives, checked embedded target/revision
+metadata, and independently verified every SHA-256 in `SHA256SUMS`. These are
+cross-built artifacts, not runtime proof for every architecture. The native host
+matrix, final format freeze, and 1.0 release acceptance remain stages 5 and 6;
+published prereleases may lag the source. No Python source, runtime, build, or
+test dependency remains in the application.
+
 ## Milestone 2: inspect and stage local downloads
 
 Status: partial. Inventory, standalone file checks, and folder ingest with ZIP
@@ -310,11 +339,14 @@ output, with the same accounting and CRC checks
 ([decision 0043](docs/decisions/0043-rar-and-7z-through-7-zip.md)); the pure-Go
 readers checked on 2026-10-11 lack verifiable checksums or memory bounds (see the
 [research record](docs/RESEARCH.md#version-sensitive-research-record)).
-Split 7z and multi-volume RAR sets are read whole through their first volume
-when 7-Zip names exactly the volumes found, and a set with a gap is preserved
-([decision 0046](docs/decisions/0046-archive-volume-sets.md)). Old-style RAR
-volume names, split ZIPs, nested archives, and PAR2 remain planned. Depends on
-milestone 1.
+Split 7z and multi-volume RAR sets are read through their first volume
+([decision 0046](docs/decisions/0046-archive-volume-sets.md)). RAR sets include
+old-style `.rar`/`.r00` names; each volume's format, role, ordinal, and size is
+checked in isolation, adjacent split-member evidence must agree, and the
+assembled listing must account for every volume without errors or unresolved
+splits ([decision 0056](docs/decisions/0056-rar-volume-identity.md)). Gaps,
+ambiguous names, overlapping families, and unlinked boundaries preserve the
+set. Split ZIPs, nested archives, and PAR2 remain planned. Depends on milestone 1.
 
 Deliver recursive inventory, file-signature checks, ZIP handling, additional archive
 adapters, and private staging. Inventory includes links and unsupported entries as
@@ -351,7 +383,8 @@ Holdings filter by declared base language without guessing missing tags
 ([decision 0037](docs/decisions/0037-base-language-filter.md)). `check
 --epubcheck` runs an installed EPUBCheck as optional conformance evidence
 ([decision 0038](docs/decisions/0038-optional-epubcheck.md)).
-Recording and track identities and cross-file work relationships remain. Depends on milestone 2.
+Recording, track, and cross-file work relationships now use the stage-1 contracts
+above. Full intake/publication acceptance still depends on milestone 2.
 
 Deliver EPUB package checks, content checks, scanner adapters, metadata handling,
 exact duplicate detection, and verified library publication.
@@ -394,7 +427,8 @@ Disk-full and scanner-failure faults are injected in tests: a full disk
 during an import copy, a journal line, a cleanup copy, and an export, and a
 scanner that is unavailable, incomplete, failing, or timing out. Each leaves
 sources intact and the library recoverable. A torn last journal line holds
-no record, is reported by `library check`, and is removed by the next write.
+no record, is reported by `library check`, and is removed by a subsequent
+authorized append to that journal.
 Writes of known size refuse up front when the disk lacks room. While one
 writer holds a library, import, ingest, cleanup, and rescan are refused as busy
 before writing; racing imports all finish consistently when retried; an

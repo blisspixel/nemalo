@@ -152,10 +152,14 @@ declaration or withdrawal fact. Holdings remain the resolved record; provider
 narration fields remain LibriVox-only. Keep user assertions, provider evidence,
 and byte equality distinct, with unresolved states visible. Writes require a
 preview plan and do not initialize a library, change holdings, or copy audio.
-Archive extraction is `internal/staging` (decisions 0017, 0043): flat indexed staging
+Archive extraction is `internal/staging` (decisions 0017, 0043, 0056): flat indexed staging
 names, never member paths; RAR and 7z only through an installed 7-Zip, by exact name
 to stdout; one archive staged at a time; account for every member and every entry
-beside a packet; ingest reuses Import.
+beside a packet; ingest reuses Import. RAR volume sets require isolated format,
+role, ordinal, and size evidence plus matching split members across every
+boundary and an error-free assembled listing. Preserve aliases, overlapping
+families, unlinked boundaries, and unknown ordinals; never infer set identity
+from names/counts alone. RAR cleanup remains refused.
 `library check` (decision 0024) is the read-only whole-library report; it never repairs.
 Source cleanup is `library/cleanup.go` and `restore.go` (decision 0022): move only held,
 verified bytes into the holding area via verified copy, hard-link publish, then source

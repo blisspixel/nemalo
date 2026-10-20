@@ -57,6 +57,7 @@ published prereleases may lag:
   file, and a recorded no-detection scan; other assessed files stay in review.
   `library ingest` imports a whole folder, including intake packets and the
   members of ZIP archives, and of RAR and 7z archives and their volume sets
+  (including old-style `.rar`/`.r00` names)
   through an installed 7-Zip, and preserves the folder. `library cleanup` then moves sources whose
   books the library holds into a recoverable holding area, and `library restore`
   undoes it. `library purge` frees that space once the library holds the

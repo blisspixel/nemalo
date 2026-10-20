@@ -4,6 +4,11 @@ Status: accepted and implemented, 2026-10-19. Extends RAR and 7z ingest
 ([decision 0043](0043-rar-and-7z-through-7-zip.md)) to multi-part sets, for
 milestone 2.
 
+The RAR count-only gate below is superseded by
+[decision 0056](0056-rar-volume-identity.md): old-style names, isolated
+volume role/ordinal checks, and cross-volume split continuity. Split 7z
+accounting remains unchanged.
+
 ## Context
 
 Large downloads are often split into volumes: `NAME.7z.001`, `.002`, and so

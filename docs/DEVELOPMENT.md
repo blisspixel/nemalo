@@ -475,9 +475,18 @@ staging with path, size, ratio, and CRC checks and recorded as
 `ARCHIVE!/MEMBER`. With 7-Zip installed, RAR and 7z members are extracted the
 same way, one at a time by exact name to standard output, from a private
 snapshot of the archive ([decision 0043](decisions/0043-rar-and-7z-through-7-zip.md)).
-A split 7z (`NAME.7z.001`, ...) or a RAR volume set (`NAME.part1.rar`, ...) is
-read whole through its first volume, and a set with a missing volume is
-preserved ([decision 0046](decisions/0046-archive-volume-sets.md)).
+A split 7z (`NAME.7z.001`, ...) or a RAR volume set (`NAME.part1.rar`, ...;
+or `NAME.rar`, `NAME.r00`, `NAME.r01`, ... through `NAME.z99`) is read through
+its actual first volume. RAR volumes must declare compatible format, role,
+ordinal, size, and adjacent split members; the assembled listing must account
+for the exact count and total size without errors or unresolved splits. Missing
+volumes, aliases, overlapping naming families, and inconclusive boundaries stay
+preserved. This includes valid sets with no member split across a boundary,
+since ordinals alone do not establish that those volumes belong together.
+The set is at most 4 GiB and 1,000 volumes (901 in the old letter naming range).
+RAR and RAR sets are never moved by cleanup. See
+[decision 0046](decisions/0046-archive-volume-sets.md) and
+[decision 0056](decisions/0056-rar-volume-identity.md).
 The folder and its archives are never changed. See
 [decision 0017](decisions/0017-folder-and-zip-ingest.md).
 

@@ -38,10 +38,28 @@ func fakeSeven() {
 	case "l":
 		if !slices.Contains(args, "-ba") {
 			// Without -ba 7-Zip prints the archive's own block first.
-			h, _ := os.ReadFile(filepath.Join(dir, "header.txt"))
+			header, exit := "header.txt", "list.code"
+			archive := args[len(args)-1]
+			if sub := filepath.Base(filepath.Dir(archive)); strings.HasPrefix(sub, "volume-") {
+				entries, err := os.ReadDir(filepath.Dir(archive))
+				if err != nil || len(entries) != 1 {
+					os.Exit(7)
+				}
+				expected, err := os.ReadFile(filepath.Join(dir, sub+".name"))
+				if err != nil || string(expected) != filepath.Base(archive) {
+					os.Exit(7)
+				}
+				header, exit = sub+".header", sub+".code"
+			}
+			h, _ := os.ReadFile(filepath.Join(dir, header))
 			os.Stdout.WriteString("Listing archive: x\n\n--\n")
 			os.Stdout.Write(h)
 			os.Stdout.WriteString("\n----------\n")
+			if exit != "list.code" {
+				b, _ := os.ReadFile(filepath.Join(dir, strings.TrimSuffix(header, ".header")+".listing"))
+				os.Stdout.Write(b)
+				os.Exit(code(exit))
+			}
 		}
 		b, _ := os.ReadFile(filepath.Join(dir, "listing.txt"))
 		os.Stdout.Write(b)
@@ -242,17 +260,14 @@ func TestSevenZipRefusesWhatItCannotList(t *testing.T) {
 	}
 }
 
-// A RAR volume set is read only when 7-Zip's header names it multi-volume
-// with as many volumes as were found; a split 7z is joined in order.
+// A RAR set needs compatible isolated-volume evidence and an assembled
+// listing that accounts for every volume; a split 7z is joined in order.
 func TestVolumeSetsAreReadWholeOrPreserved(t *testing.T) {
 	body := []byte("an epub body")
 	src, dst := sevenFixture(t, []sevenMember{{name: "book.epub", body: body}})
 	dir := os.Getenv("NEMALO_FAKE_7Z")
-	for i, name := range []string{"set.part1.rar", "set.part2.rar"} {
+	for _, name := range []string{"set.part1.rar", "set.part2.rar"} {
 		data := []byte("Rar!\x1a\x07\x01\x00 volume")
-		if i == 1 {
-			data = []byte("more")
-		}
 		if err := os.WriteFile(filepath.Join(src.Name(), name), data, 0o600); err != nil {
 			t.Fatal(err)
 		}
@@ -262,12 +277,13 @@ func TestVolumeSetsAreReadWholeOrPreserved(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	header("Path = x\nType = Rar5\nMultivolume = +\nVolumes = 2\n")
+	writeRARProbeFixtures(t, src, []string{"set.part1.rar", "set.part2.rar"}, false, "Rar5")
+	header("Path = x\nType = Rar5\nPhysical Size = 15\nTotal Physical Size = 30\nVolume Index = 0\nMultivolume = +\nVolumes = 2\n")
 	x, err := ExtractSet(context.Background(), src, []string{"set.part1.rar", "set.part2.rar"}, dst, books, Defaults())
 	if err != nil || len(x.Members) != 1 || x.Members[0].Disposition != "extracted" {
 		t.Fatal(x, err)
 	}
-	header("Path = x\nType = Rar5\nMultivolume = +\nVolumes = 3\n")
+	header("Path = x\nType = Rar5\nPhysical Size = 15\nTotal Physical Size = 30\nVolume Index = 0\nMultivolume = +\nVolumes = 3\n")
 	if _, err := ExtractSet(context.Background(), src, []string{"set.part1.rar", "set.part2.rar"}, dst, books, Defaults()); err == nil || !strings.Contains(err.Error(), "3 volume") {
 		t.Fatal(err)
 	}
@@ -305,11 +321,11 @@ func TestVolumeSetsAreReadWholeOrPreserved(t *testing.T) {
 // refuses the block, and a split 7z with bytes past its archive is refused.
 func TestArchiveBlockIgnoresCommentsAndExtraVolumes(t *testing.T) {
 	block := "Listing archive: x\n\n--\nPath = x\nType = Rar5\nMultivolume = +\nVolumes = 2\nComment = Multivolume = +\nVolumes = 3\n----------\nPath = a\n"
-	if n, multi := setHeader([]byte(block)); n != 2 || !multi {
-		t.Fatal(n, multi)
+	if keys, ok := archiveBlock([]byte(block)); !ok || keys["Volumes"] != "2" || keys["Multivolume"] != "+" {
+		t.Fatal(keys, ok)
 	}
-	if n, multi := setHeader([]byte("x\n--\nComment = hi\nMultivolume = +\nVolumes = 3\n")); n != 0 || multi {
-		t.Fatal("values after a comment were read", n, multi)
+	if keys, _ := archiveBlock([]byte("x\n--\nComment = hi\nMultivolume = +\nVolumes = 3\n")); keys["Volumes"] != "" || keys["Multivolume"] != "" {
+		t.Fatal("values after a comment were read", keys)
 	}
 	if _, ok := archiveBlock([]byte("x\n--\nVolumes = 2\nVolumes = 3\n")); ok {
 		t.Fatal("a repeated key was accepted")

@@ -372,6 +372,14 @@ nested archives, not just each individual container. Extraction failure preserve
 the original. Validate actual writes, not just archive listings, and handle path
 replacement races. Tools must be invoked as an executable and argument array.
 
+Implemented RAR intake checks each private volume's format, role, ordinal,
+and size through the installed 7-Zip reader, matches split-member evidence
+across adjacent volumes, and requires an error-free assembled listing. Names
+and counts alone cannot establish a set. Old-style letter volumes share this
+adapter; inconclusive boundaries preserve all sources. RAR cleanup remains
+refused because unlisted blocks are unaccounted for
+([decision 0056](decisions/0056-rar-volume-identity.md)).
+
 Private staging and a subprocess are not sandboxes. Go's
 [root-scoped filesystem APIs](https://go.dev/blog/osroot) are useful building blocks;
 external extraction needs a separately tested containment strategy. Linux isolation

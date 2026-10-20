@@ -276,10 +276,11 @@ func planIngest(folder string, entries []inventory.Entry, result *IngestResult) 
 		candidates = append(candidates, e.Path)
 	}
 	setOf, setFirst := map[string]string{}, map[string]bool{}
+	brokenSet := map[string]string{}
 	for _, set := range volumeSets(candidates) {
 		if !set.complete {
 			for _, v := range set.volumes {
-				setOf[v] = "incomplete"
+				brokenSet[v] = set.reason
 			}
 			continue
 		}
@@ -306,8 +307,8 @@ func planIngest(folder string, entries []inventory.Entry, result *IngestResult) 
 		switch {
 		case setFirst[e.Path]:
 			continue
-		case setOf[e.Path] == "incomplete":
-			item.Outcome, item.Detail = "not_imported", "a volume of a set with a missing volume; preserved"
+		case brokenSet[e.Path] != "":
+			item.Outcome, item.Detail = "not_imported", brokenSet[e.Path]
 		case setOf[e.Path] == "unlabelable":
 			item.Kind, item.Outcome, item.Detail = "archive", "failed", "a volume of a set whose path contains \"!/\", which member provenance cannot represent; preserved"
 		case setOf[e.Path] != "":

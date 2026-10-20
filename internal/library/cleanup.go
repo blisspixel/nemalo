@@ -833,13 +833,13 @@ func planCleanup(ctx context.Context, store, src *os.Root, lines []Holding) ([]C
 			candidates = append(candidates, ie.Path)
 		}
 	}
-	setVolumes, setOf, brokenSet := map[string][]string{}, map[string]string{}, map[string]bool{}
+	setVolumes, setOf, brokenSet := map[string][]string{}, map[string]string{}, map[string]string{}
 	for _, set := range volumeSets(candidates) {
 		for _, v := range set.volumes {
 			if set.complete {
 				setOf[v] = set.volumes[0]
 			} else {
-				brokenSet[v] = true
+				brokenSet[v] = set.reason
 			}
 		}
 		if set.complete {
@@ -865,8 +865,8 @@ func planCleanup(ctx context.Context, store, src *os.Root, lines []Holding) ([]C
 			}
 		case setOf[ie.Path] != "":
 			e.Reason = "a volume of the set read through " + setOf[ie.Path] + "; it stays with that set"
-		case brokenSet[ie.Path]:
-			e.Reason = "a volume of a set with a missing volume; preserved"
+		case brokenSet[ie.Path] != "":
+			e.Reason = brokenSet[ie.Path]
 		case staging.Supported(ie.Path):
 			e.Kind = "archive"
 			if err := planArchive(ctx, src, ie.Path, nil, held, hashFile, &e); err != nil {

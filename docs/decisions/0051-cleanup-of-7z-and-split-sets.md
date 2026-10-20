@@ -53,8 +53,9 @@ the sum of its volumes.
 
 A folder of 7z downloads can be cleared after import with the same recovery
 guarantees as ZIPs. A RAR, an archive with an unsupported member, a comment, or
-bytes outside its members stays. Old-style RAR volume names (`.r00`) and split ZIPs are not
-yet read by ingest, so cleanup keeps them too.
+bytes outside its members stays. Old-style RAR volume names (`.r00`) are now
+read by ingest under [decision 0056](0056-rar-volume-identity.md), but cleanup
+still keeps every RAR volume. Split ZIP intake remains planned.
 
 ## Validation
 

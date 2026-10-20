@@ -471,7 +471,7 @@ func TestIngestAccountsForVolumeSets(t *testing.T) {
 	if _, err := Initialize(ctx, root); err != nil {
 		t.Fatal(err)
 	}
-	writeTree(t, folder, map[string][]byte{"a.7z.001": []byte("x"), "a.7z.002": []byte("y"), "b.part1.rar": []byte("x"), "b.part3.rar": []byte("y")})
+	writeTree(t, folder, map[string][]byte{"a.7z.001": []byte("x"), "a.7z.002": []byte("y"), "b.part1.rar": []byte("x"), "b.part3.rar": []byte("y"), "c.rar": []byte("x"), "c.r00": []byte("y"), "d.r00": []byte("x"), "d.r01": []byte("y")})
 	r, err := Ingest(ctx, IngestRequest{Library: root, Folder: folder, Apply: true})
 	if err != nil {
 		t.Fatal(err)
@@ -480,7 +480,7 @@ func TestIngestAccountsForVolumeSets(t *testing.T) {
 	for _, item := range r.Items {
 		got[item.Source] = item.Outcome
 	}
-	want := map[string]string{"a.7z.001": "not_imported", "a.7z.002": "archive_volume", "b.part1.rar": "not_imported", "b.part3.rar": "not_imported"}
+	want := map[string]string{"a.7z.001": "not_imported", "a.7z.002": "archive_volume", "b.part1.rar": "not_imported", "b.part3.rar": "not_imported", "c.rar": "not_imported", "c.r00": "archive_volume", "d.r00": "not_imported", "d.r01": "not_imported"}
 	for source, outcome := range want {
 		if got[source] != outcome {
 			t.Errorf("%s: %s, want %s", source, got[source], outcome)

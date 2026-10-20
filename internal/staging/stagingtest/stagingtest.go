@@ -3,6 +3,7 @@
 package stagingtest
 
 import (
+	"bytes"
 	"fmt"
 	"hash/crc32"
 	"os"
@@ -24,6 +25,15 @@ type Archive struct {
 	// Header is the archive block 7-Zip prints without -ba, one key per line.
 	Header  string
 	Members map[string][]byte
+	// Volumes, when present, require isolated probes and exact assembled copies.
+	Volumes []Volume
+}
+
+// Volume describes one private snapshot and its isolated reader response.
+type Volume struct {
+	Name, Header, Listing string
+	Body                  []byte
+	Code                  int
 }
 
 // Main acts as 7-Zip and exits when the test binary was started as the
@@ -44,6 +54,27 @@ func Main() {
 	}
 	switch args[0] {
 	case "l":
+		archive := args[len(args)-1]
+		if sub := filepath.Base(filepath.Dir(archive)); strings.HasPrefix(sub, "volume-") {
+			entries, err := os.ReadDir(filepath.Dir(archive))
+			body, readErr := os.ReadFile(archive)
+			if err != nil || readErr != nil || len(entries) != 1 || string(read(sub+".name")) != filepath.Base(archive) || !bytes.Equal(body, read(sub+".body")) {
+				os.Exit(7)
+			}
+			os.Stdout.WriteString("Listing archive: x\n\n--\n")
+			os.Stdout.Write(read(sub + ".header"))
+			os.Stdout.WriteString("\n----------\n")
+			os.Stdout.Write(read(sub + ".listing"))
+			var code int
+			fmt.Sscan(string(read(sub+".code")), &code)
+			os.Exit(code)
+		}
+		for _, name := range strings.Fields(string(read("volume-names"))) {
+			body, err := os.ReadFile(filepath.Join(filepath.Dir(archive), name))
+			if err != nil || !bytes.Equal(body, read("copy-"+name)) {
+				os.Exit(7)
+			}
+		}
 		if !slices.Contains(args, "-ba") {
 			os.Stdout.WriteString("Listing archive: x\n\n--\n")
 			os.Stdout.Write(read("header"))
@@ -85,6 +116,19 @@ func Install(t testing.TB, a Archive) {
 		if err := os.WriteFile(filepath.Join(dir, name), []byte(body), 0o600); err != nil {
 			t.Fatal(err)
 		}
+	}
+	var volumeNames []string
+	for i, v := range a.Volumes {
+		prefix := fmt.Sprintf("volume-%04d", i)
+		for name, body := range map[string][]byte{prefix + ".name": []byte(v.Name), prefix + ".body": v.Body, prefix + ".header": []byte(v.Header), prefix + ".listing": []byte(v.Listing), prefix + ".code": fmt.Appendf(nil, "%d", v.Code), "copy-" + v.Name: v.Body} {
+			if err := os.WriteFile(filepath.Join(dir, name), body, 0o600); err != nil {
+				t.Fatal(err)
+			}
+		}
+		volumeNames = append(volumeNames, v.Name)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "volume-names"), []byte(strings.Join(volumeNames, "\n")), 0o600); err != nil {
+		t.Fatal(err)
 	}
 	exe, err := os.Executable()
 	if err != nil {
