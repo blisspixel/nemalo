@@ -188,6 +188,29 @@ func TestRecordingByteIdentitiesThroughReadOnlyMCP(t *testing.T) {
 	if err != nil || len(direct.ByteIdentities) != 1 || len(direct.ByteIdentities[0].Recordings) != 2 {
 		t.Fatal(direct, err)
 	}
+	declaration := library.NarrationDeclaration{Schema: library.NarrationDeclarationSchema, NarrationID: "user-narration:explicit-reading", Recordings: []library.NarrationSelection{}}
+	for _, ref := range direct.ByteIdentities[0].Recordings {
+		declaration.Recordings = append(declaration.Recordings, library.NarrationSelection{SourceID: ref.SourceID, Format: ref.Format, Kind: ref.Kind, ByteIdentity: direct.ByteIdentities[0].ID})
+	}
+	declarationFile := filepath.Join(t.TempDir(), "declaration.json")
+	declarationBytes, err := json.Marshal(declaration)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(declarationFile, declarationBytes, 0600); err != nil {
+		t.Fatal(err)
+	}
+	preview, err := service.DeclareNarration(ctx, library.NarrationRequest{Library: root, File: declarationFile})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if applied, err := service.DeclareNarration(ctx, library.NarrationRequest{Library: root, File: declarationFile, Apply: true, Plan: preview.Plan}); err != nil || !applied.Applied {
+		t.Fatal(applied, err)
+	}
+	direct, err = service.Recordings(ctx, root, "")
+	if err != nil || len(direct.UserNarrations) != 1 || len(direct.Declarations) != 1 || direct.Declarations[0].Evidence != library.UserNarrationEvidence {
+		t.Fatal(direct, err)
+	}
 	session := connect(t, service, Options{Scopes: []string{root}, Version: "test"})
 	res, env := call(t, session, "library_recordings", map[string]any{"library": root})
 	if res.IsError || env["error"] != nil {

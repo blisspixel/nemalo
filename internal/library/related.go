@@ -71,6 +71,7 @@ func Related(ctx context.Context, request RelatedRequest) (RelatedResult, error)
 		"Identifiers are copied from EPUB packages and from source metadata at acquisition, and are not confirmed against a registry. Titles, authors, and text are never compared.",
 		"Files of one source item can be different editions or formats; versions of one paper are distinct works of record. Tracks of a recording are listed by library recordings, not here.",
 		"An ISBN-10 and the ISBN-13 that carries it relate as one edition, under the ISBN-13.",
+		"User narration relationships are explicit library-scoped assertions over matching ordered-asset selections. They remain separate from provider narration evidence and establish no rights or scan disposition.",
 	}}
 	if request.Limit < 1 || request.Limit > MaxRelatedGroups || request.Offset < 0 {
 		return r, errors.New("related takes a limit of 1 to 200 groups and an offset of 0 or more")
@@ -156,6 +157,32 @@ func Related(ctx context.Context, request RelatedRequest) (RelatedResult, error)
 	}
 	if holding != "" && !held {
 		return r, errors.New("the library holds no asset " + holding)
+	}
+	view, err := readNarrationJournal(control.root, state.LibraryID)
+	if err != nil {
+		return r, err
+	}
+	if len(view.declarations) > 0 {
+		base := RecordingsResult{Library: root, LibraryID: state.LibraryID, Recordings: []RecordingManifest{}, Narrations: []NarrationGroup{}}
+		base, err = recordingManifests(ctx, base, lines, "")
+		if err != nil {
+			return r, err
+		}
+		if err = decorateUserNarrations(ctx, &base, view); err != nil {
+			return r, err
+		}
+		current := latestHoldings(lines)
+		manifests := recordingSelectionIndex(base.Recordings)
+		for _, statement := range base.Declarations {
+			if !statement.Active || statement.Status != "matched" {
+				continue
+			}
+			for _, selection := range statement.Selections {
+				for _, track := range manifests[narrationSelectionKey(selection.Selection)].Tracks {
+					add(key{RelationNarration, statement.Declaration.NarrationID}, current[track.AssetID], UserNarrationEvidence+" "+statement.ID, 0)
+				}
+			}
+		}
 	}
 	all := []RelatedGroup{}
 	for k, members := range groups {

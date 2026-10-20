@@ -148,6 +148,14 @@ journal evidence rather than a fresh integrity check, and neither encoding nor
 track-division equivalence is inferred
 ([decision 0052](decisions/0052-recording-byte-identities.md)).
 
+Explicit user narration statements name exact held recording selections and
+their ordered-byte identities. The optional relationship journal stores no
+resolved holdings or audio and preserves provider provenance. Withdrawals retain
+history; stale, incomplete, and conflicting selections remain visible rather
+than acquiring an inferred reading. CLI/JSON, related holdings, recording views,
+and read-only MCP use the shared library/application service
+([decision 0055](decisions/0055-user-narration-declarations.md)).
+
 Keep bibliographic language separate from the language of a specific asset or
 recording. Preserve raw provider values alongside normalized language tags. Unknown
 language does not satisfy a requested language filter. Multilingual recordings and

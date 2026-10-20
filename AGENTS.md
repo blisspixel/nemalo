@@ -146,6 +146,12 @@ decision 0006. The initialization journal stays two records. Managed operations
 are separate intent/completed pairs (import, rescan); every writer completes a
 trailing rescan intent before its own work. Preserve explicit roots,
 retained corrupt state, canonical records, OS-held locks, and TUI write review.
+User narration statements are `.nemalo/narrations.jsonl` (decision 0055): exact
+held recording selections and `recording-bytes/1` identities, with one synced
+declaration or withdrawal fact. Holdings remain the resolved record; provider
+narration fields remain LibriVox-only. Keep user assertions, provider evidence,
+and byte equality distinct, with unresolved states visible. Writes require a
+preview plan and do not initialize a library, change holdings, or copy audio.
 Archive extraction is `internal/staging` (decisions 0017, 0043): flat indexed staging
 names, never member paths; RAR and 7z only through an installed 7-Zip, by exact name
 to stdout; one archive staged at a time; account for every member and every entry

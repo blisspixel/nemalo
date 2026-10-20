@@ -213,6 +213,9 @@ func scanReason(status string) string {
 }
 
 func validateManaged(root *os.Root, libraryID string) error {
+	if _, err := readNarrationJournal(root, libraryID); err != nil {
+		return err
+	}
 	ops, err := readOptional(root, operationsName, maxOperations)
 	if err != nil {
 		return err

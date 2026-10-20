@@ -137,7 +137,9 @@ The result's `byte_identities` relates complete declared recordings with the
 same ordered asset hashes across source items, even without LibriVox metadata;
 repeated positions are retained. It uses journal evidence, not a fresh integrity
 check, and preserves every narration declaration. Different encodings and track
-divisions stay distinct ([decision 0052](decisions/0052-recording-byte-identities.md)).
+divisions stay distinct under byte identity
+([decision 0052](decisions/0052-recording-byte-identities.md)). Explicit user
+narration declarations can relate them separately, as described below.
 An Archive evaluation copies the ISBN and Open Library edition and work keys the
 item declares, import records them on the source, and `library related LIBRARY
 [--asset ID]` groups holdings that share a stated work, edition, or version, an
@@ -153,6 +155,78 @@ An existing collection intake packet is resumed or offered for ingest only when
 it records the item's exact source and file or recording format; a copied or
 mismatched packet stays retained.
 Registry confirmation of identifiers and rights policy remain planned.
+
+## Explicit user narration declarations
+
+`library narration` records a user's statement that selected, already-held
+recordings carry one reading. It needs neither the original intake packets nor
+another acquisition. First use `library recordings LIBRARY --json` to obtain
+each recording's exact source, format, kind, and `recording-sha256:` identity.
+Create a user file like this, replacing the illustrative source, format, and
+all-zero digest with the exact values returned for your selection:
+
+```json
+{
+  "schema": "narration-declaration/1",
+  "narration_id": "user-narration:reading-one",
+  "recordings": [
+    {
+      "source_id": "archive:my-recording",
+      "source_format": "MP3",
+      "kind": "tracks",
+      "byte_identity": "recording-sha256:0000000000000000000000000000000000000000000000000000000000000000"
+    }
+  ]
+}
+```
+
+Add the other exact selections carrying that same reading to `recordings`.
+The name after `user-narration:` is scoped by the library ID, starts with a
+lowercase letter or digit, and contains at most 64 lowercase letters, digits,
+dots, underscores, or hyphens. Another reading gets another name even if its
+title and work are identical. Files are at most 64 KiB with 1 to 16 distinct
+selections; unknown or duplicate fields are refused. Input order is normalized.
+
+```sh
+nemalo library narration /path/to/library --declaration reading.json
+nemalo library narration /path/to/library --declaration reading.json --apply --plan DIGEST
+nemalo library recordings /path/to/library
+nemalo library narration /path/to/library --retract DECLARATION_ID
+nemalo library narration /path/to/library --retract DECLARATION_ID --apply --plan DIGEST
+```
+
+Review the statement and exact asset IDs, then replace `DIGEST` with its preview
+token. Both declaration preview and apply verify the complete, unambiguous held
+selections and their stored bytes, with a 4 GiB unique-asset budget and a
+ten-minute deadline. Missing, incomplete, changed, or provider-named selections
+are refused. No scanner or network operation runs, no audio is copied, and no
+holding, source provenance, scan result, or access classification is rewritten.
+Pending imports must finish first; an apply completes a prior pending rescan
+and reports that recovery separately.
+
+`user_declarations` retains each statement and its active/retracted state and
+per-selection status. `user_narrations` groups only wholly matching active
+statements. Conflicting user IDs for one selection are visible and suppress the
+ambiguous group; withdrawal of one statement can resolve them. Later provider
+evidence or changed selections leave a statement unresolved. Source filtering
+does not hide a conflict in another selection of that statement. The origin is
+`user_declaration/1`, separate from provider `narrations` and `byte_identities`.
+`library related` cites the same user evidence. Ordinary listing matches journal
+identities without rereading audio; `--source` still verifies current bytes and
+reports gaps separately. Assertions never establish the same reading as a fact,
+rights, or checked status.
+
+The optional `.nemalo/narrations.jsonl` is a bounded relationship journal, not a
+second catalog. A single synced declaration or withdrawal line is one fact;
+holdings remain the only resolved records. Repeating a declaration or withdrawal
+with a fresh preview is a no-op. Incomplete final lines are retained on reads and
+removed only by an authorized subsequent append after the complete prefix is
+validated. An invalid complete record is retained and refused. Retrying a complete
+but unacknowledged append recognizes and syncs the recorded fact. Older libraries
+need no rewrite; builds without decision 0055 support refuse this new control file.
+MCP exposes these relationships read-only through `library_recordings` and
+`library_related`; it has no narration writer. See
+[decision 0055](decisions/0055-user-narration-declarations.md).
 
 ## Collection revision previews
 

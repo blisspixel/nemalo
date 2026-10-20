@@ -88,7 +88,10 @@ type RecordingsResult struct {
 	// ByteIdentities relate complete declared recordings by their ordered asset
 	// hashes, independently of source, format labels, or narration declarations.
 	ByteIdentities []RecordingByteIdentity `json:"byte_identities"`
-	Limitations    []string                `json:"limitations"`
+	// User statements remain separate from provider narration evidence.
+	Declarations   []NarrationDeclarationStatus `json:"user_declarations"`
+	UserNarrations []NarrationGroup             `json:"user_narrations"`
+	Limitations    []string                     `json:"limitations"`
 }
 
 // RecordingByteIdentityVersion fixes the ordered-asset hash construction.
@@ -134,7 +137,7 @@ const (
 func Recordings(ctx context.Context, directory, source string) (RecordingsResult, error) {
 	r := RecordingsResult{SchemaVersion: 1, Recordings: []RecordingManifest{}, Narrations: []NarrationGroup{}, ByteIdentities: []RecordingByteIdentity{}, Limitations: []string{
 		"Track order, titles, and declared durations are source declarations. Complete means every declared position is held, not that the audio was checked.",
-		"Probed timing indexes MPEG frames or MP4 sample tables without decoding. Narrators and narrations come only from a LibriVox project that names the Archive item back; nothing is inferred from titles.",
+		"Probed timing indexes MPEG frames or MP4 sample tables without decoding. Provider narrators and narrations come only from a LibriVox project that names the Archive item back. Explicit user declarations are separate evidence; nothing is inferred from titles.",
 		"Listing a recording is not evidence that anyone listened to it.",
 		"Byte identities compare complete declared track sequences by the asset hashes in the journal, not a fresh integrity check. They preserve source and narration declarations and do not relate different encodings or track divisions.",
 	}}
@@ -163,6 +166,27 @@ func Recordings(ctx context.Context, directory, source string) (RecordingsResult
 	if err != nil {
 		return r, err
 	}
+	r, err = recordingManifests(ctx, r, lines, source)
+	if err != nil {
+		return r, err
+	}
+	view, err := readNarrationJournal(control.root, state.LibraryID)
+	if err != nil {
+		return r, err
+	}
+	if err = decorateUserNarrations(ctx, &r, view); err != nil {
+		return r, err
+	}
+	filterRecordingResult(&r, source)
+	return r, nil
+}
+
+// recordingManifests derives all declared selections under the caller's lock.
+// Only the requested source is probed. Evaluate relationships before filtering
+// so a narrow read cannot hide another selected recording or a contradiction.
+func recordingManifests(ctx context.Context, r RecordingsResult, lines []Holding, source string) (RecordingsResult, error) {
+	root := r.Library
+	var err error
 	type key struct{ source, format, kind string }
 	type claim struct {
 		h   Holding
@@ -171,8 +195,11 @@ func Recordings(ctx context.Context, directory, source string) (RecordingsResult
 	}
 	groups := map[key][]claim{}
 	for _, h := range latestList(lines) {
+		if err := ctx.Err(); err != nil {
+			return r, err
+		}
 		for _, s := range h.Sources {
-			if s.SourceID == "" || (source != "" && s.SourceID != source) {
+			if s.SourceID == "" {
 				continue
 			}
 			switch {
@@ -207,6 +234,9 @@ func Recordings(ctx context.Context, directory, source string) (RecordingsResult
 	}
 	budget := int64(maxProbedRecordingBytes)
 	for _, k := range keys {
+		if err := ctx.Err(); err != nil {
+			return r, err
+		}
 		m := RecordingManifest{Schema: RecordingManifestVersion, SourceID: k.source, Format: k.format, Kind: k.kind, Missing: []int{}, Tracks: []RecordingEntry{}, Narrators: []Reader{}, Findings: []string{}}
 		counts, held := map[int]bool{}, map[string]Holding{}
 		byPosition := map[int][]claim{}
@@ -277,7 +307,7 @@ func Recordings(ctx context.Context, directory, source string) (RecordingsResult
 		}
 		m.HeldTracks = m.DeclaredTracks - len(m.Missing)
 		m.Complete = len(m.Missing) == 0 && !conflict && len(counts) == 1 && m.DeclaredTracks > 0
-		if store != nil {
+		if store != nil && k.source == source {
 			m.Probed = true
 			var elapsed int64
 			ordered, next := !conflict, 1

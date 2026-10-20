@@ -93,3 +93,22 @@ func TestImportProposalDisplaysIncomingAndRetainedEvidenceSafely(t *testing.T) {
 		t.Fatal("unsafe or misleading evidence", text)
 	}
 }
+
+func TestUserNarrationPresentationSeparatesEvidenceAndEscapesText(t *testing.T) {
+	statement := library.NarrationDeclarationStatus{ID: "declaration\x1b", Evidence: library.UserNarrationEvidence, Declaration: library.NarrationDeclaration{NarrationID: "user-narration:reading\nforged"}, Active: true, Status: "unresolved", Selections: []library.NarrationSelectionStatus{{Selection: library.NarrationSelection{SourceID: "archive:source\x00", Format: "MP3\x1b", Kind: "tracks", ByteIdentity: "digest\nforged"}, Status: "conflicting_user_declarations", Assets: []string{"asset\x1b"}}}}
+	result := library.RecordingsResult{Declarations: []library.NarrationDeclarationStatus{statement}, UserNarrations: []library.NarrationGroup{{Narration: library.Narration{ID: "user-narration:reading", Evidence: library.UserNarrationEvidence}, Recordings: []library.RecordingRef{{SourceID: "archive:source\x1b", Format: "MP3", Kind: "tracks"}}}}}
+	for _, text := range []string{Recordings(result), NarrationChange(library.NarrationResult{LibraryID: "library:test", Statement: &statement, Plan: "preview-plan", VerifiedAssets: 1}), NarrationChange(library.NarrationResult{LibraryID: "library:test", ApplyRequested: true, Statement: &statement, RecoveredRescan: true})} {
+		if strings.ContainsAny(text, "\x1b\x00") || strings.Contains(text, "\nforged") {
+			t.Fatal("terminal controls escaped evidence boundary", text)
+		}
+		for _, want := range []string{"user_declaration/1", "conflicting user declarations", "Expected ordered bytes:"} {
+			if !strings.Contains(text, want) {
+				t.Fatal("missing user evidence", want, text)
+			}
+		}
+	}
+	failed := NarrationChange(library.NarrationResult{LibraryID: "library:test", ApplyRequested: true, RecoveredRescan: true})
+	if strings.Contains(failed, "No library files were written") || !strings.Contains(failed, "Completed an earlier pending rescan") {
+		t.Fatal("failed write described as empty preview", failed)
+	}
+}

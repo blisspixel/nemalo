@@ -168,6 +168,11 @@ nemalo library list CATALOG|LIBRARY [--query TEXT]
 nemalo library recordings LIBRARY [--source archive:ITEM]
   List held recordings in declared track order; with --source, verify and
   index each track's timing.
+nemalo library narration LIBRARY --declaration FILE [--apply --plan DIGEST]
+  Preview an explicit user narration over exact held recording selections;
+  apply records it only with that preview's plan. No audio or holding changes.
+nemalo library narration LIBRARY --retract ID [--apply --plan DIGEST]
+  Preview or record withdrawal of one user statement, retaining its history.
 nemalo library related LIBRARY [--asset sha256:HASH] [--limit 10] [--offset 0]
   Group holdings that share an identifier an EPUB package or a source's
   metadata states, versions of one arXiv paper, files of one source item,

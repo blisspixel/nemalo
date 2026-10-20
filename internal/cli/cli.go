@@ -106,6 +106,8 @@ func Execute(ctx context.Context, args []string, out, errOut io.Writer, service 
 	recordingFormat := flags.String("recording", "", "declared recording format to acquire as a whole")
 	findText := flags.String("text", "", "exact text to locate")
 	planDigest := flags.String("plan", "", "plan digest from an import or cleanup preview")
+	narrationFile := flags.String("declaration", "", "explicit narration declaration JSON file")
+	retractNarration := flags.String("retract", "", "narration declaration ID to withdraw")
 	cleanupID := flags.String("cleanup", "", "cleanup ID to restore")
 	stop := flags.Bool("stop", false, "close a pending cleanup that cannot finish")
 	resume := flags.Bool("resume", false, "continue an existing recording directory")
@@ -426,6 +428,16 @@ func Execute(ctx context.Context, args []string, out, errOut io.Writer, service 
 		})
 		return next(write(data, nil, 0), present.NextAfterEvaluation(data, acquisition.Eligible(data, budget)))
 	case "library":
+		if action == "narration" {
+			if flags.NArg() != 1 || (*narrationFile == "") == (*retractNarration == "") || *apply != (*planDigest != "") {
+				return write(nil, errors.New("use library narration LIBRARY --declaration FILE or --retract ID to preview; then add --apply --plan DIGEST"), 2)
+			}
+			data, err := service.DeclareNarration(ctx, library.NarrationRequest{Library: flags.Arg(0), File: *narrationFile, Retract: *retractNarration, Apply: *apply, Plan: *planDigest})
+			if err != nil {
+				return write(data, err, 1)
+			}
+			return write(data, nil, 0)
+		}
 		if action == "import" {
 			if flags.NArg() != 2 {
 				return write(nil, errors.New("use library import LIBRARY SOURCE"), 2)
@@ -1013,6 +1025,8 @@ func flagApplies(command, action, name string) bool {
 			return name == "apply" || name == "scan"
 		case "recordings":
 			return name == "source"
+		case "narration":
+			return name == "declaration" || name == "retract" || name == "apply" || name == "plan"
 		case "related":
 			return name == "asset" || name == "limit" || name == "offset"
 		case "check":
@@ -1142,6 +1156,9 @@ func printData(out io.Writer, data any) error {
 		return err
 	case library.RecordingsResult:
 		_, err := io.WriteString(out, present.Recordings(value))
+		return err
+	case library.NarrationResult:
+		_, err := io.WriteString(out, present.NarrationChange(value))
 		return err
 	case library.CleanupResult:
 		_, err := io.WriteString(out, present.Cleanup(value))

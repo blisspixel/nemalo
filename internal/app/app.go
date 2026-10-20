@@ -486,6 +486,12 @@ func (s Service) Recordings(ctx context.Context, directory, source string) (libr
 	return library.Recordings(ctx, directory, source)
 }
 
+// DeclareNarration previews or journals an explicit user relationship over
+// existing, byte-bound recording selections. It performs no network access.
+func (s Service) DeclareNarration(ctx context.Context, request library.NarrationRequest) (library.NarrationResult, error) {
+	return library.DeclareNarration(ctx, request)
+}
+
 // CheckLibrary verifies a managed library read-only: stored and held bytes,
 // untracked store files, and unfinished operations.
 func (s Service) CheckLibrary(ctx context.Context, directory string) (library.LibraryCheck, error) {

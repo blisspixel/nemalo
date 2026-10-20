@@ -54,6 +54,9 @@ recordings, and two readings of one text stay apart. Narrations exist only
 for LibriVox readings on Archive; other providers' recording evidence, and
 merging across hosts by acoustic or declared evidence, remain later work. A
 library holding a narration record needs this version or newer.
+[Decision 0055](0055-user-narration-declarations.md) subsequently adds explicit
+user statements over held selections in a separate relationship journal. The
+provider-only fields and identities defined here retain their meaning.
 
 ## Validation
 

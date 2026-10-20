@@ -426,6 +426,16 @@ func Recordings(r library.RecordingsResult) string {
 			}
 		}
 	}
+	for _, group := range r.UserNarrations {
+		fmt.Fprintf(&b, "\nUser narration: %s (%s), %d recording(s)\n", Line(group.Narration.ID), Line(group.Narration.Evidence), len(group.Recordings))
+		for _, ref := range group.Recordings {
+			fmt.Fprintf(&b, "  %s %s (%s)\n", Line(ref.SourceID), Line(ref.Format), words(ref.Kind))
+		}
+	}
+	for _, statement := range r.Declarations {
+		b.WriteString("\nUser statement:\n")
+		narrationStatement(&b, statement, false)
+	}
 	for _, g := range r.ByteIdentities {
 		if len(g.Recordings) < 2 {
 			continue
@@ -708,4 +718,57 @@ func CollectionAcquire(r app.CollectionAcquireResult) string {
 		fmt.Fprintf(&b, "Transferred: %d bytes\nSome items did not complete; they are kept for review. Run the same command again to resume interrupted ones.\n", r.Transferred)
 	}
 	return b.String()
+}
+
+// NarrationChange shows the exact user statement and selected assets before
+// an append or withdrawal. Provider evidence and audio remain separate.
+func NarrationChange(r library.NarrationResult) string {
+	if r.LibraryID == "" {
+		return ""
+	}
+	var b strings.Builder
+	state := "Preview"
+	if r.Applied {
+		state = "Recorded"
+	} else if r.ApplyRequested {
+		state = "Narration change not completed"
+	}
+	fmt.Fprintf(&b, "%s: %s user narration declaration\n", state, words(r.Action))
+	field(&b, "Library", Exact(r.Library))
+	field(&b, "Library ID", Line(r.LibraryID))
+	if r.Statement != nil {
+		narrationStatement(&b, *r.Statement, true)
+	}
+	fmt.Fprintf(&b, "Verified assets: %d | Verified bytes: %d\n", r.VerifiedAssets, r.VerifiedBytes)
+	if r.AlreadyRecorded {
+		b.WriteString("The requested state is already recorded; no declaration append is needed.\n")
+	}
+	if r.RecoveredRescan {
+		b.WriteString("Completed an earlier pending rescan before this change.\n")
+	}
+	if !r.Applied {
+		field(&b, "Plan", Line(r.Plan))
+		if !r.ApplyRequested {
+			b.WriteString("Preview only. No library files were written.\n")
+		}
+	}
+	notes(&b, "Limitation", r.Limitations)
+	return b.String()
+}
+
+func narrationStatement(b *strings.Builder, s library.NarrationDeclarationStatus, assets bool) {
+	field(b, "Declaration", Line(s.ID))
+	field(b, "User narration", Line(s.Declaration.NarrationID))
+	field(b, "Evidence", Line(s.Evidence))
+	fmt.Fprintf(b, "State: %s | Active: %t\n", words(s.Status), s.Active)
+	for _, selection := range s.Selections {
+		ref := selection.Selection
+		fmt.Fprintf(b, "  Selection: %s | %s | %s | %s\n", Line(ref.SourceID), Line(ref.Format), words(ref.Kind), words(selection.Status))
+		field(b, "  Expected ordered bytes", Line(ref.ByteIdentity))
+		if assets {
+			for i, asset := range selection.Assets {
+				fmt.Fprintf(b, "    %d. %s\n", i+1, Line(asset))
+			}
+		}
+	}
 }

@@ -74,6 +74,8 @@ published prereleases may lag:
   chapters, and return decodable ranges; held recordings list their tracks in
   order with missing positions. Recordings from different source items relate
   by exact asset hashes in declared track order, independently of LibriVox.
+  Explicit user declarations can relate different encodings or track divisions
+  of one reading, with exact selections, visible conflicts, and withdrawal.
   M4B and M4A audiobooks list their timing and
   chapters and open in a player.
 - Read a held EPUB or PDF in the terminal with `nemalo read`: pages sized to
@@ -98,7 +100,7 @@ published prereleases may lag:
   and rescan as durable jobs that outlive the connection.
 
 Old-style RAR volume names, cleanup of RAR archives,
-recording relationships across different encodings beyond LibriVox, and a TUI view of jobs are planned. Single-file import is not
+and a TUI view of jobs are planned. Single-file import is not
 a full checked-library policy.
 File checks report limited evidence, never a safety or completeness guarantee.
 See [current capabilities and limits](docs/DEVELOPMENT.md) and the [roadmap](ROADMAP.md).

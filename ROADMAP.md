@@ -86,8 +86,11 @@ verified, not when code exists. No stage has a time estimate.
    ([decision 0053](docs/decisions/0053-collection-revision-previews.md)). Complete recordings
    with identical ordered asset hashes now share a byte identity across source
    items, including without LibriVox evidence
-   ([decision 0052](docs/decisions/0052-recording-byte-identities.md)); relating
-   different encodings beyond LibriVox remains in this stage.
+   ([decision 0052](docs/decisions/0052-recording-byte-identities.md)). Explicit
+   user declarations now relate different encodings and track divisions beyond
+   LibriVox, bound to held selections and ordered asset identities, with visible
+   unresolved evidence and withdrawal
+   ([decision 0055](docs/decisions/0055-user-narration-declarations.md)).
 2. **Intake completeness** (milestones 2 and 4). Old-style RAR volume names
    (`.rar`, `.r00`), split ZIPs, nested archives within the existing bounds,
    PAR2 sets inventoried and retained without repair, cleanup of RAR and 7z
@@ -167,8 +170,10 @@ identifier evidence for an explicit ISBN, DOI, or Open Library work or edition
 key, and they do not merge files on that evidence. See
 [decision 0010](docs/decisions/0010-bibliographic-identity.md). Recordings of
 one LibriVox reading are related by narration
-([decision 0044](docs/decisions/0044-narration-identity.md)); other providers'
-recording identity remains outstanding. A scan is recommended for a file the user
+([decision 0044](docs/decisions/0044-narration-identity.md)). Explicit user
+declarations relate other held recordings with their own evidence origin,
+independently of provider metadata
+([decision 0055](docs/decisions/0055-user-narration-declarations.md)). A scan is recommended for a file the user
 did not produce. The default is Microsoft Defender on Windows and installed
 ClamAV on Linux and macOS. `doctor` names that default. A supplied publisher
 SHA-256 confirms the published bytes. Nemalo does not install or update a
@@ -266,9 +271,10 @@ recovery are implemented. Single-file managed import is a separate journal; see
 identifier evidence is recorded on those holdings; see
 [decision 0010](docs/decisions/0010-bibliographic-identity.md). Recording, track,
 and cross-file relationships now include declared positions, related holdings,
-LibriVox narrations, and exact ordered recording byte identities (decisions
-0020, 0044, 0049, and 0052). Recording relationships across different encodings
-beyond LibriVox remain outstanding.
+LibriVox narrations, exact ordered recording byte identities, and explicit user
+declarations across encodings and track divisions (decisions 0020, 0044, 0049,
+0052, and 0055). The user relationship journal preserves provider provenance and
+holds only exact recording references and ordered-byte identities.
 
 Deliver `doctor`, configuration loading, explicit library/review paths, a versioned
 catalog schema, and a durable run journal. Use JSON metadata initially; the catalog
@@ -612,7 +618,11 @@ one reading in different formats share a narration while different readings
 stay apart ([decision 0044](docs/decisions/0044-narration-identity.md)). Complete
 recordings with identical ordered asset hashes share a byte identity across
 source items without changing their narration declarations
-([decision 0052](docs/decisions/0052-recording-byte-identities.md)). M4B and M4A
+([decision 0052](docs/decisions/0052-recording-byte-identities.md)). User-declared
+readings across different encodings and track divisions use exact held recording
+selections and those byte identities, with unresolved or conflicting statements
+reported separately from provider evidence
+([decision 0055](docs/decisions/0055-user-narration-declarations.md)). M4B and M4A
 files are assessed from their sample tables without decoding: truncation,
 misplaced samples, fragments, and protected audio are findings, chapters come
 from the QuickTime chapter track or a Nero list, and `mp4-audio/1` lists them

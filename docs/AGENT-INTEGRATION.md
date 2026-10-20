@@ -115,6 +115,16 @@ assessment evidence, and explicit partial/cancelled states. Do not compress
 uncertainty into a single `safe` boolean. Avoid dumping whole books or huge search
 results into tool responses; provide bounded excerpts and references when needed.
 
+`library_recordings` also returns `user_declarations` with active/retracted and
+per-selection match states, and `user_narrations` containing only wholly matched,
+unambiguous user assertions. These are `user_declaration/1` evidence, scoped by
+the returned library ID, separate from provider `narrations` and exact ordered
+`byte_identities`. `library_related` cites those same statements. Report stale or
+conflicting assertions rather than transferring them to new bytes or guessing
+from titles. This increment adds no narration write tool: explicit declaration
+and withdrawal use the CLI preview and plan token
+([decision 0055](decisions/0055-user-narration-declarations.md)).
+
 Long operations return a durable job ID. Jobs have bounded queues, progress,
 cancellation, and restart reconciliation. Application jobs do not depend on an
 MCP connection remaining open. Protocol-specific async capabilities can be added
