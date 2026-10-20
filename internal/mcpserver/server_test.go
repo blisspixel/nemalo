@@ -161,7 +161,12 @@ func TestToolsAreReadOnlyAndNetworkIsExplicit(t *testing.T) {
 
 func TestRecordingByteIdentitiesThroughReadOnlyMCP(t *testing.T) {
 	ctx := context.Background()
-	root := t.TempDir()
+	// MCP scopes resolve parent aliases, including macOS /var -> /private/var.
+	// Give the direct service the same path so the entire result is comparable.
+	root, err := filepath.EvalSymlinks(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
 	if _, err := library.Initialize(ctx, root); err != nil {
 		t.Fatal(err)
 	}
