@@ -327,9 +327,15 @@ func TestArchiveTreeUnknownProofStillRestoresRecordedSourceBytes(t *testing.T) {
 }
 
 func TestArchiveTreeSingleFileCleanupAndRestoreInterruptions(t *testing.T) {
+	testSingleArchiveCleanupAndRestoreInterruptions(t, func(t *testing.T) streamFixture {
+		return newCleanupTreeFixture(t, "zip", 1, nil)
+	})
+}
+
+func testSingleArchiveCleanupAndRestoreInterruptions(t *testing.T, fixture func(*testing.T) streamFixture) {
 	for _, stage := range []string{"partial", "linked", "held", "restored"} {
 		t.Run(stage, func(t *testing.T) {
-			f := newCleanupTreeFixture(t, "zip", 1, nil)
+			f := fixture(t)
 			p, err := Cleanup(context.Background(), CleanupRequest{Library: f.root, Folder: f.folder})
 			if err != nil {
 				t.Fatal(err)

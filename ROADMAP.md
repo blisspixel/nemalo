@@ -135,6 +135,10 @@ verified, not when code exists. No stage has a time estimate.
    one shared proof-read budget and verified held leaves. Exact chains bind to
    `archive-tree/1` and a leaf digest in the recoverable purge intent
    ([decision 0063](docs/decisions/0063-complete-archive-tree-cleanup.md)).
+   Every new 7z move now uses that versioned proof, including flat archives and
+   split sets. Historical unversioned 7z entries retain every part for restore;
+   acceptance is tracked in [issue 58](https://github.com/blisspixel/nemalo/issues/58)
+   ([decision 0065](docs/decisions/0065-versioned-7z-coverage.md)).
    RAR source cleanup remains unfinished; a RAR child preserves its outer source.
    A standalone read-only RAR5 framing accountant now binds physical records to
    the maintained reader's exact table. Historical RAR entries without a supported
@@ -493,6 +497,10 @@ in `archive_leaves`. Fresh purge repeats the whole-tree proof; its schema-2 grou
 also binds the canonical `leaf_digest`. Recovery never adopts changed leaf evidence
 or tries to reconstruct a partially purged tree
 ([decision 0063](docs/decisions/0063-complete-archive-tree-cleanup.md)).
+Flat 7z archives and sets now bind the same proof and exact leaves. Historical
+unversioned 7z entries retain every remaining part through cleanup/purge recovery
+for restore and a new checked cleanup
+([decision 0065](docs/decisions/0065-versioned-7z-coverage.md)).
 Disk-full and scanner-failure faults are injected in tests: a full disk
 during an import copy, a journal line, a cleanup copy, and an export, and a
 scanner that is unavailable, incomplete, failing, or timing out. Each leaves

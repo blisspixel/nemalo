@@ -89,3 +89,8 @@ entries. Each is now refused with a test, the packed-size rule replaced the
 physical-size check alone, and RARs are no longer moved. Afterwards, live: a 7z
 of an EPUB and an M4B, a seven-volume split 7z, and a ZIP made by 7-Zip moved,
 and a RAR stayed.
+
+The later [decision 0065](0065-versioned-7z-coverage.md) records versioned tree
+evidence for every new 7z move, including flat archives and sets. Unversioned
+historical 7z entries cannot resume cleanup or purge; retain their bytes for
+restore and establish current coverage through a new cleanup preview.

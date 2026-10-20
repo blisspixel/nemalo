@@ -1056,7 +1056,8 @@ func planArchive(ctx context.Context, src *os.Root, rel string, volumes []string
 		e.Reason = "the archive holds no book the library has; preserved"
 		return nil
 	}
-	if nested {
+	treeProof := nested || isSevenSource(rel)
+	if treeProof {
 		for _, f := range files {
 			if path.Dir(f) != path.Dir(rel) {
 				e.Reason = "archive tree parts do not share one exact parent; preserved"
@@ -1076,7 +1077,7 @@ func planArchive(ctx context.Context, src *os.Root, rel string, volumes []string
 	}
 	e.Disposition, e.Reason, e.Files, e.Holdings = "move", "every member is held with verified stored bytes", before, ids
 	e.ArchiveProof = zipProof
-	if nested {
+	if treeProof {
 		e.ArchiveProof = archiveTreeProof
 		e.ArchiveLeaves = leaves
 	}

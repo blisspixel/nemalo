@@ -225,6 +225,10 @@ as well as proof and indices. Validate all bindings before any source write or
 purge removal, once per entry/group rather than once per part. Unknown proofs
 retain bytes; malformed bindings require review. Restore uses recorded source
 bytes without re-extracting or replacing. Never reconstruct a partially purged tree.
+Every new 7z move, including a flat archive or split set, uses that same tree proof
+and exact leaf binding (decision 0065). Historical 7z-named archive entries/chunks
+without a supported proof cannot resume cleanup or purge. Keep all their parts
+for restore; stop, restore and preview a new cleanup to establish current coverage.
 `library/purge.go` (decision 0041) removes only held copies a current, verified holding
 also has, through its own previewed plan and manifest; receipts and intents stay.
 Readers and players get verified copies (`library open`/`export`), never stored

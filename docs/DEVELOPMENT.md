@@ -648,7 +648,8 @@ changed parts stay and recorded removals never adopt replacements. Unknown proof
 versions retain remaining bytes, while malformed bindings stop for review.
 An unreferenced manifest cannot authorize a retry. Older executables cannot read
 these cleanup entries or purge manifests; use this source version or newer to
-recover them. Ordinary-file/ZIP/7z legacy manifests retain their existing contract.
+recover them. Ordinary-file and ordinary-ZIP legacy manifests retain their existing
+contract.
 Historical RAR-named archive entries and old continuation names without a supported
 proof stay for restore. Cleanup resume stops for review; fresh and pending purge
 plans report `archive_not_accounted` and retain every file of the entry. This does
@@ -663,6 +664,15 @@ original-tree proof, each remaining source part and current holdings; it never
 reconstructs a partial tree. Unknown evidence retains bytes and malformed bindings
 stop before removal. Earlier executables refuse the new canonical leaf fields;
 use this source version or newer to restore or finish recovery.
+Every new 7z cleanup uses this same `archive-tree/1` contract, including a flat
+standalone archive or flat split set with only direct book leaves. Fresh purge
+repeats complete accounting and binds the exact file group and leaf digest.
+Historical 7z-named archive entries or chunks without a supported proof stop cleanup
+resume for review; fresh and pending purge retain all parts as `archive_not_accounted`.
+Their original bytes remain restorable without a reader. Stop an interrupted
+operation, restore what remains and preview a new cleanup to establish current
+coverage. No old manifest is rewritten. See
+[decision 0065](decisions/0065-versioned-7z-coverage.md).
 `library audit` on the library directory reports missing, changed, and review
 holdings and does not repair them. Snapshot audit still requires `--root`.
 An EPUB package identifier is recorded when it is an explicit ISBN, DOI, or

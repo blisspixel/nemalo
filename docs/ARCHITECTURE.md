@@ -470,6 +470,15 @@ bytes; malformed bindings stop before removal. RAR children and all unproven
 trees stay. Earlier executables refuse unfamiliar canonical leaf fields; restore
 with this source version or newer ([decision 0063](decisions/0063-complete-archive-tree-cleanup.md)).
 
+Every new 7z move uses that same versioned tree proof and exact leaf records,
+even for a flat standalone archive or split set. Fresh purge rechecks complete
+coverage and binds its group and leaf digest before removal. Historical 7z-named
+archive entries/chunks without supported evidence stop cleanup resume and retain
+all copies through fresh or pending purge. Restore returns their recorded bytes;
+stop, restore and preview a new cleanup to establish current coverage. Immutable
+old manifests are never migrated
+([decision 0065](decisions/0065-versioned-7z-coverage.md)).
+
 Private staging and a subprocess are not sandboxes. Go's
 [root-scoped filesystem APIs](https://go.dev/blog/osroot) are useful building blocks;
 external extraction needs a separately tested containment strategy. Linux isolation

@@ -26,7 +26,27 @@ type CleanupArchiveLeaf struct {
 }
 
 func versionedArchive(e CleanupEntry) bool {
-	return entryHasZIPParts(e) || entryHasRARFiles(e) || e.ArchiveProof != "" || len(e.ArchiveLeaves) != 0
+	return entryHasZIPParts(e) || entryHasRARFiles(e) || entryHasSevenFiles(e) || e.ArchiveProof != "" || len(e.ArchiveLeaves) != 0
+}
+
+func isSevenSource(name string) bool {
+	if strings.EqualFold(path.Ext(name), ".7z") {
+		return true
+	}
+	set, _, chunk := staging.VolumeOf(name)
+	return chunk && strings.EqualFold(path.Ext(set), ".7z")
+}
+
+func entryHasSevenFiles(e CleanupEntry) bool {
+	if e.Kind != "archive" {
+		return false
+	}
+	for _, f := range e.Files {
+		if isSevenSource(f.Path) {
+			return true
+		}
+	}
+	return false
 }
 
 // Historical manifests can name RAR sources without proof. A member-holding

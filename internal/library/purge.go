@@ -37,11 +37,11 @@ type PurgeRequest struct {
 // PurgeFile is one held file of the cleanup, indexed as restore indexes it.
 // Disposition before applying is purge, or why it stays: provenance_record
 // (an intake packet's receipt or intent), not_held (no held copy: never moved,
-// restored, or already purged), held_copy_changed, archive_not_accounted (a plain
-// ZIP no longer meets the current whole-container proof), or not_in_library (its
+// restored, or already purged), held_copy_changed, archive_not_accounted (an
+// archive lacks supported current coverage evidence), or not_in_library (its
 // bytes are not a current holding whose stored bytes verify). Outcome after
 // applying is purged, already_absent, held_copy_changed, or archive_not_accounted
-// (a plain ZIP no longer meets the current whole-container proof).
+// (an archive lacks supported current coverage evidence).
 type PurgeFile struct {
 	Index       int      `json:"index"`
 	Path        string   `json:"path"`
