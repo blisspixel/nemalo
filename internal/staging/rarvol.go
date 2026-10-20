@@ -43,7 +43,7 @@ func rarSnapshotName(old bool, index int) string {
 
 // snapshotRARSet probes each snapshot with no siblings before assembling it.
 // Reader-declared roles and ordinals are evidence, not a cryptographic set ID.
-func snapshotRARSet(ctx context.Context, exe string, src *os.Root, names []string, infos []fs.FileInfo, dst *os.Root, dir string, old bool, total int64, maxMembers int) (string, string, error) {
+func snapshotRARSet(ctx context.Context, exe string, src *os.Root, names []string, infos []fs.FileInfo, dst *os.Root, dir string, old bool, total int64, limits Limits) (string, string, error) {
 	probeCtx, cancel := context.WithTimeout(ctx, 2*time.Minute)
 	defer cancel()
 	remaining := int64(maxListing)
@@ -69,7 +69,7 @@ func snapshotRARSet(ctx context.Context, exe string, src *os.Root, names []strin
 		if got != kind {
 			return "", "", errors.New("RAR volumes disagree on their format; the set is preserved")
 		}
-		out, code, err := runSevenLimit(probeCtx, exe, nil, remaining, "l", "-slt", "-t"+kind, noPassword, "--", filepath.Join(dir, snapshot))
+		out, code, err := limits.run(probeCtx, exe, nil, remaining, "l", "-slt", "-t"+kind, noPassword, "--", filepath.Join(dir, snapshot))
 		remaining -= int64(len(out))
 		next := ""
 		if i+1 < len(names) {
@@ -81,7 +81,7 @@ func snapshotRARSet(ctx context.Context, exe string, src *os.Root, names []strin
 		}
 		entries, err := rarProbeMembers(probe)
 		listed += len(entries)
-		if err != nil || listed > maxMembers+len(names)-1 || !rarBoundary(entries, previous, i+1 < len(names)) {
+		if err != nil || listed > limits.memberLimit()+len(names)-1 || !rarBoundary(entries, previous, i+1 < len(names)) {
 			return "", "", fmt.Errorf("RAR volume %d has inconclusive or incompatible split-member continuity; the set is preserved", i+1)
 		}
 		last := entries[len(entries)-1]
@@ -95,7 +95,7 @@ func snapshotRARSet(ctx context.Context, exe string, src *os.Root, names []strin
 		}
 	}
 	archive := filepath.Join(dir, rarSnapshotName(old, 0))
-	out, code, err := runSevenLimit(probeCtx, exe, nil, remaining, "l", "-slt", "-t"+kind, noPassword, "--", archive)
+	out, code, err := limits.run(probeCtx, exe, nil, remaining, "l", "-slt", "-t"+kind, noPassword, "--", archive)
 	keys, ok := strictArchiveBlock(out)
 	_, hasError := keys["ERROR"]
 	if err != nil || code != 0 || !ok || hasError {

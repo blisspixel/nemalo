@@ -122,8 +122,20 @@ func Extract7z(ctx context.Context, src *os.Root, name string, dst *os.Root, sup
 	if err != nil {
 		return x, err
 	}
+	if limits.child && (kind == "Rar" || kind == "Rar5") {
+		probeCtx, cancel := context.WithTimeout(ctx, 2*time.Minute)
+		defer cancel()
+		out, code, err := limits.run(probeCtx, exe, nil, maxListing, "l", "-slt", "-t"+kind, noPassword, "--", filepath.Join(tmp, snapshot))
+		keys, ok := strictArchiveBlock(out)
+		_, hasError := keys["ERROR"]
+		if err != nil || code != 0 || !ok || hasError || keys["Type"] != kind || keys["Physical Size"] != strconv.FormatInt(info.Size(), 10) ||
+			keys["Multivolume"] != "-" || keys["Volumes"] != "1" || keys["Volume Index"] != "" || keys["Total Physical Size"] != "" ||
+			(keys["Embedded Stub Size"] != "" && keys["Embedded Stub Size"] != "0") {
+			return x, errors.New("the nested RAR does not establish one standalone container; volume or ambiguous evidence stays preserved")
+		}
+	}
 	x, err = extractSnapshot(ctx, exe, kind, filepath.Join(tmp, snapshot), info.Size(), dst, supported, limits)
-	if err == nil {
+	if err == nil && limits.tree == nil {
 		x.Whole = wholeArchive(ctx, exe, kind, filepath.Join(tmp, snapshot), "Physical Size", info.Size(), x.packed)
 	}
 	return x, err
@@ -194,7 +206,7 @@ func extractSnapshot(ctx context.Context, exe, kind, archive string, size int64,
 	x := Extraction{Members: []Member{}}
 	listCtx, cancel := context.WithTimeout(ctx, 2*time.Minute+time.Duration(size>>27)*time.Minute)
 	defer cancel()
-	listing, code, err := runSeven(listCtx, exe, nil, "l", "-slt", "-ba", "-t"+kind, noPassword, "--", archive)
+	listing, code, err := limits.run(listCtx, exe, nil, maxListing, "l", "-slt", "-ba", "-t"+kind, noPassword, "--", archive)
 	if listCtx.Err() != nil {
 		return x, errors.New("7-Zip did not list the archive within its deadline")
 	}
@@ -215,6 +227,16 @@ func extractSnapshot(ctx context.Context, exe, kind, archive string, size int64,
 	}
 	if len(entries) > limits.Members {
 		return x, fmt.Errorf("archive has %d members; the limit is %d", len(entries), limits.Members)
+	}
+	if err := limits.countMembers(len(entries)); err != nil {
+		return x, err
+	}
+	if limits.tree != nil {
+		names := make([]string, len(entries))
+		for i, e := range entries {
+			names[i] = e.name
+		}
+		limits.nestedBlocked = nestedVolumes(names)
 	}
 	count, folders := map[string]int{}, map[string]bool{}
 	for _, e := range entries {
@@ -248,7 +270,10 @@ func extractSnapshot(ctx context.Context, exe, kind, archive string, size int64,
 			x.Complete = false
 		}
 		if m.Disposition == "eligible" {
-			if total+m.Bytes > limits.TotalBytes {
+			if err := limits.reserveMember(m.Bytes); err != nil {
+				m.Disposition, m.Detail = "failed", err.Error()
+				x.Complete = false
+			} else if total+m.Bytes > limits.TotalBytes {
 				m.Disposition, m.Detail = "too_large", "archive total exceeds the extraction budget"
 				x.Complete = false
 			} else {
@@ -257,7 +282,7 @@ func extractSnapshot(ctx context.Context, exe, kind, archive string, size int64,
 				if err := safeio.EnsureSpaceIn(dst, m.Bytes); err != nil {
 					m.Disposition, m.Detail = "failed", err.Error()
 					x.Complete = false
-				} else if err := extractSeven(archiveCtx, exe, kind, archive, e, dst, staged, limits.MemberBytes); err != nil {
+				} else if err := extractSeven(archiveCtx, exe, kind, archive, e, dst, staged, limits); err != nil {
 					if ctx.Err() != nil {
 						return x, ctx.Err()
 					}
@@ -340,6 +365,11 @@ func parseListing(out []byte) ([]sevenEntry, error) {
 					e.packed, e.packedKnown = n, true
 				}
 			case "Volume Index", "Offset":
+				// A standalone RAR prints an empty member Volume Index.
+				// Empty is unknown; ZIP set checks still require known values.
+				if value == "" {
+					break
+				}
 				n, err := strconv.ParseInt(value, 10, 64)
 				valid := err == nil && n >= 0
 				e.malformed = e.malformed || !valid
@@ -474,7 +504,9 @@ func classifySeven(e sevenEntry, supported func(string) bool, limits Limits) (st
 		return "special", "not a regular file"
 	case e.encrypted:
 		return "encrypted", "encrypted members are not extracted"
-	case nestedArchive[strings.ToLower(path.Ext(name))]:
+	case limits.tree != nil && limits.nestedBlocked[name]:
+		return "nested_volume", "nested volume sets are not read; preserved in the outer archive"
+	case nestedArchive[strings.ToLower(path.Ext(name))] && (limits.tree == nil || !Supported(name)):
 		return "nested_archive", "preserved in the archive; not extracted"
 	case !supported(name):
 		return "unsupported_format", "preserved in the archive"
@@ -494,16 +526,16 @@ func classifySeven(e sevenEntry, supported func(string) bool, limits Limits) (st
 // extractSeven writes one member, selected by its exact name with wildcards
 // off, from 7-Zip's standard output, capped at its listed size plus one byte,
 // and checks its size and CRC. 7-Zip names no file on disk.
-func extractSeven(ctx context.Context, exe, kind, archive string, e sevenEntry, dst *os.Root, staged string, limit int64) error {
+func extractSeven(ctx context.Context, exe, kind, archive string, e sevenEntry, dst *os.Root, staged string, limits Limits) error {
 	out, err := dst.OpenFile(staged, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o600)
 	if err != nil {
 		return err
 	}
 	sum := crc32.NewIEEE()
-	w := &cappedWriter{w: io.MultiWriter(out, sum), limit: min(e.size, limit) + 1}
+	w := &cappedWriter{w: io.MultiWriter(out, sum), limit: min(e.size, limits.MemberBytes) + 1}
 	memberCtx, cancel := context.WithTimeout(ctx, 2*time.Minute+time.Duration(e.size>>26)*time.Minute)
 	defer cancel()
-	_, code, runErr := runSeven(memberCtx, exe, w, "e", "-so", "-spd", "-ssc", "-bd", "-t"+kind, noPassword, "--", archive, e.raw)
+	_, code, runErr := limits.run(memberCtx, exe, w, maxListing, "e", "-so", "-spd", "-ssc", "-bd", "-t"+kind, noPassword, "--", archive, e.raw)
 	closeErr := out.Close()
 	switch {
 	case memberCtx.Err() != nil:
@@ -549,6 +581,10 @@ func runSeven(ctx context.Context, exe string, out io.Writer, args ...string) ([
 }
 
 func runSevenLimit(ctx context.Context, exe string, out io.Writer, limit int64, args ...string) ([]byte, int, error) {
+	return runSevenBounded(ctx, exe, out, limit, nil, args...)
+}
+
+func runSevenBounded(ctx context.Context, exe string, out io.Writer, limit int64, diagnostics *allowance, args ...string) ([]byte, int, error) {
 	cmd := exec.CommandContext(ctx, exe, args...)
 	cmd.WaitDelay = 2 * time.Second
 	var buf bytes.Buffer
@@ -559,6 +595,12 @@ func runSevenLimit(ctx context.Context, exe string, out io.Writer, limit int64, 
 		cmd.Stdout = out
 	}
 	cmd.Stderr = io.Discard
+	if diagnostics != nil {
+		if out == nil {
+			cmd.Stdout = budgetWriter{cmd.Stdout, diagnostics}
+		}
+		cmd.Stderr = budgetWriter{io.Discard, diagnostics}
+	}
 	err := cmd.Run()
 	code := -1
 	var exit *exec.ExitError
@@ -680,18 +722,18 @@ func ExtractSet(ctx context.Context, src *os.Root, names []string, dst *os.Root,
 		archive := filepath.Join(tmp, "archive.7z")
 		headerCtx, cancel := context.WithTimeout(ctx, 2*time.Minute)
 		defer cancel()
-		out, code, err := runSeven(headerCtx, exe, nil, "l", "-slt", "-t"+kind, noPassword, "--", archive)
+		out, code, err := limits.run(headerCtx, exe, nil, maxListing, "l", "-slt", "-t"+kind, noPassword, "--", archive)
 		keys, ok := archiveBlock(out)
 		if err != nil || code != 0 || !ok || keys["Physical Size"] != strconv.FormatInt(total, 10) {
 			return x, errors.New("the joined volumes are not exactly one 7z archive; the set is preserved")
 		}
 		x, err = extractSnapshot(ctx, exe, kind, archive, total, dst, supported, limits)
-		if err == nil {
+		if err == nil && limits.tree == nil {
 			x.Whole = wholeArchive(ctx, exe, kind, archive, "Physical Size", total, x.packed)
 		}
 		return x, err
 	}
-	kind, archive, err := snapshotRARSet(ctx, exe, src, names, infos, tmpRoot, tmp, old, total, limits.Members)
+	kind, archive, err := snapshotRARSet(ctx, exe, src, names, infos, tmpRoot, tmp, old, total, limits)
 	if err != nil {
 		return x, err
 	}

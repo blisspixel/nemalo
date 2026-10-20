@@ -27,6 +27,10 @@ type Limits struct {
 	MemberBytes int64
 	TotalBytes  int64
 	Ratio       uint64
+	// Only ExtractTree enables traversal and shares its work across nodes.
+	tree          *treeBudget
+	child         bool
+	nestedBlocked map[string]bool
 }
 
 // Defaults bound one archive. EPUB, PDF, MP3, and MP4 audio are compressed, so a
@@ -44,6 +48,8 @@ type Member struct {
 	Disposition string `json:"disposition"`
 	Detail      string `json:"detail,omitempty"`
 	Staged      string `json:"-"`
+	// Chain is the exact outer-to-inner member selection in a tree result.
+	Chain []string `json:"-"`
 }
 
 // Extraction lists every member. Complete is false when any eligible member
@@ -81,15 +87,31 @@ func ExtractZip(ctx context.Context, src *os.Root, name string, dst *os.Root, su
 	defer f.Close()
 	archiveCtx, cancel := context.WithTimeout(ctx, archiveDeadline(info.Size()))
 	defer cancel()
-	z, err := assessment.OpenZIP(archiveCtx, f, info.Size(), maxListing, 2*maxArchiveSnapshot, limits.Members)
+	z, err := assessment.OpenZIP(archiveCtx, limits.reader(f), info.Size(), maxListing, 2*maxArchiveSnapshot, limits.memberLimit())
 	if err != nil {
 		return x, fmt.Errorf("not a readable ZIP archive: %w", err)
 	}
 	if len(z.File) > limits.Members {
 		return x, fmt.Errorf("archive has %d members; the limit is %d", len(z.File), limits.Members)
 	}
+	if err := limits.countMembers(len(z.File)); err != nil {
+		return x, err
+	}
+	if limits.tree != nil {
+		names := make([]string, len(z.File))
+		for i, entry := range z.File {
+			names[i] = entry.Name
+		}
+		limits.nestedBlocked = nestedVolumes(names)
+	}
 	var total int64
 	x.Complete = true
+	counts := map[string]int{}
+	if limits.tree != nil {
+		for _, entry := range z.File {
+			counts[entry.Name]++
+		}
+	}
 	// A member name is its provenance, so a repeated name extracts only once.
 	seen := map[string]bool{}
 	for i, entry := range z.File {
@@ -98,12 +120,15 @@ func ExtractZip(ctx context.Context, src *os.Root, name string, dst *os.Root, su
 		}
 		m := Member{Name: displayName(entry.Name), Bytes: int64(min(entry.UncompressedSize64, 1<<62))}
 		m.Disposition, m.Detail = classify(entry, supported, limits)
-		if m.Disposition == "eligible" && seen[entry.Name] {
+		if m.Disposition == "eligible" && (seen[entry.Name] || counts[entry.Name] > 1) {
 			m.Disposition, m.Detail = "duplicate_name", "another member has this exact name; preserved in the archive"
 		}
 		if m.Disposition == "eligible" {
 			seen[entry.Name] = true
-			if total+m.Bytes > limits.TotalBytes {
+			if err := limits.reserveMember(m.Bytes); err != nil {
+				m.Disposition, m.Detail = "failed", err.Error()
+				x.Complete = false
+			} else if total+m.Bytes > limits.TotalBytes {
 				m.Disposition, m.Detail = "too_large", "archive total exceeds the extraction budget"
 				x.Complete = false
 			} else {
@@ -145,7 +170,9 @@ func classify(entry *zip.File, supported func(string) bool, limits Limits) (stri
 		return "encrypted", "encrypted members are not extracted"
 	case entry.Method != zip.Store && entry.Method != zip.Deflate:
 		return "unsupported_method", fmt.Sprintf("compression method %d", entry.Method)
-	case nestedArchive[strings.ToLower(path.Ext(name))]:
+	case limits.tree != nil && limits.nestedBlocked[name]:
+		return "nested_volume", "nested volume sets are not read; preserved in the outer archive"
+	case nestedArchive[strings.ToLower(path.Ext(name))] && (limits.tree == nil || !Supported(name)):
 		return "nested_archive", "preserved in the archive; not extracted"
 	case !supported(name):
 		return "unsupported_format", "preserved in the archive"

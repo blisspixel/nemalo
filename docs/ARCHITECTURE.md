@@ -390,6 +390,14 @@ limits selected by the caller. Source-set evidence, member-level failures, and
 per-member journal recovery remain separate
 ([decision 0057](decisions/0057-split-zip-intake.md)).
 
+Nested standalone archives traverse through `staging.ExtractTree`, with one
+shared depth/member/output/read/diagnostic/process/deadline budget. Child copies
+are checked before traversal, and exact member-chain labels distinguish nested
+selections from historical direct names. Ingest still calls Import for every
+leaf; unavailable or changed pending selections stop new imports. Cleanup keeps
+the single-container extractor, so nested extraction grants no source-removal
+permission ([decision 0058](decisions/0058-bounded-nested-intake.md)).
+
 Private staging and a subprocess are not sandboxes. Go's
 [root-scoped filesystem APIs](https://go.dev/blog/osroot) are useful building blocks;
 external extraction needs a separately tested containment strategy. Linux isolation

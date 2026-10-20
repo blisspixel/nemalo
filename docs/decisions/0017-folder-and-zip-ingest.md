@@ -3,6 +3,9 @@
 Status: accepted and implemented, 2026-10-11. A production staging increment of
 milestone 2, built on the managed import of
 [decision 0009](0009-managed-epub-import.md).
+Nested traversal extends this service in
+[decision 0058](0058-bounded-nested-intake.md); the single-container extractor
+described below remains the cleanup path and still preserves nested members.
 
 ## Decision
 

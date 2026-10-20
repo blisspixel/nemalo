@@ -109,6 +109,10 @@ verified, not when code exists. No stage has a time estimate.
    Split ZIP intake now handles byte chunks and true disk segments through
    checked private snapshots; all split ZIP cleanup sources stay preserved
    ([decision 0057](docs/decisions/0057-split-zip-intake.md)).
+   Nested standalone ZIP/RAR/7z intake shares depth, output, member, reader,
+   diagnostic, process, and deadline limits across each outer archive tree;
+   nested sources and volume sets stay preserved
+   ([decision 0058](docs/decisions/0058-bounded-nested-intake.md)).
 3. **Audio access** (milestone 8). M4B and M4A byte ranges and decoded timing in
    content access, bounded ranges usable by an external player, and output
    demonstrated with a real audiobook reader or server.
@@ -353,9 +357,12 @@ set. Split ZIP byte streams (`.zip.001`) are joined and read through the Go ZIP
 extractor after a maintained-reader extent check. True `.z01`/`.zip` segments
 must present compatible sizes, ordinals, counts, and member tables through every
 part before exact-name extraction through 7-Zip. All split ZIP sources stay in
-cleanup ([decision 0057](docs/decisions/0057-split-zip-intake.md)). Nested archives
-([issue 50](https://github.com/blisspixel/nemalo/issues/50)) and PAR2 remain
-planned. Depends on milestone 1.
+cleanup ([decision 0057](docs/decisions/0057-split-zip-intake.md)). Nested standalone
+ZIP/RAR/7z archives now traverse through a shared four-level archive-tree budget
+and exact member-chain provenance. Nested volume sets remain preserved; cleanup
+keeps every outer source containing a nested archive
+([decision 0058](docs/decisions/0058-bounded-nested-intake.md)). PAR2 inventory
+and retention remain planned. Depends on milestone 1.
 
 Deliver recursive inventory, file-signature checks, ZIP handling, additional archive
 adapters, and private staging. Inventory includes links and unsupported entries as

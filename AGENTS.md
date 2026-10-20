@@ -167,6 +167,11 @@ The shared `assessment.OpenZIP` bounds directory parsing, ZIP64 count-driven
 preallocation, and lifetime compressed reads; retain EPUB's tighter budgets.
 An extraction failure marks ingest incomplete while separately verified members
 can still import; do not claim archive-wide publication atomicity.
+Nested intake is `staging.ExtractTree` (decision 0058): shared budgets include
+failed attempts, reader work, diagnostic stdout/stderr, subprocess calls, and
+the outer deadline. Keep four archive levels, exact chain provenance distinct
+from literal historical `!/` member names, and pending recovery first. Nested
+sets stay preserved. Cleanup must keep using single-container extraction.
 `library check` (decision 0024) is the read-only whole-library report; it never repairs.
 Source cleanup is `library/cleanup.go` and `restore.go` (decision 0022): move only held,
 verified bytes into the holding area via verified copy, hard-link publish, then source

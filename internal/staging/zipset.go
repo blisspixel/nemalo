@@ -38,16 +38,8 @@ func extractZIPSet(ctx context.Context, exe string, src *os.Root, names []string
 		if !zipSignature(snapshots, "archive.zip", false) {
 			return x, errors.New("the joined volumes are not an ordinary ZIP stream by signature; the set is preserved")
 		}
-		out, code, err := runSevenLimit(prepCtx, exe, nil, remaining, "l", "-slt", "-tzip", noPassword, "--", filepath.Join(dir, "archive.zip"))
-		keys, ok := strictArchiveBlock(out)
-		_, hasError := keys["ERROR"]
-		if err != nil || code != 0 || !ok || hasError ||
-			keys["Type"] != "zip" || keys["Physical Size"] != strconv.FormatInt(total, 10) ||
-			(keys["Embedded Stub Size"] != "" && keys["Embedded Stub Size"] != "0") ||
-			(keys["Multivolume"] != "" && keys["Multivolume"] != "-") ||
-			(keys["Volumes"] != "" && keys["Volumes"] != "1") ||
-			(keys["Volume Index"] != "" && keys["Volume Index"] != "0") || keys["Total Physical Size"] != "" {
-			return x, errors.New("the joined volumes do not establish exactly one ordinary ZIP without a stub, comment, warning, error, or tail; the set is preserved")
+		if err := ordinaryZIP(prepCtx, exe, filepath.Join(dir, "archive.zip"), total, remaining, limits); err != nil {
+			return x, err
 		}
 		cancel()
 		return ExtractZip(ctx, snapshots, "archive.zip", dst, supported, limits)
@@ -67,7 +59,7 @@ func extractZIPSet(ctx context.Context, exe string, src *os.Root, names []string
 	}
 	var table []byte
 	for i, name := range privateNames {
-		out, code, err := runSevenLimit(prepCtx, exe, nil, remaining, "l", "-slt", "-tzip", noPassword, "--", filepath.Join(dir, name))
+		out, code, err := limits.run(prepCtx, exe, nil, remaining, "l", "-slt", "-tzip", noPassword, "--", filepath.Join(dir, name))
 		remaining -= int64(len(out))
 		keys, ok := strictArchiveBlock(out)
 		_, hasError := keys["ERROR"]
@@ -85,7 +77,7 @@ func extractZIPSet(ctx context.Context, exe string, src *os.Root, names []string
 		body = bytes.TrimSpace(body)
 		if i == 0 {
 			entries, err := parseListing(body)
-			if err != nil || len(entries) > limits.Members || !zipMemberBounds(entries, infos, total) {
+			if err != nil || len(entries) > limits.memberLimit() || !zipMemberBounds(entries, infos, total) {
 				return x, errors.New("the ZIP member table has inconclusive or out-of-range disk, offset, or size evidence; the set is preserved")
 			}
 			table = body
@@ -95,6 +87,22 @@ func extractZIPSet(ctx context.Context, exe string, src *os.Root, names []string
 	}
 	cancel()
 	return extractSnapshot(ctx, exe, "zip", filepath.Join(dir, privateNames[0]), total, dst, supported, limits)
+}
+
+// ordinaryZIP supplies the maintained reader's extent and volume facts before
+// the same private bytes are handed to the standard ZIP extractor.
+func ordinaryZIP(ctx context.Context, exe, archive string, size, outputLimit int64, limits Limits) error {
+	out, code, err := limits.run(ctx, exe, nil, outputLimit, "l", "-slt", "-tzip", noPassword, "--", archive)
+	keys, ok := strictArchiveBlock(out)
+	_, hasError := keys["ERROR"]
+	if err != nil || code != 0 || !ok || hasError || keys["Type"] != "zip" || keys["Physical Size"] != strconv.FormatInt(size, 10) ||
+		(keys["Embedded Stub Size"] != "" && keys["Embedded Stub Size"] != "0") ||
+		(keys["Multivolume"] != "" && keys["Multivolume"] != "-") ||
+		(keys["Volumes"] != "" && keys["Volumes"] != "1") ||
+		(keys["Volume Index"] != "" && keys["Volume Index"] != "0") || keys["Total Physical Size"] != "" {
+		return errors.New("the private bytes do not establish exactly one ordinary ZIP without a stub, comment, warning, error, or tail; original sources are preserved")
+	}
+	return nil
 }
 
 func zipSignature(root *os.Root, name string, segmented bool) bool {

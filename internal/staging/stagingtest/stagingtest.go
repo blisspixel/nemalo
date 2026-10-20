@@ -4,6 +4,7 @@ package stagingtest
 
 import (
 	"bytes"
+	"crypto/sha256"
 	"fmt"
 	"hash/crc32"
 	"os"
@@ -20,6 +21,8 @@ const envDir = "NEMALO_STAGINGTEST_7Z"
 
 // Archive is what the stand-in reports for any archive it is asked about.
 type Archive struct {
+	// Body identifies a private snapshot when InstallMany supplies tree nodes.
+	Body []byte
 	// Kind is the type switch 7-Zip must be given, such as -tRar5 or -t7z.
 	Kind string
 	// Header is the archive block 7-Zip prints without -ba, one key per line.
@@ -48,11 +51,23 @@ func Main() {
 	if !ok {
 		return
 	}
+	args := os.Args[1:]
+	if _, err := os.Stat(filepath.Join(dir, "tree-profiles")); err == nil {
+		at := slices.Index(args, "--")
+		if at < 0 || at+1 >= len(args) {
+			os.Exit(7)
+		}
+		body, err := os.ReadFile(args[at+1])
+		profile, readErr := os.ReadFile(filepath.Join(dir, fmt.Sprintf("profile-%x", sha256.Sum256(body))))
+		if err != nil || readErr != nil {
+			os.Exit(7)
+		}
+		dir = string(profile)
+	}
 	read := func(name string) []byte {
 		b, _ := os.ReadFile(filepath.Join(dir, name))
 		return b
 	}
-	args := os.Args[1:]
 	kind := string(read("kind"))
 	if len(args) == 0 || !slices.Contains(args, "--") || !slices.Contains(args, kind) || !slices.Contains(args, "-pnemalo-no-password") {
 		os.Exit(7)
@@ -99,6 +114,29 @@ func Main() {
 		os.Exit(0)
 	}
 	os.Exit(7)
+}
+
+// InstallMany reports only registered snapshot bytes, allowing different
+// fixed handlers and member tables in one synthetic archive tree.
+func InstallMany(t testing.TB, archives ...Archive) {
+	t.Helper()
+	dir := t.TempDir()
+	for _, a := range archives {
+		if a.Kind == "-tzip" && a.Header == "" {
+			a.Header = fmt.Sprintf("Type = zip\nPhysical Size = %d\n", len(a.Body))
+		} else if (a.Kind == "-tRar" || a.Kind == "-tRar5") && a.Header == "" {
+			a.Header = fmt.Sprintf("Type = %s\nPhysical Size = %d\nMultivolume = -\nVolumes = 1\n", strings.TrimPrefix(a.Kind, "-t"), len(a.Body))
+		}
+		Install(t, a)
+		profile := os.Getenv(envDir)
+		if err := os.WriteFile(filepath.Join(dir, fmt.Sprintf("profile-%x", sha256.Sum256(a.Body))), []byte(profile), 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := os.WriteFile(filepath.Join(dir, "tree-profiles"), nil, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv(envDir, dir)
 }
 
 // Install makes staging run this test binary as 7-Zip, reporting a.

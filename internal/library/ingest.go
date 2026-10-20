@@ -18,9 +18,10 @@ import (
 	"github.com/blisspixel/nemalo/internal/safeio"
 	"github.com/blisspixel/nemalo/internal/scanner"
 	"github.com/blisspixel/nemalo/internal/staging"
+	"github.com/blisspixel/nemalo/internal/textsafe"
 )
 
-// IngestRequest imports every supported file, intake packet, and ZIP member
+// IngestRequest imports every supported file, intake packet, and archive member
 // under one explicit folder. Without Apply nothing is written to the library.
 type IngestRequest struct {
 	Library string
@@ -58,7 +59,7 @@ type IngestResult struct {
 
 var supportedImport = func(name string) bool { return importFormat(name) != "" }
 
-// ingestUnit is one import source: a file, an intake packet, or a ZIP archive
+// ingestUnit is one import source: a file, an intake packet, or an archive tree
 // whose members are imported in turn.
 type ingestUnit struct {
 	item    IngestItem
@@ -75,7 +76,7 @@ type ingestUnit struct {
 
 // Ingest inventories the folder once, then imports each candidate through the
 // same single-file import, journal, and recovery path as library import. An
-// intake packet is imported as a packet. ZIP archives are extracted one at a
+// intake packet is imported as a packet. Archive trees are extracted one at a
 // time into a private temporary directory that is removed before the next
 // archive; their members are recorded with the archive path as provenance
 // ("ARCHIVE!/MEMBER"), which is also how an interrupted member import resumes.
@@ -84,9 +85,33 @@ type ingestUnit struct {
 func Ingest(ctx context.Context, request IngestRequest) (result IngestResult, err error) {
 	result = IngestResult{SchemaVersion: 1, Applied: request.Apply, Items: []IngestItem{}, Limitations: []string{
 		"The folder and its archives are preserved. Nothing is moved or deleted; cleanup is a separate, later step.",
-		"Only EPUB, PDF, MP3, M4B, and M4A files, intake packets, and members of ZIP archives, and of RAR and 7z archives when 7-Zip is installed, are imported. Other files and archive formats are listed, not imported.",
+		"Only EPUB, PDF, MP3, M4B, and M4A files, completed intake packets, and supported archive members are imported. RAR, 7z, split ZIPs, and nested ZIPs need installed 7-Zip. Unsupported variants stay listed.",
+		"Each outer archive tree has four archive levels, 10,000 members, and a shared 1 GiB copy allowance including failed attempts. Nested volume sets stay preserved.",
 		"Each import is assessed and journaled like library import. A no-detection scan is not proof of safety.",
 	}}
+	defer func() {
+		for _, item := range result.Items {
+			switch item.Outcome {
+			case "checked":
+				result.Checked++
+				result.Imported++
+			case "review":
+				result.Review++
+				result.Imported++
+			case "failed":
+				result.Failed++
+			case "packet_part", "archive_volume":
+			default:
+				result.NotImported++
+			}
+		}
+		if err != nil || result.Failed > 0 {
+			result.Complete = false
+		}
+		if err == nil && !result.Complete {
+			err = errors.New("ingest incomplete; see item outcomes")
+		}
+	}()
 	libraryRoot, err := filepath.Abs(request.Library)
 	if err != nil {
 		return result, err
@@ -173,7 +198,7 @@ func Ingest(ctx context.Context, request IngestRequest) (result IngestResult, er
 		prescan(ctx, files, av, cache)
 		av = cachedScanner{cache: cache, fallback: av}
 	}
-	importOne := func(item IngestItem, file, label string) {
+	importOne := func(item IngestItem, file, label string) error {
 		r, importErr := Import(ctx, ImportRequest{Library: libraryRoot, Source: file, Apply: request.Apply, Scan: request.Scan, Scanner: av, Label: label})
 		item.Import = &r
 		switch {
@@ -185,6 +210,7 @@ func Ingest(ctx context.Context, request IngestRequest) (result IngestResult, er
 			item.Outcome = "review"
 		}
 		result.Items = append(result.Items, item)
+		return importErr
 	}
 	for n, u := range units {
 		if err := ctx.Err(); err != nil {
@@ -202,24 +228,6 @@ func Ingest(ctx context.Context, request IngestRequest) (result IngestResult, er
 		if err := ingestArchive(ctx, src, folder, dir, u, resume, request.Scan, av, cache, &result, importOne); err != nil {
 			return result, err
 		}
-	}
-	for _, item := range result.Items {
-		switch item.Outcome {
-		case "checked":
-			result.Checked++
-			result.Imported++
-		case "review":
-			result.Review++
-			result.Imported++
-		case "failed":
-			result.Failed++
-		case "packet_part", "archive_volume":
-		default:
-			result.NotImported++
-		}
-	}
-	if !result.Complete || result.Failed > 0 {
-		return result, errors.New("ingest incomplete; see item outcomes")
 	}
 	return result, nil
 }
@@ -357,10 +365,10 @@ func planIngest(folder string, entries []inventory.Entry, result *IngestResult) 
 
 // ingestArchive extracts one ZIP, RAR, or 7z archive into its own staging
 // directory, imports the
-// extracted members with "ARCHIVE!/MEMBER" provenance, and removes the staging
+// extracted members with direct or nested selection provenance, and removes the staging
 // directory before returning, so staging never holds more than one archive's
 // extraction budget. resumeLabel binds the original pending member provenance.
-func ingestArchive(ctx context.Context, src *os.Root, folder, dir string, u ingestUnit, resumeLabel string, scan bool, av assessment.Scanner, cache map[string]scanner.Result, result *IngestResult, importOne func(IngestItem, string, string)) (err error) {
+func ingestArchive(ctx context.Context, src *os.Root, folder, dir string, u ingestUnit, resumeLabel string, scan bool, av assessment.Scanner, cache map[string]scanner.Result, result *IngestResult, importOne func(IngestItem, string, string) error) (err error) {
 	_, resume, _ := strings.Cut(resumeLabel, "!/")
 	if err := os.Mkdir(dir, 0o700); err != nil {
 		return err
@@ -382,13 +390,13 @@ func ingestArchive(ctx context.Context, src *os.Root, folder, dir string, u inge
 	item := u.item
 	var members staging.Extraction
 	var extractErr error
-	if len(u.volumes) > 0 {
-		members, extractErr = staging.ExtractSet(ctx, src, u.volumes, stage, supportedImport, staging.Defaults())
-	} else {
-		members, extractErr = staging.Extract(ctx, src, rel, stage, supportedImport, staging.Defaults())
+	names := u.volumes
+	if len(names) == 0 {
+		names = []string{rel}
 	}
+	members, extractErr = staging.ExtractTree(ctx, src, names, stage, supportedImport, staging.Defaults())
 	if errors.Is(extractErr, staging.ErrNoArchiveTool) {
-		// Without 7-Zip a RAR or 7z is listed and preserved, as before.
+		// Without 7-Zip a RAR, 7z, or split ZIP is listed and preserved.
 		item.Outcome, item.Detail = "not_imported", extractErr.Error()
 		result.Items = append(result.Items, item)
 		if resume != "" {
@@ -419,7 +427,7 @@ func ingestArchive(ctx context.Context, src *os.Root, folder, dir string, u inge
 			extracted = append(extracted, m)
 			continue
 		}
-		memberItem := IngestItem{Source: u.item.Source + "!/" + m.Name, Kind: "archive_member", Outcome: "not_imported", Detail: firstNonEmpty(m.Detail, m.Disposition)}
+		memberItem := IngestItem{Source: u.item.Source + "!/" + archiveMemberSelection(m), Kind: "archive_member", Outcome: "not_imported", Detail: firstNonEmpty(m.Detail, m.Disposition)}
 		if m.Disposition == "failed" {
 			memberItem.Outcome = "failed"
 		}
@@ -428,7 +436,7 @@ func ingestArchive(ctx context.Context, src *os.Root, folder, dir string, u inge
 	if resume != "" {
 		at := -1
 		for i, m := range extracted {
-			if m.Name == resume {
+			if archiveMemberSelection(m) == resume {
 				at = i
 				break
 			}
@@ -449,16 +457,30 @@ func ingestArchive(ctx context.Context, src *os.Root, folder, dir string, u inge
 		if err := ctx.Err(); err != nil {
 			return err
 		}
-		source, label := u.item.Source+"!/"+m.Name, u.file+"!/"+m.Name
-		if resume != "" && m.Name == resume {
+		selection := archiveMemberSelection(m)
+		source, label := u.item.Source+"!/"+selection, u.file+"!/"+selection
+		if resume != "" && selection == resume {
 			label = resumeLabel
 			if u.resumeSource != "" {
-				source = u.resumeSource + "!/" + m.Name
+				source = u.resumeSource + "!/" + selection
 			}
 		}
-		importOne(IngestItem{Source: source, Kind: "archive_member"}, filepath.Join(dir, m.Staged), label)
+		importErr := importOne(IngestItem{Source: source, Kind: "archive_member"}, filepath.Join(dir, m.Staged), label)
+		if resume != "" && selection == resume && importErr != nil {
+			return importErr
+		}
 	}
 	return nil
+}
+
+// A leading slash cannot name an eligible historical direct member. Reserve
+// that suffix for a canonical JSON chain; keep every direct label unchanged.
+func archiveMemberSelection(m staging.Member) string {
+	if len(m.Chain) <= 1 {
+		return m.Name
+	}
+	data, _ := textsafe.MarshalJSON(m.Chain, false) // A string slice always marshals.
+	return "/" + string(data)
 }
 
 func firstNonEmpty(values ...string) string {

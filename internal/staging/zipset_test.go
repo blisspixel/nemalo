@@ -126,6 +126,8 @@ func TestSplitZIPRefusesInconclusiveEvidenceBeforeExtraction(t *testing.T) {
 		{"nonzero exit", "list.code", "", "2"},
 		{"member disk", "listing.txt", "Volume Index = 0", "Volume Index = 2"},
 		{"unknown disk", "listing.txt", "Volume Index = 0\n", ""},
+		{"unstated disk", "listing.txt", "Volume Index = 0\n", "Volume Index = \n"},
+		{"unstated offset", "listing.txt", "Offset = 4\n", "Offset = \n"},
 		{"unknown uncompressed size", "listing.txt", "Size = 16\n", ""},
 		{"negative offset", "listing.txt", "Offset = 4", "Offset = -1"},
 		{"offset beyond disk", "listing.txt", "Offset = 4", "Offset = 200"},

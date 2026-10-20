@@ -3,6 +3,7 @@ package staging
 import (
 	"bytes"
 	"context"
+	"crypto/sha256"
 	"encoding/hex"
 	"errors"
 	"fmt"
@@ -12,6 +13,7 @@ import (
 	"slices"
 	"strings"
 	"testing"
+	"time"
 )
 
 // fakeSeven answers as 7-Zip from NEMALO_FAKE_7Z: listing.txt for "l", and
@@ -19,6 +21,24 @@ import (
 func fakeSeven() {
 	dir := os.Getenv("NEMALO_FAKE_7Z")
 	args := os.Args[1:]
+	if _, err := os.Stat(filepath.Join(dir, "tree-profiles")); err == nil {
+		at := slices.Index(args, "--")
+		if at < 0 || at+1 >= len(args) {
+			os.Exit(7)
+		}
+		body, err := os.ReadFile(args[at+1])
+		profile, readErr := os.ReadFile(filepath.Join(dir, fmt.Sprintf("profile-%x", sha256.Sum256(body))))
+		if err != nil || readErr != nil {
+			os.Exit(7)
+		}
+		calls, err := os.OpenFile(filepath.Join(dir, "calls"), os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0o600)
+		if err != nil {
+			os.Exit(7)
+		}
+		calls.WriteString("1")
+		calls.Close()
+		dir = string(profile)
+	}
 	code := func(name string) int {
 		b, err := os.ReadFile(filepath.Join(dir, name))
 		if err != nil {
@@ -29,11 +49,20 @@ func fakeSeven() {
 		return n
 	}
 	kind := os.Getenv("NEMALO_FAKE_7Z_TYPE")
+	if b, err := os.ReadFile(filepath.Join(dir, "kind.txt")); err == nil {
+		kind = string(b)
+	}
 	if kind == "" {
 		kind = "-tRar5"
 	}
 	if len(args) == 0 || !slices.Contains(args, noPassword) || !slices.Contains(args, "--") || !slices.Contains(args, kind) {
 		os.Exit(7)
+	}
+	if b, err := os.ReadFile(filepath.Join(dir, "stderr")); err == nil {
+		os.Stderr.Write(b)
+	}
+	if b, _ := os.ReadFile(filepath.Join(dir, "wait")); len(b) != 0 {
+		time.Sleep(30 * time.Second)
 	}
 	if copies, err := os.ReadFile(filepath.Join(dir, "copies.list")); err == nil {
 		archive := args[slices.Index(args, "--")+1]

@@ -513,6 +513,34 @@ independently verified extracted members can still be imported. This is the
 existing per-member recovery model, not archive-wide publication atomicity.
 An interrupted member previously read from a standalone terminal `.zip` resumes
 first under that original source label when its segments are now grouped.
+Nested standalone ZIP, RAR, and 7z children now traverse through the same
+extractors and Import service, with four archive levels including the outer
+container. Every tree shares 10,000 members, a 1 GiB copy allowance charged as
+declared bytes plus the detection byte for every attempt, 8 GiB of Go ZIP read
+work, 16 MiB of listing stdout and subprocess stderr, 1,000 subprocess calls,
+and the outer archive deadline (at most an hour). Failed attempts do not refund
+their allowance. Existing per-member, ratio, source-copy, and free-space checks
+still apply. Reader snapshots can add up to 4 GiB beside the tree's bounded
+member staging, so an outer snapshot can need 5 GiB of temporary space in total.
+Traversal and extraction are sequential; a subprocess is not a memory sandbox.
+
+Nested ZIPs require installed 7-Zip to establish one ordinary container before
+the Go extractor reads the same private bytes. Nested RARs must explicitly
+declare one non-volume container. Recognized nested sets, unsupported archive
+types, and missing reader capabilities stay preserved with reasons. Tree intake
+refuses every occurrence of a duplicate member name; it never cites an ambiguous
+first occurrence. Depth/work limits or corrupt children make ingest incomplete,
+while separately verified leaves can still import. Cleanup retains outer sources
+with nested material.
+
+Direct labels remain `OUTER!/MEMBER`, even when a literal member name contains
+`!/`. A nested selection is `OUTER!//["inner.zip","book.epub"]`, using a canonical
+JSON array of exact member names. The leading slash distinguishes it from any
+previously eligible direct member. The existing 4,096-byte record limit applies
+before publication. Recovery re-extracts that exact selection, resumes it first,
+and stops on unavailable or changed bytes; historical labels stay unchanged.
+Cancellation and early errors report incomplete results with counted outcomes.
+See [decision 0058](decisions/0058-bounded-nested-intake.md).
 The folder and its archives are never changed. See
 [decision 0017](decisions/0017-folder-and-zip-ingest.md).
 
