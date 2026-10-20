@@ -78,6 +78,15 @@ and smokes a cgo-free executable. Tools are pinned in `go.mod`, not installed gl
 For docs, check links/anchors, examples, consistency, whitespace, and citations.
 Hosted CI passes require an actual hosted run; a local pass is not equivalent.
 
+Before closing an issue manually or merging a PR that will auto-close it, comment
+on the issue with what changed, code/commit/PR links, checks actually run and their
+results, and the user-visible outcome against its acceptance criteria. Link longer
+receipts; state skipped checks and material limitations. A merge alone does not
+prove release or live acceptance. Keep unmet criteria open unless an agreed scope
+change links durable follow-up work. Duplicate or not-planned closures need a
+reason and a link to the canonical issue or decision. Documentation-only work may
+cite link and consistency review without adding test requirements.
+
 Shared operations belong in `internal/app`; CLI and TUI use those services and
 `internal/present`. Provider networking is in `internal/discovery`; read-only
 root-scoped inventory is in `internal/inventory`; configuration is in
