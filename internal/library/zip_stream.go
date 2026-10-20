@@ -93,6 +93,8 @@ func zipSetParts(e CleanupEntry) ([]string, bool) {
 	if !ok || n != 1 || !strings.EqualFold(filepath.Ext(set), ".zip") {
 		return nil, false
 	}
+	// Staging names are native paths; manifests always use portable slashes.
+	set = filepath.ToSlash(set)
 	var total int64
 	parts := make([]string, len(e.Files))
 	for i, f := range e.Files {
@@ -103,7 +105,7 @@ func zipSetParts(e CleanupEntry) ([]string, bool) {
 				other, ordinal, ok = f.Path, i+1, strings.EqualFold(path.Ext(f.Path), ".zip")
 			}
 		}
-		if !ok || ordinal != i+1 || !strings.EqualFold(other, set) || path.Dir(f.Path) != path.Dir(e.Path) || f.Bytes < 1 || f.Bytes > 256<<20 || total > (4<<30)-f.Bytes {
+		if !ok || ordinal != i+1 || !strings.EqualFold(filepath.ToSlash(other), set) || path.Dir(f.Path) != path.Dir(e.Path) || f.Bytes < 1 || f.Bytes > 256<<20 || total > (4<<30)-f.Bytes {
 			return nil, false
 		}
 		total += f.Bytes

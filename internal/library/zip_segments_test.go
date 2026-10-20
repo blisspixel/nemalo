@@ -18,6 +18,19 @@ import (
 
 type zipFixtureFactory func(*testing.T, int, func([]byte) []byte) streamFixture
 
+func TestZIPSegmentManifestFamilyUsesPortablePaths(t *testing.T) {
+	e := CleanupEntry{Kind: "archive", Path: "nested/books/parts.z01", ArchiveProof: zipSegmentsProof,
+		Files: []CleanupFile{{Path: "nested/books/parts.z01", Bytes: 100}, {Path: "nested/books/parts.z02", Bytes: 100}, {Path: "nested/books/parts.zip", Bytes: 100}}}
+	parts, ok := zipSetParts(e)
+	if !ok || !supportedZIPSet(e) || !reflect.DeepEqual(parts, []string{"parts.z01", "parts.z02", "parts.zip"}) {
+		t.Fatal("portable manifest disagrees with native family keys", parts, ok)
+	}
+	e.Files[2].Path = "nested/other/parts.zip"
+	if _, ok := zipSetParts(e); ok {
+		t.Fatal("a different exact parent was accepted")
+	}
+}
+
 func (f streamFixture) proof() string {
 	return zipProofFor(CleanupEntry{Path: f.names[0]})
 }
