@@ -534,8 +534,12 @@ that marker, tails, warnings, errors, or contradictory evidence preserve the set
 Old RAR rollover also uses `.zNN`: conflicting or absent RAR/ZIP anchors preserve
 the ambiguous paths. A set has 2 to 1,000 volumes and at most 4 GiB. Preparation
 shares two minutes and 16 MiB of reader output. Both ZIP layouts require installed
-7-Zip for container evidence; missing tools preserve every part. Split ZIP cleanup
-always keeps the sources. See [decision 0057](decisions/0057-split-zip-intake.md).
+7-Zip for container evidence; missing tools preserve every part. True disk segments
+stay in cleanup. Complete byte chunks can move as one recoverable set after the
+shared coverage proof and held-member checks; all parts must share one exact
+parent. Source rehashes share the cleanup's 64 GiB hash-work limit. See decisions
+[0057](decisions/0057-split-zip-intake.md) and
+[0061](decisions/0061-split-zip-stream-cleanup.md).
 
 Go ZIP directory parsing has a 16 MiB read budget before member processing,
 with ZIP64 counts bounded before decoder preallocation, a persistent 8 GiB
@@ -608,6 +612,15 @@ does not change intake. Purge rechecks ZIPs, including historical cleanup copies
 and pending purge manifests, and reports `archive_not_accounted` when the proof
 fails. Those bytes remain available to restore. See
 [decision 0060](decisions/0060-complete-zip-cleanup-accounting.md).
+For ZIP byte chunks, a fresh purge verifies the entire held set again. Its JSON
+preview includes `archive_groups`, with the supported proof and ordered file
+indices bound to the plan digest. A schema-2 purge manifest records that proof
+before removal. Resume rehashes remaining parts and checks current holdings;
+changed parts stay and recorded removals never adopt replacements. Unknown proof
+versions retain remaining bytes, while malformed bindings stop for review.
+An unreferenced manifest cannot authorize a retry. Older executables cannot read
+these cleanup entries or purge manifests; use this source version or newer to
+recover them. Ordinary-file/ZIP/7z legacy manifests retain their existing contract.
 `library audit` on the library directory reports missing, changed, and review
 holdings and does not repair them. Snapshot audit still requires `--root`.
 An EPUB package identifier is recorded when it is an explicit ISBN, DOI, or

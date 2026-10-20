@@ -51,13 +51,14 @@ type CleanupFile struct {
 // CleanupEntry is one folder entry: a loose file, an intake packet's parts, an
 // archive, or anything else. Only "move" entries are changed.
 type CleanupEntry struct {
-	Path        string        `json:"path"`
-	Kind        string        `json:"kind"`
-	Disposition string        `json:"disposition"`
-	Reason      string        `json:"reason"`
-	Files       []CleanupFile `json:"files,omitempty"`
-	Holdings    []string      `json:"holdings,omitempty"`
-	Outcome     string        `json:"outcome,omitempty"`
+	Path         string        `json:"path"`
+	Kind         string        `json:"kind"`
+	Disposition  string        `json:"disposition"`
+	Reason       string        `json:"reason"`
+	Files        []CleanupFile `json:"files,omitempty"`
+	Holdings     []string      `json:"holdings,omitempty"`
+	ArchiveProof string        `json:"archive_proof,omitempty"`
+	Outcome      string        `json:"outcome,omitempty"`
 }
 
 type CleanupRequest struct {
@@ -401,6 +402,13 @@ func stopCleanup(ctx context.Context, control *control, records []cleanupRecord,
 
 // runCleanup moves each planned entry not yet journaled, then completes.
 func runCleanup(ctx context.Context, control *control, store *os.Root, records []cleanupRecord, m cleanupManifest, result CleanupResult) (CleanupResult, error) {
+	for _, e := range m.Entries {
+		if e.Disposition == "move" && (entryHasZIPChunks(e) || e.ArchiveProof != "") {
+			if _, ok := zipStreamParts(e); !ok || e.ArchiveProof != zipStreamProof {
+				return result, fmt.Errorf("%w: unsupported ZIP stream cleanup proof", ErrStateReview)
+			}
+		}
+	}
 	result.CleanupID, result.Digest, result.Folder = m.CleanupID, m.Digest, m.Folder
 	result.HoldingArea = filepath.Join(result.Library, cleanupDir, m.CleanupID[len("cleanup:"):])
 	result.Entries = append([]CleanupEntry{}, m.Entries...)
@@ -692,7 +700,7 @@ func planCleanup(ctx context.Context, store, src *os.Root, lines []Holding) ([]C
 		byHash[h.SHA256] = h
 	}
 	verified := map[string]bool{}
-	hashed := int64(0)
+	remainingHashes := int64(maxPlanHashBytes)
 	held := func(sum string) (Holding, bool, error) {
 		h, ok := byHash[sum]
 		if !ok {
@@ -709,8 +717,8 @@ func planCleanup(ctx context.Context, store, src *os.Root, lines []Holding) ([]C
 		return h, err == nil, nil
 	}
 	hashFile := func(rel string) (CleanupFile, error) {
-		f, err := fileIdentity(ctx, src, rel)
-		if hashed += f.Bytes; hashed > maxPlanHashBytes {
+		f, err := fileIdentityWithin(ctx, src, rel, &remainingHashes)
+		if errors.Is(err, errIdentityBudget) {
 			return f, errors.New("the folder holds more than 64 GiB of candidate files; plan a smaller folder")
 		}
 		return f, err
@@ -917,12 +925,22 @@ func planCleanup(ctx context.Context, store, src *os.Root, lines []Holding) ([]C
 // a RAR or 7z must be whole as 7-Zip lists it, with no comment, offset, or
 // bytes outside its members. Members are staged privately and removed.
 func planArchive(ctx context.Context, src *os.Root, rel string, volumes []string, held func(string) (Holding, bool, error), hashFile func(string) (CleanupFile, error), e *CleanupEntry) error {
+	zipStream := false
 	if volumes != nil {
 		set, _, stream := staging.VolumeOf(volumes[0])
 		_, _, segmented := staging.ZIPSegmentOf(volumes[0])
-		if segmented || (stream && strings.EqualFold(filepath.Ext(set), ".zip")) {
-			e.Reason = "split ZIP byte accounting is not established for cleanup; preserved"
+		if segmented {
+			e.Reason = "segmented ZIP byte accounting is not established for cleanup; preserved"
 			return nil
+		}
+		zipStream = stream && strings.EqualFold(filepath.Ext(set), ".zip")
+		if zipStream {
+			for _, v := range volumes {
+				if path.Dir(v) != path.Dir(volumes[0]) {
+					e.Reason = "ZIP chunks do not share one exact parent; preserved"
+					return nil
+				}
+			}
 		}
 	}
 	// The archive's own bytes are fixed first; the same bytes must remain
@@ -969,7 +987,9 @@ func planArchive(ctx context.Context, src *os.Root, rel string, volumes []string
 		for i, v := range volumes {
 			names[i] = filepath.FromSlash(v)
 		}
-		x, err = staging.ExtractSet(ctx, src, names, stage, supportedImport, staging.Defaults())
+		limits := staging.Defaults()
+		limits.ZIPCoverage = zipStream
+		x, err = staging.ExtractSet(ctx, src, names, stage, supportedImport, limits)
 	} else {
 		x, err = staging.Extract(ctx, src, filepath.FromSlash(rel), stage, supportedImport, staging.Defaults())
 	}
@@ -978,6 +998,9 @@ func planArchive(ctx context.Context, src *os.Root, rel string, volumes []string
 		return ctx.Err()
 	case errors.Is(err, staging.ErrNoArchiveTool):
 		e.Reason = "7-Zip is not installed, so its members cannot be checked; preserved"
+		return nil
+	case errors.Is(err, staging.ErrZIPCoverage):
+		e.Reason = err.Error() + "; preserved"
 		return nil
 	case err != nil:
 		e.Reason = "the archive could not be read; preserved"
@@ -1018,7 +1041,7 @@ func planArchive(ctx context.Context, src *os.Root, rel string, volumes []string
 		return nil
 	}
 	for i, f := range files {
-		after, err := fileIdentity(ctx, src, f)
+		after, err := hashFile(f)
 		if err != nil {
 			return err
 		}
@@ -1028,11 +1051,18 @@ func planArchive(ctx context.Context, src *os.Root, rel string, volumes []string
 		}
 	}
 	e.Disposition, e.Reason, e.Files, e.Holdings = "move", "every member is held with verified stored bytes", before, ids
+	if zipStream {
+		e.ArchiveProof = zipStreamProof
+	}
 	return nil
 }
 
 // fileIdentity hashes one regular file through an opened handle.
 func fileIdentity(ctx context.Context, root *os.Root, rel string) (CleanupFile, error) {
+	return fileIdentityWithin(ctx, root, rel, nil)
+}
+
+func fileIdentityWithin(ctx context.Context, root *os.Root, rel string, remaining *int64) (CleanupFile, error) {
 	name := filepath.FromSlash(rel)
 	info, err := root.Lstat(name)
 	if err != nil {
@@ -1045,6 +1075,9 @@ func fileIdentity(ctx context.Context, root *os.Root, rel string) (CleanupFile, 
 	if info.Size() > assessment.MaxFileBytes(importFormat(rel)) {
 		return CleanupFile{Path: filepath.ToSlash(rel)}, errTooLarge
 	}
+	if remaining != nil && (info.Size() < 0 || info.Size() >= *remaining) {
+		return CleanupFile{}, errIdentityBudget
+	}
 	f, err := safeio.OpenRegular(root, name, info, os.O_RDONLY)
 	if err != nil {
 		return CleanupFile{}, err
@@ -1052,6 +1085,9 @@ func fileIdentity(ctx context.Context, root *os.Root, rel string) (CleanupFile, 
 	defer f.Close()
 	sum := sha256.New()
 	n, err := io.Copy(sum, io.LimitReader(importReader{ctx, f}, info.Size()+1))
+	if remaining != nil {
+		*remaining -= n
+	}
 	if err != nil {
 		return CleanupFile{}, err
 	}
@@ -1216,6 +1252,7 @@ func openCleanup(records []cleanupRecord) *cleanupRecord {
 }
 
 var errTooLarge = errors.New("file over the 256 MiB limit, or 2 GiB for an M4B or M4A")
+var errIdentityBudget = errors.New("identity hash budget exceeded")
 
 // receiptBinds checks that a packet receipt is a completed Nemalo receipt for
 // exactly this content.

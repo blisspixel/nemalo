@@ -19,6 +19,7 @@ import (
 	"time"
 
 	"github.com/blisspixel/nemalo/internal/safeio"
+	"github.com/blisspixel/nemalo/internal/staging"
 )
 
 // PurgeRequest removes held copies of one completed cleanup whose bytes the
@@ -52,29 +53,31 @@ type PurgeFile struct {
 }
 
 type PurgeResult struct {
-	SchemaVersion int         `json:"schema_version"`
-	Applied       bool        `json:"applied"`
-	Resumed       bool        `json:"resumed"`
-	Library       string      `json:"library"`
-	LibraryID     string      `json:"library_id,omitempty"`
-	CleanupID     string      `json:"cleanup_id"`
-	Folder        string      `json:"folder"`
-	Digest        string      `json:"plan_digest"`
-	Files         []PurgeFile `json:"files"`
-	Purge         int         `json:"purge"`
-	Keep          int         `json:"keep"`
-	PurgeBytes    int64       `json:"purge_bytes"`
-	Purged        int         `json:"purged"`
-	PurgedBytes   int64       `json:"purged_bytes"`
-	Limitations   []string    `json:"limitations"`
+	SchemaVersion int                 `json:"schema_version"`
+	Applied       bool                `json:"applied"`
+	Resumed       bool                `json:"resumed"`
+	Library       string              `json:"library"`
+	LibraryID     string              `json:"library_id,omitempty"`
+	CleanupID     string              `json:"cleanup_id"`
+	Folder        string              `json:"folder"`
+	Digest        string              `json:"plan_digest"`
+	Files         []PurgeFile         `json:"files"`
+	ArchiveGroups []PurgeArchiveGroup `json:"archive_groups,omitempty"`
+	Purge         int                 `json:"purge"`
+	Keep          int                 `json:"keep"`
+	PurgeBytes    int64               `json:"purge_bytes"`
+	Purged        int                 `json:"purged"`
+	PurgedBytes   int64               `json:"purged_bytes"`
+	Limitations   []string            `json:"limitations"`
 }
 
 type purgeManifest struct {
-	SchemaVersion int         `json:"schema_version"`
-	CleanupID     string      `json:"cleanup_id"`
-	LibraryID     string      `json:"library_id"`
-	Digest        string      `json:"plan_digest"`
-	Files         []PurgeFile `json:"files"`
+	SchemaVersion int                 `json:"schema_version"`
+	CleanupID     string              `json:"cleanup_id"`
+	LibraryID     string              `json:"library_id"`
+	Digest        string              `json:"plan_digest"`
+	Files         []PurgeFile         `json:"files"`
+	ArchiveGroups []PurgeArchiveGroup `json:"archive_groups,omitempty"`
 }
 
 func purgeLimitations() []string {
@@ -180,13 +183,17 @@ func Purge(ctx context.Context, request PurgeRequest) (result PurgeResult, err e
 			return result, err
 		}
 		result.Resumed = true
-		return runPurge(ctx, control, store, records, *open, pm, latestHoldings(lines), map[string]bool{}, result)
+		return runPurge(ctx, control, store, records, *open, pm, m, latestHoldings(lines), map[string]bool{}, result)
 	}
 	files, verified, err := planPurge(ctx, store, m, lines)
 	if err != nil {
 		return result, err
 	}
-	result.Files, result.Digest = files, purgeDigest(m.CleanupID, files)
+	groups, err := planZIPStreamPurge(ctx, store, m, lines, files, verified)
+	if err != nil {
+		return result, err
+	}
+	result.Files, result.ArchiveGroups, result.Digest = files, groups, purgePlanDigest(m.CleanupID, files, groups)
 	for _, f := range files {
 		if f.Disposition == "purge" {
 			result.Purge++
@@ -209,7 +216,10 @@ func Purge(ctx context.Context, request PurgeRequest) (result PurgeResult, err e
 		return result, err
 	}
 	rec := cleanupRecord{SchemaVersion: 1, Sequence: len(records) + 1, LibraryID: state.LibraryID, CleanupID: m.CleanupID, Event: "purge_started", Digest: result.Digest, Count: len(files), At: now()}
-	pm := purgeManifest{SchemaVersion: 1, CleanupID: m.CleanupID, LibraryID: state.LibraryID, Digest: result.Digest, Files: files}
+	pm := purgeManifest{SchemaVersion: 1, CleanupID: m.CleanupID, LibraryID: state.LibraryID, Digest: result.Digest, Files: files, ArchiveGroups: groups}
+	if len(groups) != 0 {
+		pm.SchemaVersion = 2
+	}
 	if rec.Manifest, err = writePurgeManifest(store, pm, rec.Sequence); err != nil {
 		return result, err
 	}
@@ -220,7 +230,7 @@ func Purge(ctx context.Context, request PurgeRequest) (result PurgeResult, err e
 		return result, err
 	}
 	records = append(records, rec)
-	return runPurge(ctx, control, store, records, rec, pm, latestHoldings(lines), verified, result)
+	return runPurge(ctx, control, store, records, rec, pm, m, latestHoldings(lines), verified, result)
 }
 
 // stopPurge closes a pending purge without removing anything more. Removals
@@ -355,8 +365,13 @@ func purgeDigest(cleanupID string, files []PurgeFile) string {
 
 // runPurge removes each planned file not yet journaled. verified holds the
 // stored-byte checks the plan just made; a resumed purge checks again.
-func runPurge(ctx context.Context, control *control, store *os.Root, records []cleanupRecord, started cleanupRecord, pm purgeManifest, current map[string]Holding, verified map[string]bool, result PurgeResult) (PurgeResult, error) {
+func runPurge(ctx context.Context, control *control, store *os.Root, records []cleanupRecord, started cleanupRecord, pm purgeManifest, m cleanupManifest, current map[string]Holding, verified map[string]bool, result PurgeResult) (PurgeResult, error) {
+	permissions, err := zipStreamPermissions(m, pm)
+	if err != nil {
+		return result, err
+	}
 	result.Digest, result.Files = pm.Digest, append([]PurgeFile{}, pm.Files...)
+	result.ArchiveGroups = pm.ArchiveGroups
 	done := map[int]string{}
 	for i := range records {
 		if records[i].Sequence > started.Sequence && records[i].CleanupID == pm.CleanupID && records[i].Event == "purge_entry" {
@@ -379,7 +394,12 @@ func runPurge(ctx context.Context, control *control, store *os.Root, records []c
 		if err := ctx.Err(); err != nil {
 			return result, err
 		}
-		outcome, err := purgeFile(ctx, store, path.Join(holding, "files", f.Path), f, current, verified)
+		outcome, err := "archive_not_accounted", error(nil)
+		if allowed, stream := permissions[f.Index]; (!stream && !isZIPChunk(f.Path)) || allowed {
+			outcome, err = purgeFile(ctx, store, path.Join(holding, "files", f.Path), f, current, verified)
+		} else {
+			outcome = retainedStreamOutcome(store, path.Join(holding, "files", f.Path), f)
+		}
 		if err != nil {
 			return result, err
 		}
@@ -467,7 +487,7 @@ func purgeFile(ctx context.Context, store *os.Root, held string, f PurgeFile, cu
 	// Pending purge manifests can predate the current proof. Check the same
 	// opened, rehashed ZIP before every removal, including resumed operations.
 	if strings.EqualFold(path.Ext(f.Path), ".zip") {
-		if accounted, _ := zipAccountedReader(ctx, h, before.Size()); !accounted {
+		if accounted, _ := staging.ZIPAccounted(ctx, h, before.Size()); !accounted {
 			return "archive_not_accounted", ctx.Err()
 		}
 	}
@@ -573,7 +593,8 @@ func readPurgeManifest(store *os.Root, started cleanupRecord, libraryID string) 
 	}
 	data := buf.Bytes()
 	sum := sha256.Sum256(data)
-	if len(data) > maxManifest || hex.EncodeToString(sum[:]) != started.Manifest || json.Unmarshal(data, &pm) != nil || pm.SchemaVersion != 1 || pm.CleanupID != started.CleanupID || pm.LibraryID != libraryID || pm.Digest != started.Digest || len(pm.Files) != started.Count {
+	if len(data) > maxManifest || hex.EncodeToString(sum[:]) != started.Manifest || canonical(data, &pm) != nil || (pm.SchemaVersion != 1 && pm.SchemaVersion != 2) || pm.CleanupID != started.CleanupID || pm.LibraryID != libraryID || pm.Digest != started.Digest || len(pm.Files) != started.Count ||
+		(pm.SchemaVersion == 1 && len(pm.ArchiveGroups) != 0) || (pm.SchemaVersion == 2 && len(pm.ArchiveGroups) == 0) {
 		return pm, fmt.Errorf("%w: purge manifest does not match its journal record", ErrStateReview)
 	}
 	for _, f := range pm.Files {

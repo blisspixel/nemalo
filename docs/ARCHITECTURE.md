@@ -400,11 +400,22 @@ Split ZIP byte chunks and true disk segments share this staging service and
 Import. Byte chunks are joined for the Go ZIP reader after a maintained-reader
 extent check. True segments must expose consistent member tables and exact
 sizes/ordinals through every private part. Both use the installed 7-Zip for
-container evidence; cleanup preserves all parts. The standard ZIP opener shares
+container evidence. Complete byte chunks can move as one recoverable cleanup
+entry after the shared `staging.ZIPAccounted` proof and held-member checks; true
+disk segments stay preserved. The standard ZIP opener shares
 assessment's directory and lifetime compressed-reader guards, with operation
 limits selected by the caller. Source-set evidence, member-level failures, and
 per-member journal recovery remain separate
 ([decision 0057](decisions/0057-split-zip-intake.md)).
+
+Byte-stream cleanup entries bind `zip-stream/1` evidence to exact part identities
+and holdings. A fresh purge repeats the complete check. Its schema-2 manifest
+binds versioned archive groups into the reviewed digest and durable intent.
+Partial recovery checks each remaining original part and current holdings against
+that supported proof, without pretending missing chunks form a whole archive.
+Unsupported evidence retains bytes; malformed bindings require review. Earlier
+executables refuse the new cleanup field and purge manifest version
+([decision 0061](decisions/0061-split-zip-stream-cleanup.md)).
 
 Nested standalone archives traverse through `staging.ExtractTree`, with one
 shared depth/member/output/read/diagnostic/process/deadline budget. Child copies

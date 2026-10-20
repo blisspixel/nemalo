@@ -11,9 +11,13 @@ import (
 	"regexp"
 	"strconv"
 	"time"
+
+	"github.com/blisspixel/nemalo/internal/safeio"
 )
 
 var zipSegment = regexp.MustCompile(`(?i)^(.+)\.z([0-9]{2,4})$`)
+
+var ErrZIPCoverage = errors.New("ZIP byte coverage is not established")
 
 // ZIPSegmentOf recognizes a PKZIP segment. The set names its required terminal
 // .zip sibling, not its first segment. A plain .zip is not itself a segment.
@@ -41,8 +45,25 @@ func extractZIPSet(ctx context.Context, exe string, src *os.Root, names []string
 		if err := ordinaryZIP(prepCtx, exe, filepath.Join(dir, "archive.zip"), total, remaining, limits); err != nil {
 			return x, err
 		}
+		if limits.ZIPCoverage {
+			info, err := snapshots.Lstat("archive.zip")
+			if err != nil {
+				return x, err
+			}
+			f, err := safeio.OpenRegular(snapshots, "archive.zip", info, os.O_RDONLY)
+			if err != nil {
+				return x, err
+			}
+			accounted, why := ZIPAccounted(prepCtx, f, total)
+			f.Close()
+			if !accounted {
+				return x, fmt.Errorf("%w: %s", ErrZIPCoverage, why)
+			}
+		}
 		cancel()
-		return ExtractZip(ctx, snapshots, "archive.zip", dst, supported, limits)
+		x, err := ExtractZip(ctx, snapshots, "archive.zip", dst, supported, limits)
+		x.Whole = limits.ZIPCoverage && err == nil
+		return x, err
 	}
 	privateNames := make([]string, len(names))
 	for i, name := range names {

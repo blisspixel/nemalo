@@ -78,6 +78,10 @@ Count alone cannot establish a set. No reference code is incorporated.
 
 ## Limits and validation
 
+The later [decision 0061](0061-split-zip-stream-cleanup.md) adds recoverable cleanup
+and version-bound purge of completely accounted byte chunks. The retention rule
+above remains in force for true disk segments and unproven sets.
+
 Self-extracting, spanned removable-media, header-encrypted, ambiguous, or otherwise
 unproven variants stay for review. In particular, raw archive comments cannot
 authorize or supply reader header evidence. Files and unsupported members remain

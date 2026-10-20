@@ -118,7 +118,9 @@ func TestSplitZIPIngestRetainsSourcesProvenanceAndRepeat(t *testing.T) {
 				t.Fatal(page, err)
 			}
 			saved := staging.SevenZip
-			staging.SevenZip = func() (string, error) { t.Fatal("split ZIP cleanup ran an archiver"); return "", nil }
+			if !stream {
+				staging.SevenZip = func() (string, error) { t.Fatal("segmented ZIP cleanup ran an archiver"); return "", nil }
+			}
 			t.Cleanup(func() { staging.SevenZip = saved })
 			plan, err := Cleanup(context.Background(), CleanupRequest{Library: root, Folder: folder})
 			if err != nil || len(plan.Entries) != len(before) {
@@ -129,7 +131,11 @@ func TestSplitZIPIngestRetainsSourcesProvenanceAndRepeat(t *testing.T) {
 					t.Fatal(entry)
 				}
 			}
-			if !strings.Contains(entryFor(t, plan, first).Reason, "split ZIP byte accounting") || !reflect.DeepEqual(before, snapshotTree(t, folder)) {
+			wantReason := "segmented ZIP byte accounting"
+			if stream {
+				wantReason = "notes.txt is not held"
+			}
+			if !strings.Contains(entryFor(t, plan, first).Reason, wantReason) || !reflect.DeepEqual(before, snapshotTree(t, folder)) {
 				t.Fatal(plan)
 			}
 		})

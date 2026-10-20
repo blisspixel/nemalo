@@ -107,7 +107,7 @@ verified, not when code exists. No stage has a time estimate.
    RAR cleanup sources stay preserved
    ([decision 0056](docs/decisions/0056-rar-volume-identity.md)).
    Split ZIP intake now handles byte chunks and true disk segments through
-   checked private snapshots; all split ZIP cleanup sources stay preserved
+   checked private snapshots
    ([decision 0057](docs/decisions/0057-split-zip-intake.md)).
    Nested standalone ZIP/RAR/7z intake shares depth, output, member, reader,
    diagnostic, process, and deadline limits across each outer archive tree;
@@ -123,6 +123,10 @@ verified, not when code exists. No stage has a time estimate.
    Ordinary ZIP cleanup now requires complete directory/local-record accounting;
    purge rechecks even historical held ZIPs and pending manifests before removal
    ([decision 0060](docs/decisions/0060-complete-zip-cleanup-accounting.md)).
+   Complete ZIP byte chunks now move as one recoverable set after the shared
+   coverage and held-member checks. Purge binds a current whole-set proof before
+   removing any part and rehashes remaining parts on resume; true ZIP disk
+   segments stay preserved ([decision 0061](docs/decisions/0061-split-zip-stream-cleanup.md)).
 3. **Audio access** (milestone 8). M4B and M4A byte ranges and decoded timing in
    content access, bounded ranges usable by an external player, and output
    demonstrated with a real audiobook reader or server.
@@ -366,16 +370,20 @@ ambiguous names, overlapping families, and unlinked boundaries preserve the
 set. Split ZIP byte streams (`.zip.001`) are joined and read through the Go ZIP
 extractor after a maintained-reader extent check. True `.z01`/`.zip` segments
 must present compatible sizes, ordinals, counts, and member tables through every
-part before exact-name extraction through 7-Zip. All split ZIP sources stay in
-cleanup ([decision 0057](docs/decisions/0057-split-zip-intake.md)). Nested standalone
+part before exact-name extraction through 7-Zip
+([decision 0057](docs/decisions/0057-split-zip-intake.md)). Complete byte chunks now
+qualify for recoverable whole-set cleanup; true disk segments stay preserved
+([decision 0061](docs/decisions/0061-split-zip-stream-cleanup.md)). Nested standalone
 ZIP/RAR/7z archives now traverse through a shared four-level archive-tree budget
 and exact member-chain provenance. Nested volume sets remain preserved; cleanup
 keeps every outer source containing a nested archive
 ([decision 0058](docs/decisions/0058-bounded-nested-intake.md)). `inspect --par2`
 now inventories bounded packet metadata and declared sets without verifying or
 repairing protected files. Recovery material stays preserved by ingest and
-cleanup ([decision 0059](docs/decisions/0059-par2-metadata-inventory.md)). Full
-milestone acceptance still needs the remaining platform and cleanup evidence.
+cleanup ([decision 0059](docs/decisions/0059-par2-metadata-inventory.md)). Native
+Windows junction/symbolic-link tests now run without privilege-based skips
+([decision 0008](docs/decisions/0008-filesystem-and-display-boundaries.md)). Full
+milestone acceptance still needs the remaining archive cleanup evidence.
 Depends on milestone 1.
 
 Deliver recursive inventory, file-signature checks, ZIP handling, additional archive
@@ -453,6 +461,10 @@ and split 7z sets move only when whole as 7-Zip lists them, and RARs stay
 ([decision 0051](docs/decisions/0051-cleanup-of-7z-and-split-sets.md)). `library check` reports missing, changed,
 untracked, and unscanned entries, unfinished operations, and held copies without
 changing anything ([decision 0024](docs/decisions/0024-library-check.md)).
+ZIP byte streams move as one set only with complete byte coverage and every
+member held. Purge binds the full set and its current proof to a durable intent,
+then verifies each remaining part independently during partial recovery
+([decision 0061](docs/decisions/0061-split-zip-stream-cleanup.md)).
 Disk-full and scanner-failure faults are injected in tests: a full disk
 during an import copy, a journal line, a cleanup copy, and an export, and a
 scanner that is unavailable, incomplete, failing, or timing out. Each leaves

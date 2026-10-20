@@ -166,7 +166,7 @@ boundary and an error-free assembled listing. Preserve aliases, overlapping
 families, unlinked boundaries, and unknown ordinals; never infer set identity
 from names/counts alone. RAR cleanup remains refused. Split ZIPs are decision
 0057: byte chunks join privately, true segments require consistent reader
-evidence through every part, and all split ZIP cleanup sources stay. Resolve
+evidence through every part. True disk segments stay in cleanup. Resolve
 `.zNN` RAR/ZIP naming only from explicit sibling anchors; preserve ambiguity.
 The shared `assessment.OpenZIP` bounds directory parsing, ZIP64 count-driven
 preallocation, and lifetime compressed reads; retain EPUB's tighter budgets.
@@ -188,6 +188,12 @@ Plain ZIP cleanup and purge share complete local/central/descriptor accounting
 and a 16 MiB proof-read budget (decision 0060). Preserve comments, unknown metadata
 and unsupported layouts. Pending historical purge plans cannot bypass the current
 proof; `archive_not_accounted` keeps the bytes available to restore.
+The shared proof is `staging.ZIPAccounted`. ZIP byte-chunk cleanup (decision 0061)
+binds `zip-stream/1` to all exact parts and holdings. Fresh purge checks the full
+set and binds archive groups in a schema-2 manifest before removal; partial resume
+checks remaining original hashes and current holdings against that supported proof.
+Unknown evidence retains bytes, malformed binding requires review, and completed
+removals never adopt replacement files. Earlier builds refuse these new manifests.
 `library/purge.go` (decision 0041) removes only held copies a current, verified holding
 also has, through its own previewed plan and manifest; receipts and intents stay.
 Readers and players get verified copies (`library open`/`export`), never stored

@@ -27,6 +27,9 @@ type Limits struct {
 	MemberBytes int64
 	TotalBytes  int64
 	Ratio       uint64
+	// ZIPCoverage requests independent coverage evidence for a byte-chunk set.
+	// It does not change intake eligibility or authorize source mutation.
+	ZIPCoverage bool
 	// Only ExtractTree enables traversal and shares its work across nodes.
 	tree          *treeBudget
 	child         bool
@@ -58,10 +61,9 @@ type Member struct {
 type Extraction struct {
 	Members  []Member `json:"members"`
 	Complete bool     `json:"complete"`
-	// Whole reports, for an archive read through 7-Zip, that its archive
-	// block names no comment, warning, leading offset, or trailing bytes, and
-	// a physical size equal to the bytes read, so the members are all it
-	// holds. Cleanup moves such an archive only when Whole.
+	// Whole is independent container-byte evidence: the 7z header/packed-size
+	// proof, or requested ZIP coverage on a joined byte stream. It does not
+	// establish member eligibility, successful extraction, or write permission.
 	Whole bool `json:"whole,omitempty"`
 	// packed is the sum of the packed sizes 7-Zip lists for the members.
 	packed int64

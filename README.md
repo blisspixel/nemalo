@@ -63,7 +63,8 @@ published prereleases may lag:
   installed 7-Zip. The folder stays intact.
   `library cleanup` then moves sources whose
   books the library holds into a recoverable holding area, and `library restore`
-  undoes it. `library purge` frees that space once the library holds the
+  undoes it. Complete `.zip.001` byte streams move as one checked set.
+  `library purge` frees that space once the library holds the
   same verified bytes, after its own preview. `library rescan` scans review holdings in
   one batched command.
 - Retrieve bounded EPUB text in CLI/JSON/TUI, with exact continuation, source parts,
@@ -103,7 +104,7 @@ published prereleases may lag:
   import tools that store only the plan a preview returned, and acquisition
   and rescan as durable jobs that outlive the connection.
 
-Cleanup of RAR, split ZIP, and nested archive sources,
+Cleanup of RAR, disk-segmented ZIP, and nested archive sources,
 and a TUI view of jobs are planned. Single-file import is not
 a full checked-library policy.
 File checks report limited evidence, never a safety or completeness guarantee.
