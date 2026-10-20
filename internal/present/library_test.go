@@ -47,3 +47,27 @@ func TestRecordingByteIdentityPresentationEscapesSourceLabels(t *testing.T) {
 		t.Fatal(text)
 	}
 }
+
+func TestCollectionDiffPresentationKeepsChangesSeparateAndEscapesText(t *testing.T) {
+	a := library.CollectionItem{Source: "archive:a", File: "a.epub", Note: "new\x1b"}
+	b := library.CollectionItem{Source: "archive:b", Recording: "MP3\nforged"}
+	r := library.CollectionDiffResult{Complete: true, Changed: true, NameChanged: true,
+		Before: library.CollectionRevision{Name: "Old\x1b", Path: "before", SHA256: "old-hash", Items: 2},
+		After:  library.CollectionRevision{Name: "New", Path: "after", SHA256: "new-hash", Items: 2},
+		Added:  []library.CollectionPosition{{Position: 2, Item: b}}, Removed: []library.CollectionPosition{{Position: 2, Item: b}},
+		NotesChanged:  []library.CollectionNoteChange{{Item: a, BeforeNote: "old\x00", BeforePosition: 1, AfterPosition: 2}},
+		RetainedOrder: []library.CollectionOrderEntry{{Item: a, BeforePosition: 1, AfterPosition: 2}},
+	}
+	text := CollectionDiff(r)
+	for _, want := range []string{"old-hash", "new-hash", "Name changed:", "Added (after 2):", "Removed (before 2):", "Note changed: archive:a", "Retained selection order changed", "1 -> 2: archive:a"} {
+		if !strings.Contains(text, want) {
+			t.Fatal("missing diff fact", want, text)
+		}
+	}
+	if strings.ContainsAny(text, "\x1b\x00") || strings.Contains(text, "\nforged") || CollectionDiff(library.CollectionDiffResult{}) != "" {
+		t.Fatal("untrusted controls or incomplete evidence rendered", text)
+	}
+	if text := CollectionDiff(library.CollectionDiffResult{Complete: true}); !strings.Contains(text, "No declaration changes.") {
+		t.Fatal(text)
+	}
+}

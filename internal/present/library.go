@@ -563,6 +563,46 @@ func collectionItem(i library.CollectionItem) string {
 	return Line(i.Source) + " " + Line(i.File)
 }
 
+// CollectionDiff shows declaration changes, keeping added selections separate
+// from notes and relative-order changes that do not need acquisition.
+func CollectionDiff(r library.CollectionDiffResult) string {
+	if !r.Complete {
+		return ""
+	}
+	var b strings.Builder
+	fmt.Fprintf(&b, "Before: %s | %s | %d items\n  %s\n", Line(r.Before.Name), Line(r.Before.Path), r.Before.Items, Line(r.Before.SHA256))
+	fmt.Fprintf(&b, "After: %s | %s | %d items\n  %s\n", Line(r.After.Name), Line(r.After.Path), r.After.Items, Line(r.After.SHA256))
+	if !r.Changed {
+		b.WriteString("No declaration changes.\n")
+	}
+	if r.NameChanged {
+		fmt.Fprintf(&b, "Name changed: %s -> %s\n", Line(r.Before.Name), Line(r.After.Name))
+	}
+	for _, p := range r.Removed {
+		fmt.Fprintf(&b, "Removed (before %d): %s\n", p.Position, collectionItem(p.Item))
+		if p.Item.Note != "" {
+			fmt.Fprintf(&b, "  Note: %s\n", Line(p.Item.Note))
+		}
+	}
+	for _, p := range r.Added {
+		fmt.Fprintf(&b, "Added (after %d): %s\n", p.Position, collectionItem(p.Item))
+		if p.Item.Note != "" {
+			fmt.Fprintf(&b, "  Note: %s\n", Line(p.Item.Note))
+		}
+	}
+	for _, n := range r.NotesChanged {
+		fmt.Fprintf(&b, "Note changed: %s (before %d, after %d)\n  Before: %s\n  After: %s\n", collectionItem(n.Item), n.BeforePosition, n.AfterPosition, Line(n.BeforeNote), Line(n.Item.Note))
+	}
+	if len(r.RetainedOrder) > 0 {
+		b.WriteString("Retained selection order changed (before -> after positions):\n")
+		for _, p := range r.RetainedOrder {
+			fmt.Fprintf(&b, "  %d -> %d: %s\n", p.BeforePosition, p.AfterPosition, collectionItem(p.Item))
+		}
+	}
+	notes(&b, "Limitation", r.Limitations)
+	return b.String()
+}
+
 // CollectionStatus shows each item of a collection and the holdings that
 // resolve it.
 func CollectionStatus(r library.CollectionStatusResult) string {

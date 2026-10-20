@@ -13,7 +13,8 @@ AI service. The agent interface (MCP) uses the same application services.
 
 ## Status
 
-**Early development, not 1.0.** Available today:
+**Early development, not 1.0.** Implemented in the current source tree;
+published prereleases may lag:
 
 - Search Open Library and Internet Archive by provider relevance, or Archive by
   download count or identifier, or every source at once with `--source all`,
@@ -43,6 +44,9 @@ AI service. The agent interface (MCP) uses the same application services.
 - Save portable catalog snapshots, browse holdings, and audit changed/missing files.
 - List and search a managed library, and open a holding in a reader or player
   through a verified read-only copy, so readers never modify stored files.
+- Keep collections of exact selections, compare two manifest revisions offline,
+  resolve them against holdings, and acquire only missing selections. Removed
+  selections leave earlier holdings and annotations intact.
 - Initialize library control state with locking and resumable initialization.
 - Import one EPUB, PDF, MP3, M4B, or M4A, or a completed intake packet, into an
   initialized library. Preview writes nothing. Checked status requires a passed

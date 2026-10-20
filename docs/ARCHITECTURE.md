@@ -220,6 +220,12 @@ publication version or recording, asset IDs, hashes when known, provenance, and
 rights evidence. Version both schemas. Do not treat a changing download URL as a pin.
 This is an internal Go data contract, not a new package ecosystem or executable DSL.
 
+The implemented collection revision preview compares two explicit user files
+offline, bound to their byte hashes: exact selection additions/removals and
+name, note, and retained-order changes. It creates no stored collection record
+and does not infer upstream rights, changed assets, or transfer estimates
+([decision 0053](decisions/0053-collection-revision-previews.md)).
+
 Updates produce a preview showing changed versions, formats, rights, files, and
 expected transfers. Acquire new assets alongside originals; do not overwrite
 annotations, replace a translation, or change a narration implicitly. Repeating an

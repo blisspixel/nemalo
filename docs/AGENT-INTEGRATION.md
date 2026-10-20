@@ -39,10 +39,15 @@ nemalo mcp serve --scope /path/to/library --allow-network
 ```
 
 Implemented tools are all read-only: `nemalo_capabilities`, `library_status`,
-`library_list`, `library_recordings`, `library_related`, `collection_status`, `library_audit`, `library_check`, `file_check` (no antivirus), and
+`library_list`, `library_recordings`, `library_related`, `collection_diff`, `collection_status`, `library_audit`, `library_check`, `file_check` (no antivirus), and
 `content_capabilities`, `content_units`, `content_navigation`, `content_pages`, `content_read`, `content_locate`, `content_source`,
 `content_resource`. `content_navigation` lists source-declared EPUB contents;
 a read of one entry uses `content_read` with representation `epub-nav/1`.
+`collection_diff` takes `before` and `after` collection-file paths inside scope
+and compares their exact selections, notes, names, and retained order, with both
+file hashes. It needs no library, contacts no provider, and writes nothing. A
+diff does not authorize acquisition or establish rights or upstream freshness
+([decision 0053](decisions/0053-collection-revision-previews.md)).
 `library_recordings` includes `byte_identities` (`recording-bytes/1`) for
 complete declared recordings with identical ordered asset hashes across source
 items. These use journal evidence, retain narration declarations, and do not

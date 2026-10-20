@@ -726,6 +726,12 @@ func Execute(ctx context.Context, args []string, out, errOut io.Writer, service 
 		return write(service.Doctor(p, c, app.Lookup), nil, 0)
 	case "collection":
 		switch {
+		case action == "diff" && flags.NArg() == 2:
+			data, err := service.CollectionDiff(ctx, flags.Arg(0), flags.Arg(1))
+			if err != nil {
+				return write(data, err, 1)
+			}
+			return write(data, nil, 0)
 		case action == "status" && flags.NArg() == 2:
 			data, err := service.CollectionStatus(ctx, flags.Arg(1), flags.Arg(0))
 			if err != nil {
@@ -753,7 +759,7 @@ func Execute(ctx context.Context, args []string, out, errOut io.Writer, service 
 			}
 			return write(data, nil, code)
 		}
-		return write(nil, errors.New("use collection status COLLECTION LIBRARY, or collection acquire COLLECTION LIBRARY --output INTAKE [--apply]"), 2)
+		return write(nil, errors.New("use collection diff BEFORE AFTER, collection status COLLECTION LIBRARY, or collection acquire COLLECTION LIBRARY --output INTAKE [--apply]"), 2)
 	case "jobs":
 		// The durable jobs MCP servers started, from their journals.
 		store, err := jobs.Open(filepath.Join(p.State, "jobs"), 1, 0)
@@ -1124,6 +1130,9 @@ func printData(out io.Writer, data any) error {
 		return err
 	case library.CollectionStatusResult:
 		_, err := io.WriteString(out, present.CollectionStatus(value))
+		return err
+	case library.CollectionDiffResult:
+		_, err := io.WriteString(out, present.CollectionDiff(value))
 		return err
 	case app.CollectionAcquireResult:
 		_, err := io.WriteString(out, present.CollectionAcquire(value))

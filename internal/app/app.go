@@ -468,6 +468,12 @@ func (s Service) CollectionStatus(ctx context.Context, directory, collection str
 	return library.CollectionStatus(ctx, directory, collection)
 }
 
+// CollectionDiff compares two explicit collection declarations without network
+// access, library state, or writes.
+func (s Service) CollectionDiff(ctx context.Context, before, after string) (library.CollectionDiffResult, error) {
+	return library.CollectionDiff(ctx, before, after)
+}
+
 // Related groups holdings that share a stated identifier, an arXiv paper, a
 // source item, or a narration; with asset, only that holding's groups.
 func (s Service) Related(ctx context.Context, request library.RelatedRequest) (library.RelatedResult, error) {

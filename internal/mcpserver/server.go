@@ -131,6 +131,18 @@ func New(service app.Service, opts Options) (*mcp.Server, error) {
 			}
 			return service.Recordings(ctx, dir, in.Source)
 		})
+	add(&r, "collection_diff", "Compare two explicit collection JSON files offline, returning both file hashes, added and removed exact selections, name and note changes, and changed order of retained selections. Needs no library and writes nothing. Does not check upstream changes, rights, or asset bytes and never authorizes acquisition. Both paths must be inside configured scopes.", false,
+		func(ctx context.Context, in collectionDiffInput) (any, error) {
+			before, err := scopes.path(in.Before)
+			if err != nil {
+				return nil, err
+			}
+			after, err := scopes.path(in.After)
+			if err != nil {
+				return nil, err
+			}
+			return service.CollectionDiff(ctx, before, after)
+		})
 	add(&r, "collection_status", "Resolve each item of a collection file (exact source selections) against an initialized library, offline: held, held in review, recording incomplete, or not held, with the holdings that resolve it. Fetches and changes nothing.", false,
 		func(ctx context.Context, in collectionInput) (any, error) {
 			dir, err := scopes.path(in.Library)
@@ -452,6 +464,11 @@ type recordingsInput struct {
 type collectionInput struct {
 	Collection string `json:"collection" jsonschema:"a collection JSON file inside a configured scope"`
 	Library    string `json:"library" jsonschema:"an initialized library directory inside a configured scope"`
+}
+
+type collectionDiffInput struct {
+	Before string `json:"before" jsonschema:"the before collection JSON file inside a configured scope"`
+	After  string `json:"after" jsonschema:"the after collection JSON file inside a configured scope"`
 }
 
 type relatedInput struct {

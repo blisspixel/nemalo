@@ -15,6 +15,7 @@ import (
 	"strings"
 
 	"github.com/blisspixel/nemalo/internal/discovery"
+	"github.com/blisspixel/nemalo/internal/safeio"
 )
 
 const (
@@ -108,20 +109,37 @@ func (c Collection) Validate() error {
 // ReadCollection reads and validates one collection file, at most 1 MiB,
 // refusing unknown fields, and returns its SHA-256.
 func ReadCollection(path string) (Collection, string, error) {
+	return readCollection(context.Background(), path)
+}
+
+func readCollection(ctx context.Context, path string) (Collection, string, error) {
 	var c Collection
-	f, err := os.Open(path)
+	if err := ctx.Err(); err != nil {
+		return c, "", err
+	}
+	abs, err := filepath.Abs(path)
 	if err != nil {
 		return c, "", err
 	}
-	defer f.Close()
-	info, err := f.Stat()
+	root, err := safeio.OpenResolvedRoot(filepath.Dir(abs))
+	if err != nil {
+		return c, "", err
+	}
+	defer root.Close()
+	name := filepath.Base(abs)
+	info, err := root.Lstat(name)
 	if err != nil {
 		return c, "", err
 	}
 	if !info.Mode().IsRegular() {
 		return c, "", errors.New("a collection must be a regular file")
 	}
-	data, err := io.ReadAll(io.LimitReader(f, maxCollectionBytes+1))
+	f, err := safeio.OpenRegular(root, name, info, os.O_RDONLY)
+	if err != nil {
+		return c, "", err
+	}
+	defer f.Close()
+	data, err := io.ReadAll(io.LimitReader(importReader{ctx, f}, maxCollectionBytes+1))
 	if err != nil {
 		return c, "", err
 	}
@@ -140,6 +158,9 @@ func ReadCollection(path string) (Collection, string, error) {
 		return c, "", errors.New("read collection: data follows the JSON value")
 	}
 	if err := c.Validate(); err != nil {
+		return c, "", err
+	}
+	if err := ctx.Err(); err != nil {
 		return c, "", err
 	}
 	sum := sha256.Sum256(data)
@@ -196,7 +217,7 @@ func CollectionStatus(ctx context.Context, directory, collection string) (Collec
 		return r, err
 	}
 	r.Collection = path
-	c, digest, err := ReadCollection(path)
+	c, digest, err := readCollection(ctx, path)
 	if err != nil {
 		return r, err
 	}

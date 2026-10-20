@@ -14,6 +14,8 @@ needed for the application, tests, or first-party tooling.
 `content units`, `content navigation`,
 `content read`, `content locate`, `content source`, `content resource`, `content capabilities`,
 `read`, `mcp serve`, `jobs`, and `tui` are implemented.
+`collection diff`, `collection status`, and `collection acquire` compare exact
+declarations, resolve holdings, and acquire missing selections.
 Search defaults to Open Library work metadata; `--source archive` selects Internet
 Archive text/audio item search. `--source gutenberg` reads a local
 `pg_catalog.csv` (`--catalog`, `gutenberg_catalog`, or `NEMALO_GUTENBERG_CATALOG`)
@@ -151,6 +153,31 @@ An existing collection intake packet is resumed or offered for ingest only when
 it records the item's exact source and file or recording format; a copied or
 mismatched packet stays retained.
 Registry confirmation of identifiers and rights policy remain planned.
+
+## Collection revision previews
+
+`collection diff BEFORE AFTER [--json]` compares two explicit collection files
+offline, without a library or writes. It reports both file hashes and names,
+added and removed exact selections, changed notes, and changes in the relative
+order of retained selections. Inserting or removing an item alone does not mean
+the retained items were reordered; formatting alone can change the hash without
+changing a declaration. Positions are one-based. A changed version or encoding
+is a removal and addition, not an inferred edition or narration update.
+
+```sh
+nemalo collection diff collection-before.json collection-after.json
+nemalo collection status collection-after.json ~/books
+nemalo collection acquire collection-after.json ~/books --output ~/intake
+```
+
+Review the diff and acquisition preview before adding `--apply` to acquire.
+Earlier holdings and annotations remain intact when selections are removed.
+Comparison uses regular files, at most 1 MiB and 1,000 items each, through the
+same strict parser as status and acquisition; invalid or cancelled input returns
+an error and no partial diff. Parent directory aliases are supported. The service
+refuses final file links; MCP may resolve an explicitly selected file link only
+inside scope. No upstream rights, changed bytes, or transfer estimate is inferred.
+See [decision 0053](decisions/0053-collection-revision-previews.md).
 
 ## File health and scanning
 

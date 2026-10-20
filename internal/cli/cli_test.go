@@ -185,7 +185,7 @@ func TestHelpAndVersion(t *testing.T) {
 			t.Fatal(args, code, out)
 		}
 	}
-	for _, command := range []string{"tui", "doctor", "search", "evaluate", "catalog", "acquire", "inspect", "check", "library", "bookmark", "content", "read", "mcp", "version", "help"} {
+	for _, command := range []string{"tui", "doctor", "search", "evaluate", "catalog", "acquire", "inspect", "check", "library", "collection", "bookmark", "content", "read", "mcp", "version", "help"} {
 		code, out, _ := execute(t, []string{"help", command}, nil)
 		if code != 0 || out == "" {
 			t.Fatal("no help for", command)

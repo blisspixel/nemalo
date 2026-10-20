@@ -18,7 +18,7 @@ Usage: nemalo <command> [options]
 
 Find      search QUERY, evaluate ID, catalog fetch gutenberg
 Acquire   acquire ID --file NAME --output NEW_DIRECTORY,
-          collection status, collection acquire
+          collection diff, collection status, collection acquire
 Check     inspect DIRECTORY, check FILE [--scan]
 Keep      library init, import, ingest, list, audit, check, cleanup,
           restore, rescan, open, export, recordings, related, snapshot,
@@ -210,7 +210,12 @@ files, account for excluded links, refuse incomplete inventories, and never
 overwrite. A snapshot audit requires --root; the catalog cannot authorize a
 scan. A library audit compares managed holdings only.
 `,
-	"collection": `nemalo collection status COLLECTION LIBRARY
+	"collection": `nemalo collection diff BEFORE AFTER
+  Compare two collection files offline: added/removed exact selections,
+  name/note changes, and changes in retained selection order. Reports both
+  file hashes. Needs no library and writes nothing. Review this diff and
+  the acquisition preview before applying an updated collection.
+nemalo collection status COLLECTION LIBRARY
   Resolve each item of a collection file against the library, offline:
   held, held in review, recording incomplete, or not held.
 nemalo collection acquire COLLECTION LIBRARY --output INTAKE [--apply]

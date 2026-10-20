@@ -81,7 +81,9 @@ verified, not when code exists. No stage has a time estimate.
    source-declared edition and work identifiers and `library related`
    ([decision 0049](docs/decisions/0049-declared-identifiers-and-related-holdings.md)),
    and collections resolved by holdings with idempotent acquisition
-   ([decision 0050](docs/decisions/0050-collections.md)). Complete recordings
+   ([decision 0050](docs/decisions/0050-collections.md)), with offline revision
+   previews of exact selection, note, name, and order changes
+   ([decision 0053](docs/decisions/0053-collection-revision-previews.md)). Complete recordings
    with identical ordered asset hashes now share a byte identity across source
    items, including without LibriVox evidence
    ([decision 0052](docs/decisions/0052-recording-byte-identities.md)); relating
