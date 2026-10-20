@@ -46,7 +46,7 @@ func entryFor(t *testing.T, plan CleanupResult, path string) CleanupEntry {
 
 // A 7z whose members are all held moves only when 7-Zip lists it whole: no
 // tail, comment, or offset, a physical size equal to the file, and a header
-// and packed streams that fill it. A RAR never moves.
+// and packed streams that fill it. An unsupported RAR stays.
 func TestCleanupMovesAWholeHeld7zOnly(t *testing.T) {
 	ctx := context.Background()
 	// The stand-in's bytes need only be longer than the member they list.
@@ -71,7 +71,7 @@ func TestCleanupMovesAWholeHeld7zOnly(t *testing.T) {
 		t.Fatal("an archive with an unheld member would move", err)
 	}
 	stagingtest.Install(t, stagingtest.Archive{Kind: "-tRar5", Header: fmt.Sprintf("Path = books.rar\nType = Rar5\nPhysical Size = 26\nHeaders Size = %d\n", 26-len(member)), Members: map[string][]byte{"book.epub": member}})
-	if plan, err := Cleanup(ctx, CleanupRequest{Library: root, Folder: folder}); err != nil || !strings.Contains(entryFor(t, plan, "books.rar").Reason, "a RAR can hold") {
+	if plan, err := Cleanup(ctx, CleanupRequest{Library: root, Folder: folder}); err != nil || entryFor(t, plan, "books.rar").Disposition != "keep" || !strings.Contains(entryFor(t, plan, "books.rar").Reason, "RAR5 framing") {
 		t.Fatal("a RAR would move", err)
 	}
 	stagingtest.Install(t, stagingtest.Archive{Kind: "-t7z", Header: whole, Members: map[string][]byte{"book.epub": member}})

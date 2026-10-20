@@ -392,14 +392,14 @@ Implemented RAR intake checks each private volume's format, role, ordinal,
 and size through the installed 7-Zip reader, matches split-member evidence
 across adjacent volumes, and requires an error-free assembled listing. Names
 and counts alone cannot establish a set. Old-style letter volumes share this
-adapter; inconclusive boundaries preserve all sources. RAR cleanup remains
+adapter; inconclusive boundaries preserve all sources. RAR volume cleanup remains
 refused because unlisted blocks are unaccounted for
 ([decision 0056](decisions/0056-rar-volume-identity.md)).
 
 Requested standalone RAR5 coverage now measures bounded physical framing from
 the opened private snapshot, then matches every raw file name, size, packed size,
 directory state and CRC to one UTF-8 reader table before extraction. This is
-read-only evidence; default intake and RAR cleanup preservation remain unchanged.
+read-only evidence, separate from application permission. Default intake is unchanged.
 Child RAR coverage is refused. Historical RAR-named archive entries, including old
 continuations, cannot resume cleanup or purge without a supported versioned proof.
 Their recorded bytes remain restorable
@@ -478,6 +478,17 @@ all copies through fresh or pending purge. Restore returns their recorded bytes;
 stop, restore and preview a new cleanup to establish current coverage. Immutable
 old manifests are never migrated
 ([decision 0065](decisions/0065-versioned-7z-coverage.md)).
+
+Standalone RAR5 cleanup uses its own `rar5-frames/1`, one exact source and
+one-component leaf selections. It reuses the opened-snapshot framing/reader
+binding, verified current holdings, final source hashes, copy/link/remove journal
+and raw-byte restore. Fresh purge repeats complete checks and binds the proof,
+single exact index and leaf digest to its schema-2 intent. Recovery validates
+every binding before removal and checks current remaining bytes/holdings without
+reconstructing or adopting replacements. RAR4, volume sets, nested RARs and RAR
+roots containing nested archives remain outside this subset. `archive-tree/1`
+does not grant RAR authority
+([decision 0066](decisions/0066-standalone-rar5-cleanup.md)).
 
 Private staging and a subprocess are not sandboxes. Go's
 [root-scoped filesystem APIs](https://go.dev/blog/osroot) are useful building blocks;

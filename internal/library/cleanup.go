@@ -125,7 +125,7 @@ func cleanupLimitations() []string {
 	return []string{
 		"Only files whose exact bytes the library holds, with stored bytes verified, move. Everything else stays, with its reason.",
 		"Moved sources go to the library's cleanup holding area and can be restored. library purge removes held copies the library holds, after its own preview.",
-		"An archive moves only when every member is a directory or a held file; a 7z or split 7z set also only when 7-Zip lists it with nothing beyond its members. A RAR stays. Intake packets move as their receipt, intent, and content.",
+		"An archive moves only when every member is a directory or a held file, with complete container accounting. Only the bounded standalone RAR5 subset qualifies; other RAR layouts stay. Intake packets move as their receipt, intent, and content.",
 		"Directory-entry durability across power loss depends on the filesystem.",
 	}
 }
@@ -923,7 +923,7 @@ func planCleanup(ctx context.Context, store, src *os.Root, lines []Holding) ([]C
 
 // planArchive moves a completely accounted archive tree or outer volume set
 // only when every leaf is held. Snapshots bind to the planned source bytes;
-// final hashes recheck every original. RAR and unproven containers stay.
+// final hashes recheck every original. Unsupported and unproven containers stay.
 func planArchive(ctx context.Context, src *os.Root, rel string, volumes []string, held func(string) (Holding, bool, error), hashFile func(string) (CleanupFile, error), hashRemaining *int64, e *CleanupEntry) error {
 	zipProof := ""
 	if volumes != nil {
@@ -961,8 +961,9 @@ func planArchive(ctx context.Context, src *os.Root, rel string, volumes []string
 		}
 		before[i] = h
 	}
-	if strings.EqualFold(path.Ext(rel), ".rar") {
-		e.Reason = "a RAR can hold blocks 7-Zip does not list, so cleanup keeps it; preserved"
+	rootRAR := strings.EqualFold(path.Ext(rel), ".rar")
+	if rootRAR && volumes != nil {
+		e.Reason = "RAR volume cleanup has no supported complete proof; preserved"
 		return nil
 	}
 	tmp, err := os.MkdirTemp("", "nemalo-cleanup-")
@@ -996,6 +997,9 @@ func planArchive(ctx context.Context, src *os.Root, rel string, volumes []string
 	case errors.Is(err, staging.ErrZIPCoverage):
 		e.Reason = err.Error() + "; preserved"
 		return nil
+	case errors.Is(err, staging.ErrRAR5Coverage):
+		e.Reason = err.Error() + "; preserved"
+		return nil
 	case errors.Is(err, staging.ErrSnapshotBudget):
 		return errors.New("the folder requires more than 64 GiB of source-hash work; plan a smaller folder")
 	case errors.Is(err, staging.ErrSourceChanged):
@@ -1018,6 +1022,10 @@ func planArchive(ctx context.Context, src *os.Root, rel string, volumes []string
 		case "directory":
 			continue
 		case "nested_archive":
+			if rootRAR {
+				e.Reason = "nested contents of a RAR root are outside the standalone proof; preserved"
+				return nil
+			}
 			// This is traversal bookkeeping; only the whole-tree checks below
 			// and every held leaf can grant source-removal permission.
 			nested = true
@@ -1077,7 +1085,9 @@ func planArchive(ctx context.Context, src *os.Root, rel string, volumes []string
 	}
 	e.Disposition, e.Reason, e.Files, e.Holdings = "move", "every member is held with verified stored bytes", before, ids
 	e.ArchiveProof = zipProof
-	if treeProof {
+	if rootRAR {
+		e.ArchiveProof, e.ArchiveLeaves = rar5FramesProof, leaves
+	} else if treeProof {
 		e.ArchiveProof = archiveTreeProof
 		e.ArchiveLeaves = leaves
 	}

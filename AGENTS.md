@@ -164,7 +164,7 @@ beside a packet; ingest reuses Import. RAR volume sets require isolated format,
 role, ordinal, and size evidence plus matching split members across every
 boundary and an error-free assembled listing. Preserve aliases, overlapping
 families, unlinked boundaries, and unknown ordinals; never infer set identity
-from names/counts alone. RAR cleanup remains refused. Split ZIPs are decision
+from names/counts alone. RAR volume cleanup remains refused. Split ZIPs are decision
 0057: byte chunks join privately, true segments require consistent reader
 evidence through every part. Segment cleanup is decision 0062: validate raw disk
 records and complete header boundaries, then reuse shared framing over a view
@@ -182,7 +182,7 @@ from literal historical `!/` member names, and pending recovery first. Nested
 sets stay preserved. Cleanup uses the same tree only with requested complete
 coverage (decision 0063): one shared 16 MiB proof allowance, also charged to reader
 work, and bounded 7z coverage probes through the shared runner. Default intake
-does not request coverage. RAR at any depth preserves the whole outer source.
+does not request coverage. A RAR child preserves the whole outer source.
 Every leaf must be held with verified stored bytes; container markers alone
 confer no permission. Keep exact-chain refusals and parse-equivalent previews.
 Bind every cleanup root snapshot to the plan's expected size/hash while copying.
@@ -194,12 +194,20 @@ Source cleanup is `library/cleanup.go` and `restore.go` (decision 0022): move on
 verified bytes into the holding area via verified copy, hard-link publish, then source
 removal; resume from the manifest, never a new plan; never replace on restore. A 7z or
 split 7z set moves only whole as 7-Zip lists it, header and packed sizes filling the
-file, a set as one entry; a RAR never moves; a directory holding data is not a directory
+file, a set as one entry; unsupported RAR layouts stay; a directory holding data is not a directory
 (decision 0051).
 Decision 0064 permits an independent bounded Go RAR framing accountant beside
 the maintained reader. It is read-only evidence, not a decoder or cleanup policy.
 Keep RAR cleanup disabled until that proof passes its complete verification,
 then separately verify the versioned application and recovery integration.
+That read-only prerequisite passed all-six hosted checks through commit 4707628.
+Decision 0066 permits only standalone root RAR5 book leaves and empty directories,
+with `rar5-frames/1`, one exact source identity and one-component `archive_leaves`.
+Fresh purge repeats the full check and binds its single-file group and leaf digest;
+recovery uses the supported immutable evidence and current remaining bytes/holdings.
+RAR4, sets, child RARs and RAR roots containing nested archives stay preserved.
+Never broaden `archive-tree/1` to RAR. The application increment needs its own full
+local/native/hosted acceptance; implementation is not a release.
 Requested standalone RAR5 coverage binds every physical file record to one UTF-8
 reader table before exact-name extraction; child RAR coverage remains refused.
 Historical RAR-named archive entries and old continuations without a supported

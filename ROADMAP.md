@@ -104,7 +104,7 @@ verified, not when code exists. No stage has a time estimate.
    ([decision 0051](docs/decisions/0051-cleanup-of-7z-and-split-sets.md)).
    Old-style RAR intake now checks each volume's role/ordinal and cross-volume
    split continuity before reading an assembled set; inconclusive sets and all
-   RAR cleanup sources stay preserved
+   RAR volume cleanup sources stay preserved
    ([decision 0056](docs/decisions/0056-rar-volume-identity.md)).
    Split ZIP intake now handles byte chunks and true disk segments through
    checked private snapshots
@@ -142,9 +142,14 @@ verified, not when code exists. No stage has a time estimate.
    RAR source cleanup remains unfinished; a RAR child preserves its outer source.
    A standalone read-only RAR5 framing accountant now binds physical records to
    the maintained reader's exact table. Historical RAR entries without a supported
-   proof stay for restore. This does not enable cleanup; acceptance evidence is
+   proof stay for restore. This framing evidence alone does not authorize cleanup;
+   acceptance evidence is
    tracked in [issue 57](https://github.com/blisspixel/nemalo/issues/57)
    ([decision 0064](docs/decisions/0064-bounded-rar-framing-accounting.md)).
+   Standalone root RAR5 cleanup is now implemented under its own `rar5-frames/1`
+   with exact direct leaves, full fresh purge checks and grouped recovery
+   ([decision 0066](docs/decisions/0066-standalone-rar5-cleanup.md)). RAR4, volume
+   and nested layouts remain unfinished; this subset does not complete stage 2.
 3. **Audio access** (milestone 8). M4B and M4A byte ranges and decoded timing in
    content access, bounded ranges usable by an external player, and output
    demonstrated with a real audiobook reader or server.
@@ -480,7 +485,7 @@ journaled crash recovery, and restore are implemented in CLI, JSON, and TUI
 purge` removes a completed cleanup's held copies whose bytes the library holds
 and verifies, after its own preview and plan, and resumes from its manifest
 ([decision 0041](docs/decisions/0041-purge-held-sources.md)). 7z archives
-and split 7z sets move only when whole as 7-Zip lists them, and RARs stay
+and split 7z sets move only when whole as 7-Zip lists them; unsupported RAR layouts stay
 ([decision 0051](docs/decisions/0051-cleanup-of-7z-and-split-sets.md)). `library check` reports missing, changed,
 untracked, and unscanned entries, unfinished operations, and held copies without
 changing anything ([decision 0024](docs/decisions/0024-library-check.md)).
@@ -501,6 +506,11 @@ Flat 7z archives and sets now bind the same proof and exact leaves. Historical
 unversioned 7z entries retain every remaining part through cleanup/purge recovery
 for restore and a new checked cleanup
 ([decision 0065](docs/decisions/0065-versioned-7z-coverage.md)).
+Standalone RAR5 book leaves use `rar5-frames/1`, a source identity and exact direct
+leaf selections under the same recoverable operations. Fresh purge repeats complete
+framing/reader/holding checks and binds the single source and leaf digest; RAR4,
+sets and nested RAR layouts remain preserved
+([decision 0066](docs/decisions/0066-standalone-rar5-cleanup.md)).
 Disk-full and scanner-failure faults are injected in tests: a full disk
 during an import copy, a journal line, a cleanup copy, and an export, and a
 scanner that is unavailable, incomplete, failing, or timing out. Each leaves

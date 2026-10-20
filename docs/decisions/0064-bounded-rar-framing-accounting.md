@@ -1,8 +1,11 @@
 # 0064: bounded RAR framing accounting beside the maintained reader
 
-Status: accepted, 2026-10-20. Implementation and verification in progress in
+Status: accepted, 2026-10-20. Read-only implementation and verification completed;
+the remaining application/layout work is tracked in
 [issue 57](https://github.com/blisspixel/nemalo/issues/57), roadmap stage 2.
 No RAR cleanup capability is established by this decision alone.
+The later [decision 0066](0066-standalone-rar5-cleanup.md) specifies the separately
+verified standalone cleanup subset and its distinct proof.
 
 ## Evidence and scope
 

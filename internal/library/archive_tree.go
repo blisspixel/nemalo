@@ -15,6 +15,11 @@ import (
 )
 
 const archiveTreeProof = "archive-tree/1"
+const rar5FramesProof = "rar5-frames/1"
+
+func leafBoundArchiveProof(proof string) bool {
+	return proof == archiveTreeProof || proof == rar5FramesProof
+}
 
 // CleanupArchiveLeaf binds an exact nested selection to verified held bytes.
 // Chain components are archive member names, never filesystem paths to open.
@@ -110,8 +115,20 @@ func equalArchiveLeaves(a, b []CleanupArchiveLeaf) bool {
 }
 
 func supportedArchiveProof(e CleanupEntry) bool {
+	if e.ArchiveProof == rar5FramesProof {
+		if !validArchiveLeaves(e) || len(e.Files) != 1 || e.Kind != "archive" || e.Path != e.Files[0].Path || !strings.EqualFold(path.Ext(e.Path), ".rar") {
+			return false
+		}
+		for _, leaf := range e.ArchiveLeaves {
+			if len(leaf.Chain) != 1 {
+				return false
+			}
+		}
+		return true
+	}
 	if e.ArchiveProof == archiveTreeProof {
-		return validArchiveLeaves(e)
+		_, layout := archiveEntryParts(e)
+		return layout && !strings.EqualFold(path.Ext(e.Path), ".rar") && validArchiveLeaves(e)
 	}
 	return len(e.ArchiveLeaves) == 0 && supportedZIPSet(e)
 }
@@ -122,7 +139,7 @@ func archiveEntryParts(e CleanupEntry) ([]string, bool) {
 	if len(e.Files) == 1 {
 		f := e.Files[0]
 		ext := strings.ToLower(path.Ext(f.Path))
-		if e.Kind != "archive" || e.Path != f.Path || (ext != ".zip" && ext != ".7z") || f.Bytes < 1 || f.Bytes > 256<<20 {
+		if e.Kind != "archive" || e.Path != f.Path || (ext != ".zip" && ext != ".7z" && ext != ".rar") || f.Bytes < 1 || f.Bytes > 256<<20 {
 			return nil, false
 		}
 		return []string{path.Base(f.Path)}, true
@@ -137,7 +154,7 @@ func archiveGroupDigestValid(e CleanupEntry, group PurgeArchiveGroup) bool {
 	if group.Proof != e.ArchiveProof || !supportedArchiveProof(e) {
 		return false
 	}
-	if e.ArchiveProof == archiveTreeProof {
+	if leafBoundArchiveProof(e.ArchiveProof) {
 		return group.LeafDigest == archiveLeafDigest(e)
 	}
 	return group.LeafDigest == ""

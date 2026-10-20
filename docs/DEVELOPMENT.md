@@ -518,7 +518,7 @@ volumes, aliases, overlapping naming families, and inconclusive boundaries stay
 preserved. This includes valid sets with no member split across a boundary,
 since ordinals alone do not establish that those volumes belong together.
 The set is at most 4 GiB and 1,000 volumes (901 in the old letter naming range).
-RAR and RAR sets are never moved by cleanup. See
+RAR sets remain preserved by cleanup. See
 [decision 0046](decisions/0046-archive-volume-sets.md) and
 [decision 0056](decisions/0056-rar-volume-identity.md).
 
@@ -653,7 +653,7 @@ contract.
 Historical RAR-named archive entries and old continuation names without a supported
 proof stay for restore. Cleanup resume stops for review; fresh and pending purge
 plans report `archive_not_accounted` and retain every file of the entry. This does
-not authorize new RAR cleanup. The read-only standalone RAR5 coverage path now
+not authorize those unversioned entries. The read-only standalone RAR5 coverage path now
 binds physical framing to the installed reader's exact table; child RAR coverage
 remains refused ([decision 0064](decisions/0064-bounded-rar-framing-accounting.md)).
 For nested cleanup, fresh purge rechecks every held container and leaf through the
@@ -673,6 +673,20 @@ Their original bytes remain restorable without a reader. Stop an interrupted
 operation, restore what remains and preview a new cleanup to establish current
 coverage. No old manifest is rewritten. See
 [decision 0065](decisions/0065-versioned-7z-coverage.md).
+Standalone root RAR5 cleanup now supports only held book leaves and empty
+directories within the bounded framing subset. It records `rar5-frames/1`, one
+original source identity and exact one-component leaves. Every physical file
+record must match the maintained reader's same UTF-8 table; output size/CRC,
+current held hashes and final source hashes are checked separately. Service,
+comment and recovery records, unknown metadata, encryption, directory data,
+aliases, gaps and tails stay preserved. RAR4, volume sets, child RARs and a RAR
+root containing nested archives also stay. Fresh purge repeats the full check and
+binds the single-file group and leaf digest in its schema-2 intent; partial recovery
+uses that supported immutable evidence and never adopts replacements. Earlier
+executables retain or refuse the unfamiliar proof. See
+[decision 0066](decisions/0066-standalone-rar5-cleanup.md); this is implemented source
+behavior, with acceptance evidence tracked in
+[issue 57](https://github.com/blisspixel/nemalo/issues/57).
 `library audit` on the library directory reports missing, changed, and review
 holdings and does not repair them. Snapshot audit still requires `--root`.
 An EPUB package identifier is recorded when it is an explicit ISBN, DOI, or

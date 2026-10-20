@@ -1,6 +1,6 @@
 # 0065: versioned coverage for every 7z cleanup
 
-Status: accepted, 2026-10-20. Implementation and verification in progress in
+Status: accepted and implemented, 2026-10-20. Acceptance evidence is tracked in
 [issue 58](https://github.com/blisspixel/nemalo/issues/58), roadmap stage 2.
 Extends [decision 0051](0051-cleanup-of-7z-and-split-sets.md) through the existing
 [tree proof and grouped recovery](0063-complete-archive-tree-cleanup.md).
@@ -44,8 +44,9 @@ its recorded-byte, no-replacement contract and needs no installed reader.
 
 Old executables refuse new canonical leaf fields. Use this source version or
 newer for the recorded cleanup and grouped purge recovery. Unknown proofs retain
-bytes; malformed bindings stop for review. RAR cleanup remains disabled under
-[decision 0064](0064-bounded-rar-framing-accounting.md).
+bytes; malformed bindings stop for review. This decision does not enable RAR
+cleanup; the later [decision 0066](0066-standalone-rar5-cleanup.md) specifies its
+separate bounded subset after the read-only prerequisite in decision 0064.
 
 ## Verification
 

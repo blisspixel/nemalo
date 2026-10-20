@@ -164,7 +164,7 @@ func planArchivePurge(ctx context.Context, store *os.Root, m cleanupManifest, li
 			continue
 		}
 		group := PurgeArchiveGroup{Proof: e.ArchiveProof}
-		if e.ArchiveProof == archiveTreeProof {
+		if leafBoundArchiveProof(e.ArchiveProof) {
 			group.LeafDigest = archiveLeafDigest(e)
 		}
 		for i := start; i < index; i++ {
@@ -231,6 +231,9 @@ func archivePermissions(m cleanupManifest, pm purgeManifest) (map[int]bool, erro
 		if e.Disposition == "move" && len(e.ArchiveLeaves) != 0 && !validArchiveLeaves(e) {
 			return nil, bad
 		}
+		if e.Disposition == "move" && e.ArchiveProof == rar5FramesProof && !supportedArchiveProof(e) {
+			return nil, bad
+		}
 	}
 	for i, e := range entries {
 		if versionedArchive(e) {
@@ -263,8 +266,8 @@ func archivePermissions(m cleanupManifest, pm purgeManifest) (map[int]bool, erro
 			return nil, bad
 		}
 		switch group.Proof {
-		case zipStreamProof, zipSegmentsProof, archiveTreeProof:
-			if group.Proof != e.ArchiveProof && (e.ArchiveProof == archiveTreeProof || group.Proof == archiveTreeProof) {
+		case zipStreamProof, zipSegmentsProof, archiveTreeProof, rar5FramesProof:
+			if group.Proof != e.ArchiveProof && (leafBoundArchiveProof(e.ArchiveProof) || leafBoundArchiveProof(group.Proof)) {
 				return nil, bad
 			}
 		}

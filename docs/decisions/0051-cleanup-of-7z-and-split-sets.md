@@ -94,3 +94,6 @@ The later [decision 0065](0065-versioned-7z-coverage.md) records versioned tree
 evidence for every new 7z move, including flat archives and sets. Unversioned
 historical 7z entries cannot resume cleanup or purge; retain their bytes for
 restore and establish current coverage through a new cleanup preview.
+Later [decision 0066](0066-standalone-rar5-cleanup.md) permits a separately
+verified standalone RAR5 subset with its own framing proof. RAR4, volume sets
+and nested RAR layouts remain preserved.
