@@ -184,6 +184,10 @@ removal; resume from the manifest, never a new plan; never replace on restore. A
 split 7z set moves only whole as 7-Zip lists it, header and packed sizes filling the
 file, a set as one entry; a RAR never moves; a directory holding data is not a directory
 (decision 0051).
+Plain ZIP cleanup and purge share complete local/central/descriptor accounting
+and a 16 MiB proof-read budget (decision 0060). Preserve comments, unknown metadata
+and unsupported layouts. Pending historical purge plans cannot bypass the current
+proof; `archive_not_accounted` keeps the bytes available to restore.
 `library/purge.go` (decision 0041) removes only held copies a current, verified holding
 also has, through its own previewed plan and manifest; receipts and intents stay.
 Readers and players get verified copies (`library open`/`export`), never stored

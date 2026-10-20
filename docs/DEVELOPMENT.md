@@ -599,6 +599,15 @@ then removes held copies of a completed cleanup whose bytes are a current
 holding with verified stored bytes, after its own preview and plan digest;
 receipts, intents, and anything else stay, and restore reports a purged file
 as purged ([decision 0041](decisions/0041-purge-held-sources.md)).
+An ordinary ZIP must account for every local and central record and descriptor,
+with matching names, flags, method, CRC and sizes. Proof reads share 16 MiB,
+including the standard reader's end search and offset queries. Comments, unknown
+or malformed extra metadata, ZIP64 and unsupported layouts stay for review.
+Known fixed timestamp/identity fields remain supported. This stricter subset
+does not change intake. Purge rechecks ZIPs, including historical cleanup copies
+and pending purge manifests, and reports `archive_not_accounted` when the proof
+fails. Those bytes remain available to restore. See
+[decision 0060](decisions/0060-complete-zip-cleanup-accounting.md).
 `library audit` on the library directory reports missing, changed, and review
 holdings and does not repair them. Snapshot audit still requires `--root`.
 An EPUB package identifier is recorded when it is an explicit ISBN, DOI, or

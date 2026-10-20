@@ -374,6 +374,14 @@ I/O paths or write authority, and conflicting metadata remains visible. No verif
 repairer or cleanup permission follows from set inventory
 ([decision 0059](decisions/0059-par2-metadata-inventory.md)).
 
+Ordinary ZIP cleanup uses an independent byte-coverage proof beside the maintained
+decoder: central records, local headers and descriptors must agree and cover the
+file exactly. Proof reads share 16 MiB. Unaccounted bytes, unknown metadata and
+unsupported layouts stay preserved. Purge repeats this proof on the opened,
+rehashed ZIP, including when resuming an older purge manifest; it never treats
+historical cleanup permission as current accounting
+([decision 0060](decisions/0060-complete-zip-cleanup-accounting.md)).
+
 Enforce shared per-run budgets for nesting, entry count, compressed/expanded bytes,
 per-file size, memory, time, process output, workers, and disk usage. Budgets span
 nested archives, not just each individual container. Extraction failure preserves

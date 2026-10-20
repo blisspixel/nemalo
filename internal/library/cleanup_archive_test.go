@@ -169,7 +169,15 @@ func TestCleanupKeepsAZIPWithUncheckedBytes(t *testing.T) {
 	if _, err := zip.NewReader(bytes.NewReader(gapped), int64(len(gapped))); err != nil {
 		t.Fatal("the crafted archive is not a readable ZIP", err)
 	}
-	root, folder, _ := archiveCleanup(t, map[string][]byte{"clean.zip": clean, "gapped.zip": gapped, "dir.zip": bytes.ReplaceAll(build(map[string][]byte{"book.epub": book, "hiddenx": book}), []byte("hiddenx"), []byte("hidden/"))})
+	// Go's ZIP reader accepts the requested entry count even if the declared
+	// directory extends over arbitrary bytes before the end record.
+	directoryGap := append(append(append([]byte{}, clean[:n-22]...), hidden...), clean[n-22:]...)
+	dirSize := binary.LittleEndian.Uint32(clean[n-10:])
+	binary.LittleEndian.PutUint32(directoryGap[len(directoryGap)-10:], dirSize+uint32(len(hidden)))
+	if z, err := zip.NewReader(bytes.NewReader(directoryGap), int64(len(directoryGap))); err != nil || len(z.File) != 1 {
+		t.Fatal("directory-gap fixture is not a readable one-member ZIP", err)
+	}
+	root, folder, _ := archiveCleanup(t, map[string][]byte{"clean.zip": clean, "gapped.zip": gapped, "directory-gap.zip": directoryGap, "dir.zip": bytes.ReplaceAll(build(map[string][]byte{"book.epub": book, "hiddenx": book}), []byte("hiddenx"), []byte("hidden/"))})
 	plan, err := Cleanup(ctx, CleanupRequest{Library: root, Folder: folder})
 	if err != nil {
 		t.Fatal(err)
@@ -179,6 +187,9 @@ func TestCleanupKeepsAZIPWithUncheckedBytes(t *testing.T) {
 	}
 	if e := entryFor(t, plan, "gapped.zip"); e.Disposition != "keep" || !strings.Contains(e.Reason, "outside its entries") {
 		t.Fatal(e)
+	}
+	if e := entryFor(t, plan, "directory-gap.zip"); e.Disposition != "keep" || !strings.Contains(e.Reason, "outside its entries") {
+		t.Fatal("unaccounted directory bytes authorized cleanup", e)
 	}
 	if e := entryFor(t, plan, "dir.zip"); e.Disposition != "keep" || !strings.Contains(e.Reason, "hidden/") {
 		t.Fatal(e)

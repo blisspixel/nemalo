@@ -36,9 +36,11 @@ type PurgeRequest struct {
 // PurgeFile is one held file of the cleanup, indexed as restore indexes it.
 // Disposition before applying is purge, or why it stays: provenance_record
 // (an intake packet's receipt or intent), not_held (no held copy: never moved,
-// restored, or already purged), held_copy_changed, or not_in_library (its
+// restored, or already purged), held_copy_changed, archive_not_accounted (a plain
+// ZIP no longer meets the current whole-container proof), or not_in_library (its
 // bytes are not a current holding whose stored bytes verify). Outcome after
-// applying is purged, already_absent, or held_copy_changed.
+// applying is purged, already_absent, held_copy_changed, or archive_not_accounted
+// (a plain ZIP no longer meets the current whole-container proof).
 type PurgeFile struct {
 	Index       int      `json:"index"`
 	Path        string   `json:"path"`
@@ -78,6 +80,7 @@ type purgeManifest struct {
 func purgeLimitations() []string {
 	return []string{
 		"Purge removes only held copies whose exact bytes are a current holding whose stored bytes verify, and archives whose every member is. The library's own copy is never touched.",
+		"A ZIP must still account for all its bytes. Unsupported or unaccounted archive data stays available to restore, including after an older purge is resumed.",
 		"A purged file cannot be restored from the holding area; restore reports it as purged. Receipts, intents, and anything not held stay.",
 		"Directory-entry durability across power loss depends on the filesystem.",
 	}
@@ -313,6 +316,20 @@ func planPurge(ctx context.Context, store *os.Root, m cleanupManifest, lines []H
 			p.Disposition, p.Holdings = "not_in_library", e.Holdings
 			if ok && (e.Kind == "archive" || (len(e.Holdings) == 1 && current[e.Holdings[0]].SHA256 == f.SHA256)) {
 				p.Disposition = "purge"
+				if strings.EqualFold(path.Ext(f.Path), ".zip") {
+					parent, base, err := heldParent(store, path.Join(holding, "files", f.Path))
+					if err != nil {
+						return nil, nil, err
+					}
+					accounted, _ := zipAccounted(ctx, parent, base)
+					parent.Close()
+					if err := ctx.Err(); err != nil {
+						return nil, nil, err
+					}
+					if !accounted {
+						p.Disposition = "archive_not_accounted"
+					}
+				}
 			}
 		}
 		out = append(out, p)
@@ -436,8 +453,8 @@ func purgeFile(ctx context.Context, store *os.Root, held string, f PurgeFile, cu
 	if err != nil {
 		return "not_readable", nil
 	}
+	defer h.Close()
 	same, hashErr := sameBytes(ctx, h, CleanupFile{Path: f.Path, Bytes: f.Bytes, SHA256: f.SHA256})
-	_ = h.Close()
 	if ctx.Err() != nil {
 		return "", ctx.Err()
 	}
@@ -447,6 +464,14 @@ func purgeFile(ctx context.Context, store *os.Root, held string, f PurgeFile, cu
 	if !same {
 		return "held_copy_changed", nil
 	}
+	// Pending purge manifests can predate the current proof. Check the same
+	// opened, rehashed ZIP before every removal, including resumed operations.
+	if strings.EqualFold(path.Ext(f.Path), ".zip") {
+		if accounted, _ := zipAccountedReader(ctx, h, before.Size()); !accounted {
+			return "archive_not_accounted", ctx.Err()
+		}
+	}
+	_ = h.Close()
 	after, err := parent.Lstat(name)
 	if err != nil || !os.SameFile(before, after) || after.Size() != before.Size() || !after.ModTime().Equal(before.ModTime()) {
 		return "held_copy_changed", nil

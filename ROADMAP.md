@@ -120,6 +120,9 @@ verified, not when code exists. No stage has a time estimate.
    Native Windows reparse-point fixtures now require real junctions and symbolic
    links for root, inventory and library recovery boundaries, with an explicit
    hosted execution gate ([decision 0008](docs/decisions/0008-filesystem-and-display-boundaries.md)).
+   Ordinary ZIP cleanup now requires complete directory/local-record accounting;
+   purge rechecks even historical held ZIPs and pending manifests before removal
+   ([decision 0060](docs/decisions/0060-complete-zip-cleanup-accounting.md)).
 3. **Audio access** (milestone 8). M4B and M4A byte ranges and decoded timing in
    content access, bounded ranges usable by an external player, and output
    demonstrated with a real audiobook reader or server.

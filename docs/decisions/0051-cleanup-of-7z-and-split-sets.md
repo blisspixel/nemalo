@@ -60,7 +60,7 @@ still keeps every RAR volume. Split ZIP intake now follows
 
 ## Validation
 
-Offline tests through a stand-in 7-Zip (`internal/staging/stagingtest`): a RAR
+Offline tests through a stand-in 7-Zip (`internal/staging/stagingtest`): a 7z
 with a tail, a comment, or a physical size one byte short stays; one with an
 unheld member stays; a whole one with only a held book moves; without 7-Zip a
 7z stays; a split 7z set moves as one entry with both volumes, is restored
@@ -71,6 +71,10 @@ Live with 7-Zip 26.04 on 2026-10-19: after ingest, `books.7z` (an EPUB and an
 M4B) and a seven-volume `split.7z` set moved, while the same archive with five
 bytes appended stayed; the purge preview listed the archive and all seven
 volumes.
+
+The later [decision 0060](0060-complete-zip-cleanup-accounting.md) strengthens
+ordinary ZIP accounting across central records, local metadata and descriptors,
+and rechecks historical held ZIPs before purge. RAR sources still never move.
 
 An independent adversarial review with the real 7-Zip then found two defects
 that could move unchecked bytes, which a purge would then delete: a 7z with an
