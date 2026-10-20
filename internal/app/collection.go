@@ -107,6 +107,11 @@ func (s Service) CollectionAcquire(ctx context.Context, request CollectionAcquir
 			default:
 				state = acquisition.InspectPacket(step.Packet)
 			}
+			// Packet names are lookup hints. A copied packet, or a collision in
+			// their short digest, must not satisfy a different exact selection.
+			if state.State != acquisition.PacketRetained && (state.SourceID != item.Item.Source || state.File != item.Item.File || state.Recording != item.Item.Recording) {
+				state = acquisition.PacketState{State: acquisition.PacketRetained, Detail: "the existing packet does not record this exact collection selection; it was retained"}
+			}
 			switch state.State {
 			case acquisition.PacketImportable:
 				step.Action = StepAwaitingImport

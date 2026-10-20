@@ -30,8 +30,8 @@ func TestInspectPacketReadsWhatAPacketHolds(t *testing.T) {
 		return d
 	}
 	done := packet()
-	writeJSON(t, done, "receipt.json", Result{Complete: true, Status: "untrusted_intake"})
-	if s := InspectPacket(done); s.State != PacketImportable {
+	writeJSON(t, done, "receipt.json", Result{Complete: true, Status: "untrusted_intake", Intent: &Intent{Request: Request{SourceID: "archive:a", File: "a.epub"}}})
+	if s := InspectPacket(done); s.State != PacketImportable || s.SourceID != "archive:a" || s.File != "a.epub" {
 		t.Fatal(s)
 	}
 	detected := packet()
@@ -47,7 +47,7 @@ func TestInspectPacketReadsWhatAPacketHolds(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(partial, "content.epub"), make([]byte, 40), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	if s := InspectPacket(partial); s.State != PacketResumable || s.Remaining != 60 {
+	if s := InspectPacket(partial); s.State != PacketResumable || s.Remaining != 60 || s.SourceID != "archive:a" || s.File != "a.epub" {
 		t.Fatal(s)
 	}
 	weak := packet()
@@ -65,12 +65,12 @@ func TestInspectPacketReadsWhatAPacketHolds(t *testing.T) {
 		t.Fatal(s)
 	}
 	recording := packet()
-	writeJSON(t, recording, recordingIntentName, recordingIntent{Request: RecordingRequest{Format: "64Kbps MP3"}, Selection: discovery.Evaluation{Recordings: []discovery.Recording{{Format: "64Kbps MP3", Bytes: 900}}}})
-	if s := InspectRecording(recording); s.State != PacketResumable || s.Remaining != 900 {
+	writeJSON(t, recording, recordingIntentName, recordingIntent{Request: RecordingRequest{SourceID: "archive:a", Format: "64Kbps MP3"}, Selection: discovery.Evaluation{Recordings: []discovery.Recording{{Format: "64Kbps MP3", Bytes: 900}}}})
+	if s := InspectRecording(recording); s.State != PacketResumable || s.Remaining != 900 || s.SourceID != "archive:a" || s.Recording != "64Kbps MP3" {
 		t.Fatal(s)
 	}
-	writeJSON(t, recording, recordingReceiptName, RecordingResult{Complete: true, Status: "untrusted_intake"})
-	if s := InspectRecording(recording); s.State != PacketImportable {
+	writeJSON(t, recording, recordingReceiptName, RecordingResult{Complete: true, Status: "untrusted_intake", SourceID: "archive:a", Format: "64Kbps MP3"})
+	if s := InspectRecording(recording); s.State != PacketImportable || s.SourceID != "archive:a" || s.Recording != "64Kbps MP3" {
 		t.Fatal(s)
 	}
 	if s := InspectRecording(packet()); s.State != PacketRetained {

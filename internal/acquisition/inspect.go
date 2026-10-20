@@ -22,6 +22,11 @@ type PacketState struct {
 	State     string `json:"state"`
 	Detail    string `json:"detail,omitempty"`
 	Remaining int64  `json:"remaining_bytes,omitempty"`
+	// Selection is the source and file or recording declared by this packet.
+	// Callers must compare it with their requested selection before reuse.
+	SourceID  string `json:"source_id,omitempty"`
+	File      string `json:"source_file,omitempty"`
+	Recording string `json:"source_format,omitempty"`
 }
 
 func retained(format string, args ...any) PacketState {
@@ -45,7 +50,11 @@ func InspectPacket(dir string) PacketState {
 		if !receipt.Complete || receipt.Status != "untrusted_intake" {
 			return retained("its receipt records %s; it is not imported", receipt.Status)
 		}
-		return PacketState{State: PacketImportable}
+		state := PacketState{State: PacketImportable}
+		if receipt.Intent != nil {
+			state.SourceID, state.File = receipt.Intent.Request.SourceID, receipt.Intent.Request.File
+		}
+		return state
 	} else if !errors.Is(err, os.ErrNotExist) {
 		return retained("its receipt cannot be read")
 	}
@@ -72,7 +81,7 @@ func InspectPacket(dir string) PacketState {
 	if file.Access == discovery.GutenbergEPUBAccess && readRecord(root, "transfer.json", &rec) == nil && rec.ContentLength > 0 {
 		total = rec.ContentLength
 	}
-	return PacketState{State: PacketResumable, Remaining: total - info.Size()}
+	return PacketState{State: PacketResumable, Remaining: total - info.Size(), SourceID: intent.Request.SourceID, File: intent.Request.File}
 }
 
 // InspectRecording reads one recording directory without changing it:
@@ -90,7 +99,7 @@ func InspectRecording(dir string) PacketState {
 		if err := readRecord(root, recordingReceiptName, &receipt); err != nil || !receipt.Complete || receipt.Status != "untrusted_intake" {
 			return retained("its recording receipt is not completed untrusted intake")
 		}
-		return PacketState{State: PacketImportable}
+		return PacketState{State: PacketImportable, SourceID: receipt.SourceID, Recording: receipt.Format}
 	} else if !errors.Is(err, os.ErrNotExist) {
 		return retained("its recording receipt cannot be read")
 	}
@@ -100,7 +109,7 @@ func InspectRecording(dir string) PacketState {
 	}
 	for _, r := range intent.Selection.Recordings {
 		if r.Format == intent.Request.Format {
-			return PacketState{State: PacketResumable, Remaining: r.Bytes}
+			return PacketState{State: PacketResumable, Remaining: r.Bytes, SourceID: intent.Request.SourceID, Recording: intent.Request.Format}
 		}
 	}
 	return retained("its recording intent names no declared recording")

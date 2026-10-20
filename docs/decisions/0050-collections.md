@@ -39,6 +39,10 @@ not a production path and is not reused for policy.
   ingest, an interrupted one is resumed as `--resume` would, and any other
   existing packet is reported and left untouched. One item's failure does not
   stop the others; cancellation stops before the next item.
+  Before offering resume or import, the packet's recorded source and exact
+  file or recording format must match the collection item. The directory name
+  is a lookup hint, not selection evidence; mismatched or absent declarations
+  keep the packet retained without requests or writes to it.
 - `--max-total-bytes` caps the bytes a run may transfer: each item's budget is
   the smaller of its own default and what remains, and no item starts once it is
   spent. The intake must be absolute and outside the library.

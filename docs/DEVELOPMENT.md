@@ -147,6 +147,9 @@ acquires only the missing ones into an intake directory for `library ingest`
 ([decision 0050](decisions/0050-collections.md)).
 Conflicting track positions or totals keep a collection's recording incomplete,
 with every conflicting asset listed for review.
+An existing collection intake packet is resumed or offered for ingest only when
+it records the item's exact source and file or recording format; a copied or
+mismatched packet stays retained.
 Registry confirmation of identifiers and rights policy remain planned.
 
 ## File health and scanning

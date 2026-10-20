@@ -4,7 +4,9 @@ import (
 	"context"
 	"crypto/md5"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"os"
@@ -24,6 +26,97 @@ type shelf struct {
 	mu        sync.Mutex
 	bodies    map[string][]byte
 	downloads []string
+}
+
+func TestCollectionExistingPacketsMustNameTheExactSelection(t *testing.T) {
+	ctx := context.Background()
+	lib := t.TempDir()
+	if _, err := library.Initialize(ctx, lib); err != nil {
+		t.Fatal(err)
+	}
+	for _, recording := range []bool{false, true} {
+		for _, receipted := range []bool{false, true} {
+			for _, mismatch := range []string{"", "source", "selection", "missing"} {
+				t.Run(fmt.Sprintf("recording=%t/receipted=%t/mismatch=%s", recording, receipted, mismatch), func(t *testing.T) {
+					item := library.CollectionItem{Source: "archive:demo", File: "book.pdf"}
+					if recording {
+						item.File, item.Recording = "", "MP3"
+					}
+					collection := filepath.Join(t.TempDir(), "c.json")
+					body, err := json.Marshal(library.Collection{SchemaVersion: 1, Name: "Selection", Items: []library.CollectionItem{item}})
+					if err != nil {
+						t.Fatal(err)
+					}
+					if err := os.WriteFile(collection, body, 0600); err != nil {
+						t.Fatal(err)
+					}
+					intake := t.TempDir()
+					packet := filepath.Join(intake, item.Packet())
+					if err := os.Mkdir(packet, 0700); err != nil {
+						t.Fatal(err)
+					}
+					source, file, format := item.Source, item.File, item.Recording
+					switch mismatch {
+					case "source":
+						source = "archive:other"
+					case "selection":
+						if recording {
+							format = "VBR MP3"
+						} else {
+							file = "other.pdf"
+						}
+					case "missing":
+						source = ""
+					}
+					files := map[string]string{}
+					switch {
+					case recording && receipted:
+						files["recording.json"] = fmt.Sprintf(`{"complete":true,"status":"untrusted_intake","source_id":%q,"source_format":%q}`, source, format)
+					case recording:
+						files["recording-intent.json"] = fmt.Sprintf(`{"request":{"source_id":%q,"source_format":%q},"selection":{"recordings":[{"source_format":%q,"declared_bytes":100}]}}`, source, format, format)
+					case receipted:
+						files["receipt.json"] = fmt.Sprintf(`{"complete":true,"status":"untrusted_intake","intent":{"request":{"source_id":%q,"source_file":%q}}}`, source, file)
+					default:
+						files["intent.json"] = fmt.Sprintf(`{"schema_version":1,"request":{"source_id":%q,"source_file":%q},"selection":{"files":[{"name":%q,"source_format":"Text PDF","declared_bytes":100}]}}`, source, file, file)
+						files["transfer.json"] = fmt.Sprintf(`{"schema_version":1,"status":200,"etag":"\"same\"","strong_etag":true,"source_file":%q}`, file)
+						files["content.pdf"] = "partial"
+					}
+					for name, text := range files {
+						if err := os.WriteFile(filepath.Join(packet, name), []byte(text), 0600); err != nil {
+							t.Fatal(err)
+						}
+					}
+					service := Service{Providers: map[string]Searcher{}, Scanner: kindScanner{}}
+					r, err := service.CollectionAcquire(ctx, CollectionAcquireRequest{Library: lib, Collection: collection, Intake: intake})
+					want := StepResume
+					if receipted {
+						want = StepAwaitingImport
+					}
+					if mismatch != "" {
+						want = StepRetained
+					}
+					if err != nil || len(r.Steps) != 1 || r.Steps[0].Action != want {
+						t.Fatal(r, err)
+					}
+					if mismatch == "" {
+						return
+					}
+					// Applying a retained step does not evaluate a provider, run a
+					// scanner, or modify its bytes, with all external I/O substituted.
+					r, err = service.CollectionAcquire(ctx, CollectionAcquireRequest{Library: lib, Collection: collection, Intake: intake, Apply: true})
+					if err != nil || r.Complete || r.Steps[0].Outcome != "not_started" || !strings.Contains(r.Steps[0].Detail, "exact collection selection") {
+						t.Fatal(r, err)
+					}
+					for name, text := range files {
+						got, err := os.ReadFile(filepath.Join(packet, name))
+						if err != nil || string(got) != text {
+							t.Fatal("retained packet changed", name, err)
+						}
+					}
+				})
+			}
+		}
+	}
 }
 
 func (s *shelf) Search(context.Context, string, int, int) (discovery.Page, error) {
