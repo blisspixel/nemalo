@@ -70,7 +70,10 @@ still refuses this reference.
 
 Use synthetic Go fixtures for exact spans, supported fields, every truncation,
 header corruption, malformed sizes/flags/attributes/names, directory payloads,
-non-file records, tails, bounds, cancellation and failed/shared reader work.
+non-file records, tails, bounds, cancellation during reads and final name/prefix
+validation, and failed/shared reader work. A large valid name set must not return
+framing evidence after cancellation during its final validation. The shared
+RAR5 name checks obey the same cancellation contract.
 Fuzz raw framing and checksum-aware headers. Compare independently generated
 native archives with the maintained reader outside the checkout, including its
 unlisted records. Keep installed tools and scanners out of core tests.

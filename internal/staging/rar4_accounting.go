@@ -136,8 +136,8 @@ func RAR4Accounted(ctx context.Context, source io.ReaderAt, size int64) ([]RAR4F
 			if headerSize != 7 || flags&^uint16(0x4000) != 0 || next != size {
 				return fail("unsupported end metadata or trailing data")
 			}
-			if !unambiguousRARParents(names) {
-				return fail("overlapping member selections")
+			if err := unambiguousRARParents(ctx, names); err != nil {
+				return nil, fmt.Errorf("%w: %w", ErrRAR4Coverage, err)
 			}
 			return files, nil
 		default:

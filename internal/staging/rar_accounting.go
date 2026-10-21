@@ -15,6 +15,7 @@ import (
 )
 
 var ErrRAR5Coverage = errors.New("RAR5 framing is unsupported or unaccounted")
+var errRARNameConflict = errors.New("duplicate or overlapping member selections")
 
 // RAR5File is a declared file record, not evidence of extracted integrity.
 // HeaderOffset through DataOffset+Packed partitions the original container.
@@ -100,8 +101,8 @@ func RAR5Accounted(ctx context.Context, source io.ReaderAt, size int64) ([]RAR5F
 			if flags&^uint64(4) != 0 || endFlags != 0 || !h.done() || next != size {
 				return nil, fmt.Errorf("%w: unsupported end marker or trailing bytes", ErrRAR5Coverage)
 			}
-			if !unambiguousRAR5Names(files) {
-				return nil, fmt.Errorf("%w: duplicate or overlapping member selections", ErrRAR5Coverage)
+			if err := unambiguousRAR5Names(ctx, files); err != nil {
+				return nil, fmt.Errorf("%w: %w", ErrRAR5Coverage, err)
 			}
 			return files, nil
 		default:
@@ -287,15 +288,18 @@ func supportedRAR5Compression(c uint64) bool {
 	return version == 1 || (dictionary <= 15 && c&0x1f8000 == 0)
 }
 
-func unambiguousRAR5Names(files []RAR5File) bool {
+func unambiguousRAR5Names(ctx context.Context, files []RAR5File) error {
 	names := map[string]bool{}
 	for _, f := range files {
+		if err := ctx.Err(); err != nil {
+			return err
+		}
 		if _, exists := names[f.Name]; exists {
-			return false
+			return errRARNameConflict
 		}
 		names[f.Name] = f.Directory
 	}
-	return unambiguousRARParents(names)
+	return unambiguousRARParents(ctx, names)
 }
 
 func validRARName(name string) bool {
@@ -303,13 +307,16 @@ func validRARName(name string) bool {
 		!strings.ContainsFunc(name, func(r rune) bool { return unicode.IsControl(r) || unicode.In(r, unicode.Cf) || r == '\ufffe' })
 }
 
-func unambiguousRARParents(names map[string]bool) bool {
+func unambiguousRARParents(ctx context.Context, names map[string]bool) error {
 	for name := range names {
+		if err := ctx.Err(); err != nil {
+			return err
+		}
 		for parent := path.Dir(name); parent != "."; parent = path.Dir(parent) {
 			if dir, exists := names[parent]; exists && !dir {
-				return false
+				return errRARNameConflict
 			}
 		}
 	}
-	return true
+	return ctx.Err()
 }
