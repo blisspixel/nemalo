@@ -921,8 +921,13 @@ their test executable for the same handler.
 Full library suites run independent RAR tree and RAR5 set recovery groups in at
 most three isolated copies of that same compiled test executable across both
 matrices. This isolates fixture environment/global changes and overlaps filesystem waits.
-Covered children write to Go test's shared counter directory; the parent retains
-its final text profile. Race instrumentation, every case/assertion and real
+Each covered group and its synthetic reader descendants write to a private
+counter directory, avoiding concurrent metadata replacement on Windows. After
+the group succeeds, the running toolchain's offline `go tool covdata merge`
+combines its counters. Serialized exclusive publication retains every merged
+counter in Go test's directory; identical metadata is reused without replacement,
+and conflicts or missing counters fail the test. The parent retains its final
+text profile. Race instrumentation, every case/assertion and real
 durability operations stay enabled. Children have a four-minute timeout inside
 the parent's unchanged ten-minute package timeout. An unknown/unexecuted group
 or a failed child fails the parent. Explicit `-run` filters keep their original
