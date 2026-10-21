@@ -870,6 +870,16 @@ inherited `GORACE` options, avoiding a one-second sleep per invocation. They rem
 race-instrumented with failure reporting; the running parent keeps its startup
 settings. See [Go's race options](https://go.dev/doc/articles/race_detector#Options).
 
+Outside coverage runs, library recovery tests build the shared synthetic reader
+as a small Go executable once per test process, rather than restarting the full
+library test executable for every reader call. The build uses the running
+toolchain offline and matches the parent's race instrumentation, which a test
+checks from the executable's build information. Coverage runs keep Go test's own
+instrumented executable and counter identity; the test checks this selection too.
+Real child processes, production durability operations, every recovery case and
+the default test timeout remain in place. Other packages may continue to use
+their test executable for the same handler.
+
 Race instrumentation needs cgo and a C compiler. Cgo-free release builds do not.
 On Windows with MSYS2 installed, put its compiler directory on PATH for race tests
 and set `CGO_ENABLED=1`. CI runs native Linux, macOS, and Windows checks, followed

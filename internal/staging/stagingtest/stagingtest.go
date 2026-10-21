@@ -19,6 +19,11 @@ import (
 
 const envDir = "NEMALO_STAGINGTEST_7Z"
 
+// Executable selects the synthetic reader. Packages with many process fixtures
+// may build the small command in cmd/archiver once from TestMain. The default
+// reuses the calling test binary, whose TestMain must call Main first.
+var Executable = os.Executable
+
 // Archive is what the stand-in reports for any archive it is asked about.
 type Archive struct {
 	// Body identifies a private snapshot when InstallMany supplies tree nodes.
@@ -141,7 +146,7 @@ func InstallMany(t testing.TB, archives ...Archive) {
 	t.Setenv(envDir, dir)
 }
 
-// Install makes staging run this test binary as 7-Zip, reporting a.
+// Install makes staging run the selected synthetic executable as 7-Zip, reporting a.
 func Install(t testing.TB, a Archive) {
 	t.Helper()
 	// These synchronous fixture children start no application goroutines.
@@ -196,7 +201,7 @@ func Install(t testing.TB, a Archive) {
 	if err := os.WriteFile(filepath.Join(dir, "volume-names"), []byte(strings.Join(volumeNames, "\n")), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	exe, err := os.Executable()
+	exe, err := Executable()
 	if err != nil {
 		t.Fatal(err)
 	}
