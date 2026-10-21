@@ -690,9 +690,16 @@ behavior, with acceptance evidence tracked in
 `staging.RAR4Accounted` separately measures a strict standalone subset read-only,
 without payload reads or integrity claims. It shares the 16 MiB lifetime proof
 reader and refuses subblocks, comments, encryption, volumes, ambiguous names and
-unsupported metadata. This grants no RAR4 extraction coverage or cleanup permission;
+unsupported metadata. Its facts alone grant no coverage or cleanup permission;
 acceptance evidence is tracked in issue 57. See
 [decision 0067](decisions/0067-read-only-rar4-framing.md).
+An internal caller can explicitly request standalone RAR4 reader binding with
+both `Coverage` and `RAR4Coverage`. The same private snapshot and complete UTF-8
+table drive checked exact-name extraction through the common RAR matcher. This is
+not a CLI/JSON/MCP option; application services leave the RAR4 opt-in false and
+RAR4 sources still never move. Child RARs and sets receive no new coverage.
+The capability requires separate verification and grants no application proof;
+see [decision 0068](decisions/0068-opt-in-rar4-reader-binding.md).
 `library audit` on the library directory reports missing, changed, and review
 holdings and does not repair them. Snapshot audit still requires `--root`.
 An EPUB package identifier is recorded when it is an explicit ISBN, DOI, or

@@ -10,6 +10,10 @@ import (
 	"time"
 )
 
+func rar5TableMatches(files []RAR5File, entries []sevenEntry) bool {
+	return rarTableMatches(rar5BindingFiles(files), entries)
+}
+
 func TestRAR5ReaderTableBindsEveryExactRecord(t *testing.T) {
 	for _, kind := range []string{"exact", "reordered", "missing", "extra", "duplicate", "physical_duplicate", "raw_name", "normalized_name", "bytes", "packed", "unknown_size", "unknown_packed", "directory", "unknown_crc", "crc", "invalid", "malformed", "link", "special", "encrypted", "split", "split_before", "split_after", "directory_crc", "directory_unknown_packed"} {
 		t.Run(kind, func(t *testing.T) {

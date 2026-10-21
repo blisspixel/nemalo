@@ -1,8 +1,10 @@
 # 0067: read-only accounting of bounded standalone RAR4 framing
 
-Status: accepted, 2026-10-20. Implementation and verification tracked in
+Status: accepted and verified, 2026-10-20. Evidence is tracked in
 [issue 57](https://github.com/blisspixel/nemalo/issues/57), roadmap stage 2.
 This decision enables no RAR4 cleanup or extraction coverage authority.
+The separate [decision 0068](0068-opt-in-rar4-reader-binding.md) specifies the
+explicitly opted-in reader binding, with the application gate still closed.
 
 ## Evidence
 

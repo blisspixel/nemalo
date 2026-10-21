@@ -207,8 +207,11 @@ Fresh purge repeats the full check and binds its single-file group and leaf dige
 recovery uses the supported immutable evidence and current remaining bytes/holdings.
 RAR4, sets, child RARs and RAR roots containing nested archives stay preserved.
 Decision 0067 permits separate read-only RAR4 framing measurements. They grant no
-staging coverage or cleanup authority; keep unsupported names/metadata preserved
-and require full verification before any later reader/application integration.
+coverage or cleanup authority alone. Decision 0068 binds an explicitly opted-in
+standalone root to the maintained reader. Require Coverage plus RAR4Coverage;
+application services leave RAR4Coverage false. Never let RAR4 evidence fall through
+rar5-frames/1. Keep child/set coverage and all application RAR4 cleanup disabled
+until their separately versioned contracts and complete verification.
 Never broaden `archive-tree/1` to RAR. The application increment needs its own full
 local/native/hosted acceptance; implementation is not a release.
 Requested standalone RAR5 coverage binds every physical file record to one UTF-8
