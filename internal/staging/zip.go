@@ -80,6 +80,9 @@ type Extraction struct {
 	// RARVersion is measured from the checked outer snapshot signature. It is
 	// internal evidence; neither a filename nor a child can supply this fact.
 	RARVersion int `json:"-"`
+	// RARContainers counts individually covered RAR nodes. A partial tree or
+	// failed output can still have covered nodes; this count grants no permission.
+	RARContainers int `json:"-"`
 	// CoverageGap locates the first container without requested byte evidence.
 	// An empty chain names the outer container, not an archive member.
 	CoverageGap *CoverageGap `json:"coverage_gap,omitempty"`

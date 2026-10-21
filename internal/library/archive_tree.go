@@ -15,11 +15,16 @@ import (
 )
 
 const archiveTreeProof = "archive-tree/1"
+const archiveRARTreeProof = "archive-tree/2"
 const rar5FramesProof = "rar5-frames/1"
 const rar4FramesProof = "rar4-frames/1"
 
 func leafBoundArchiveProof(proof string) bool {
-	return proof == archiveTreeProof || proof == rar5FramesProof || proof == rar4FramesProof
+	return proof == archiveTreeProof || proof == archiveRARTreeProof || proof == rar5FramesProof || proof == rar4FramesProof
+}
+
+func knownArchiveProof(proof string) bool {
+	return leafBoundArchiveProof(proof) || proof == zipStreamProof || proof == zipSegmentsProof
 }
 
 // CleanupArchiveLeaf binds an exact nested selection to verified held bytes.
@@ -90,7 +95,7 @@ func validArchiveLeaves(e CleanupEntry) bool {
 				if !supportedImport(name) {
 					return false
 				}
-			} else if ext := strings.ToLower(path.Ext(name)); ext != ".zip" && ext != ".7z" {
+			} else if ext := strings.ToLower(path.Ext(name)); ext != ".zip" && ext != ".7z" && ext != ".rar" {
 				return false
 			}
 		}
@@ -127,9 +132,24 @@ func supportedArchiveProof(e CleanupEntry) bool {
 		}
 		return true
 	}
-	if e.ArchiveProof == archiveTreeProof {
+	if e.ArchiveProof == archiveTreeProof || e.ArchiveProof == archiveRARTreeProof {
 		_, layout := archiveEntryParts(e)
-		return layout && !strings.EqualFold(path.Ext(e.Path), ".rar") && validArchiveLeaves(e)
+		if !layout || !validArchiveLeaves(e) {
+			return false
+		}
+		if e.ArchiveProof == archiveTreeProof {
+			if strings.EqualFold(path.Ext(e.Path), ".rar") {
+				return false
+			}
+			for _, leaf := range e.ArchiveLeaves {
+				for _, container := range leaf.Chain[:len(leaf.Chain)-1] {
+					if strings.EqualFold(path.Ext(container), ".rar") {
+						return false
+					}
+				}
+			}
+		}
+		return true
 	}
 	return len(e.ArchiveLeaves) == 0 && supportedZIPSet(e)
 }

@@ -14,7 +14,7 @@ import (
 	"github.com/blisspixel/nemalo/internal/staging/stagingtest"
 )
 
-func TestNestedRARReaderCoverageCannotAuthorizeExistingCleanupProofs(t *testing.T) {
+func TestNestedRARReaderCoverageRequiresNewCleanupProof(t *testing.T) {
 	for _, version := range []int{4, 5} {
 		t.Run(fmt.Sprint(version), func(t *testing.T) {
 			fixture, kind := newRAR4CleanupFixture, "Rar"
@@ -54,12 +54,19 @@ func TestNestedRARReaderCoverageCannotAuthorizeExistingCleanupProofs(t *testing.
 			}
 			before := snapshotTree(t, f.folder)
 			p, err := Cleanup(context.Background(), CleanupRequest{Library: f.root, Folder: f.folder})
-			if err != nil || p.Move != 0 || p.Keep != 1 || !reflect.DeepEqual(before, snapshotTree(t, f.folder)) {
-				t.Fatal("read-only capability granted existing proof", p, err)
+			if err != nil || p.Move != 1 || p.Keep != 0 || p.Entries[0].ArchiveProof != "archive-tree/2" || !reflect.DeepEqual(before, snapshotTree(t, f.folder)) {
+				t.Fatal("nested coverage did not use its own proof", p, err)
+			}
+			old := p.Entries[0]
+			for _, proof := range []string{"archive-tree/1", "rar4-frames/1", "rar5-frames/1"} {
+				old.ArchiveProof = proof
+				if supportedArchiveProof(old) {
+					t.Fatal("existing proof gained nested authority", proof)
+				}
 			}
 			c, err := Cleanup(context.Background(), CleanupRequest{Library: f.root, Folder: f.folder, Apply: p.Digest})
-			if err != nil || c.Moved != 0 || !reflect.DeepEqual(before, snapshotTree(t, f.folder)) {
-				t.Fatal("application moved unsupported tree", c, err)
+			if err != nil || c.Moved != 1 || c.Entries[0].ArchiveProof != "archive-tree/2" {
+				t.Fatal("nested move did not retain its proof", c, err)
 			}
 		})
 	}

@@ -86,6 +86,7 @@ func extractTree(ctx context.Context, src *os.Root, names []string, dst *os.Root
 		}
 		result.Complete = result.Complete && x.Complete
 		result.Whole = result.Whole && x.Whole
+		result.RARContainers += x.RARContainers
 		if depth == 1 && len(files) == 1 {
 			result.RARVersion = x.RARVersion
 		}

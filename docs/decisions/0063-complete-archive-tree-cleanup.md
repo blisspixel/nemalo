@@ -2,6 +2,8 @@
 
 Status: accepted and implemented, 2026-10-20. Acceptance evidence tracked in
 [issue 56](https://github.com/blisspixel/nemalo/issues/56), stage 2.
+The later [decision 0072](0072-nested-rar-cleanup.md) adds `archive-tree/2` for
+covered RAR trees without expanding this decision's original /1 proof.
 
 ## Decision
 

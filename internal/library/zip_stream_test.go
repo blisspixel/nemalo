@@ -144,7 +144,11 @@ func testZIPCleanupRestoreAndPurge(t *testing.T, fixture zipFixtureFactory) {
 }
 
 func testZIPCleanupRefusesUnaccountedSources(t *testing.T, fixture zipFixtureFactory) {
-	for _, kind := range []string{"notes", "member_comment", "directory_gap", "crc", "missing", "changed", "alias", "missing_tool"} {
+	testArchiveCleanupRefusals(t, fixture, []string{"notes", "member_comment", "directory_gap", "crc", "missing", "changed", "alias", "missing_tool"})
+}
+
+func testArchiveCleanupRefusals(t *testing.T, fixture zipFixtureFactory, kinds []string) {
+	for _, kind := range kinds {
 		t.Run(kind, func(t *testing.T) {
 			build := func(book []byte) []byte {
 				b := streamZIPBytes(t, book, kind == "notes", map[bool]string{true: "preserved annotation"}[kind == "member_comment"])
@@ -179,7 +183,7 @@ func testZIPCleanupRefusesUnaccountedSources(t *testing.T, fixture zipFixtureFac
 				if f.proof() == zipSegmentsProof {
 					alias = "books/SEGMENTS.Z001"
 				}
-				if f.proof() == archiveTreeProof {
+				if f.proof() == archiveTreeProof || f.proof() == archiveRARTreeProof {
 					base := strings.ToUpper(filepath.Base(f.names[0]))
 					if isZIPChunk(f.names[0]) {
 						base = strings.TrimSuffix(base, ".001") + ".0001"
@@ -387,7 +391,7 @@ func testZIPPurgeRetainsUnsupportedOrMalformedEvidence(t *testing.T, fixture zip
 			})
 			before := snapshotTree(t, filepath.Join(c.HoldingArea, "files"))
 			r, err := Purge(ctx, PurgeRequest{Library: f.root, CleanupID: c.CleanupID, Apply: digest})
-			if kind == "unknown" || kind == "missing" || (kind == "wrong_proof" && f.proof() != archiveTreeProof) {
+			if kind == "unknown" || kind == "missing" || (kind == "wrong_proof" && !leafBoundArchiveProof(f.proof())) {
 				if err != nil || r.Purged != 0 {
 					t.Fatal(r, err)
 				}

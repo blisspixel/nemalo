@@ -64,7 +64,7 @@ published prereleases may lag:
   `library cleanup` then moves sources whose
   books the library holds into a recoverable holding area, and `library restore`
   undoes it. Complete `.zip.001` byte streams and `.z01`/`.zip` disk segments
-  move as one checked set. Nested ZIP/7z trees qualify only when every container
+  move as one checked set. Nested ZIP/RAR/7z trees qualify only when every container
   is accounted for and every leaf is held; the preview shows exact selections.
   `library purge` frees that space once the library holds the
   same verified bytes, after its own preview. `library rescan` scans review holdings in
@@ -106,8 +106,8 @@ published prereleases may lag:
   import tools that store only the plan a preview returned, and acquisition
   and rescan as durable jobs that outlive the connection.
 
-Cleanup supports bounded standalone RAR4/RAR5 subsets with only held book leaves;
-volume sets and nested RAR cleanup remain planned, along with a TUI view
+Cleanup supports bounded RAR4/RAR5 subsets in fully accounted trees whose book
+leaves are all held. RAR volume cleanup remains planned, along with a TUI view
 of jobs. Single-file import is not
 a full checked-library policy.
 File checks report limited evidence, never a safety or completeness guarantee.

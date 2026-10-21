@@ -36,6 +36,17 @@ func cleanupTreeSeven(label string, files ...nestedFile) (body []byte, profile s
 
 func newCleanupTreeFixture(t *testing.T, layout string, count int, build func([]byte) []byte) streamFixture {
 	t.Helper()
+	return newCleanupTreeFixtureWithChild(t, layout, count, "inside.zip", func(book []byte) ([]byte, []stagingtest.Archive) {
+		inner := nestedZIP(t, nestedFile{"book.epub", book})
+		if build != nil {
+			inner = build(book)
+		}
+		return inner, []stagingtest.Archive{{Body: inner, Kind: "-tzip"}}
+	})
+}
+
+func newCleanupTreeFixtureWithChild(t *testing.T, layout string, count int, childName string, child func([]byte) ([]byte, []stagingtest.Archive)) streamFixture {
+	t.Helper()
 	f := streamFixture{root: t.TempDir(), folder: t.TempDir(), archiveProof: archiveTreeProof}
 	if _, err := Initialize(context.Background(), f.root); err != nil {
 		t.Fatal(err)
@@ -45,14 +56,11 @@ func newCleanupTreeFixture(t *testing.T, layout string, count int, build func([]
 	if _, err := Import(context.Background(), ImportRequest{Library: f.root, Source: bookPath, Apply: true, Scan: true, Scanner: cleanScan{}}); err != nil {
 		t.Fatal(err)
 	}
-	inner := nestedZIP(t, nestedFile{"book.epub", book})
-	if build != nil {
-		inner = build(book)
-	}
-	middle, middleProfile := cleanupTreeSeven("middle", nestedFile{"inside.zip", inner})
+	inner, profiles := child(book)
+	middle, middleProfile := cleanupTreeSeven("middle", nestedFile{childName, inner})
 	outerFiles := []nestedFile{{"direct.epub", book}, {"middle.7z", middle}}
 	outer := nestedZIP(t, outerFiles...)
-	profiles := []stagingtest.Archive{{Body: inner, Kind: "-tzip"}, middleProfile}
+	profiles = append(profiles, middleProfile)
 	rootProfile := stagingtest.Archive{Body: outer, Kind: "-tzip", Header: fmt.Sprintf("Type = zip\nPhysical Size = %d\n", len(outer))}
 	if layout == "7z" || layout == "7z_chunks" {
 		outer, rootProfile = cleanupTreeSeven("outer", outerFiles...)
@@ -266,9 +274,14 @@ func rewriteTreeCleanup(t *testing.T, root, id string, alter func(*cleanupManife
 }
 
 func TestArchiveTreeCleanupResumeRejectsUnsupportedBindingsBeforeWrites(t *testing.T) {
-	for _, kind := range []string{"future", "missing_leaves", "wrong_hash", "wrong_chain", "wrong_layout"} {
+	testTreeCleanupResumeBindings(t, func(t *testing.T) streamFixture { return newCleanupTreeFixture(t, "zip_chunks", 3, nil) })
+}
+
+func testTreeCleanupResumeBindings(t *testing.T, fixture func(*testing.T) streamFixture, extra ...string) {
+	kinds := append([]string{"future", "missing_leaves", "wrong_hash", "wrong_chain", "wrong_layout"}, extra...)
+	for _, kind := range kinds {
 		t.Run(kind, func(t *testing.T) {
-			f := newCleanupTreeFixture(t, "zip_chunks", 3, nil)
+			f := fixture(t)
 			p, err := Cleanup(context.Background(), CleanupRequest{Library: f.root, Folder: f.folder})
 			if err != nil {
 				t.Fatal(err)
@@ -291,6 +304,10 @@ func TestArchiveTreeCleanupResumeRejectsUnsupportedBindingsBeforeWrites(t *testi
 				switch kind {
 				case "future":
 					e.ArchiveProof = "archive-tree/future"
+				case "old_tree":
+					e.ArchiveProof = archiveTreeProof
+				case "standalone":
+					e.ArchiveProof = rar4FramesProof
 				case "missing_leaves":
 					e.ArchiveLeaves = nil
 				case "wrong_hash":

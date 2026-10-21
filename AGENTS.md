@@ -205,7 +205,7 @@ Decision 0066 permits only standalone root RAR5 book leaves and empty directorie
 with `rar5-frames/1`, one exact source identity and one-component `archive_leaves`.
 Fresh purge repeats the full check and binds its single-file group and leaf digest;
 recovery uses the supported immutable evidence and current remaining bytes/holdings.
-Sets, child RARs and RAR roots containing nested archives stay preserved.
+RAR sets stay preserved; nested tree authority is separate in decision 0072.
 Decision 0067 permits separate read-only RAR4 framing measurements. They grant no
 coverage or cleanup authority alone. Decision 0068 binds an explicitly opted-in
 standalone root to the maintained reader. Require Coverage plus RAR4Coverage.
@@ -217,9 +217,9 @@ time fields, Unicode names and other extensions remain preserved. This adds no
 RAR4 application permission and does not expand the RAR5 proof.
 Decision 0070 permits bounded standalone root RAR4 cleanup under rar4-frames/1,
 after the read-only prerequisites passed all-six hosted checks through ee52520.
-Application cleanup requests RAR4Coverage only for a RAR root and selects its
-distinct proof from the checked outer snapshot signature, never the filename or
-a child. Keep exact one-component leaves, the shared recovery protocol and strict
+Standalone authority selects its distinct proof from the checked outer snapshot
+signature, never the filename or a child. Keep exact one-component leaves,
+the shared recovery protocol and strict
 known proof mismatch checks. Unicode names, unsupported metadata and nonzero high
 words remain preserved. No public option, decoder or new dependency is added.
 Never broaden `archive-tree/1` to RAR. The application increment needs its own full
@@ -227,12 +227,20 @@ local/native/hosted acceptance; implementation is not a release.
 Requested standalone RAR5 coverage binds every physical file record to one UTF-8
 reader table before exact-name extraction. Decision 0071 adds an explicit internal
 NestedRARCoverage opt-in alongside Coverage for the same standalone proof on
-checked private children; RAR4 also needs RAR4Coverage. Application services leave
-NestedRARCoverage false. Keep strict standalone child preflight and all shared
+checked private children; RAR4 also needs RAR4Coverage. Keep strict standalone
+child preflight and all shared
 proof/read/member/output/process/diagnostic/deadline limits, including failed work.
 Physical coverage alone grants no member eligibility, integrity or cleanup right.
-The new capability needs full local/native/exact-hosted verification before a later
-separately versioned tree proof and recovery increment can authorize nested cleanup.
+That capability passed full local/native/exact-hosted verification at 12bea6e.
+Decision 0072 enables both RAR coverage flags only alongside complete tree checks
+and the new archive-tree/2 authority. Select it using measured covered RAR nodes,
+including empty children, never filenames or leaf chains. ZIP/7z-only trees stay
+on /1 and direct-only RAR roots keep their standalone IDs. Keep /1's exclusion of
+RAR roots/intermediate chains. Check canonical leaf syntax separately from proof
+semantics; validate every known proof's complete shape before any independent
+group may remove bytes. Unknown proofs retain bytes. Fresh purge repeats the
+full tree check; partial recovery uses only supported immutable group/leaf evidence
+and current remaining identities/holdings. RAR and nested volume sets stay.
 Historical RAR-named archive entries and old continuations without a supported
 proof cannot resume cleanup or purge, including pending purge intents. Preserve
 their recorded bytes for restore; member holdings alone confer no permission.

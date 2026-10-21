@@ -3,6 +3,8 @@
 Status: accepted, 2026-10-20. Implementation and verification tracked in
 [issue 57](https://github.com/blisspixel/nemalo/issues/57), roadmap stage 2.
 This decision grants no new cleanup or purge authority.
+The later [decision 0072](0072-nested-rar-cleanup.md) specifies separate
+application authority after this read-only prerequisite's full acceptance.
 
 ## Prerequisite and boundary
 

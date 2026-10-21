@@ -257,7 +257,7 @@ func TestStandaloneRAR4PurgeInterruptions(t *testing.T) {
 	}
 }
 
-func TestStandaloneRAR4ScopeRetainsVolumesAndNestedSources(t *testing.T) {
+func TestRAR4NestedSourcesRequireNewProofAndVolumesStay(t *testing.T) {
 	for _, kind := range []string{"modern_set", "old_set", "nested_root", "child"} {
 		t.Run(kind, func(t *testing.T) {
 			var book []byte
@@ -286,12 +286,19 @@ func TestStandaloneRAR4ScopeRetainsVolumesAndNestedSources(t *testing.T) {
 			case "child":
 				outer := nestedZIP(t, nestedFile{"inside.rar", f.parts[0]})
 				writeTree(t, f.folder, map[string][]byte{"books/outer.zip": outer})
-				stagingtest.InstallMany(t, stagingtest.Archive{Kind: "-tRar", Body: f.parts[0], Members: map[string][]byte{"book.epub": book}})
+				stagingtest.InstallMany(t, stagingtest.Archive{Kind: "-tRar", Body: f.parts[0], Header: fmt.Sprintf("Type = Rar\nPhysical Size = %d\nMultivolume = -\nVolumes = 1\n", len(f.parts[0])), Members: map[string][]byte{"book.epub": book}})
 			}
 			before := snapshotTree(t, f.folder)
 			p, err := Cleanup(context.Background(), CleanupRequest{Library: f.root, Folder: f.folder})
-			if err != nil || p.Move != 0 || !reflect.DeepEqual(before, snapshotTree(t, f.folder)) {
-				t.Fatal("unsupported RAR4 source moved", p, err)
+			wantMove := 0
+			if kind == "nested_root" || kind == "child" {
+				wantMove = 1
+			}
+			if err != nil || p.Move != wantMove || !reflect.DeepEqual(before, snapshotTree(t, f.folder)) {
+				t.Fatal("RAR4 scope changed", p, err)
+			}
+			if wantMove == 1 && p.Entries[0].ArchiveProof != "archive-tree/2" {
+				t.Fatal("RAR4 nested source borrowed an existing proof", p)
 			}
 		})
 	}

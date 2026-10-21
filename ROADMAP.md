@@ -111,7 +111,7 @@ verified, not when code exists. No stage has a time estimate.
    ([decision 0057](docs/decisions/0057-split-zip-intake.md)).
    Nested standalone ZIP/RAR/7z intake shares depth, output, member, reader,
    diagnostic, process, and deadline limits across each outer archive tree;
-   nested sources and volume sets stay preserved
+   intake preserves all original sources
    ([decision 0058](docs/decisions/0058-bounded-nested-intake.md)).
    Explicit PAR2 metadata inventory groups declared set IDs, preserves conflicting
    declarations, and distinguishes packet checksums from unverified protected
@@ -139,7 +139,7 @@ verified, not when code exists. No stage has a time estimate.
    split sets. Historical unversioned 7z entries retain every part for restore;
    acceptance is tracked in [issue 58](https://github.com/blisspixel/nemalo/issues/58)
    ([decision 0065](docs/decisions/0065-versioned-7z-coverage.md)).
-   RAR source cleanup remains unfinished; a RAR child preserves its outer source.
+   RAR volume cleanup remains unfinished; an unsupported RAR child preserves its outer source.
    A standalone read-only RAR5 framing accountant now binds physical records to
    the maintained reader's exact table. Historical RAR entries without a supported
    proof stay for restore. This framing evidence alone does not authorize cleanup;
@@ -163,13 +163,19 @@ verified, not when code exists. No stage has a time estimate.
    `rar4-frames/1`, selected only from the checked outer signature, exact held
    leaves and the same version-bound purge/recovery protocol. Acceptance is
    tracked in issue 57 ([decision 0070](docs/decisions/0070-standalone-rar4-cleanup.md)).
-   Unicode and unsupported metadata, volume sets, child RARs and RAR roots
-   containing nested archives remain preserved; stage 2 is still unfinished.
+   Unicode and unsupported metadata and RAR volume sets remain preserved;
+   stage 2 is still unfinished.
    Read-only nested RAR4/RAR5 coverage is now implemented behind an explicit
    internal opt-in, reusing checked child snapshots, strict standalone preflight
-   and the shared framing/table/work limits. Application cleanup leaves that
-   flag off; acceptance is tracked in issue 57
+   and the shared framing/table/work limits. Its initial application guard kept
+   all nested sources; acceptance is tracked in issue 57
    ([decision 0071](docs/decisions/0071-opt-in-nested-rar-coverage.md)).
+   Covered nested trees containing standalone RARs now use the separate
+   `archive-tree/2`, selected by measured covered containers, including empty
+   children. Every leaf must be held, and fresh purge and durable recovery bind
+   the exact source group and leaves. Existing proof IDs retain their meanings
+   ([decision 0072](docs/decisions/0072-nested-rar-cleanup.md)); acceptance is
+   tracked in issue 57 and RAR volume cleanup remains unfinished.
 3. **Audio access** (milestone 8). M4B and M4A byte ranges and decoded timing in
    content access, bounded ranges usable by an external player, and output
    demonstrated with a real audiobook reader or server.

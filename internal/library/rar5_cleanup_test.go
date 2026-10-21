@@ -422,7 +422,7 @@ func testStandaloneRARIndependentGroupsValidateBeforeAnyRemoval(t *testing.T, fi
 	}
 }
 
-func TestStandaloneRAR5ScopeRetainsVolumesAndNestedRoots(t *testing.T) {
+func TestRAR5NestedRootsRequireNewProofAndVolumesStay(t *testing.T) {
 	for _, kind := range []string{"modern_set", "old_set", "nested_root", "rar4"} {
 		t.Run(kind, func(t *testing.T) {
 			var book []byte
@@ -457,11 +457,15 @@ func TestStandaloneRAR5ScopeRetainsVolumesAndNestedRoots(t *testing.T) {
 			}
 			before := snapshotTree(t, f.folder)
 			p, err := Cleanup(context.Background(), CleanupRequest{Library: f.root, Folder: f.folder})
-			if err != nil || p.Move != 0 || p.Keep != len(before) || !reflect.DeepEqual(before, snapshotTree(t, f.folder)) {
+			wantMove := 0
+			if kind == "nested_root" {
+				wantMove = 1
+			}
+			if err != nil || p.Move != wantMove || p.Keep != len(before)-wantMove || !reflect.DeepEqual(before, snapshotTree(t, f.folder)) {
 				t.Fatal(p, err)
 			}
-			if kind == "nested_root" && !strings.Contains(p.Entries[0].Reason, "nested contents of a RAR root") {
-				t.Fatal("nested root did not reach subset boundary", p)
+			if kind == "nested_root" && p.Entries[0].ArchiveProof != "archive-tree/2" {
+				t.Fatal("nested root borrowed standalone authority", p)
 			}
 		})
 	}

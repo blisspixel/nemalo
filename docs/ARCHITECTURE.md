@@ -513,12 +513,12 @@ metadata extension alone grants no application permission
 Standalone root RAR4 cleanup uses the separately verified `rar4-frames/1`.
 The adapter measures the checked outer snapshot signature and propagates its
 version only from the root, as internal evidence omitted from JSON. Application
-cleanup opts into RAR4 binding only for a RAR root, selecting its own proof for
-version 4 and `rar5-frames/1` for version 5. Unknown versions preserve the source.
+standalone authority selects its own proof for version 4 and `rar5-frames/1` for
+version 5. Unknown versions preserve the source.
 Exact leaves, current holdings, final originals, reviewed manifests, fresh purge
 and immutable recovery reuse the same protocol. Known proof mismatches stop
 before removal; unfamiliar proofs retain bytes. Unicode names, unsupported
-metadata, volumes, child RARs and RAR roots with nested archives stay preserved
+metadata and RAR volume sets stay preserved; nested authority is specified separately
 ([decision 0070](decisions/0070-standalone-rar4-cleanup.md)).
 
 Explicit internal `NestedRARCoverage` alongside `Coverage` extends the same
@@ -528,9 +528,24 @@ one standalone child are unchanged. All descendants share proof/read, output,
 member, diagnostic/process and deadline allowances, including failed attempts.
 The outer-only measured RAR version never comes from a child. Whole framing,
 output integrity, member eligibility and application permission remain separate.
-Application cleanup leaves the nested opt-in false, so no existing proof gains
-nested RAR authority and all such sources remain preserved
+This read-only prerequisite initially left the application nested opt-in false
 ([decision 0071](decisions/0071-opt-in-nested-rar-coverage.md)).
+
+Covered trees containing standalone RAR nodes now use the distinct
+`archive-tree/2`. A measured count of individually covered private RAR nodes,
+including empty children, selects that authority only after the whole tree,
+every leaf/current holding and final original bytes pass. The count is internal
+and omitted from JSON; incomplete output or a partial tree still grants no move.
+Direct RAR roots keep their standalone proof and ZIP/7z-only trees keep /1.
+The original /1 continues to reject RAR roots and intermediate RAR selections.
+Canonical leaf syntax permits safe RAR chains independently of proof semantics,
+so unfamiliar authority retains its bytes. All known proof shapes and mismatched
+bindings are validated before any independent purge group can remove bytes.
+Fresh purge repeats complete tree checks; immutable partial recovery binds exact
+indices/leaves, remaining original identities and current holdings without
+reconstruction. Restore returns raw originals without replacing a target. RAR
+volume sets and nested volume sets remain preserved
+([decision 0072](decisions/0072-nested-rar-cleanup.md)).
 
 Private staging and a subprocess are not sandboxes. Go's
 [root-scoped filesystem APIs](https://go.dev/blog/osroot) are useful building blocks;

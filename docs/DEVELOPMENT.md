@@ -707,15 +707,14 @@ Unicode names or application cleanup. See
 [decision 0069](decisions/0069-bounded-rar4-time-and-size-metadata.md).
 Standalone root RAR4 cleanup now uses its distinct `rar4-frames/1` within the
 verified ASCII-name, known-attribute/method, zero-high-size and exact time subset.
-The application opts into reader binding only for a RAR root, and selects RAR4
-or RAR5 authority from the checked private outer signature. A child, filename,
+Standalone RAR4 or RAR5 authority is selected from the checked private outer signature. A child, filename,
 unknown signature or successful extraction alone cannot supply that permission.
 Every direct leaf must be held with verified current bytes. Fresh purge repeats
 the complete check and binds the exact index and leaf digest; recovery validates
 supported immutable evidence and current remaining identities/holdings. Known
 RAR4/RAR5/tree proof mismatches stop before removal, and unknown proofs retain
-bytes. Restore needs no reader and never replaces a target. Volumes, nested RARs,
-RAR roots with nested archives, Unicode and unsupported metadata stay preserved.
+bytes. Restore needs no reader and never replaces a target. RAR volumes,
+Unicode and unsupported metadata stay preserved.
 See [decision 0070](decisions/0070-standalone-rar4-cleanup.md); acceptance is tracked
 in issue 57 and this does not complete stage 2 or authorize a release.
 An explicit internal `NestedRARCoverage` plus `Coverage` now permits the same
@@ -724,11 +723,23 @@ also requires `RAR4Coverage`. No metadata or volume subset is broadened. Every
 child still needs the reader's standalone-container preflight and shares the
 whole tree's proof/read/member/output/diagnostic/process/deadline bounds. Failed
 work stays charged. Framed notes remain visible unsupported material; failed
-output integrity remains separate from physical coverage. Application cleanup
-leaves this nested flag false, so existing tree and standalone proofs gain no
-new authority and all nested RAR sources stay. See
+output integrity remains separate from physical coverage. The initial read-only
+increment left this nested flag false in application cleanup. See
 [decision 0071](decisions/0071-opt-in-nested-rar-coverage.md); acceptance remains
-tracked in issue 57 before a separately verified application increment.
+tracked in issue 57.
+Covered nested trees containing standalone RAR4/RAR5 nodes now use new
+`archive-tree/2`, with exact chains, current held bytes and unchanged originals.
+Selection uses measured covered RAR nodes, including an empty child beside a
+direct held book, rather than leaf names. Direct-only RARs keep their own proof;
+ZIP/7z-only trees keep /1, whose RAR exclusions are unchanged. Every known proof's
+shape and binding is checked before any purge group removes bytes. Unknown proof
+versions retain copies for restore. Fresh purge repeats the full tree check and
+binds the exact original indices and canonical leaf digest; partial recovery never
+reconstructs missing parts or adopts replacements. Earlier executables refuse or
+retain unfamiliar authority; raw restore is tested separately. RAR volume sets,
+nested volume sets, unsupported metadata and unheld material remain preserved.
+See [decision 0072](decisions/0072-nested-rar-cleanup.md), tracked in issue 57;
+RAR volume cleanup still leaves roadmap stage 2 unfinished.
 `library audit` on the library directory reports missing, changed, and review
 holdings and does not repair them. Snapshot audit still requires `--root`.
 An EPUB package identifier is recorded when it is an explicit ISBN, DOI, or

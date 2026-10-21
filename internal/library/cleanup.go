@@ -125,7 +125,7 @@ func cleanupLimitations() []string {
 	return []string{
 		"Only files whose exact bytes the library holds, with stored bytes verified, move. Everything else stays, with its reason.",
 		"Moved sources go to the library's cleanup holding area and can be restored. library purge removes held copies the library holds, after its own preview.",
-		"An archive moves only when every member is a directory or a held file, with complete container accounting. Only the bounded standalone RAR4/RAR5 subsets qualify; other RAR layouts stay. Intake packets move as their receipt, intent, and content.",
+		"An archive moves only when every member is a directory or a held file, with complete container accounting. Supported trees may contain standalone RAR4/RAR5 archives; RAR volume sets stay. Intake packets move as their receipt, intent, and content.",
 		"Directory-entry durability across power loss depends on the filesystem.",
 	}
 }
@@ -982,7 +982,8 @@ func planArchive(ctx context.Context, src *os.Root, rel string, volumes []string
 	}
 	limits := staging.Defaults()
 	limits.Coverage = true
-	limits.RAR4Coverage = rootRAR
+	limits.RAR4Coverage = true
+	limits.NestedRARCoverage = true
 	limits.ExpectedSources = make(map[string]staging.SnapshotIdentity, len(before))
 	limits.SourceHashRemaining = hashRemaining
 	for i, f := range before {
@@ -1035,10 +1036,6 @@ func planArchive(ctx context.Context, src *os.Root, rel string, volumes []string
 		case "directory":
 			continue
 		case "nested_archive":
-			if rootRAR {
-				e.Reason = "nested contents of a RAR root are outside the standalone proof; preserved"
-				return nil
-			}
 			// This is traversal bookkeeping; only the whole-tree checks below
 			// and every held leaf can grant source-removal permission.
 			nested = true
@@ -1098,7 +1095,9 @@ func planArchive(ctx context.Context, src *os.Root, rel string, volumes []string
 	}
 	e.Disposition, e.Reason, e.Files, e.Holdings = "move", "every member is held with verified stored bytes", before, ids
 	e.ArchiveProof = zipProof
-	if rootRAR {
+	if nested && x.RARContainers > 0 {
+		e.ArchiveProof, e.ArchiveLeaves = archiveRARTreeProof, leaves
+	} else if rootRAR {
 		e.ArchiveProof, e.ArchiveLeaves = rarProof, leaves
 	} else if treeProof {
 		e.ArchiveProof = archiveTreeProof
