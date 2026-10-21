@@ -139,6 +139,11 @@ func InstallMany(t testing.TB, archives ...Archive) {
 		if err := os.WriteFile(filepath.Join(dir, fmt.Sprintf("profile-%x", sha256.Sum256(a.Body))), []byte(profile), 0o600); err != nil {
 			t.Fatal(err)
 		}
+		for _, v := range a.Volumes {
+			if err := os.WriteFile(filepath.Join(dir, fmt.Sprintf("profile-%x", sha256.Sum256(v.Body))), []byte(profile), 0o600); err != nil {
+				t.Fatal(err)
+			}
+		}
 	}
 	if err := os.WriteFile(filepath.Join(dir, "tree-profiles"), nil, 0o600); err != nil {
 		t.Fatal(err)

@@ -18,9 +18,10 @@ const archiveTreeProof = "archive-tree/1"
 const archiveRARTreeProof = "archive-tree/2"
 const rar5FramesProof = "rar5-frames/1"
 const rar4FramesProof = "rar4-frames/1"
+const rar5SetProof = "rar5-set/1"
 
 func leafBoundArchiveProof(proof string) bool {
-	return proof == archiveTreeProof || proof == archiveRARTreeProof || proof == rar5FramesProof || proof == rar4FramesProof
+	return proof == archiveTreeProof || proof == archiveRARTreeProof || proof == rar5FramesProof || proof == rar4FramesProof || proof == rar5SetProof
 }
 
 func knownArchiveProof(proof string) bool {
@@ -121,6 +122,10 @@ func equalArchiveLeaves(a, b []CleanupArchiveLeaf) bool {
 }
 
 func supportedArchiveProof(e CleanupEntry) bool {
+	if e.ArchiveProof == rar5SetProof {
+		_, layout := archiveSetParts(e, ".rar")
+		return layout && validArchiveLeaves(e)
+	}
 	if e.ArchiveProof == rar5FramesProof || e.ArchiveProof == rar4FramesProof {
 		if !validArchiveLeaves(e) || len(e.Files) != 1 || e.Kind != "archive" || e.Path != e.Files[0].Path || !strings.EqualFold(path.Ext(e.Path), ".rar") {
 			return false
@@ -133,6 +138,12 @@ func supportedArchiveProof(e CleanupEntry) bool {
 		return true
 	}
 	if e.ArchiveProof == archiveTreeProof || e.ArchiveProof == archiveRARTreeProof {
+		// Expanding syntactic set validation must not expand either tree ID.
+		// Old RAR continuations overlap ZIP's .zNN names. The validated
+		// outer layout, not that historical retention classifier, selects this.
+		if len(e.Files) > 1 && strings.EqualFold(path.Ext(e.Path), ".rar") {
+			return false
+		}
 		_, layout := archiveEntryParts(e)
 		if !layout || !validArchiveLeaves(e) {
 			return false
@@ -167,6 +178,9 @@ func archiveEntryParts(e CleanupEntry) ([]string, bool) {
 	}
 	if zipProofFor(e) != "" {
 		return zipSetParts(e)
+	}
+	if strings.EqualFold(path.Ext(e.Path), ".rar") {
+		return archiveSetParts(e, ".rar")
 	}
 	return archiveSetParts(e, ".7z")
 }

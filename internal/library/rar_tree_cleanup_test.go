@@ -247,9 +247,13 @@ func TestRARTreeRootRARRecoveryUsesTreeAuthority(t *testing.T) {
 }
 
 func TestRARTreeUnknownAndMalformedPurgeBindingsRetainBytes(t *testing.T) {
-	for _, kind := range []string{"unknown", "unknown_both", "missing", "old_tree", "standalone", "leaf_digest", "index", "unsafe_chain"} {
+	testRARTreePurgeBindings(t, func(t *testing.T) streamFixture { return newCleanupRARTreeFixture(t, "zip_chunks", 5, 3, nil) })
+}
+
+func testRARTreePurgeBindings(t *testing.T, fixture func(*testing.T) streamFixture, extra ...string) {
+	for _, kind := range append([]string{"unknown", "unknown_both", "missing", "old_tree", "standalone", "leaf_digest", "index", "unsafe_chain"}, extra...) {
 		t.Run(kind, func(t *testing.T) {
-			f := newCleanupRARTreeFixture(t, "zip_chunks", 5, 3, nil)
+			f := fixture(t)
 			c := f.cleanup(t)
 			ctx := context.Background()
 			p, err := Purge(ctx, PurgeRequest{Library: f.root, CleanupID: c.CleanupID})
@@ -268,12 +272,22 @@ func TestRARTreeUnknownAndMalformedPurgeBindingsRetainBytes(t *testing.T) {
 				p.ArchiveGroups[0].Proof = "archive-tree/1"
 			case "standalone":
 				p.ArchiveGroups[0].Proof = "rar5-frames/1"
+			case "newer_tree":
+				p.ArchiveGroups[0].Proof = archiveRARTreeProof
+			case "rar4_standalone":
+				p.ArchiveGroups[0].Proof = rar4FramesProof
+			case "zip_stream":
+				p.ArchiveGroups[0].Proof = zipStreamProof
+			case "zip_segments":
+				p.ArchiveGroups[0].Proof = zipSegmentsProof
 			case "leaf_digest":
 				p.ArchiveGroups[0].LeafDigest = ""
 			case "index":
 				p.ArchiveGroups[0].Indices = []int{0, 0, 2}
 			case "unsafe_chain":
-				rewriteTreeCleanup(t, f.root, c.CleanupID, func(m *cleanupManifest) { m.Entries[0].ArchiveLeaves[1].Chain = []string{"../escape.rar", "book.epub"} })
+				rewriteTreeCleanup(t, f.root, c.CleanupID, func(m *cleanupManifest) {
+					m.Entries[0].ArchiveLeaves[len(m.Entries[0].ArchiveLeaves)-1].Chain = []string{"../escape.rar", "book.epub"}
+				})
 			}
 			digest := startRAR5TestPurge(t, c, p)
 			before := snapshotTree(t, filepath.Join(c.HoldingArea, "files"))
@@ -300,11 +314,19 @@ func TestRARTreeUnknownAndMalformedPurgeBindingsRetainBytes(t *testing.T) {
 }
 
 func TestRARTreeIndependentGroupsValidateKnownShapesBeforeAnyRemoval(t *testing.T) {
-	for _, kind := range []string{"unknown_first", "old_tree_second", "zip_proof_second", "standalone_second", "missing_leaves_second"} {
+	testRARTreeIndependentShapes(t, func(t *testing.T) streamFixture { return newCleanupRARTreeFixture(t, "zip", 4, 1, nil) })
+}
+
+func testRARTreeIndependentShapes(t *testing.T, fixture func(*testing.T) streamFixture, extra ...string) {
+	for _, kind := range append([]string{"unknown_first", "old_tree_second", "zip_proof_second", "standalone_second", "missing_leaves_second"}, extra...) {
 		t.Run(kind, func(t *testing.T) {
-			f := newCleanupRARTreeFixture(t, "zip", 4, 1, nil)
-			other := "other/" + filepath.Base(f.names[0])
-			writeTree(t, f.folder, map[string][]byte{other: f.parts[0]})
+			f := fixture(t)
+			var others []string
+			for i, name := range f.names {
+				other := "other/" + filepath.Base(name)
+				others = append(others, other)
+				writeTree(t, f.folder, map[string][]byte{other: f.parts[i]})
+			}
 			ctx := context.Background()
 			p, err := Cleanup(ctx, CleanupRequest{Library: f.root, Folder: f.folder})
 			if err != nil || p.Move != 2 {
@@ -315,7 +337,7 @@ func TestRARTreeIndependentGroupsValidateKnownShapesBeforeAnyRemoval(t *testing.
 				t.Fatal(err)
 			}
 			q, err := Purge(ctx, PurgeRequest{Library: f.root, CleanupID: c.CleanupID})
-			if err != nil || q.Purge != 2 || len(q.ArchiveGroups) != 2 {
+			if err != nil || q.Purge != 2*len(f.parts) || len(q.ArchiveGroups) != 2 {
 				t.Fatal(q, err)
 			}
 			if kind == "unknown_first" {
@@ -330,6 +352,10 @@ func TestRARTreeIndependentGroupsValidateKnownShapesBeforeAnyRemoval(t *testing.
 						e.ArchiveProof = zipStreamProof
 					case "standalone_second":
 						e.ArchiveProof = "rar4-frames/1"
+					case "newer_tree_second":
+						e.ArchiveProof = archiveRARTreeProof
+					case "rar5_standalone_second":
+						e.ArchiveProof = rar5FramesProof
 					case "missing_leaves_second":
 						e.ArchiveLeaves = nil
 					}
@@ -339,12 +365,14 @@ func TestRARTreeIndependentGroupsValidateKnownShapesBeforeAnyRemoval(t *testing.
 			before := snapshotTree(t, filepath.Join(c.HoldingArea, "files"))
 			r, err := Purge(ctx, PurgeRequest{Library: f.root, CleanupID: c.CleanupID, Apply: digest})
 			if kind == "unknown_first" {
-				if err != nil || r.Purged != 1 {
+				if err != nil || r.Purged != len(f.parts) {
 					t.Fatal(r, err)
 				}
 				f.assertParts(t, filepath.Join(c.HoldingArea, "files"))
-				if _, err := os.Stat(filepath.Join(c.HoldingArea, "files", filepath.FromSlash(other))); !errors.Is(err, os.ErrNotExist) {
-					t.Fatal("independent supported group retained", err)
+				for _, other := range others {
+					if _, err := os.Stat(filepath.Join(c.HoldingArea, "files", filepath.FromSlash(other))); !errors.Is(err, os.ErrNotExist) {
+						t.Fatal("independent supported group retained", err)
+					}
 				}
 			} else if !errors.Is(err, ErrStateReview) || !reflect.DeepEqual(before, snapshotTree(t, filepath.Join(c.HoldingArea, "files"))) {
 				t.Fatal("later malformed known proof permitted earlier removal", r, err)

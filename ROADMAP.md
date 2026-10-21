@@ -103,8 +103,8 @@ verified, not when code exists. No stage has a time estimate.
    Progress: cleanup of 7z archives and split 7z sets
    ([decision 0051](docs/decisions/0051-cleanup-of-7z-and-split-sets.md)).
    Old-style RAR intake now checks each volume's role/ordinal and cross-volume
-   split continuity before reading an assembled set; inconclusive sets and all
-   RAR volume cleanup sources stay preserved
+   split continuity before reading an assembled set; inconclusive sets stay
+   preserved and cleanup requires the separate coverage contract below
    ([decision 0056](docs/decisions/0056-rar-volume-identity.md)).
    Split ZIP intake now handles byte chunks and true disk segments through
    checked private snapshots
@@ -163,8 +163,8 @@ verified, not when code exists. No stage has a time estimate.
    `rar4-frames/1`, selected only from the checked outer signature, exact held
    leaves and the same version-bound purge/recovery protocol. Acceptance is
    tracked in issue 57 ([decision 0070](docs/decisions/0070-standalone-rar4-cleanup.md)).
-   Unicode and unsupported metadata and RAR volume sets remain preserved;
-   stage 2 is still unfinished.
+   Unicode and unsupported metadata remain preserved. Volume authority is separate,
+   and stage 2 is still unfinished.
    Read-only nested RAR4/RAR5 coverage is now implemented behind an explicit
    internal opt-in, reusing checked child snapshots, strict standalone preflight
    and the shared framing/table/work limits. Its initial application guard kept
@@ -179,9 +179,15 @@ verified, not when code exists. No stage has a time estimate.
    Read-only modern root RAR5 set coverage is implemented behind an internal
    explicit opt-in, binding each physical volume to its isolated table and the
    complete set to the exact assembled extraction table. Source-copy and proof
-   work share budgets; application cleanup keeps the flag false and every RAR
-   set. Acceptance remains tracked in issue 57
+   work share budgets; that read-only increment kept the application flag false
+   and every RAR set. Acceptance remains tracked in issue 57
    ([decision 0073](docs/decisions/0073-read-only-rar5-set-coverage.md)).
+   Completely covered modern root RAR5 sets now have distinct `rar5-set/1`
+   cleanup authority, one recoverable set entry, exact held leaves and whole-set
+   fresh purge with immutable partial recovery. Existing proof IDs retain their
+   scopes. RAR4, old-named and nested sets remain preserved; stage 2 is unfinished.
+   Separate full acceptance remains tracked in issue 57
+   ([decision 0074](docs/decisions/0074-modern-rar5-set-cleanup.md)).
 3. **Audio access** (milestone 8). M4B and M4A byte ranges and decoded timing in
    content access, bounded ranges usable by an external player, and output
    demonstrated with a real audiobook reader or server.
@@ -548,9 +554,10 @@ proof excludes RAR4, sets and nested RAR layouts
 Standalone RAR4 has its separate `rar4-frames/1` proof, and covered trees with
 standalone RAR nodes use `archive-tree/2`
 ([decision 0070](docs/decisions/0070-standalone-rar4-cleanup.md),
-[decision 0072](docs/decisions/0072-nested-rar-cleanup.md)). RAR sets still stay;
-the internal modern RAR5 set accountant is read-only
-([decision 0073](docs/decisions/0073-read-only-rar5-set-coverage.md)).
+[decision 0072](docs/decisions/0072-nested-rar-cleanup.md)). Modern root RAR5 sets
+now use their separate `rar5-set/1` contract, while RAR4, old-named and nested
+sets stay preserved
+([decision 0074](docs/decisions/0074-modern-rar5-set-cleanup.md)).
 Disk-full and scanner-failure faults are injected in tests: a full disk
 during an import copy, a journal line, a cleanup copy, and an export, and a
 scanner that is unavailable, incomplete, failing, or timing out. Each leaves

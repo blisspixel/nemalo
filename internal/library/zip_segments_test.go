@@ -160,9 +160,13 @@ func TestZIPSegmentsCannotUseAStreamPurgeProof(t *testing.T) {
 }
 
 func TestZIPSegmentsPartialRestoreKeepsReplacementAndEveryOriginalByte(t *testing.T) {
+	testSetPartialRestoreKeepsReplacementAndEveryOriginalByte(t, newSegmentFixture)
+}
+
+func testSetPartialRestoreKeepsReplacementAndEveryOriginalByte(t *testing.T, fixture zipFixtureFactory) {
 	for stop := 1; stop <= 3; stop++ {
 		t.Run(fmt.Sprint(stop), func(t *testing.T) {
-			f := newSegmentFixture(t, 3, nil)
+			f := fixture(t, 3, nil)
 			c := f.cleanup(t)
 			ctx := context.Background()
 			crash := errors.New("restore interrupted before completion record")

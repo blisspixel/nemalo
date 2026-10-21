@@ -518,7 +518,8 @@ volumes, aliases, overlapping naming families, and inconclusive boundaries stay
 preserved. This includes valid sets with no member split across a boundary,
 since ordinals alone do not establish that those volumes belong together.
 The set is at most 4 GiB and 1,000 volumes (901 in the old letter naming range).
-RAR sets remain preserved by cleanup. See
+Unsupported RAR sets remain preserved by cleanup; the modern RAR5 subset below
+requires a separate complete physical proof. See
 [decision 0046](decisions/0046-archive-volume-sets.md) and
 [decision 0056](decisions/0056-rar-volume-identity.md).
 
@@ -528,9 +529,21 @@ before that same table drives extraction. Direct calls share source-copy, proof,
 reader, process, diagnostic and output budgets. A split part's packed CRC is not
 the final whole-file CRC, and framing alone does not validate extracted bytes.
 The separately measured set version is omitted from JSON. This adds no public
-option or application cleanup permission: every RAR set still stays. RAR4,
+option or application cleanup permission by itself. RAR4,
 old-named and nested sets are outside this new coverage contract. Acceptance is
 tracked in issue 57; see [decision 0073](decisions/0073-read-only-rar5-set-coverage.md).
+
+Application cleanup now requests that capability for completely covered modern
+root RAR5 sets under `rar5-set/1`. All volumes move as one recoverable entry only
+after every leaf is held with verified bytes and final original hashes match.
+Covered standalone children reuse existing tree checks; a child cannot lend its
+proof to the outer set. Neither `archive-tree/1` nor `archive-tree/2` accepts RAR outer sets.
+Fresh purge rechecks the complete held set and exact leaves; durable partial
+recovery binds the original proof, file indices and leaf digest without joining
+missing parts or adopting replacements. Raw restore needs no reader and replaces
+nothing. RAR4, old-named, nested sets and unsupported material stay preserved.
+See [decision 0074](decisions/0074-modern-rar5-set-cleanup.md). Source implementation
+is separate from full acceptance, tracked in issue 57, and from a release.
 
 Split ZIP byte chunks (`NAME.zip.001`, `.002`, ...; three or four numeric digits)
 are joined privately, checked as exactly one ordinary ZIP through installed
@@ -724,7 +737,7 @@ Every direct leaf must be held with verified current bytes. Fresh purge repeats
 the complete check and binds the exact index and leaf digest; recovery validates
 supported immutable evidence and current remaining identities/holdings. Known
 RAR4/RAR5/tree proof mismatches stop before removal, and unknown proofs retain
-bytes. Restore needs no reader and never replaces a target. RAR volumes,
+bytes. Restore needs no reader and never replaces a target. Unsupported RAR volumes,
 Unicode and unsupported metadata stay preserved.
 See [decision 0070](decisions/0070-standalone-rar4-cleanup.md); acceptance is tracked
 in issue 57 and this does not complete stage 2 or authorize a release.
@@ -747,7 +760,7 @@ shape and binding is checked before any purge group removes bytes. Unknown proof
 versions retain copies for restore. Fresh purge repeats the full tree check and
 binds the exact original indices and canonical leaf digest; partial recovery never
 reconstructs missing parts or adopts replacements. Earlier executables refuse or
-retain unfamiliar authority; raw restore is tested separately. RAR volume sets,
+retain unfamiliar authority; raw restore is tested separately. Unsupported RAR volume sets,
 nested volume sets, unsupported metadata and unheld material remain preserved.
 See [decision 0072](decisions/0072-nested-rar-cleanup.md), tracked in issue 57;
 RAR volume cleanup still leaves roadmap stage 2 unfinished.
@@ -891,9 +904,9 @@ Real child processes, production durability operations, every recovery case and
 the default test timeout remain in place. Other packages may continue to use
 their test executable for the same handler.
 
-Full library suites run the RAR tree recovery matrix's independent layout/version
-groups in at most three isolated copies of that same compiled test executable.
-This isolates fixture environment/global changes and overlaps filesystem waits.
+Full library suites run independent RAR tree and RAR5 set recovery groups in at
+most three isolated copies of that same compiled test executable across both
+matrices. This isolates fixture environment/global changes and overlaps filesystem waits.
 Covered children write to Go test's shared counter directory; the parent retains
 its final text profile. Race instrumentation, every case/assertion and real
 durability operations stay enabled. Children have a four-minute timeout inside

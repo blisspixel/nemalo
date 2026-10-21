@@ -306,8 +306,12 @@ func testTreeCleanupResumeBindings(t *testing.T, fixture func(*testing.T) stream
 					e.ArchiveProof = "archive-tree/future"
 				case "old_tree":
 					e.ArchiveProof = archiveTreeProof
+				case "newer_tree":
+					e.ArchiveProof = archiveRARTreeProof
 				case "standalone":
 					e.ArchiveProof = rar4FramesProof
+				case "rar5_standalone":
+					e.ArchiveProof = rar5FramesProof
 				case "missing_leaves":
 					e.ArchiveLeaves = nil
 				case "wrong_hash":
@@ -462,9 +466,14 @@ func TestArchiveCleanupBindsSnapshotToThePlannedSourceBytes(t *testing.T) {
 }
 
 func TestArchiveTreeEveryOuterLayoutBindsTheActualSnapshot(t *testing.T) {
-	for _, layout := range []string{"zip", "7z", "zip_chunks", "zip_segments", "7z_chunks"} {
+	for _, layout := range []string{"zip", "7z", "zip_chunks", "zip_segments", "7z_chunks", "rar5_set"} {
 		t.Run(layout, func(t *testing.T) {
-			f := newCleanupTreeFixture(t, layout, 3, nil)
+			var f streamFixture
+			if layout == "rar5_set" {
+				f = newRAR5SetCleanupFixture(t, 3, nil)
+			} else {
+				f = newCleanupTreeFixture(t, layout, 3, nil)
+			}
 			page, err := FindManaged(context.Background(), f.root, "", "all", "all", 10, 0)
 			if err != nil || len(page.Holdings) != 1 {
 				t.Fatal(page, err)

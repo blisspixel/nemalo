@@ -392,8 +392,8 @@ Implemented RAR intake checks each private volume's format, role, ordinal,
 and size through the installed 7-Zip reader, matches split-member evidence
 across adjacent volumes, and requires an error-free assembled listing. Names
 and counts alone cannot establish a set. Old-style letter volumes share this
-adapter; inconclusive boundaries preserve all sources. RAR volume cleanup remains
-refused because unlisted blocks are unaccounted for
+adapter; inconclusive boundaries preserve all sources. Reader listing evidence
+alone never authorizes volume cleanup because unlisted blocks are unaccounted for
 ([decision 0056](decisions/0056-rar-volume-identity.md)).
 
 Requested standalone RAR5 coverage now measures bounded physical framing from
@@ -517,8 +517,8 @@ standalone authority selects its own proof for version 4 and `rar5-frames/1` for
 version 5. Unknown versions preserve the source.
 Exact leaves, current holdings, final originals, reviewed manifests, fresh purge
 and immutable recovery reuse the same protocol. Known proof mismatches stop
-before removal; unfamiliar proofs retain bytes. Unicode names, unsupported
-metadata and RAR volume sets stay preserved; nested authority is specified separately
+before removal; unfamiliar proofs retain bytes. Unicode names and unsupported
+metadata stay preserved; volume and nested authority are specified separately
 ([decision 0070](decisions/0070-standalone-rar4-cleanup.md)).
 
 Explicit internal `NestedRARCoverage` alongside `Coverage` extends the same
@@ -544,7 +544,7 @@ bindings are validated before any independent purge group can remove bytes.
 Fresh purge repeats complete tree checks; immutable partial recovery binds exact
 indices/leaves, remaining original identities and current holdings without
 reconstruction. Restore returns raw originals without replacing a target. RAR
-volume sets and nested volume sets remain preserved
+outer sets and nested volume sets receive no authority from either tree proof
 ([decision 0072](decisions/0072-nested-rar-cleanup.md)).
 
 Explicit internal `Coverage` plus `RAR5SetCoverage` adds read-only coverage for
@@ -556,10 +556,25 @@ strict assembled table used for exact-name extraction. Direct calls share one
 proof/read/process/output budget, including source copies and failed work.
 `RARSetVersion` is separate from standalone version/count evidence and omitted
 from JSON. Whole framing does not establish successful extraction or permission.
-The application leaves this opt-in false and still retains every RAR set; RAR4,
+That read-only increment left this opt-in false and retained every RAR set. RAR4,
 old naming and nested sets receive no new coverage. A later writer requires a
 distinct proof and separate full recovery/verification gate
 ([decision 0073](decisions/0073-read-only-rar5-set-coverage.md)).
+
+Completely covered modern root RAR5 sets now use distinct `rar5-set/1` application
+authority. The cleanup service requests the verified read-only capability and
+requires measured set version 5, complete framing/output/traversal, every current
+verified held leaf, bound snapshots and unchanged final originals. Set authority
+takes precedence over nested-RAR counts. Existing tree and standalone proof IDs
+retain their scopes; neither tree ID accepts a RAR outer set. Ordered modern
+parts share one exact parent/family and one recoverable entry. Fresh purge repeats
+the whole held-set check and binds all indices and the canonical leaf digest.
+Immutable partial recovery checks remaining identities/holdings without joining
+missing parts or adopting replacements. Unknown authority retains bytes; known
+malformed bindings stop before independent removals. Restore returns raw originals
+without a reader or replacement. RAR4, old-named and nested volume sets remain
+preserved. This requires its own acceptance and preceding-binary checks
+([decision 0074](decisions/0074-modern-rar5-set-cleanup.md)).
 
 Private staging and a subprocess are not sandboxes. Go's
 [root-scoped filesystem APIs](https://go.dev/blog/osroot) are useful building blocks;

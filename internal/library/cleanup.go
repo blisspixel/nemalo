@@ -125,7 +125,7 @@ func cleanupLimitations() []string {
 	return []string{
 		"Only files whose exact bytes the library holds, with stored bytes verified, move. Everything else stays, with its reason.",
 		"Moved sources go to the library's cleanup holding area and can be restored. library purge removes held copies the library holds, after its own preview.",
-		"An archive moves only when every member is a directory or a held file, with complete container accounting. Supported trees may contain standalone RAR4/RAR5 archives; RAR volume sets stay. Intake packets move as their receipt, intent, and content.",
+		"An archive moves only when every member is a directory or a held file, with complete container accounting. Supported trees may contain standalone RAR4/RAR5 archives. Covered modern RAR5 sets move together; unsupported RAR sets stay. Intake packets move as their receipt, intent, and content.",
 		"Directory-entry durability across power loss depends on the filesystem.",
 	}
 }
@@ -962,9 +962,12 @@ func planArchive(ctx context.Context, src *os.Root, rel string, volumes []string
 		before[i] = h
 	}
 	rootRAR := strings.EqualFold(path.Ext(rel), ".rar")
-	if rootRAR && volumes != nil {
-		e.Reason = "RAR volume cleanup has no supported complete proof; preserved"
-		return nil
+	rarSet := rootRAR && volumes != nil
+	if rarSet {
+		if _, ok := archiveSetParts(CleanupEntry{Kind: "archive", Path: rel, Files: before}, ".rar"); !ok {
+			e.Reason = "RAR volume layout has no supported complete proof; preserved"
+			return nil
+		}
 	}
 	tmp, err := os.MkdirTemp("", "nemalo-cleanup-")
 	if err != nil {
@@ -984,6 +987,7 @@ func planArchive(ctx context.Context, src *os.Root, rel string, volumes []string
 	limits.Coverage = true
 	limits.RAR4Coverage = true
 	limits.NestedRARCoverage = true
+	limits.RAR5SetCoverage = rarSet
 	limits.ExpectedSources = make(map[string]staging.SnapshotIdentity, len(before))
 	limits.SourceHashRemaining = hashRemaining
 	for i, f := range before {
@@ -1017,7 +1021,13 @@ func planArchive(ctx context.Context, src *os.Root, rel string, volumes []string
 		return nil
 	}
 	rarProof := ""
-	if rootRAR {
+	if rarSet {
+		if x.RARSetVersion != 5 {
+			e.Reason = "the checked outer RAR set has no supported cleanup proof; preserved"
+			return nil
+		}
+		rarProof = rar5SetProof
+	} else if rootRAR {
 		switch x.RARVersion {
 		case 4:
 			rarProof = rar4FramesProof
@@ -1095,7 +1105,9 @@ func planArchive(ctx context.Context, src *os.Root, rel string, volumes []string
 	}
 	e.Disposition, e.Reason, e.Files, e.Holdings = "move", "every member is held with verified stored bytes", before, ids
 	e.ArchiveProof = zipProof
-	if nested && x.RARContainers > 0 {
+	if rarSet {
+		e.ArchiveProof, e.ArchiveLeaves = rarProof, leaves
+	} else if nested && x.RARContainers > 0 {
 		e.ArchiveProof, e.ArchiveLeaves = archiveRARTreeProof, leaves
 	} else if rootRAR {
 		e.ArchiveProof, e.ArchiveLeaves = rarProof, leaves

@@ -164,7 +164,8 @@ beside a packet; ingest reuses Import. RAR volume sets require isolated format,
 role, ordinal, and size evidence plus matching split members across every
 boundary and an error-free assembled listing. Preserve aliases, overlapping
 families, unlinked boundaries, and unknown ordinals; never infer set identity
-from names/counts alone. RAR volume cleanup remains refused. Split ZIPs are decision
+from names/counts alone. RAR volume cleanup requires the separate bounded proof
+below; unsupported sets stay preserved. Split ZIPs are decision
 0057: byte chunks join privately, true segments require consistent reader
 evidence through every part. Segment cleanup is decision 0062: validate raw disk
 records and complete header boundaries, then reuse shared framing over a view
@@ -205,7 +206,7 @@ Decision 0066 permits only standalone root RAR5 book leaves and empty directorie
 with `rar5-frames/1`, one exact source identity and one-component `archive_leaves`.
 Fresh purge repeats the full check and binds its single-file group and leaf digest;
 recovery uses the supported immutable evidence and current remaining bytes/holdings.
-RAR sets stay preserved; nested tree authority is separate in decision 0072.
+RAR sets need the separate authority below; nested tree authority is decision 0072.
 Decision 0067 permits separate read-only RAR4 framing measurements. They grant no
 coverage or cleanup authority alone. Decision 0068 binds an explicitly opted-in
 standalone root to the maintained reader. Require Coverage plus RAR4Coverage.
@@ -240,10 +241,11 @@ RAR roots/intermediate chains. Check canonical leaf syntax separately from proof
 semantics; validate every known proof's complete shape before any independent
 group may remove bytes. Unknown proofs retain bytes. Fresh purge repeats the
 full tree check; partial recovery uses only supported immutable group/leaf evidence
-and current remaining identities/holdings. RAR and nested volume sets stay.
+and current remaining identities/holdings. That tree authority excludes RAR outer
+sets and nested volume sets.
 Decision 0073 adds read-only modern root RAR5 set coverage only with explicit
-Coverage plus RAR5SetCoverage. The application leaves the new flag false and
-retains its early RAR-set cleanup refusal. Frame each exact private volume and
+Coverage plus RAR5SetCoverage. That read-only increment left the new flag false
+and retained its early RAR-set cleanup refusal. Frame each exact private volume and
 bind its isolated UTF-8 table before exposing siblings, then bind complete
 logical facts to the same error-free assembled table used for extraction.
 Nonfinal CRCs describe packed parts; the final CRC describes the whole output.
@@ -252,6 +254,19 @@ including source-copy reads and failed work. RARSetVersion is internal and
 separate from RARVersion/RARContainers. RAR4, old-named and nested sets receive
 no new coverage. Full read-only acceptance must precede any separately versioned
 writer decision, fresh whole-set purge and immutable partial recovery.
+That read-only capability passed all-six hosted verification at be042d6.
+Decision 0074 permits modern root RAR5 sets only under rar5-set/1. Require the
+measured set version, complete physical/output/tree coverage, every verified
+held leaf, expected snapshot identities and unchanged final originals. Select
+set authority before nested-RAR authority; a child cannot grant it. Neither
+archive-tree/1 nor /2 accepts RAR outer sets. Keep 2..1000 ordered numeric parts
+in one exact parent/family, existing source/hash/work limits and one set entry.
+Fresh purge repeats the whole set and binds exact indices and leaf digest;
+partial recovery never reconstructs a set or adopts replacements. Known malformed
+bindings stop before any independent removal, unknown proofs retain bytes, and
+raw restore never replaces a target. RAR4, old-named and nested sets stay.
+Require actual preceding-binary retention/raw-restore evidence and the separate
+full local/native/exact-hosted gate; stage 2 remains unfinished.
 Historical RAR-named archive entries and old continuations without a supported
 proof cannot resume cleanup or purge, including pending purge intents. Preserve
 their recorded bytes for restore; member holdings alone confer no permission.

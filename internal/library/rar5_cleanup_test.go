@@ -426,6 +426,7 @@ func TestRAR5NestedRootsRequireNewProofAndVolumesStay(t *testing.T) {
 	for _, kind := range []string{"modern_set", "old_set", "nested_root", "rar4"} {
 		t.Run(kind, func(t *testing.T) {
 			var book []byte
+			probes := 0
 			f := newRAR5CleanupFixture(t, func(b []byte) []byte {
 				book = bytes.Clone(b)
 				data := append([]byte("Rar!\x1a\x07\x01\x00"), cleanupRAR5Block(1, "", nil)...)
@@ -443,7 +444,15 @@ func TestRAR5NestedRootsRequireNewProofAndVolumesStay(t *testing.T) {
 				}
 				writeTree(t, f.folder, map[string][]byte{second: []byte("synthetic continuation")})
 				saved := staging.SevenZip
-				staging.SevenZip = func() (string, error) { t.Fatal("unsupported RAR set reached reader"); return "", nil }
+				staging.SevenZip = func() (string, error) {
+					if kind == "old_set" {
+						t.Fatal("unsupported old RAR set reached reader")
+					}
+					// Naming a standalone RAR5 plus arbitrary bytes as parts
+					// cannot satisfy the new physical and reader set proof.
+					probes++
+					return saved()
+				}
 				t.Cleanup(func() { staging.SevenZip = saved })
 			case "nested_root":
 				inner := nestedZIP(t, nestedFile{"book.epub", book})
@@ -463,6 +472,9 @@ func TestRAR5NestedRootsRequireNewProofAndVolumesStay(t *testing.T) {
 			}
 			if err != nil || p.Move != wantMove || p.Keep != len(before)-wantMove || !reflect.DeepEqual(before, snapshotTree(t, f.folder)) {
 				t.Fatal(p, err)
+			}
+			if kind == "modern_set" && probes == 0 {
+				t.Fatal("malformed modern set did not exercise reader refusal")
 			}
 			if kind == "nested_root" && p.Entries[0].ArchiveProof != "archive-tree/2" {
 				t.Fatal("nested root borrowed standalone authority", p)

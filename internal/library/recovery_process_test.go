@@ -15,6 +15,8 @@ import (
 
 const rarRecoveryCaseEnv = "NEMALO_TEST_RAR_RECOVERY_CASE"
 
+var recoveryProcessSlots = make(chan struct{}, 3)
+
 // The same compiled test executable retains race/coverage instrumentation.
 // Go test supplies one counter directory; covered children join its counters
 // without competing to write the parent's final text coverage profile.
@@ -62,27 +64,34 @@ func (o *recoveryProcessOutput) bytes() []byte {
 
 func runRARRecoveryProcesses(t *testing.T, versions []int, layouts []string) {
 	t.Helper()
-	root := t.Name()
-	slots := make(chan struct{}, 3)
+	var selections []string
 	for _, version := range versions {
 		for _, layout := range layouts {
-			selected := fmt.Sprintf("%d/%s", version, layout)
-			t.Run(selected, func(t *testing.T) {
-				t.Parallel()
-				slots <- struct{}{}
-				defer func() { <-slots }()
-				ctx, cancel := context.WithTimeout(t.Context(), 5*time.Minute)
-				defer cancel()
-				out, err := recoveryProcess(ctx, root, selected)
-				if err != nil {
-					t.Fatalf("isolated recovery case %s: %v\n%s", selected, err, out)
-				}
-				if !bytes.Contains(out, []byte("=== RUN   "+root+"/"+selected+"\n")) || !bytes.Contains(out, []byte("--- PASS: "+root+"/"+selected+" (")) {
-					t.Fatalf("recovery subprocess did not execute its selected group %s\n%s", selected, out)
-				}
-				t.Logf("isolated recovery result:\n%s", out)
-			})
+			selections = append(selections, fmt.Sprintf("%d/%s", version, layout))
 		}
+	}
+	runRecoveryProcesses(t, selections)
+}
+
+func runRecoveryProcesses(t *testing.T, selections []string) {
+	t.Helper()
+	root := t.Name()
+	for _, selected := range selections {
+		t.Run(selected, func(t *testing.T) {
+			t.Parallel()
+			recoveryProcessSlots <- struct{}{}
+			defer func() { <-recoveryProcessSlots }()
+			ctx, cancel := context.WithTimeout(t.Context(), 5*time.Minute)
+			defer cancel()
+			out, err := recoveryProcess(ctx, root, selected)
+			if err != nil {
+				t.Fatalf("isolated recovery case %s: %v\n%s", selected, err, out)
+			}
+			if !bytes.Contains(out, []byte("=== RUN   "+root+"/"+selected+"\n")) || !bytes.Contains(out, []byte("--- PASS: "+root+"/"+selected+" (")) {
+				t.Fatalf("recovery subprocess did not execute its selected group %s\n%s", selected, out)
+			}
+			t.Logf("isolated recovery result:\n%s", out)
+		})
 	}
 }
 

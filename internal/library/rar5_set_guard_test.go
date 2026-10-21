@@ -26,7 +26,18 @@ func cleanupRAR5SetRecord(kind, flags uint64, body, data []byte) []byte {
 	return append(append(binary.LittleEndian.AppendUint32(nil, crc32.ChecksumIEEE(h)), h...), data...)
 }
 
-func TestRAR5SetReadOnlyCoverageCannotAuthorizeCleanup(t *testing.T) {
+func newRAR5SetCleanupFixture(t *testing.T, count int, build func([]byte) []byte) streamFixture {
+	if build == nil {
+		return newRAR5SetCleanupWithChild(t, count, "book.epub", nil)
+	}
+	return newRAR5SetCleanupWithChild(t, count, "inside.zip", func(book []byte) ([]byte, []stagingtest.Archive) {
+		body := build(book)
+		return body, []stagingtest.Archive{{Kind: "-tzip", Body: body}}
+	})
+}
+
+func newRAR5SetCleanupWithChild(t *testing.T, count int, name string, build func([]byte) ([]byte, []stagingtest.Archive), alter ...func(int, []byte) []byte) streamFixture {
+	t.Helper()
 	f := newRAR5CleanupFixture(t, nil)
 	var book []byte
 	for _, b := range snapshotTree(t, filepath.Join(f.root, "assets")) {
@@ -38,11 +49,15 @@ func TestRAR5SetReadOnlyCoverageCannotAuthorizeCleanup(t *testing.T) {
 	if err := os.Remove(filepath.Join(f.folder, filepath.FromSlash(f.names[0]))); err != nil {
 		t.Fatal(err)
 	}
-	a := stagingtest.Archive{Kind: "-tRar5", Members: map[string][]byte{"book.epub": book}, Fields: map[string]string{"book.epub": "Split Before = -\nSplit After = -\nVolume Index = 0\n"}}
-	var names []string
+	var children []stagingtest.Archive
+	if build != nil {
+		book, children = build(book)
+	}
+	a := stagingtest.Archive{Kind: "-tRar5", Members: map[string][]byte{name: book}, Fields: map[string]string{name: "Split Before = -\nSplit After = -\nVolume Index = 0\n"}}
+	f.names, f.parts, f.archiveProof = nil, nil, rar5SetProof
 	var total, first int
-	for i := range 3 {
-		piece := book[i*len(book)/3 : (i+1)*len(book)/3]
+	for i := range count {
+		piece := book[i*len(book)/count : (i+1)*len(book)/count]
 		main := cleanupRAR5Numbers(1)
 		if i > 0 {
 			main = cleanupRAR5Numbers(3, uint64(i))
@@ -54,43 +69,59 @@ func TestRAR5SetReadOnlyCoverageCannotAuthorizeCleanup(t *testing.T) {
 			flags |= 8
 			before = "+"
 		}
-		if i < 2 {
+		if i+1 < count {
 			flags |= 16
 			after = "+"
 		}
 		crc := crc32.ChecksumIEEE(book)
-		if i < 2 {
+		if i+1 < count {
 			crc = crc32.ChecksumIEEE(piece)
 		}
 		fields := cleanupRAR5Numbers(4, uint64(len(book)), 0100644)
 		fields = binary.LittleEndian.AppendUint32(fields, crc)
-		fields = append(fields, cleanupRAR5Numbers(0, 1, uint64(len("book.epub")))...)
-		fields = append(fields, "book.epub"...)
+		fields = append(fields, cleanupRAR5Numbers(0, 1, uint64(len(name)))...)
+		fields = append(fields, name...)
 		b = append(b, cleanupRAR5SetRecord(2, flags, fields, piece)...)
 		end := uint64(0)
-		if i < 2 {
+		if i+1 < count {
 			end = 1
 		}
 		b = append(b, cleanupRAR5SetRecord(5, 0, cleanupRAR5Numbers(end), nil)...)
-		name := fmt.Sprintf("books/set.part%d.rar", i+1)
-		names = append(names, filepath.FromSlash(name))
-		writeTree(t, f.folder, map[string][]byte{name: b})
+		for _, change := range alter {
+			b = change(i, b)
+		}
+		partName := fmt.Sprintf("books/set.part%d.rar", i+1)
+		f.names, f.parts = append(f.names, partName), append(f.parts, b)
+		writeTree(t, f.folder, map[string][]byte{partName: b})
 		total += len(b)
 		if i == 0 {
 			first = len(b)
 		}
 		header := fmt.Sprintf("Type = Rar5\nPhysical Size = %d\nMultivolume = +\nVolume Index = %d\nVolumes = 1\n", len(b), i)
-		if i < 2 {
+		if i+1 < count {
 			header += fmt.Sprintf("ERROR = Missing volume : archive.part%04d.rar\n", i+2)
 		}
 		if i > 0 {
 			header += "ERRORS:\nHeaders Error\n"
 		}
-		listing := fmt.Sprintf("Path = book.epub\nSize = %d\nPacked Size = %d\nAttributes = -rw-r--r--\nCRC = %08X\nSplit Before = %s\nSplit After = %s\nVolume Index = %d\n\n", len(book), len(piece), crc, before, after, i)
+		listing := fmt.Sprintf("Path = %s\nSize = %d\nPacked Size = %d\nAttributes = -rw-r--r--\nCRC = %08X\nSplit Before = %s\nSplit After = %s\nVolume Index = %d\n\n", name, len(book), len(piece), crc, before, after, i)
 		a.Volumes = append(a.Volumes, stagingtest.Volume{Name: fmt.Sprintf("archive.part%04d.rar", i+1), Body: b, Header: header, Listing: listing, Code: 2})
 	}
-	a.Header = fmt.Sprintf("Type = Rar5\nPhysical Size = %d\nTotal Physical Size = %d\nMultivolume = +\nVolume Index = 0\nVolumes = 3\n", first, total)
-	stagingtest.Install(t, a)
+	a.Header = fmt.Sprintf("Type = Rar5\nPhysical Size = %d\nTotal Physical Size = %d\nMultivolume = +\nVolume Index = 0\nVolumes = %d\n", first, total, count)
+	stagingtest.InstallMany(t, append(children, a)...)
+	return f
+}
+
+func TestRAR5SetCoverageRequiresDistinctCleanupAuthority(t *testing.T) {
+	f := newRAR5SetCleanupFixture(t, 3, nil)
+	var book []byte
+	for _, b := range snapshotTree(t, filepath.Join(f.root, "assets")) {
+		book = b
+	}
+	var names []string
+	for _, name := range f.names {
+		names = append(names, filepath.FromSlash(name))
+	}
 	src, err := safeio.OpenRoot(f.folder)
 	if err != nil {
 		t.Fatal(err)
@@ -111,17 +142,48 @@ func TestRAR5SetReadOnlyCoverageCannotAuthorizeCleanup(t *testing.T) {
 		t.Fatal("staged holding differs", err)
 	}
 	before, held := snapshotTree(t, f.folder), snapshotTree(t, filepath.Join(f.root, "assets"))
-	saved := staging.SevenZip
-	staging.SevenZip = func() (string, error) { t.Fatal("RAR set cleanup reached the reader"); return "", nil }
-	t.Cleanup(func() { staging.SevenZip = saved })
 	p, err := Cleanup(context.Background(), CleanupRequest{Library: f.root, Folder: f.folder})
-	if err != nil || p.Move != 0 {
-		t.Fatal("read-only set capability granted write permission", p, err)
+	if err != nil || p.Move != 1 || len(p.Entries) != 1 || p.Entries[0].ArchiveProof != rar5SetProof || !supportedArchiveProof(p.Entries[0]) {
+		t.Fatal("set has no distinct complete authority", p, err)
 	}
-	if applied, err := Cleanup(context.Background(), CleanupRequest{Library: f.root, Folder: f.folder, Apply: p.Digest}); err != nil || applied.Moved != 0 {
-		t.Fatal(applied, err)
+	for _, proof := range []string{archiveTreeProof, archiveRARTreeProof, rar4FramesProof, rar5FramesProof, zipStreamProof, zipSegmentsProof, "", "rar5-set/2"} {
+		e := p.Entries[0]
+		e.ArchiveProof = proof
+		if supportedArchiveProof(e) {
+			t.Fatal("RAR outer set borrowed older or unknown authority", proof, e)
+		}
+	}
+	for _, kind := range []string{"single", "ordinal", "parent", "family", "zero_bytes", "part_limit", "total_limit", "wrong_kind", "first_path"} {
+		e := p.Entries[0]
+		e.Files = append([]CleanupFile{}, e.Files...)
+		switch kind {
+		case "single":
+			e.Files = e.Files[:1]
+		case "ordinal":
+			e.Files[1].Path = "books/set.part3.rar"
+		case "parent":
+			e.Files[1].Path = "Books/set.part2.rar"
+		case "family":
+			e.Files[1].Path = "books/other.part2.rar"
+		case "zero_bytes":
+			e.Files[1].Bytes = 0
+		case "part_limit":
+			e.Files[1].Bytes = (256 << 20) + 1
+		case "total_limit":
+			e.Files = nil
+			for i := range 17 {
+				e.Files = append(e.Files, CleanupFile{Path: fmt.Sprintf("books/set.part%d.rar", i+1), Bytes: 256 << 20})
+			}
+		case "wrong_kind":
+			e.Kind = "file"
+		case "first_path":
+			e.Path = "books/other.part1.rar"
+		}
+		if supportedArchiveProof(e) {
+			t.Fatal("malformed set authority accepted", kind, e)
+		}
 	}
 	if !reflect.DeepEqual(before, snapshotTree(t, f.folder)) || !reflect.DeepEqual(held, snapshotTree(t, filepath.Join(f.root, "assets"))) {
-		t.Fatal("read-only set capability changed sources or held bytes")
+		t.Fatal("preview changed sources or held bytes")
 	}
 }
