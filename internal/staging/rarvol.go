@@ -45,7 +45,7 @@ func rarSnapshotName(old bool, index int) string {
 
 // snapshotRARSet probes each snapshot with no siblings before assembling it.
 // Reader-declared roles and ordinals are evidence, not a cryptographic set ID.
-func snapshotRARSet(ctx context.Context, exe string, src *os.Root, names []string, infos []fs.FileInfo, dst *os.Root, dir string, old bool, total int64, limits Limits, proof *rar5SetBinding) (string, string, error) {
+func snapshotRARSet(ctx context.Context, exe string, src *os.Root, names []string, infos []fs.FileInfo, dst *os.Root, dir string, old bool, total int64, limits Limits, proof *rarSetBinding) (string, string, error) {
 	probeCtx, cancel := context.WithTimeout(ctx, 2*time.Minute)
 	defer cancel()
 	remaining := int64(maxListing)
@@ -71,8 +71,10 @@ func snapshotRARSet(ctx context.Context, exe string, src *os.Root, names []strin
 		if got != kind {
 			return "", "", errors.New("RAR volumes disagree on their format; the set is preserved")
 		}
-		if proof != nil && kind != "Rar5" {
-			return "", "", fmt.Errorf("%w: only RAR5 set framing is supported", ErrRAR5Coverage)
+		if proof != nil {
+			if err := proof.coverageKind(kind); err != nil {
+				return "", "", err
+			}
 		}
 		args := []string{"l", "-slt", "-t" + kind, noPassword}
 		if proof != nil {
@@ -106,28 +108,19 @@ func snapshotRARSet(ctx context.Context, exe string, src *os.Root, names []strin
 				return "", "", err
 			}
 			if info.Size() != infos[i].Size() {
-				return "", "", fmt.Errorf("%w: private volume size changed", ErrRAR5Coverage)
+				return "", "", fmt.Errorf("%w: private volume size changed", rarCoverageError(kind))
 			}
 			file, err := safeio.OpenRegular(dst, snapshot, info, os.O_RDONLY)
 			if err != nil {
 				return "", "", err
 			}
-			volume, proofErr := RAR5VolumeAccounted(probeCtx, limits.proofReader(file), info.Size())
+			proofErr := proof.accountVolume(probeCtx, kind, limits.proofReader(file), info.Size(), entries, i, len(names), limits.memberLimit())
 			closeErr := file.Close()
 			if proofErr != nil {
 				return "", "", proofErr
 			}
 			if closeErr != nil {
 				return "", "", closeErr
-			}
-			if !rar5VolumeTableMatches(probeCtx, volume, entries) {
-				if probeCtx.Err() != nil {
-					return "", "", probeCtx.Err()
-				}
-				return "", "", fmt.Errorf("%w: isolated table disagrees with physical volume", ErrRAR5Coverage)
-			}
-			if err := proof.add(probeCtx, volume, i, len(names), limits.memberLimit()); err != nil {
-				return "", "", err
 			}
 		}
 		last := entries[len(entries)-1]
@@ -174,7 +167,7 @@ func snapshotRARSet(ctx context.Context, exe string, src *os.Root, names []strin
 			if probeCtx.Err() != nil {
 				return "", "", probeCtx.Err()
 			}
-			return "", "", fmt.Errorf("%w: assembled table disagrees with complete physical records", ErrRAR5Coverage)
+			return "", "", fmt.Errorf("%w: assembled table disagrees with complete physical records", rarCoverageError(kind))
 		}
 		proof.entries = entries
 	}

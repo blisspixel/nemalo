@@ -267,6 +267,18 @@ bindings stop before any independent removal, unknown proofs retain bytes, and
 raw restore never replaces a target. RAR4, old-named and nested sets stay.
 Require actual preceding-binary retention/raw-restore evidence and the separate
 full local/native/exact-hosted gate; stage 2 remains unfinished.
+Decision 0075 adds read-only modern root RAR4 set coverage with all three explicit
+Coverage, RAR4Coverage and RAR4SetCoverage flags. Application cleanup leaves the
+new flag false and still requires root-set version 5. Each version adapts only
+its own measured physical facts into the shared format-neutral continuation and
+table matcher; neither may borrow the other's opt-in or proof. Keep standalone
+RAR4 volume refusal, mandatory physical end ordinals/first roles, zero reserved
+end fields, strict known metadata and separate packed-part/final whole CRCs.
+Volume-wide CRC declarations, old names and nested sets stay unsupported.
+Share all proof/read/source-copy/process/output budgets, including failed work;
+direct work budgets never enable traversal. RARSetVersion=4 stays internal and
+separate from standalone facts and cleanup permission. Full read-only acceptance
+and issue readback must precede a distinct writer decision and its own full gate.
 Historical RAR-named archive entries and old continuations without a supported
 proof cannot resume cleanup or purge, including pending purge intents. Preserve
 their recorded bytes for restore; member holdings alone confer no permission.

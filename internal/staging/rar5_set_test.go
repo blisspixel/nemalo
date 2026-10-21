@@ -53,7 +53,7 @@ func rar5TestSplit(name string, whole, packed []byte, before, after bool, compre
 	return rar5Record(2, flags, body, packed)
 }
 
-func rar5PartListing(whole, packed []byte, index, count int) string {
+func rarPartListing(whole, packed []byte, index, count int) string {
 	before, after := "-", "-"
 	if index > 0 {
 		before = "+"
@@ -69,6 +69,10 @@ func rar5PartListing(whole, packed []byte, index, count int) string {
 }
 
 func updateRAR5SetHeaders(t *testing.T, src *os.Root, names []string) {
+	updateRARSetHeaders(t, src, names, "Rar5")
+}
+
+func updateRARSetHeaders(t *testing.T, src *os.Root, names []string, kind string) {
 	t.Helper()
 	var total int64
 	var first int64
@@ -82,13 +86,20 @@ func updateRAR5SetHeaders(t *testing.T, src *os.Root, names []string) {
 			first = info.Size()
 		}
 		prefix := fmt.Sprintf("volume-%04d", i)
-		header := fmt.Sprintf("Type = Rar5\nPhysical Size = %d\nMultivolume = +\nVolume Index = %d\nVolumes = 1\n", info.Size(), i)
+		header := fmt.Sprintf("Type = %s\nPhysical Size = %d\nMultivolume = +\nVolume Index = %d\nVolumes = 1\n", kind, info.Size(), i)
+		if kind == "Rar" {
+			header += "Characteristics = Volume NewVolName"
+			if i == 0 {
+				header += " FirstVolume"
+			}
+			header += "\n"
+		}
 		code := "0"
 		if i+1 < len(names) {
 			header += "ERROR = Missing volume : " + rarSnapshotName(false, i+1) + "\n"
 			code = "2"
 		}
-		if i > 0 {
+		if i > 0 && kind == "Rar5" {
 			header += "ERRORS:\nHeaders Error\n"
 			code = "2"
 		}
@@ -96,7 +107,7 @@ func updateRAR5SetHeaders(t *testing.T, src *os.Root, names []string) {
 		writeFakeRARFile(t, prefix+".code", code)
 		writeFakeRARFile(t, prefix+".name", rarSnapshotName(false, i))
 	}
-	writeFakeRARFile(t, "header.txt", fmt.Sprintf("Type = Rar5\nPhysical Size = %d\nTotal Physical Size = %d\nMultivolume = +\nVolume Index = 0\nVolumes = %d\n", first, total, len(names)))
+	writeFakeRARFile(t, "header.txt", fmt.Sprintf("Type = %s\nPhysical Size = %d\nTotal Physical Size = %d\nMultivolume = +\nVolume Index = 0\nVolumes = %d\n", kind, first, total, len(names)))
 }
 
 func rar5SetFixture(t *testing.T, count int) (*os.Root, *os.Root, []string, [][]byte, []byte) {
@@ -113,7 +124,7 @@ func rar5SetFixture(t *testing.T, count int) (*os.Root, *os.Root, []string, [][]
 			t.Fatal(err)
 		}
 		names, parts = append(names, name), append(parts, b)
-		writeFakeRARFile(t, fmt.Sprintf("volume-%04d.listing", i), rar5PartListing(whole, piece, i, count))
+		writeFakeRARFile(t, fmt.Sprintf("volume-%04d.listing", i), rarPartListing(whole, piece, i, count))
 	}
 	updateRAR5SetHeaders(t, src, names)
 	return src, dst, names, parts, whole
@@ -203,25 +214,25 @@ func TestRAR5SetRefusesHiddenPhysicalRecordsAndTableMismatches(t *testing.T) {
 			updateRAR5SetHeaders(t, src, names)
 		}},
 		{"isolated_crc", func(t *testing.T, _ *os.Root, _ []string, _ [][]byte, whole []byte) {
-			replaceRAR5Fixture(t, "volume-0000.listing", fmt.Sprintf("CRC = %08X", crc32.ChecksumIEEE(whole[:len(whole)/3])), "CRC = DEADBEEF")
+			replaceRARFixture(t, "volume-0000.listing", fmt.Sprintf("CRC = %08X", crc32.ChecksumIEEE(whole[:len(whole)/3])), "CRC = DEADBEEF")
 		}},
 		{"isolated_packed", func(t *testing.T, _ *os.Root, _ []string, _ [][]byte, _ []byte) {
-			replaceRAR5Fixture(t, "volume-0001.listing", "Packed Size = ", "Packed Size = 9")
+			replaceRARFixture(t, "volume-0001.listing", "Packed Size = ", "Packed Size = 9")
 		}},
 		{"isolated_ordinal", func(t *testing.T, _ *os.Root, _ []string, _ [][]byte, _ []byte) {
-			replaceRAR5Fixture(t, "volume-0001.listing", "Volume Index = 1", "Volume Index = 0")
+			replaceRARFixture(t, "volume-0001.listing", "Volume Index = 1", "Volume Index = 0")
 		}},
 		{"assembled_crc", func(t *testing.T, _ *os.Root, _ []string, _ [][]byte, whole []byte) {
-			replaceRAR5Fixture(t, "listing.txt", fmt.Sprintf("CRC = %08X", crc32.ChecksumIEEE(whole)), "CRC = DEADBEEF")
+			replaceRARFixture(t, "listing.txt", fmt.Sprintf("CRC = %08X", crc32.ChecksumIEEE(whole)), "CRC = DEADBEEF")
 		}},
 		{"assembled_start", func(t *testing.T, _ *os.Root, _ []string, _ [][]byte, _ []byte) {
-			replaceRAR5Fixture(t, "listing.txt", "Volume Index = 0", "Volume Index = 1")
+			replaceRARFixture(t, "listing.txt", "Volume Index = 0", "Volume Index = 1")
 		}},
 		{"assembled_split_field", func(t *testing.T, _ *os.Root, _ []string, _ [][]byte, _ []byte) {
-			replaceRAR5Fixture(t, "listing.txt", "Split After = -\n", "")
+			replaceRARFixture(t, "listing.txt", "Split After = -\n", "")
 		}},
 		{"assembled_probe_summary", func(t *testing.T, _ *os.Root, _ []string, _ [][]byte, _ []byte) {
-			replaceRAR5Fixture(t, "listing.txt", "Volume Index = 0\n", "Volume Index = 0\n\nErrors: 1\n")
+			replaceRARFixture(t, "listing.txt", "Volume Index = 0\n", "Volume Index = 0\n\nErrors: 1\n")
 		}},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -261,7 +272,7 @@ func TestRAR5SetAssembledTableNormalizesCRLFWithoutProbeExceptions(t *testing.T)
 	}
 }
 
-func replaceRAR5Fixture(t *testing.T, name, from, to string) {
+func replaceRARFixture(t *testing.T, name, from, to string) {
 	t.Helper()
 	b, err := os.ReadFile(filepath.Join(os.Getenv("NEMALO_FAKE_7Z"), name))
 	if err != nil {
@@ -299,9 +310,13 @@ func TestRAR5SetSnapshotIdentityAndOutputAreIndependent(t *testing.T) {
 }
 
 func TestRAR5SetDirectCallsShareWorkAcrossVolumesAndFailures(t *testing.T) {
+	testRARSetBudgets(t, rar5SetFixture, rar5SetLimits)
+}
+
+func testRARSetBudgets(t *testing.T, fixture func(*testing.T, int) (*os.Root, *os.Root, []string, [][]byte, []byte), bounds func() Limits) {
 	t.Run("proof", func(t *testing.T) {
-		src, dst, names, parts, whole := rar5SetFixture(t, 3)
-		l := rar5SetLimits()
+		src, dst, names, parts, whole := fixture(t, 3)
+		l := bounds()
 		l.tree = newTreeBudget(l)
 		l.tree.proofs.remaining = int64(len(parts[0]) + len(parts[1]) - len(whole)*2/3 - 1)
 		x, err := ExtractSet(context.Background(), src, names, dst, books, l)
@@ -315,8 +330,8 @@ func TestRAR5SetDirectCallsShareWorkAcrossVolumesAndFailures(t *testing.T) {
 		}
 	})
 	t.Run("source copies", func(t *testing.T) {
-		src, dst, names, parts, _ := rar5SetFixture(t, 3)
-		l := rar5SetLimits()
+		src, dst, names, parts, _ := fixture(t, 3)
+		l := bounds()
 		l.tree = newTreeBudget(l)
 		l.tree.reads.remaining = int64(len(parts[0]) + 1)
 		x, err := ExtractSet(context.Background(), src, names, dst, books, l)
@@ -329,8 +344,8 @@ func TestRAR5SetDirectCallsShareWorkAcrossVolumesAndFailures(t *testing.T) {
 		}
 	})
 	t.Run("processes", func(t *testing.T) {
-		src, dst, names, _, _ := rar5SetFixture(t, 3)
-		l := rar5SetLimits()
+		src, dst, names, _, _ := fixture(t, 3)
+		l := bounds()
 		l.tree = newTreeBudget(l)
 		l.tree.processes = 2
 		if x, err := ExtractSet(context.Background(), src, names, dst, books, l); !errors.Is(err, errTreeBudget) || x.Whole || l.tree.processes != 0 {
@@ -338,8 +353,8 @@ func TestRAR5SetDirectCallsShareWorkAcrossVolumesAndFailures(t *testing.T) {
 		}
 	})
 	t.Run("diagnostics", func(t *testing.T) {
-		src, dst, names, _, _ := rar5SetFixture(t, 3)
-		l := rar5SetLimits()
+		src, dst, names, _, _ := fixture(t, 3)
+		l := bounds()
 		l.tree = newTreeBudget(l)
 		l.tree.diagnostics.remaining = 1
 		if x, err := ExtractSet(context.Background(), src, names, dst, books, l); err == nil || x.Whole || l.tree.diagnostics.left() != 0 {
@@ -347,16 +362,16 @@ func TestRAR5SetDirectCallsShareWorkAcrossVolumesAndFailures(t *testing.T) {
 		}
 	})
 	t.Run("logical member count", func(t *testing.T) {
-		src, dst, names, _, _ := rar5SetFixture(t, 7)
-		l := rar5SetLimits()
+		src, dst, names, _, _ := fixture(t, 7)
+		l := bounds()
 		l.Members = 1
 		if x, err := ExtractSet(context.Background(), src, names, dst, books, l); err != nil || !x.Whole || !x.Complete {
 			t.Fatal(x, err)
 		}
 	})
 	t.Run("output budget", func(t *testing.T) {
-		src, dst, names, _, whole := rar5SetFixture(t, 3)
-		l := rar5SetLimits()
+		src, dst, names, _, whole := fixture(t, 3)
+		l := bounds()
 		l.TotalBytes = int64(len(whole))
 		if x, err := ExtractSet(context.Background(), src, names, dst, books, l); err != nil || !x.Whole || x.Complete || x.Members[0].Disposition != "failed" {
 			t.Fatal(x, err)
@@ -406,7 +421,11 @@ func TestRAR5SetRefusesOtherLayoutsWithoutChangingSources(t *testing.T) {
 }
 
 func TestRAR5SetCancellationStopsActiveIdentityProbe(t *testing.T) {
-	src, dst, names, _, _ := rar5SetFixture(t, 3)
+	testRARSetCancellation(t, rar5SetFixture, rar5SetLimits)
+}
+
+func testRARSetCancellation(t *testing.T, fixture func(*testing.T, int) (*os.Root, *os.Root, []string, [][]byte, []byte), bounds func() Limits) {
+	src, dst, names, _, _ := fixture(t, 3)
 	writeFakeRARFile(t, "trace-enabled", "")
 	writeFakeRARFile(t, "wait", "1")
 	ctx, cancel := context.WithCancel(context.Background())
@@ -416,7 +435,7 @@ func TestRAR5SetCancellationStopsActiveIdentityProbe(t *testing.T) {
 		err error
 	}
 	done := make(chan outcome, 1)
-	go func() { x, err := ExtractSet(ctx, src, names, dst, books, rar5SetLimits()); done <- outcome{x, err} }()
+	go func() { x, err := ExtractSet(ctx, src, names, dst, books, bounds()); done <- outcome{x, err} }()
 	deadline := time.Now().Add(10 * time.Second)
 	for {
 		b, _ := os.ReadFile(filepath.Join(os.Getenv("NEMALO_FAKE_7Z"), "trace"))
@@ -449,10 +468,10 @@ func TestRAR5SetDirectWorkBudgetDoesNotEnableNestedTraversal(t *testing.T) {
 				if err := src.WriteFile(name, b, 0o600); err != nil {
 					t.Fatal(err)
 				}
-				replaceRAR5Fixture(t, fmt.Sprintf("volume-%04d.listing", i), "Path = book.epub", "Path = inside.zip")
+				replaceRARFixture(t, fmt.Sprintf("volume-%04d.listing", i), "Path = book.epub", "Path = inside.zip")
 			}
 			updateRAR5SetHeaders(t, src, names)
-			replaceRAR5Fixture(t, "listing.txt", "Path = book.epub", "Path = inside.zip")
+			replaceRARFixture(t, "listing.txt", "Path = book.epub", "Path = inside.zip")
 			writeFakeRARFile(t, filepath.Join("members", fmt.Sprintf("%x", "inside.zip")), string(whole))
 			var x Extraction
 			var err error

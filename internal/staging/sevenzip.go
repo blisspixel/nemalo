@@ -804,12 +804,16 @@ func ExtractSet(ctx context.Context, src *os.Root, names []string, dst *os.Root,
 		}
 		return x, err
 	}
-	var proof *rar5SetBinding
-	if limits.Coverage && limits.RAR5SetCoverage {
+	var proof *rarSetBinding
+	if limits.Coverage && (limits.RAR5SetCoverage || (limits.RAR4Coverage && limits.RAR4SetCoverage)) {
 		if old || limits.child {
-			return x, fmt.Errorf("%w: old-named or nested RAR set coverage is unsupported", ErrRAR5Coverage)
+			coverageErr := ErrRAR5Coverage
+			if !limits.RAR5SetCoverage {
+				coverageErr = ErrRAR4Coverage
+			}
+			return x, fmt.Errorf("%w: old-named or nested RAR set coverage is unsupported", coverageErr)
 		}
-		proof = &rar5SetBinding{}
+		proof = &rarSetBinding{allow4: limits.RAR4Coverage && limits.RAR4SetCoverage, allow5: limits.RAR5SetCoverage}
 		if limits.tree == nil {
 			limits.tree = newTreeBudget(limits)
 			limits.budgetOnly = true
@@ -825,7 +829,7 @@ func ExtractSet(ctx context.Context, src *os.Root, names []string, dst *os.Root,
 	}
 	if proof != nil {
 		x, err = extractListedSnapshot(ctx, exe, kind, archive, total, dst, supported, limits, proof.entries)
-		x.Whole, x.RARSetVersion = true, 5
+		x.Whole, x.RARSetVersion = true, proof.version
 		return x, err
 	}
 	return extractSnapshot(ctx, exe, kind, archive, total, dst, supported, limits, nil)

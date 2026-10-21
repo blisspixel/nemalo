@@ -3,6 +3,7 @@ package staging
 import (
 	"bytes"
 	"context"
+	"crypto/sha256"
 	"encoding/binary"
 	"errors"
 	"fmt"
@@ -26,8 +27,12 @@ type RAR4File struct {
 
 // RAR4Accounted measures a strict standalone framing subset without reading
 // payloads, decompressing, checking file contents or granting write permission.
-// A future shared-tree caller must also wrap source with Limits.proofReader.
+// Shared-tree callers must also wrap source with Limits.proofReader.
 func RAR4Accounted(ctx context.Context, source io.ReaderAt, size int64) ([]RAR4File, error) {
+	return rar4Accounted(ctx, source, size, nil)
+}
+
+func rar4Accounted(ctx context.Context, source io.ReaderAt, size int64, volume *RAR4Volume) ([]RAR4File, error) {
 	fail := func(reason string) ([]RAR4File, error) { return nil, fmt.Errorf("%w: %s", ErrRAR4Coverage, reason) }
 	if size < 7 || size > maxArchiveSnapshot {
 		return fail("source size exceeds supported bounds")
@@ -73,13 +78,27 @@ func RAR4Accounted(ctx context.Context, source io.ReaderAt, size int64) ([]RAR4F
 		switch kind {
 		case 0x73:
 			// Lock, solid and skip-if-unknown have no additional data here.
-			if main || headerSize != 13 || flags&^uint16(0x400c) != 0 || !bytes.Equal(h[7:], make([]byte, 6)) {
+			allowed := uint16(0x400c)
+			if volume != nil {
+				allowed |= 0x111
+			}
+			if main || headerSize != 13 || flags&^allowed != 0 || !bytes.Equal(h[7:], make([]byte, 6)) {
 				return fail("unsupported main metadata or volume")
+			}
+			if volume != nil {
+				if flags&0x11 != 0x11 {
+					return fail("missing modern volume flags")
+				}
+				volume.First, volume.Solid = flags&0x100 != 0, flags&8 != 0
 			}
 			main = true
 		case 0x74:
 			// Known framing flags plus zero high sizes and bounded time metadata.
-			if len(files) >= 10000 || headerSize < 33 || flags&^uint16(0xd1f0) != 0 || flags&0x8000 == 0 {
+			allowed := uint16(0xd1f0)
+			if volume != nil {
+				allowed |= 3
+			}
+			if len(files) >= 10000 || headerSize < 33 || flags&^allowed != 0 || flags&0x8000 == 0 {
 				return fail("unsupported file flags or member count")
 			}
 			nameOffset := 32
@@ -139,18 +158,41 @@ func RAR4Accounted(ctx context.Context, source io.ReaderAt, size int64) ([]RAR4F
 			if f.Packed > size-next {
 				return fail("data span exceeds source")
 			}
+			if volume != nil && (f.Bytes == 0xffffffff || (f.Directory && flags&3 != 0)) {
+				return fail("unknown whole size or split directory")
+			}
 			if f.Directory && (f.Packed != 0 || f.Bytes != 0 || f.CRC32 != 0 || f.CompressionMethod != 0x30) {
 				return fail("directory carries data or unsupported declarations")
 			}
-			if f.CompressionMethod == 0x30 && f.Packed != f.Bytes {
+			if f.CompressionMethod == 0x30 && (volume == nil || flags&3 == 0) && f.Packed != f.Bytes {
 				return fail("stored sizes disagree")
 			}
 			files = append(files, f)
+			if volume != nil {
+				volume.Files = append(volume.Files, RAR4VolumeFile{RAR4File: f, SplitBefore: flags&1 != 0, SplitAfter: flags&2 != 0, metadata: rar4VolumeMetadata{flags: flags &^ 3, extra: sha256.Sum256(extra)}})
+			}
 			names[f.Name] = f.Directory
 			next += f.Packed
 		case 0x7b:
-			if headerSize != 7 || flags&^uint16(0x4000) != 0 || next != size {
-				return fail("unsupported end metadata or trailing data")
+			if volume == nil {
+				if headerSize != 7 || flags&^uint16(0x4000) != 0 || next != size {
+					return fail("unsupported end metadata or trailing data")
+				}
+			} else {
+				endSize := 9
+				if flags&4 != 0 {
+					endSize += 7
+				}
+				if flags&^uint16(0x400d) != 0 || flags&8 == 0 || headerSize != endSize || next != size {
+					return fail("unsupported volume end metadata, missing ordinal or trailing data")
+				}
+				if flags&4 != 0 && !bytes.Equal(h[9:], make([]byte, 7)) {
+					return fail("nonzero reserved volume end metadata")
+				}
+				volume.Ordinal, volume.More = int(binary.LittleEndian.Uint16(h[7:9])), flags&1 != 0
+				if volume.Ordinal >= 1000 || volume.First != (volume.Ordinal == 0) {
+					return fail("first volume role disagrees with ordinal")
+				}
 			}
 			if err := unambiguousRARParents(ctx, names); err != nil {
 				return nil, fmt.Errorf("%w: %w", ErrRAR4Coverage, err)

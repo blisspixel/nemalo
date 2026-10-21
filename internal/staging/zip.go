@@ -39,8 +39,11 @@ type Limits struct {
 	// Application cleanup requests this only under its separate tree proof.
 	NestedRARCoverage bool
 	// RAR5SetCoverage requests read-only framing/table evidence for modern root
-	// RAR5 volume sets alongside Coverage. Application cleanup leaves it false.
+	// RAR5 volume sets alongside Coverage, under its distinct application proof.
 	RAR5SetCoverage bool
+	// RAR4SetCoverage requests read-only modern root RAR4 set evidence only
+	// alongside Coverage and RAR4Coverage. Application cleanup leaves it false.
+	RAR4SetCoverage bool
 	// ExpectedSources binds coverage snapshots to the application's root plan.
 	// SourceHashRemaining, when set, charges actual copy-hash reads to its budget.
 	ExpectedSources     map[string]SnapshotIdentity

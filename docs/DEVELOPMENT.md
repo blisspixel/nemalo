@@ -545,6 +545,20 @@ nothing. RAR4, old-named, nested sets and unsupported material stay preserved.
 See [decision 0074](decisions/0074-modern-rar5-set-cleanup.md). Source implementation
 is separate from full acceptance, tracked in issue 57, and from a release.
 
+An additional internal read-only `RAR4SetCoverage` requires both `Coverage` and
+`RAR4Coverage` for modern root RAR4 sets. Physical framing binds exact end
+ordinals/roles, known metadata, split records and the same isolated/assembled
+tables used for extraction. Optional reserved end bytes must be exactly seven
+zeros; volume-wide CRC declarations, old naming and nested sets stay unsupported.
+Both versions share a format-neutral continuation/table matcher with separate
+declaration fingerprints and explicit capabilities. Standalone facts and earlier
+proof IDs keep their meanings. Source-copy and all work limits span every part
+and failed attempt; direct covered calls still do not enable traversal. The
+JSON-omitted root-set version 4 confers no cleanup permission: the application
+keeps this flag false and requires version 5 for its existing RAR5 set writer.
+See [decision 0075](decisions/0075-read-only-rar4-set-coverage.md), with acceptance
+tracked in issue 57. This does not complete stage 2 or authorize a release.
+
 Split ZIP byte chunks (`NAME.zip.001`, `.002`, ...; three or four numeric digits)
 are joined privately, checked as exactly one ordinary ZIP through installed
 7-Zip, and extracted by the existing Go ZIP reader. True ZIP segments

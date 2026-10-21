@@ -576,6 +576,21 @@ without a reader or replacement. RAR4, old-named and nested volume sets remain
 preserved. This requires its own acceptance and preceding-binary checks
 ([decision 0074](decisions/0074-modern-rar5-set-cleanup.md)).
 
+Separate internal `Coverage`, `RAR4Coverage` and `RAR4SetCoverage` together permit
+read-only modern root RAR4 set coverage. Standalone RAR4 framing still refuses
+volume declarations. The volume accountant measures an explicit end ordinal,
+first/continuation roles, supported metadata and optional seven reserved zero
+bytes. Volume-wide CRC declarations remain unsupported. Each format feeds its
+own declaration fingerprint and neutral facts into the same continuation and
+exact-table matcher, preserving RAR5 conditions without converting RAR4 into
+RAR5 authority. The same private per-volume and assembled tables, source-copy
+and shared work limits, output checks and direct-call traversal boundary apply.
+Root-set version 4 is internal evidence distinct from standalone facts. The
+application leaves the new flag false and still requires version 5 for its RAR5
+set writer. This adds no RAR4 set cleanup right, public option or decoder; old
+names and nested sets remain outside the contract
+([decision 0075](decisions/0075-read-only-rar4-set-coverage.md)).
+
 Private staging and a subprocess are not sandboxes. Go's
 [root-scoped filesystem APIs](https://go.dev/blog/osroot) are useful building blocks;
 external extraction needs a separately tested containment strategy. Linux isolation

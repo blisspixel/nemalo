@@ -188,6 +188,12 @@ verified, not when code exists. No stage has a time estimate.
    scopes. RAR4, old-named and nested sets remain preserved; stage 2 is unfinished.
    Separate full acceptance remains tracked in issue 57
    ([decision 0074](docs/decisions/0074-modern-rar5-set-cleanup.md)).
+   Modern root RAR4 sets now have separate internal read-only framing/table
+   coverage with explicit opt-in. Physical ordinals, split roles, known metadata,
+   shared work and complete logical selections are checked through the common
+   matcher. Application cleanup leaves this capability disabled; no existing
+   proof gains RAR4 set authority. Full acceptance remains tracked in issue 57
+   ([decision 0075](docs/decisions/0075-read-only-rar4-set-coverage.md)).
 3. **Audio access** (milestone 8). M4B and M4A byte ranges and decoded timing in
    content access, bounded ranges usable by an external player, and output
    demonstrated with a real audiobook reader or server.
