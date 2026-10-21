@@ -78,16 +78,32 @@ func RAR4Accounted(ctx context.Context, source io.ReaderAt, size int64) ([]RAR4F
 			}
 			main = true
 		case 0x74:
-			// Only solid, dictionary, skip-if-unknown and long-block bits.
-			if len(files) >= 10000 || headerSize < 33 || flags&^uint16(0xc0f0) != 0 || flags&0x8000 == 0 {
+			// Known framing flags plus zero high sizes and bounded time metadata.
+			if len(files) >= 10000 || headerSize < 33 || flags&^uint16(0xd1f0) != 0 || flags&0x8000 == 0 {
 				return fail("unsupported file flags or member count")
 			}
+			nameOffset := 32
+			if flags&0x100 != 0 {
+				if headerSize < 40 || binary.LittleEndian.Uint32(h[32:36]) != 0 || binary.LittleEndian.Uint32(h[36:40]) != 0 {
+					return fail("missing or unsupported high-size fields")
+				}
+				nameOffset = 40
+			}
 			nameSize := int(binary.LittleEndian.Uint16(h[26:28]))
-			if nameSize < 1 || nameSize > 1024 || headerSize != 32+nameSize {
+			if nameSize < 1 || nameSize > 1024 || nameOffset+nameSize > headerSize {
 				return fail("unsupported file metadata or name length")
 			}
+			nameEnd := nameOffset + nameSize
+			extra := h[nameEnd:]
+			if flags&0x1000 != 0 {
+				if !rar4TimeMetadata(extra) {
+					return fail("missing or unsupported extended-time metadata")
+				}
+			} else if len(extra) != 0 {
+				return fail("unsupported trailing file metadata")
+			}
 			f := RAR4File{
-				Name: string(h[32:]), HeaderOffset: off, DataOffset: next,
+				Name: string(h[nameOffset:nameEnd]), HeaderOffset: off, DataOffset: next,
 				Packed:            int64(binary.LittleEndian.Uint32(h[7:11])),
 				Bytes:             int64(binary.LittleEndian.Uint32(h[11:15])),
 				HostOS:            h[15],
@@ -146,4 +162,45 @@ func RAR4Accounted(ctx context.Context, source io.ReaderAt, size int64) ([]RAR4F
 		off = next
 	}
 	return fail("missing end marker or block limit")
+}
+
+// Measure only the known mtime/ctime/atime layout. DOS time words stay declared
+// metadata; fractional values are limited to the selected subsecond subset.
+func rar4TimeMetadata(data []byte) bool {
+	if len(data) < 2 {
+		return false
+	}
+	mask := binary.LittleEndian.Uint16(data[:2])
+	if mask&15 != 0 { // The fourth time field is outside this subset.
+		return false
+	}
+	data = data[2:]
+	for i, shift := range []uint{12, 8, 4} {
+		field := byte(mask>>shift) & 15
+		if field&8 == 0 {
+			if field != 0 {
+				return false
+			}
+			continue
+		}
+		if i != 0 {
+			if len(data) < 4 {
+				return false
+			}
+			data = data[4:]
+		}
+		n := int(field & 3)
+		if len(data) < n {
+			return false
+		}
+		var fraction uint32
+		for j := 0; j < n; j++ {
+			fraction |= uint32(data[j]) << uint(j*8)
+		}
+		if fraction<<uint((3-n)*8) >= 10_000_000 {
+			return false
+		}
+		data = data[n:]
+	}
+	return len(data) == 0
 }

@@ -503,6 +503,12 @@ directory and CRC before extraction. Application services leave `RAR4Coverage`
 false so this capability cannot authorize the existing RAR5 cleanup proof.
 Child RARs and sets receive no new coverage authority
 ([decision 0068](decisions/0068-opt-in-rar4-reader-binding.md)).
+RAR4 framing also accounts for zero high-size words and exact modification,
+creation and access time fields. Presence, width, selected subsecond range and
+header exhaustion are checked; no time interpretation is generated. Unknown
+time fields, nonzero high words and unsupported encodings stay refused. This
+metadata extension leaves the application RAR4 gate closed
+([decision 0069](decisions/0069-bounded-rar4-time-and-size-metadata.md)).
 
 Private staging and a subprocess are not sandboxes. Go's
 [root-scoped filesystem APIs](https://go.dev/blog/osroot) are useful building blocks;

@@ -156,6 +156,9 @@ verified, not when code exists. No stage has a time estimate.
    Standalone RAR4 reader binding is now implemented behind an internal explicit
    opt-in; application cleanup leaves that gate closed
    ([decision 0068](docs/decisions/0068-opt-in-rar4-reader-binding.md)).
+   Known zero-high-size and extended-time RAR4 metadata is now accounted for under
+   a separate measured extension; acceptance remains tracked in issue 57
+   ([decision 0069](docs/decisions/0069-bounded-rar4-time-and-size-metadata.md)).
 3. **Audio access** (milestone 8). M4B and M4A byte ranges and decoded timing in
    content access, bounded ranges usable by an external player, and output
    demonstrated with a real audiobook reader or server.

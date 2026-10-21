@@ -700,6 +700,12 @@ not a CLI/JSON/MCP option; application services leave the RAR4 opt-in false and
 RAR4 sources still never move. Child RARs and sets receive no new coverage.
 The capability requires separate verification and grants no application proof;
 see [decision 0068](decisions/0068-opt-in-rar4-reader-binding.md).
+RAR4 framing now measures known zero high packed/unpacked-size words and exact
+extended modification, creation and access time metadata. It accepts only the
+documented subsecond subset and refuses missing fields, a fourth time field,
+trailing metadata and nonzero high words. This does not add larger-file support,
+Unicode names or application cleanup. See
+[decision 0069](decisions/0069-bounded-rar4-time-and-size-metadata.md).
 `library audit` on the library directory reports missing, changed, and review
 holdings and does not repair them. Snapshot audit still requires `--root`.
 An EPUB package identifier is recorded when it is an explicit ISBN, DOI, or

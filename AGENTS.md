@@ -212,6 +212,10 @@ standalone root to the maintained reader. Require Coverage plus RAR4Coverage;
 application services leave RAR4Coverage false. Never let RAR4 evidence fall through
 rar5-frames/1. Keep child/set coverage and all application RAR4 cleanup disabled
 until their separately versioned contracts and complete verification.
+Decision 0069 accounts for zero high-size words and exact mtime/ctime/atime
+metadata in RAR4 framing. Nonzero high words, unsupported fractions, unknown
+time fields, Unicode names and other extensions remain preserved. This adds no
+RAR4 application permission and does not expand the RAR5 proof.
 Never broaden `archive-tree/1` to RAR. The application increment needs its own full
 local/native/hosted acceptance; implementation is not a release.
 Requested standalone RAR5 coverage binds every physical file record to one UTF-8

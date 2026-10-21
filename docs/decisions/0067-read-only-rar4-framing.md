@@ -5,6 +5,8 @@ Status: accepted and verified, 2026-10-20. Evidence is tracked in
 This decision enables no RAR4 cleanup or extraction coverage authority.
 The separate [decision 0068](0068-opt-in-rar4-reader-binding.md) specifies the
 explicitly opted-in reader binding, with the application gate still closed.
+The later [decision 0069](0069-bounded-rar4-time-and-size-metadata.md) accounts
+for selected zero-high-size and extended-time fields beyond this initial subset.
 
 ## Evidence
 

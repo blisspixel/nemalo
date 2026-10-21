@@ -1,6 +1,6 @@
 # 0068: opt-in read-only RAR4 reader binding
 
-Status: accepted, 2026-10-20. Implementation and verification tracked in
+Status: accepted and verified, 2026-10-20. Evidence is tracked in
 [issue 57](https://github.com/blisspixel/nemalo/issues/57), roadmap stage 2.
 This decision grants no RAR4 application cleanup permission.
 
