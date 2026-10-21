@@ -891,6 +891,16 @@ Real child processes, production durability operations, every recovery case and
 the default test timeout remain in place. Other packages may continue to use
 their test executable for the same handler.
 
+Full library suites run the RAR tree recovery matrix's independent layout/version
+groups in at most three isolated copies of that same compiled test executable.
+This isolates fixture environment/global changes and overlaps filesystem waits.
+Covered children write to Go test's shared counter directory; the parent retains
+its final text profile. Race instrumentation, every case/assertion and real
+durability operations stay enabled. Children have a four-minute timeout inside
+the parent's unchanged ten-minute package timeout. An unknown/unexecuted group
+or a failed child fails the parent. Explicit `-run` filters keep their original
+serial subtest selection.
+
 Race instrumentation needs cgo and a C compiler. Cgo-free release builds do not.
 On Windows with MSYS2 installed, put its compiler directory on PATH for race tests
 and set `CGO_ENABLED=1`. CI runs native Linux, macOS, and Windows checks, followed

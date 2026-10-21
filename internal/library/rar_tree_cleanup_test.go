@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"flag"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -91,8 +92,21 @@ func TestRARTreePreviewRequiresNewProofAndExactLeaves(t *testing.T) {
 }
 
 func TestRARTreeRecoveryAcrossEveryOuterSetLayout(t *testing.T) {
-	for _, version := range []int{4, 5} {
-		for _, layout := range []string{"zip_chunks", "zip_segments", "7z_chunks"} {
+	versions, layouts := []int{4, 5}, []string{"zip_chunks", "zip_segments", "7z_chunks"}
+	selected := os.Getenv(rarRecoveryCaseEnv)
+	// A filtered invocation keeps Go's exact subtest selection. Full suites run
+	// independent groups in isolated processes, since fixtures change globals.
+	if selected == "" && flag.Lookup("test.run").Value.String() == "" {
+		runRARRecoveryProcesses(t, versions, layouts)
+		return
+	}
+	matched := false
+	for _, version := range versions {
+		for _, layout := range layouts {
+			if selected != "" && selected != fmt.Sprintf("%d/%s", version, layout) {
+				continue
+			}
+			matched = true
 			t.Run(fmt.Sprintf("%d/%s", version, layout), func(t *testing.T) {
 				factory := func(t *testing.T, count int, build func([]byte) []byte) streamFixture {
 					return newCleanupRARTreeFixture(t, layout, version, count, build)
@@ -123,6 +137,9 @@ func TestRARTreeRecoveryAcrossEveryOuterSetLayout(t *testing.T) {
 				})
 			})
 		}
+	}
+	if !matched {
+		t.Fatalf("unknown RAR recovery case %q", selected)
 	}
 }
 
