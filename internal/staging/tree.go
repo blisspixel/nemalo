@@ -86,6 +86,9 @@ func extractTree(ctx context.Context, src *os.Root, names []string, dst *os.Root
 		}
 		result.Complete = result.Complete && x.Complete
 		result.Whole = result.Whole && x.Whole
+		if depth == 1 && len(files) == 1 {
+			result.RARVersion = x.RARVersion
+		}
 		if !x.Whole {
 			gap(chain, "a comment, leading data, or bytes beyond the archive's members prevent complete accounting")
 		}

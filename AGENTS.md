@@ -205,17 +205,23 @@ Decision 0066 permits only standalone root RAR5 book leaves and empty directorie
 with `rar5-frames/1`, one exact source identity and one-component `archive_leaves`.
 Fresh purge repeats the full check and binds its single-file group and leaf digest;
 recovery uses the supported immutable evidence and current remaining bytes/holdings.
-RAR4, sets, child RARs and RAR roots containing nested archives stay preserved.
+Sets, child RARs and RAR roots containing nested archives stay preserved.
 Decision 0067 permits separate read-only RAR4 framing measurements. They grant no
 coverage or cleanup authority alone. Decision 0068 binds an explicitly opted-in
-standalone root to the maintained reader. Require Coverage plus RAR4Coverage;
-application services leave RAR4Coverage false. Never let RAR4 evidence fall through
-rar5-frames/1. Keep child/set coverage and all application RAR4 cleanup disabled
+standalone root to the maintained reader. Require Coverage plus RAR4Coverage.
+Never let RAR4 evidence fall through rar5-frames/1. Keep child/set coverage disabled
 until their separately versioned contracts and complete verification.
 Decision 0069 accounts for zero high-size words and exact mtime/ctime/atime
 metadata in RAR4 framing. Nonzero high words, unsupported fractions, unknown
 time fields, Unicode names and other extensions remain preserved. This adds no
 RAR4 application permission and does not expand the RAR5 proof.
+Decision 0070 permits bounded standalone root RAR4 cleanup under rar4-frames/1,
+after the read-only prerequisites passed all-six hosted checks through ee52520.
+Application cleanup requests RAR4Coverage only for a RAR root and selects its
+distinct proof from the checked outer snapshot signature, never the filename or
+a child. Keep exact one-component leaves, the shared recovery protocol and strict
+known proof mismatch checks. Unicode names, unsupported metadata and nonzero high
+words remain preserved. No public option, decoder or new dependency is added.
 Never broaden `archive-tree/1` to RAR. The application increment needs its own full
 local/native/hosted acceptance; implementation is not a release.
 Requested standalone RAR5 coverage binds every physical file record to one UTF-8

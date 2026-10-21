@@ -106,8 +106,8 @@ published prereleases may lag:
   import tools that store only the plan a preview returned, and acquisition
   and rescan as durable jobs that outlive the connection.
 
-Cleanup supports a bounded standalone RAR5 subset with only held book leaves;
-RAR4, volume sets and nested RAR cleanup remain planned, along with a TUI view
+Cleanup supports bounded standalone RAR4/RAR5 subsets with only held book leaves;
+volume sets and nested RAR cleanup remain planned, along with a TUI view
 of jobs. Single-file import is not
 a full checked-library policy.
 File checks report limited evidence, never a safety or completeness guarantee.

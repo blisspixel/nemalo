@@ -125,7 +125,7 @@ func cleanupLimitations() []string {
 	return []string{
 		"Only files whose exact bytes the library holds, with stored bytes verified, move. Everything else stays, with its reason.",
 		"Moved sources go to the library's cleanup holding area and can be restored. library purge removes held copies the library holds, after its own preview.",
-		"An archive moves only when every member is a directory or a held file, with complete container accounting. Only the bounded standalone RAR5 subset qualifies; other RAR layouts stay. Intake packets move as their receipt, intent, and content.",
+		"An archive moves only when every member is a directory or a held file, with complete container accounting. Only the bounded standalone RAR4/RAR5 subsets qualify; other RAR layouts stay. Intake packets move as their receipt, intent, and content.",
 		"Directory-entry durability across power loss depends on the filesystem.",
 	}
 }
@@ -982,6 +982,7 @@ func planArchive(ctx context.Context, src *os.Root, rel string, volumes []string
 	}
 	limits := staging.Defaults()
 	limits.Coverage = true
+	limits.RAR4Coverage = rootRAR
 	limits.ExpectedSources = make(map[string]staging.SnapshotIdentity, len(before))
 	limits.SourceHashRemaining = hashRemaining
 	for i, f := range before {
@@ -997,7 +998,7 @@ func planArchive(ctx context.Context, src *os.Root, rel string, volumes []string
 	case errors.Is(err, staging.ErrZIPCoverage):
 		e.Reason = err.Error() + "; preserved"
 		return nil
-	case errors.Is(err, staging.ErrRAR5Coverage):
+	case errors.Is(err, staging.ErrRAR5Coverage), errors.Is(err, staging.ErrRAR4Coverage):
 		e.Reason = err.Error() + "; preserved"
 		return nil
 	case errors.Is(err, staging.ErrSnapshotBudget):
@@ -1013,6 +1014,18 @@ func planArchive(ctx context.Context, src *os.Root, rel string, volumes []string
 		encoded, _ := textsafe.MarshalJSON(x.CoverageGap.Chain, false)
 		e.Reason = "container " + string(encoded) + " is not completely accounted for: " + textsafe.Visible(x.CoverageGap.Detail) + "; the archive is preserved"
 		return nil
+	}
+	rarProof := ""
+	if rootRAR {
+		switch x.RARVersion {
+		case 4:
+			rarProof = rar4FramesProof
+		case 5:
+			rarProof = rar5FramesProof
+		default:
+			e.Reason = "the checked outer RAR version has no supported cleanup proof; preserved"
+			return nil
+		}
 	}
 	ids := []string{}
 	leaves := []CleanupArchiveLeaf{}
@@ -1086,7 +1099,7 @@ func planArchive(ctx context.Context, src *os.Root, rel string, volumes []string
 	e.Disposition, e.Reason, e.Files, e.Holdings = "move", "every member is held with verified stored bytes", before, ids
 	e.ArchiveProof = zipProof
 	if rootRAR {
-		e.ArchiveProof, e.ArchiveLeaves = rar5FramesProof, leaves
+		e.ArchiveProof, e.ArchiveLeaves = rarProof, leaves
 	} else if treeProof {
 		e.ArchiveProof = archiveTreeProof
 		e.ArchiveLeaves = leaves

@@ -31,8 +31,8 @@ type Limits struct {
 	// It does not change intake eligibility or authorize source mutation.
 	Coverage bool
 	// RAR4Coverage explicitly opts into standalone RAR4 reader evidence when
-	// Coverage is set. Application cleanup leaves this false until it has its
-	// own signature-bound RAR4 proof and recovery contract.
+	// Coverage is set. Application cleanup requests this only for a RAR root,
+	// alongside its separate signature-bound proof and recovery contract.
 	RAR4Coverage bool
 	// ExpectedSources binds coverage snapshots to the application's root plan.
 	// SourceHashRemaining, when set, charges actual copy-hash reads to its budget.
@@ -73,6 +73,9 @@ type Extraction struct {
 	// proof, or requested ZIP/RAR framing, split-set or complete-tree coverage. It does not
 	// establish member eligibility, successful extraction, or write permission.
 	Whole bool `json:"whole,omitempty"`
+	// RARVersion is measured from the checked outer snapshot signature. It is
+	// internal evidence; neither a filename nor a child can supply this fact.
+	RARVersion int `json:"-"`
 	// CoverageGap locates the first container without requested byte evidence.
 	// An empty chain names the outer container, not an archive member.
 	CoverageGap *CoverageGap `json:"coverage_gap,omitempty"`

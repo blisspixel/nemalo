@@ -3,6 +3,8 @@
 Status: accepted and implemented, 2026-10-20. Acceptance evidence is tracked in
 [issue 57](https://github.com/blisspixel/nemalo/issues/57), roadmap stage 2.
 This decision does not complete that issue or authorize a release.
+RAR4 has its own later [decision 0070](0070-standalone-rar4-cleanup.md); it never
+borrows this RAR5 proof.
 
 ## Prerequisite
 

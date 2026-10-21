@@ -231,7 +231,7 @@ func archivePermissions(m cleanupManifest, pm purgeManifest) (map[int]bool, erro
 		if e.Disposition == "move" && len(e.ArchiveLeaves) != 0 && !validArchiveLeaves(e) {
 			return nil, bad
 		}
-		if e.Disposition == "move" && e.ArchiveProof == rar5FramesProof && !supportedArchiveProof(e) {
+		if e.Disposition == "move" && (e.ArchiveProof == rar5FramesProof || e.ArchiveProof == rar4FramesProof) && !supportedArchiveProof(e) {
 			return nil, bad
 		}
 	}
@@ -266,7 +266,7 @@ func archivePermissions(m cleanupManifest, pm purgeManifest) (map[int]bool, erro
 			return nil, bad
 		}
 		switch group.Proof {
-		case zipStreamProof, zipSegmentsProof, archiveTreeProof, rar5FramesProof:
+		case zipStreamProof, zipSegmentsProof, archiveTreeProof, rar5FramesProof, rar4FramesProof:
 			if group.Proof != e.ArchiveProof && (leafBoundArchiveProof(e.ArchiveProof) || leafBoundArchiveProof(group.Proof)) {
 				return nil, bad
 			}

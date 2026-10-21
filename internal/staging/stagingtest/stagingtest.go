@@ -33,6 +33,8 @@ type Archive struct {
 	Headers map[string]string
 	Fields  map[string]string
 	Served  map[string][]byte
+	// Attributes supplies exact member type declarations, including directories.
+	Attributes map[string]string
 	// Volumes, when present, require isolated probes and exact assembled copies.
 	Volumes []Volume
 }
@@ -159,7 +161,11 @@ func Install(t testing.TB, a Archive) {
 	var listing strings.Builder
 	for _, name := range names {
 		body := a.Members[name]
-		fmt.Fprintf(&listing, "Path = %s\nSize = %d\nPacked Size = %d\nModified = 2026-10-19 07:47:40\nAttributes = A -rw-r--r--\nCRC = %08X\nEncrypted = -\nMethod = LZMA2:24\nBlock = 0\n%s\n", name, len(body), len(body), crc32.ChecksumIEEE(body), a.Fields[name])
+		attributes := a.Attributes[name]
+		if attributes == "" {
+			attributes = "A -rw-r--r--"
+		}
+		fmt.Fprintf(&listing, "Path = %s\nSize = %d\nPacked Size = %d\nModified = 2026-10-19 07:47:40\nAttributes = %s\nCRC = %08X\nEncrypted = -\nMethod = LZMA2:24\nBlock = 0\n%s\n", name, len(body), len(body), attributes, crc32.ChecksumIEEE(body), a.Fields[name])
 		if served, ok := a.Served[name]; ok {
 			body = served
 		}

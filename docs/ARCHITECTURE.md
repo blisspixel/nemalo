@@ -493,22 +493,33 @@ does not grant RAR authority
 The separate `staging.RAR4Accounted` measures a strict standalone RAR4 header/data
 partition through the shared lifetime proof reader. It returns declared facts
 without reading payloads and refuses unlisted subblocks and unsupported metadata.
-Its facts alone grant no extraction coverage or application permission. Existing
-RAR4 intake and application preservation remain unchanged
+Its facts alone grant no extraction coverage or application permission. Default
+RAR4 intake remains unchanged
 ([decision 0067](decisions/0067-read-only-rar4-framing.md)).
 Explicit internal `Coverage` plus `RAR4Coverage` permits standalone root reader
 binding through the same opened snapshot, shared budgets and UTF-8 exact-table
 matcher as RAR5. The common matcher checks every raw name, size, packed size,
-directory and CRC before extraction. Application services leave `RAR4Coverage`
-false so this capability cannot authorize the existing RAR5 cleanup proof.
+directory and CRC before extraction. This capability alone cannot authorize the
+existing RAR5 cleanup proof.
 Child RARs and sets receive no new coverage authority
 ([decision 0068](decisions/0068-opt-in-rar4-reader-binding.md)).
 RAR4 framing also accounts for zero high-size words and exact modification,
 creation and access time fields. Presence, width, selected subsecond range and
 header exhaustion are checked; no time interpretation is generated. Unknown
 time fields, nonzero high words and unsupported encodings stay refused. This
-metadata extension leaves the application RAR4 gate closed
+metadata extension alone grants no application permission
 ([decision 0069](decisions/0069-bounded-rar4-time-and-size-metadata.md)).
+
+Standalone root RAR4 cleanup uses the separately verified `rar4-frames/1`.
+The adapter measures the checked outer snapshot signature and propagates its
+version only from the root, as internal evidence omitted from JSON. Application
+cleanup opts into RAR4 binding only for a RAR root, selecting its own proof for
+version 4 and `rar5-frames/1` for version 5. Unknown versions preserve the source.
+Exact leaves, current holdings, final originals, reviewed manifests, fresh purge
+and immutable recovery reuse the same protocol. Known proof mismatches stop
+before removal; unfamiliar proofs retain bytes. Unicode names, unsupported
+metadata, volumes, child RARs and RAR roots with nested archives stay preserved
+([decision 0070](decisions/0070-standalone-rar4-cleanup.md)).
 
 Private staging and a subprocess are not sandboxes. Go's
 [root-scoped filesystem APIs](https://go.dev/blog/osroot) are useful building blocks;

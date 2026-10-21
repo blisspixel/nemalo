@@ -166,6 +166,14 @@ func Extract7z(ctx context.Context, src *os.Root, name string, dst *os.Root, sup
 		}
 	}
 	x, err = extractSnapshot(ctx, exe, kind, filepath.Join(tmp, snapshot), info.Size(), dst, supported, limits, rarFiles)
+	if err == nil {
+		switch kind {
+		case "Rar":
+			x.RARVersion = 4
+		case "Rar5":
+			x.RARVersion = 5
+		}
+	}
 	if err == nil && kind == "7z" && (limits.tree == nil || limits.Coverage) {
 		x.Whole = wholeArchive(ctx, exe, kind, filepath.Join(tmp, snapshot), "Physical Size", info.Size(), x.packed, limits)
 	}

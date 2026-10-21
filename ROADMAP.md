@@ -149,16 +149,22 @@ verified, not when code exists. No stage has a time estimate.
    Standalone root RAR5 cleanup is now implemented under its own `rar5-frames/1`
    with exact direct leaves, full fresh purge checks and grouped recovery
    ([decision 0066](docs/decisions/0066-standalone-rar5-cleanup.md)). RAR4, volume
-   and nested layouts remain unfinished; this subset does not complete stage 2.
+   and nested layouts remained outside that subset, which does not complete stage 2.
    A separate read-only RAR4 framing accountant is implemented, with acceptance
    tracked in issue 57. Its facts alone grant no RAR4 cleanup authority
    ([decision 0067](docs/decisions/0067-read-only-rar4-framing.md)).
    Standalone RAR4 reader binding is now implemented behind an internal explicit
-   opt-in; application cleanup leaves that gate closed
+   opt-in, initially leaving the application cleanup gate closed
    ([decision 0068](docs/decisions/0068-opt-in-rar4-reader-binding.md)).
    Known zero-high-size and extended-time RAR4 metadata is now accounted for under
    a separate measured extension; acceptance remains tracked in issue 57
    ([decision 0069](docs/decisions/0069-bounded-rar4-time-and-size-metadata.md)).
+   Standalone root RAR4 cleanup is now implemented with its distinct
+   `rar4-frames/1`, selected only from the checked outer signature, exact held
+   leaves and the same version-bound purge/recovery protocol. Acceptance is
+   tracked in issue 57 ([decision 0070](docs/decisions/0070-standalone-rar4-cleanup.md)).
+   Unicode and unsupported metadata, volume sets, child RARs and RAR roots
+   containing nested archives remain preserved; stage 2 is still unfinished.
 3. **Audio access** (milestone 8). M4B and M4A byte ranges and decoded timing in
    content access, bounded ranges usable by an external player, and output
    demonstrated with a real audiobook reader or server.

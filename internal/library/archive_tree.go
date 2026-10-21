@@ -16,9 +16,10 @@ import (
 
 const archiveTreeProof = "archive-tree/1"
 const rar5FramesProof = "rar5-frames/1"
+const rar4FramesProof = "rar4-frames/1"
 
 func leafBoundArchiveProof(proof string) bool {
-	return proof == archiveTreeProof || proof == rar5FramesProof
+	return proof == archiveTreeProof || proof == rar5FramesProof || proof == rar4FramesProof
 }
 
 // CleanupArchiveLeaf binds an exact nested selection to verified held bytes.
@@ -115,7 +116,7 @@ func equalArchiveLeaves(a, b []CleanupArchiveLeaf) bool {
 }
 
 func supportedArchiveProof(e CleanupEntry) bool {
-	if e.ArchiveProof == rar5FramesProof {
+	if e.ArchiveProof == rar5FramesProof || e.ArchiveProof == rar4FramesProof {
 		if !validArchiveLeaves(e) || len(e.Files) != 1 || e.Kind != "archive" || e.Path != e.Files[0].Path || !strings.EqualFold(path.Ext(e.Path), ".rar") {
 			return false
 		}

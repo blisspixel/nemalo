@@ -165,6 +165,13 @@ patches, advisories, compatibility, and contracts when implementation begins.
 | PDF | `github.com/digitorus/pdf` v0.3.0 selected for object parsing behind Nemalo's own guards; alternatives compared in [decision 0021](decisions/0021-pdf-pages-and-text.md) |
 | RAR and 7z | Pure-Go candidates were evaluated on 2026-10-11 and neither was adopted. Ingest now uses installed 7-Zip ([decision 0043](decisions/0043-rar-and-7z-through-7-zip.md)). At that evaluation, [rardecode/v2](https://github.com/nwaples/rardecode) lacked observable checksum coverage and skipped RAR5 BLAKE2 checksums; [sevenzip](https://github.com/bodgit/sevenzip) v1.6.5 needed decoder and header-allocation bounds. A separate 2026-10-20 check of [rardecode/v2 v2.4.5](https://github.com/nwaples/rardecode/blob/v2.4.5/archive50.go) found that its file iteration discards non-file block data, so that API does not establish whole-container coverage. Generated RAR5 service, comment and unknown-extra fixtures also passed installed 7-Zip 26.04 checks without complete listing evidence. A bounded read-only framing accountant and exact reader binding passed local, native and hosted checks ([decision 0064](decisions/0064-bounded-rar-framing-accounting.md)). A separately versioned standalone RAR5 cleanup subset is implemented, with acceptance tracked in issue 57 ([decision 0066](decisions/0066-standalone-rar5-cleanup.md)); RAR4, volume and nested cleanup remain outside it. No candidate module or decoder was added. |
 
+The bounded standalone RAR4 application increment is recorded separately in
+[decision 0070](decisions/0070-standalone-rar4-cleanup.md), with its own proof and
+signature-bound selection after the read-only framing/reader prerequisites.
+Installed-reader experiments with generated stored books and known metadata
+verify cleanup, byte-exact restore and purge while retaining hidden records and
+unsupported metadata. This does not establish volume or nested RAR coverage.
+
 ## Terminal interaction reviewed on 2026-10-08
 
 The [Charm v2 release](https://charm.land/blog/v2/) and the installed, pinned

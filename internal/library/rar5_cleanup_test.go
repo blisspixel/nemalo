@@ -42,7 +42,11 @@ func newRAR5CleanupFixture(t *testing.T, build func([]byte) []byte) streamFixtur
 }
 
 func TestStandaloneRAR5CleanupBindsExactLeafAndPurge(t *testing.T) {
-	f := newRAR5CleanupFixture(t, nil)
+	testStandaloneRARCleanupBindsExactLeafAndPurge(t, newRAR5CleanupFixture)
+}
+
+func testStandaloneRARCleanupBindsExactLeafAndPurge(t *testing.T, fixture func(*testing.T, func([]byte) []byte) streamFixture) {
+	f := fixture(t, nil)
 	ctx := context.Background()
 	before := snapshotTree(t, f.folder)
 	p, err := Cleanup(ctx, CleanupRequest{Library: f.root, Folder: f.folder})
@@ -50,7 +54,7 @@ func TestStandaloneRAR5CleanupBindsExactLeafAndPurge(t *testing.T) {
 		t.Fatal(p, err)
 	}
 	e := p.Entries[0]
-	if e.ArchiveProof != "rar5-frames/1" || len(e.ArchiveLeaves) != 1 || !validArchiveLeaves(e) || !reflect.DeepEqual(e.ArchiveLeaves[0].Chain, []string{"book.epub"}) {
+	if e.ArchiveProof != f.archiveProof || len(e.ArchiveLeaves) != 1 || !validArchiveLeaves(e) || !reflect.DeepEqual(e.ArchiveLeaves[0].Chain, []string{"book.epub"}) {
 		t.Fatal(e)
 	}
 	changed := e
@@ -143,9 +147,13 @@ func startRAR5TestPurge(t *testing.T, c CleanupResult, p PurgeResult) string {
 }
 
 func TestStandaloneRAR5PendingPurgeValidatesBindingsBeforeRemoval(t *testing.T) {
-	for _, kind := range []string{"unknown", "unknown_both", "missing", "wrong_proof", "leaf_digest", "index", "nested_leaf", "changed_chain"} {
+	testStandaloneRARPendingPurgeValidatesBindingsBeforeRemoval(t, newRAR5CleanupFixture)
+}
+
+func testStandaloneRARPendingPurgeValidatesBindingsBeforeRemoval(t *testing.T, fixture func(*testing.T, func([]byte) []byte) streamFixture) {
+	for _, kind := range []string{"unknown", "unknown_both", "missing", "wrong_proof", "other_rar", "leaf_digest", "index", "nested_leaf", "changed_chain"} {
 		t.Run(kind, func(t *testing.T) {
-			f := newRAR5CleanupFixture(t, nil)
+			f := fixture(t, nil)
 			c := f.cleanup(t)
 			ctx := context.Background()
 			p, err := Purge(ctx, PurgeRequest{Library: f.root, CleanupID: c.CleanupID})
@@ -154,14 +162,19 @@ func TestStandaloneRAR5PendingPurgeValidatesBindingsBeforeRemoval(t *testing.T) 
 			}
 			switch kind {
 			case "unknown":
-				p.ArchiveGroups[0].Proof = "rar5-frames/future"
+				p.ArchiveGroups[0].Proof = f.archiveProof + "-future"
 			case "unknown_both":
-				p.ArchiveGroups[0].Proof = "rar5-frames/future"
-				rewriteTreeCleanup(t, f.root, c.CleanupID, func(m *cleanupManifest) { m.Entries[0].ArchiveProof = "rar5-frames/future" })
+				p.ArchiveGroups[0].Proof = f.archiveProof + "-future"
+				rewriteTreeCleanup(t, f.root, c.CleanupID, func(m *cleanupManifest) { m.Entries[0].ArchiveProof = f.archiveProof + "-future" })
 			case "missing":
 				p.ArchiveGroups = nil
 			case "wrong_proof":
 				p.ArchiveGroups[0].Proof = archiveTreeProof
+			case "other_rar":
+				p.ArchiveGroups[0].Proof = "rar4-frames/1"
+				if f.archiveProof == "rar4-frames/1" {
+					p.ArchiveGroups[0].Proof = "rar5-frames/1"
+				}
 			case "leaf_digest":
 				p.ArchiveGroups[0].LeafDigest = ""
 			case "index":
@@ -196,9 +209,13 @@ func TestStandaloneRAR5PendingPurgeValidatesBindingsBeforeRemoval(t *testing.T) 
 }
 
 func TestStandaloneRAR5PurgeRecoveryChecksFreshHoldingsAndRemainingBytes(t *testing.T) {
+	testStandaloneRARPurgeRecoveryChecksFreshHoldingsAndRemainingBytes(t, newRAR5CleanupFixture)
+}
+
+func testStandaloneRARPurgeRecoveryChecksFreshHoldingsAndRemainingBytes(t *testing.T, fixture func(*testing.T, func([]byte) []byte) streamFixture) {
 	for _, kind := range []string{"valid", "source_changed", "holding_changed", "replacement_after_removal"} {
 		t.Run(kind, func(t *testing.T) {
-			f := newRAR5CleanupFixture(t, nil)
+			f := fixture(t, nil)
 			c := f.cleanup(t)
 			ctx := context.Background()
 			p, err := Purge(ctx, PurgeRequest{Library: f.root, CleanupID: c.CleanupID})
@@ -263,11 +280,22 @@ func TestStandaloneRAR5PurgeRecoveryChecksFreshHoldingsAndRemainingBytes(t *test
 }
 
 func TestStandaloneRAR5FreshPurgeRequiresCurrentEvidence(t *testing.T) {
-	for _, kind := range []string{"missing_reader", "changed_source", "changed_holding"} {
+	testStandaloneRARFreshPurgeRequiresCurrentEvidence(t, newRAR5CleanupFixture)
+}
+
+func testStandaloneRARFreshPurgeRequiresCurrentEvidence(t *testing.T, fixture func(*testing.T, func([]byte) []byte) streamFixture) {
+	for _, kind := range []string{"missing_reader", "changed_source", "changed_holding", "other_rar_proof"} {
 		t.Run(kind, func(t *testing.T) {
-			f := newRAR5CleanupFixture(t, nil)
+			f := fixture(t, nil)
 			c := f.cleanup(t)
 			switch kind {
+			case "other_rar_proof":
+				rewriteTreeCleanup(t, f.root, c.CleanupID, func(m *cleanupManifest) {
+					m.Entries[0].ArchiveProof = "rar4-frames/1"
+					if f.archiveProof == "rar4-frames/1" {
+						m.Entries[0].ArchiveProof = "rar5-frames/1"
+					}
+				})
 			case "missing_reader":
 				saved := staging.SevenZip
 				staging.SevenZip = func() (string, error) { return "", staging.ErrNoArchiveTool }
@@ -296,9 +324,13 @@ func TestStandaloneRAR5FreshPurgeRequiresCurrentEvidence(t *testing.T) {
 }
 
 func TestStandaloneRAR5CleanupResumeRejectsInvalidProofBeforeWrites(t *testing.T) {
+	testStandaloneRARCleanupResumeRejectsInvalidProofBeforeWrites(t, newRAR5CleanupFixture)
+}
+
+func testStandaloneRARCleanupResumeRejectsInvalidProofBeforeWrites(t *testing.T, fixture func(*testing.T, func([]byte) []byte) streamFixture) {
 	for _, kind := range []string{"unknown", "tree_proof", "missing_leaves", "nested_leaf", "wrong_source_type"} {
 		t.Run(kind, func(t *testing.T) {
-			f := newRAR5CleanupFixture(t, nil)
+			f := fixture(t, nil)
 			ctx := context.Background()
 			p, err := Cleanup(ctx, CleanupRequest{Library: f.root, Folder: f.folder})
 			if err != nil {
@@ -321,7 +353,7 @@ func TestStandaloneRAR5CleanupResumeRejectsInvalidProofBeforeWrites(t *testing.T
 				e := &m.Entries[0]
 				switch kind {
 				case "unknown":
-					e.ArchiveProof = "rar5-frames/future"
+					e.ArchiveProof = f.archiveProof + "-future"
 				case "tree_proof":
 					e.ArchiveProof = archiveTreeProof
 				case "missing_leaves":
@@ -344,9 +376,13 @@ func TestStandaloneRAR5CleanupResumeRejectsInvalidProofBeforeWrites(t *testing.T
 }
 
 func TestStandaloneRAR5IndependentGroupsValidateBeforeAnyRemoval(t *testing.T) {
+	testStandaloneRARIndependentGroupsValidateBeforeAnyRemoval(t, newRAR5CleanupFixture)
+}
+
+func testStandaloneRARIndependentGroupsValidateBeforeAnyRemoval(t *testing.T, fixture func(*testing.T, func([]byte) []byte) streamFixture) {
 	for _, kind := range []string{"unknown_first", "malformed_second"} {
 		t.Run(kind, func(t *testing.T) {
-			f := newRAR5CleanupFixture(t, nil)
+			f := fixture(t, nil)
 			ctx := context.Background()
 			writeTree(t, f.folder, map[string][]byte{"other/one.rar": f.parts[0]})
 			p, err := Cleanup(ctx, CleanupRequest{Library: f.root, Folder: f.folder})
@@ -362,7 +398,7 @@ func TestStandaloneRAR5IndependentGroupsValidateBeforeAnyRemoval(t *testing.T) {
 				t.Fatal(q, err)
 			}
 			if kind == "unknown_first" {
-				q.ArchiveGroups[0].Proof = "rar5-frames/future"
+				q.ArchiveGroups[0].Proof = f.archiveProof + "-future"
 			} else {
 				q.ArchiveGroups[1].LeafDigest = ""
 			}

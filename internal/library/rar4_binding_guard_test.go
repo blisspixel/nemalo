@@ -70,11 +70,11 @@ func TestRAR4ReaderCapabilityCannotAuthorizeRAR5CleanupProof(t *testing.T) {
 	}
 	before := snapshotTree(t, f.folder)
 	p, err := Cleanup(ctx, CleanupRequest{Library: f.root, Folder: f.folder})
-	if err != nil || p.Move != 0 || p.Keep != 1 || !reflect.DeepEqual(before, snapshotTree(t, f.folder)) {
+	if err != nil || p.Move != 1 || p.Keep != 0 || p.Entries[0].ArchiveProof != "rar4-frames/1" || !reflect.DeepEqual(before, snapshotTree(t, f.folder)) {
 		t.Fatal("RAR4 capability granted wrong cleanup proof", p, err)
 	}
 	applied, err := Cleanup(ctx, CleanupRequest{Library: f.root, Folder: f.folder, Apply: p.Digest})
-	if err != nil || applied.Moved != 0 || !reflect.DeepEqual(before, snapshotTree(t, f.folder)) {
-		t.Fatal("unsupported RAR4 source moved", applied, err)
+	if err != nil || applied.Moved != 1 || applied.Entries[0].ArchiveProof != "rar4-frames/1" {
+		t.Fatal("RAR4 did not use its own proof", applied, err)
 	}
 }

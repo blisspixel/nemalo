@@ -679,7 +679,7 @@ original source identity and exact one-component leaves. Every physical file
 record must match the maintained reader's same UTF-8 table; output size/CRC,
 current held hashes and final source hashes are checked separately. Service,
 comment and recovery records, unknown metadata, encryption, directory data,
-aliases, gaps and tails stay preserved. RAR4, volume sets, child RARs and a RAR
+aliases, gaps and tails stay preserved. Volume sets, child RARs and a RAR
 root containing nested archives also stay. Fresh purge repeats the full check and
 binds the single-file group and leaf digest in its schema-2 intent; partial recovery
 uses that supported immutable evidence and never adopts replacements. Earlier
@@ -696,9 +696,8 @@ acceptance evidence is tracked in issue 57. See
 An internal caller can explicitly request standalone RAR4 reader binding with
 both `Coverage` and `RAR4Coverage`. The same private snapshot and complete UTF-8
 table drive checked exact-name extraction through the common RAR matcher. This is
-not a CLI/JSON/MCP option; application services leave the RAR4 opt-in false and
-RAR4 sources still never move. Child RARs and sets receive no new coverage.
-The capability requires separate verification and grants no application proof;
+not a CLI/JSON/MCP option. Child RARs and sets receive no new coverage.
+The capability requires separate verification and alone grants no application proof;
 see [decision 0068](decisions/0068-opt-in-rar4-reader-binding.md).
 RAR4 framing now measures known zero high packed/unpacked-size words and exact
 extended modification, creation and access time metadata. It accepts only the
@@ -706,6 +705,19 @@ documented subsecond subset and refuses missing fields, a fourth time field,
 trailing metadata and nonzero high words. This does not add larger-file support,
 Unicode names or application cleanup. See
 [decision 0069](decisions/0069-bounded-rar4-time-and-size-metadata.md).
+Standalone root RAR4 cleanup now uses its distinct `rar4-frames/1` within the
+verified ASCII-name, known-attribute/method, zero-high-size and exact time subset.
+The application opts into reader binding only for a RAR root, and selects RAR4
+or RAR5 authority from the checked private outer signature. A child, filename,
+unknown signature or successful extraction alone cannot supply that permission.
+Every direct leaf must be held with verified current bytes. Fresh purge repeats
+the complete check and binds the exact index and leaf digest; recovery validates
+supported immutable evidence and current remaining identities/holdings. Known
+RAR4/RAR5/tree proof mismatches stop before removal, and unknown proofs retain
+bytes. Restore needs no reader and never replaces a target. Volumes, nested RARs,
+RAR roots with nested archives, Unicode and unsupported metadata stay preserved.
+See [decision 0070](decisions/0070-standalone-rar4-cleanup.md); acceptance is tracked
+in issue 57 and this does not complete stage 2 or authorize a release.
 `library audit` on the library directory reports missing, changed, and review
 holdings and does not repair them. Snapshot audit still requires `--root`.
 An EPUB package identifier is recorded when it is an explicit ISBN, DOI, or

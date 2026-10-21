@@ -3,6 +3,8 @@
 Status: accepted and verified, 2026-10-20. Evidence is tracked in
 [issue 57](https://github.com/blisspixel/nemalo/issues/57), roadmap stage 2.
 This decision grants no RAR4 application cleanup permission.
+The later [decision 0070](0070-standalone-rar4-cleanup.md) adds separately verified
+signature-bound application authority after this read-only prerequisite.
 
 ## Boundary
 
@@ -13,7 +15,7 @@ The framing implementation, including final name-work cancellation, needs its
 complete local/native/hosted verification. This binding then needs its own full
 gate before any later application permission.
 
-The current cleanup service requests generic coverage and records `rar5-frames/1`
+At this read-only increment, cleanup requests generic coverage and records `rar5-frames/1`
 for a RAR root because the adapter admits only a RAR5 signature there. Simply
 admitting RAR4 under that generic request would grant it the wrong application
 proof. Do not infer write permission from a newly available reader capability.
