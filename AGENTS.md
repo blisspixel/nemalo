@@ -182,7 +182,7 @@ from literal historical `!/` member names, and pending recovery first. Nested
 sets stay preserved. Cleanup uses the same tree only with requested complete
 coverage (decision 0063): one shared 16 MiB proof allowance, also charged to reader
 work, and bounded 7z coverage probes through the shared runner. Default intake
-does not request coverage. A RAR child preserves the whole outer source.
+does not request coverage. An unaccounted RAR child preserves the whole outer source.
 Every leaf must be held with verified stored bytes; container markers alone
 confer no permission. Keep exact-chain refusals and parse-equivalent previews.
 Bind every cleanup root snapshot to the plan's expected size/hash while copying.
@@ -241,6 +241,17 @@ semantics; validate every known proof's complete shape before any independent
 group may remove bytes. Unknown proofs retain bytes. Fresh purge repeats the
 full tree check; partial recovery uses only supported immutable group/leaf evidence
 and current remaining identities/holdings. RAR and nested volume sets stay.
+Decision 0073 adds read-only modern root RAR5 set coverage only with explicit
+Coverage plus RAR5SetCoverage. The application leaves the new flag false and
+retains its early RAR-set cleanup refusal. Frame each exact private volume and
+bind its isolated UTF-8 table before exposing siblings, then bind complete
+logical facts to the same error-free assembled table used for extraction.
+Nonfinal CRCs describe packed parts; the final CRC describes the whole output.
+Do not equate them or claim payload integrity from framing. Share all budgets,
+including source-copy reads and failed work. RARSetVersion is internal and
+separate from RARVersion/RARContainers. RAR4, old-named and nested sets receive
+no new coverage. Full read-only acceptance must precede any separately versioned
+writer decision, fresh whole-set purge and immutable partial recovery.
 Historical RAR-named archive entries and old continuations without a supported
 proof cannot resume cleanup or purge, including pending purge intents. Preserve
 their recorded bytes for restore; member holdings alone confer no permission.

@@ -11,7 +11,7 @@ import (
 )
 
 func rar5TableMatches(files []RAR5File, entries []sevenEntry) bool {
-	return rarTableMatches(rar5BindingFiles(files), entries)
+	return rarTableMatches(context.Background(), rar5BindingFiles(files), entries)
 }
 
 func TestRAR5ReaderTableBindsEveryExactRecord(t *testing.T) {

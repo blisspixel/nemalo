@@ -2,6 +2,7 @@ package staging
 
 import (
 	"context"
+	"crypto/sha256"
 	"encoding/binary"
 	"errors"
 	"fmt"
@@ -34,6 +35,10 @@ type RAR5File struct {
 // reader must independently bind every returned record and check its output.
 // Callers sharing tree work must also wrap source with Limits.proofReader.
 func RAR5Accounted(ctx context.Context, source io.ReaderAt, size int64) ([]RAR5File, error) {
+	return rar5Accounted(ctx, source, size, nil)
+}
+
+func rar5Accounted(ctx context.Context, source io.ReaderAt, size int64, volume *RAR5Volume) ([]RAR5File, error) {
 	if size < 8 || size > maxArchiveSnapshot {
 		return nil, fmt.Errorf("%w: source size exceeds the supported bounds", ErrRAR5Coverage)
 	}
@@ -60,12 +65,28 @@ func RAR5Accounted(ctx context.Context, source io.ReaderAt, size int64) ([]RAR5F
 		case 1:
 			extra := h.extra(flags)
 			archiveFlags := h.number()
-			if main || flags&^uint64(5) != 0 || archiveFlags&^uint64(4) != 0 || !h.done() || !rar5Extras(extra, true) {
+			allowed := uint64(4)
+			if volume != nil {
+				allowed = 7
+				ordinal := uint64(0)
+				if archiveFlags&2 != 0 {
+					ordinal = h.number()
+				}
+				if archiveFlags&1 == 0 || ordinal >= 1000 || (archiveFlags&2 != 0) != (ordinal > 0) {
+					return nil, fmt.Errorf("%w: unsupported volume ordinal or role", ErrRAR5Coverage)
+				}
+				volume.Ordinal, volume.Solid = int(ordinal), archiveFlags&4 != 0
+			}
+			if main || flags&^uint64(5) != 0 || archiveFlags&^allowed != 0 || !h.done() || !rar5Extras(extra, true) {
 				return nil, fmt.Errorf("%w: unsupported main metadata or volume", ErrRAR5Coverage)
 			}
 			main = true
 		case 2:
-			if flags&^uint64(7) != 0 || len(files) >= 10000 {
+			allowed := uint64(7)
+			if volume != nil {
+				allowed |= 24
+			}
+			if flags&^allowed != 0 || len(files) >= 10000 {
 				return nil, fmt.Errorf("%w: unsupported flags, split record or member limit", ErrRAR5Coverage)
 			}
 			extraBytes := uint64(0)
@@ -80,7 +101,7 @@ func RAR5Accounted(ctx context.Context, source io.ReaderAt, size int64) ([]RAR5F
 				return nil, fmt.Errorf("%w: data span exceeds the source", ErrRAR5Coverage)
 			}
 			extra := h.splitExtra(extraBytes)
-			f, err := readRAR5File(h)
+			f, metadata, err := readRAR5File(h)
 			if err != nil {
 				return nil, err
 			}
@@ -88,17 +109,30 @@ func RAR5Accounted(ctx context.Context, source io.ReaderAt, size int64) ([]RAR5F
 				return nil, fmt.Errorf("%w: unsupported file extra records", ErrRAR5Coverage)
 			}
 			f.HeaderOffset, f.DataOffset, f.Packed = off, next, int64(packed)
+			before, after := flags&8 != 0, flags&16 != 0
+			if f.Directory && (before || after) {
+				return nil, fmt.Errorf("%w: split directory", ErrRAR5Coverage)
+			}
 			if f.Directory && (f.Bytes != 0 || f.Packed != 0 || f.CRC32 != 0) {
 				return nil, fmt.Errorf("%w: directory contains data", ErrRAR5Coverage)
 			}
-			if f.Compression>>7&7 == 0 && f.Packed != f.Bytes {
+			if f.Compression>>7&7 == 0 && !before && !after && f.Packed != f.Bytes {
 				return nil, fmt.Errorf("%w: stored size disagrees with data span", ErrRAR5Coverage)
 			}
 			files = append(files, f)
+			if volume != nil {
+				metadata.extra = sha256.Sum256(extra)
+				volume.Files = append(volume.Files, RAR5VolumeFile{RAR5File: f, SplitBefore: before, SplitAfter: after, metadata: metadata})
+			}
 			next += int64(packed)
 		case 5:
 			endFlags := h.number()
-			if flags&^uint64(4) != 0 || endFlags != 0 || !h.done() || next != size {
+			allowed := uint64(0)
+			if volume != nil {
+				allowed = 1
+				volume.More = endFlags&1 != 0
+			}
+			if flags&^uint64(4) != 0 || endFlags&^allowed != 0 || !h.done() || next != size {
 				return nil, fmt.Errorf("%w: unsupported end marker or trailing bytes", ErrRAR5Coverage)
 			}
 			if err := unambiguousRAR5Names(ctx, files); err != nil {
@@ -243,12 +277,14 @@ func rar5Extras(data []byte, main bool) bool {
 	return true
 }
 
-func readRAR5File(h *rar5Fields) (RAR5File, error) {
+func readRAR5File(h *rar5Fields) (RAR5File, rar5VolumeMetadata, error) {
 	f := RAR5File{}
+	metadata := rar5VolumeMetadata{}
 	flags, bytes := h.number(), h.number()
+	metadata.flags = flags
 	f.Attributes = h.number()
 	if flags&2 != 0 {
-		h.fixed32() // Known seconds-resolution mtime; no generated interpretation.
+		metadata.modified = h.fixed32()
 	}
 	f.Directory, f.HasCRC = flags&1 != 0, flags&4 != 0
 	if f.HasCRC {
@@ -258,26 +294,26 @@ func readRAR5File(h *rar5Fields) (RAR5File, error) {
 	nameBytes := h.number()
 	if !h.ok || flags&^uint64(7) != 0 || bytes > maxArchiveSnapshot || (!f.Directory && !f.HasCRC) ||
 		nameBytes < 1 || nameBytes > 1024 || nameBytes != uint64(len(h.data)) || !supportedRAR5Compression(f.Compression) {
-		return f, fmt.Errorf("%w: unknown size, checksum, compression or file metadata", ErrRAR5Coverage)
+		return f, metadata, fmt.Errorf("%w: unknown size, checksum, compression or file metadata", ErrRAR5Coverage)
 	}
 	f.Bytes, f.Name = int64(bytes), string(h.data)
 	if !validRARName(f.Name) {
-		return f, fmt.Errorf("%w: unsupported member name", ErrRAR5Coverage)
+		return f, metadata, fmt.Errorf("%w: unsupported member name", ErrRAR5Coverage)
 	}
 	switch f.HostOS {
 	case 0:
 		if f.Attributes&^uint64(0xb7) != 0 || (f.Attributes&16 != 0) != f.Directory {
-			return f, fmt.Errorf("%w: unsupported Windows attributes", ErrRAR5Coverage)
+			return f, metadata, fmt.Errorf("%w: unsupported Windows attributes", ErrRAR5Coverage)
 		}
 	case 1:
 		mode := f.Attributes & 0170000
 		if f.Attributes > 0177777 || (f.Directory && mode != 0 && mode != 0040000) || (!f.Directory && mode != 0 && mode != 0100000) {
-			return f, fmt.Errorf("%w: unsupported Unix attributes", ErrRAR5Coverage)
+			return f, metadata, fmt.Errorf("%w: unsupported Unix attributes", ErrRAR5Coverage)
 		}
 	default:
-		return f, fmt.Errorf("%w: unsupported host", ErrRAR5Coverage)
+		return f, metadata, fmt.Errorf("%w: unsupported host", ErrRAR5Coverage)
 	}
-	return f, nil
+	return f, metadata, nil
 }
 
 func supportedRAR5Compression(c uint64) bool {

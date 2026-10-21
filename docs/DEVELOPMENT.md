@@ -522,6 +522,16 @@ RAR sets remain preserved by cleanup. See
 [decision 0046](decisions/0046-archive-volume-sets.md) and
 [decision 0056](decisions/0056-rar-volume-identity.md).
 
+An internal read-only opt-in now measures physical framing of modern root RAR5
+sets, then binds each isolated volume table and the complete assembled table
+before that same table drives extraction. Direct calls share source-copy, proof,
+reader, process, diagnostic and output budgets. A split part's packed CRC is not
+the final whole-file CRC, and framing alone does not validate extracted bytes.
+The separately measured set version is omitted from JSON. This adds no public
+option or application cleanup permission: every RAR set still stays. RAR4,
+old-named and nested sets are outside this new coverage contract. Acceptance is
+tracked in issue 57; see [decision 0073](decisions/0073-read-only-rar5-set-coverage.md).
+
 Split ZIP byte chunks (`NAME.zip.001`, `.002`, ...; three or four numeric digits)
 are joined privately, checked as exactly one ordinary ZIP through installed
 7-Zip, and extracted by the existing Go ZIP reader. True ZIP segments
@@ -654,8 +664,9 @@ Historical RAR-named archive entries and old continuation names without a suppor
 proof stay for restore. Cleanup resume stops for review; fresh and pending purge
 plans report `archive_not_accounted` and retain every file of the entry. This does
 not authorize those unversioned entries. The read-only standalone RAR5 coverage path now
-binds physical framing to the installed reader's exact table; child RAR coverage
-remains refused ([decision 0064](decisions/0064-bounded-rar-framing-accounting.md)).
+binds physical framing to the installed reader's exact table; child coverage
+requires the separate nested opt-in below
+([decision 0064](decisions/0064-bounded-rar-framing-accounting.md)).
 For nested cleanup, fresh purge rechecks every held container and leaf through the
 same tree. Its schema-2 group also includes `leaf_digest`, binding the canonical
 leaf evidence to that reviewed purge and durable intent. Single-file trees and

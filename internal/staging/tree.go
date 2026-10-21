@@ -32,9 +32,8 @@ func ExtractTree(ctx context.Context, src *os.Root, names []string, dst *os.Root
 	}
 	treeCtx, cancel := context.WithTimeout(ctx, archiveDeadline(size))
 	defer cancel()
-	limits.tree = &treeBudget{members: limits.Members, bytes: limits.TotalBytes, processes: maxRuns,
-		reads: allowance{remaining: 2 * maxArchiveSnapshot}, diagnostics: allowance{remaining: maxListing},
-		proofs: allowance{remaining: archiveProofBytes}}
+	limits.tree = newTreeBudget(limits)
+	limits.budgetOnly = false
 	return extractTree(treeCtx, src, names, dst, supported, limits)
 }
 
@@ -89,6 +88,9 @@ func extractTree(ctx context.Context, src *os.Root, names []string, dst *os.Root
 		result.RARContainers += x.RARContainers
 		if depth == 1 && len(files) == 1 {
 			result.RARVersion = x.RARVersion
+		}
+		if depth == 1 && len(files) > 1 {
+			result.RARSetVersion = x.RARSetVersion
 		}
 		if !x.Whole {
 			gap(chain, "a comment, leading data, or bytes beyond the archive's members prevent complete accounting")

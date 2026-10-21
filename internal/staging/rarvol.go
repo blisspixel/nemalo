@@ -12,6 +12,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/blisspixel/nemalo/internal/safeio"
 )
 
 var oldRAR = regexp.MustCompile(`(?i)^(.+)\.([r-z])([0-9]{2})$`)
@@ -43,7 +45,7 @@ func rarSnapshotName(old bool, index int) string {
 
 // snapshotRARSet probes each snapshot with no siblings before assembling it.
 // Reader-declared roles and ordinals are evidence, not a cryptographic set ID.
-func snapshotRARSet(ctx context.Context, exe string, src *os.Root, names []string, infos []fs.FileInfo, dst *os.Root, dir string, old bool, total int64, limits Limits) (string, string, error) {
+func snapshotRARSet(ctx context.Context, exe string, src *os.Root, names []string, infos []fs.FileInfo, dst *os.Root, dir string, old bool, total int64, limits Limits, proof *rar5SetBinding) (string, string, error) {
 	probeCtx, cancel := context.WithTimeout(ctx, 2*time.Minute)
 	defer cancel()
 	remaining := int64(maxListing)
@@ -69,14 +71,28 @@ func snapshotRARSet(ctx context.Context, exe string, src *os.Root, names []strin
 		if got != kind {
 			return "", "", errors.New("RAR volumes disagree on their format; the set is preserved")
 		}
-		out, code, err := limits.run(probeCtx, exe, nil, remaining, "l", "-slt", "-t"+kind, noPassword, "--", filepath.Join(dir, snapshot))
+		if proof != nil && kind != "Rar5" {
+			return "", "", fmt.Errorf("%w: only RAR5 set framing is supported", ErrRAR5Coverage)
+		}
+		args := []string{"l", "-slt", "-t" + kind, noPassword}
+		if proof != nil {
+			args = append(args, "-sccUTF-8")
+		}
+		args = append(args, "--", filepath.Join(dir, snapshot))
+		out, code, err := limits.run(probeCtx, exe, nil, remaining, args...)
 		remaining -= int64(len(out))
 		next := ""
 		if i+1 < len(names) {
 			next = rarSnapshotName(old, i+1)
 		}
 		probe, splitDiagnostic := rarProbeOutput(out, kind, i)
-		if probeCtx.Err() != nil || (err != nil && code != 2) || !rarVolumeHeader(probe, code, kind, infos[i].Size(), i, old, next, splitDiagnostic) {
+		if probeCtx.Err() != nil {
+			return "", "", probeCtx.Err()
+		}
+		if err != nil && code < 0 {
+			return "", "", err
+		}
+		if (err != nil && code != 2) || !rarVolumeHeader(probe, code, kind, infos[i].Size(), i, old, next, splitDiagnostic) {
 			return "", "", fmt.Errorf("RAR volume %d has inconclusive or incompatible format, role, ordinal, size, or naming evidence; the set is preserved", i+1)
 		}
 		entries, err := rarProbeMembers(probe)
@@ -84,19 +100,60 @@ func snapshotRARSet(ctx context.Context, exe string, src *os.Root, names []strin
 		if err != nil || listed > limits.memberLimit()+len(names)-1 || !rarBoundary(entries, previous, i+1 < len(names)) {
 			return "", "", fmt.Errorf("RAR volume %d has inconclusive or incompatible split-member continuity; the set is preserved", i+1)
 		}
+		if proof != nil {
+			info, err := dst.Lstat(snapshot)
+			if err != nil {
+				return "", "", err
+			}
+			if info.Size() != infos[i].Size() {
+				return "", "", fmt.Errorf("%w: private volume size changed", ErrRAR5Coverage)
+			}
+			file, err := safeio.OpenRegular(dst, snapshot, info, os.O_RDONLY)
+			if err != nil {
+				return "", "", err
+			}
+			volume, proofErr := RAR5VolumeAccounted(probeCtx, limits.proofReader(file), info.Size())
+			closeErr := file.Close()
+			if proofErr != nil {
+				return "", "", proofErr
+			}
+			if closeErr != nil {
+				return "", "", closeErr
+			}
+			if !rar5VolumeTableMatches(probeCtx, volume, entries) {
+				if probeCtx.Err() != nil {
+					return "", "", probeCtx.Err()
+				}
+				return "", "", fmt.Errorf("%w: isolated table disagrees with physical volume", ErrRAR5Coverage)
+			}
+			if err := proof.add(probeCtx, volume, i, len(names), limits.memberLimit()); err != nil {
+				return "", "", err
+			}
+		}
 		last := entries[len(entries)-1]
 		previous = &last
 	}
 	// All probes finished before any sibling becomes visible to the reader.
 	for i := range names {
+		if err := probeCtx.Err(); err != nil {
+			return "", "", err
+		}
 		name := rarSnapshotName(old, i)
 		if err := dst.Rename(filepath.Join(fmt.Sprintf("volume-%04d", i), name), name); err != nil {
 			return "", "", err
 		}
 	}
 	archive := filepath.Join(dir, rarSnapshotName(old, 0))
-	out, code, err := limits.run(probeCtx, exe, nil, remaining, "l", "-slt", "-t"+kind, noPassword, "--", archive)
+	args := []string{"l", "-slt", "-t" + kind, noPassword}
+	if proof != nil {
+		args = append(args, "-sccUTF-8")
+	}
+	args = append(args, "--", archive)
+	out, code, err := limits.run(probeCtx, exe, nil, remaining, args...)
 	keys, ok := strictArchiveBlock(out)
+	if probeCtx.Err() != nil {
+		return "", "", probeCtx.Err()
+	}
 	_, hasError := keys["ERROR"]
 	if err != nil || code != 0 || !ok || hasError {
 		return "", "", errors.New("7-Zip could not read the complete RAR volume set; it is preserved")
@@ -107,6 +164,19 @@ func snapshotRARSet(ctx context.Context, exe string, src *os.Root, names []strin
 	}
 	if keys["Type"] != kind || keys["Volume Index"] != "0" || keys["Physical Size"] != strconv.FormatInt(infos[0].Size(), 10) || keys["Total Physical Size"] != strconv.FormatInt(total, 10) {
 		return "", "", errors.New("7-Zip cannot account for every RAR volume's size and order; the set is preserved")
+	}
+	if proof != nil {
+		entries, err := rarListedMembers(out, false)
+		if err != nil {
+			return "", "", err
+		}
+		if !proof.matchesAssembled(probeCtx, entries) {
+			if probeCtx.Err() != nil {
+				return "", "", probeCtx.Err()
+			}
+			return "", "", fmt.Errorf("%w: assembled table disagrees with complete physical records", ErrRAR5Coverage)
+		}
+		proof.entries = entries
 	}
 	return kind, archive, nil
 }
@@ -143,11 +213,18 @@ func rarProbeOutput(out []byte, kind string, index int) ([]byte, bool) {
 }
 
 func rarProbeMembers(out []byte) ([]sevenEntry, error) {
-	_, body, ok := strings.Cut(string(out), "\n----------\n")
+	return rarListedMembers(out, true)
+}
+
+// Only isolated identity probes may remove their narrowly allowed error summary.
+// An assembled table must parse in full, with no diagnostic exception.
+func rarListedMembers(out []byte, isolated bool) ([]sevenEntry, error) {
+	text := strings.ReplaceAll(string(out), "\r\n", "\n")
+	_, body, ok := strings.Cut(text, "\n----------\n")
 	if !ok {
 		return nil, errors.New("no RAR member listing")
 	}
-	if before, summary, has := strings.Cut(body, "\n\nErrors: "); has {
+	if before, summary, has := strings.Cut(body, "\n\nErrors: "); isolated && has {
 		if strings.TrimSpace(summary) != "1" && strings.TrimSpace(summary) != "2" {
 			return nil, errors.New("ambiguous RAR probe summary")
 		}

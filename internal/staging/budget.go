@@ -64,6 +64,14 @@ type treeBudget struct {
 	proofs             allowance
 }
 
+func newTreeBudget(l Limits) *treeBudget {
+	return &treeBudget{members: l.Members, bytes: l.TotalBytes, processes: maxRuns,
+		reads: allowance{remaining: 2 * maxArchiveSnapshot}, diagnostics: allowance{remaining: maxListing},
+		proofs: allowance{remaining: archiveProofBytes}}
+}
+
+func (l Limits) nestedTraversal() bool { return l.tree != nil && !l.budgetOnly }
+
 func (l Limits) memberLimit() int {
 	if l.tree != nil {
 		return min(l.Members, l.tree.members)

@@ -58,6 +58,14 @@ func fakeSeven() {
 	if len(args) == 0 || !slices.Contains(args, noPassword) || !slices.Contains(args, "--") || !slices.Contains(args, kind) {
 		os.Exit(7)
 	}
+	if _, err := os.Stat(filepath.Join(dir, "trace-enabled")); err == nil {
+		trace, err := os.OpenFile(filepath.Join(dir, "trace"), os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0o600)
+		if err != nil {
+			os.Exit(7)
+		}
+		fmt.Fprintln(trace, args[0], filepath.Base(filepath.Dir(args[slices.Index(args, "--")+1])))
+		trace.Close()
+	}
 	if b, err := os.ReadFile(filepath.Join(dir, "stderr")); err == nil {
 		os.Stderr.Write(b)
 	}
@@ -76,6 +84,9 @@ func fakeSeven() {
 	}
 	switch args[0] {
 	case "l":
+		if _, err := os.Stat(filepath.Join(dir, "reject-ba")); err == nil && slices.Contains(args, "-ba") {
+			os.Exit(7)
+		}
 		if _, err := os.Stat(filepath.Join(dir, "require-utf8")); err == nil && !slices.Contains(args, "-sccUTF-8") {
 			os.Exit(7)
 		}

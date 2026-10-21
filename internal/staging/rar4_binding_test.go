@@ -11,7 +11,7 @@ import (
 )
 
 func rar4TableMatches(files []RAR4File, entries []sevenEntry) bool {
-	return rarTableMatches(rar4BindingFiles(files), entries)
+	return rarTableMatches(context.Background(), rar4BindingFiles(files), entries)
 }
 
 func TestRAR4ReaderTableUsesTheCommonExactBinding(t *testing.T) {

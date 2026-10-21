@@ -400,7 +400,7 @@ Requested standalone RAR5 coverage now measures bounded physical framing from
 the opened private snapshot, then matches every raw file name, size, packed size,
 directory state and CRC to one UTF-8 reader table before extraction. This is
 read-only evidence, separate from application permission. Default intake is unchanged.
-Child RAR coverage is refused. Historical RAR-named archive entries, including old
+Child RAR coverage requires the separate opt-in below. Historical RAR-named archive entries, including old
 continuations, cannot resume cleanup or purge without a supported versioned proof.
 Their recorded bytes remain restorable
 ([decision 0064](decisions/0064-bounded-rar-framing-accounting.md)).
@@ -466,7 +466,7 @@ Fresh purge repeats the complete tree check; its schema-2 archive group binds
 the leaf digest as well as proof and file indices. Partial recovery checks that
 immutable original-tree evidence, remaining part identities and current holdings.
 It never reconstructs a tree after a part was removed. Unsupported proofs retain
-bytes; malformed bindings stop before removal. RAR children and all unproven
+bytes; malformed bindings stop before removal. Unaccounted RAR children and all unproven
 trees stay. Earlier executables refuse unfamiliar canonical leaf fields; restore
 with this source version or newer ([decision 0063](decisions/0063-complete-archive-tree-cleanup.md)).
 
@@ -501,7 +501,7 @@ binding through the same opened snapshot, shared budgets and UTF-8 exact-table
 matcher as RAR5. The common matcher checks every raw name, size, packed size,
 directory and CRC before extraction. This capability alone cannot authorize the
 existing RAR5 cleanup proof.
-Child RARs and sets receive no new coverage authority
+This standalone RAR4 opt-in alone grants no child or set coverage
 ([decision 0068](decisions/0068-opt-in-rar4-reader-binding.md)).
 RAR4 framing also accounts for zero high-size words and exact modification,
 creation and access time fields. Presence, width, selected subsecond range and
@@ -546,6 +546,20 @@ indices/leaves, remaining original identities and current holdings without
 reconstruction. Restore returns raw originals without replacing a target. RAR
 volume sets and nested volume sets remain preserved
 ([decision 0072](decisions/0072-nested-rar-cleanup.md)).
+
+Explicit internal `Coverage` plus `RAR5SetCoverage` adds read-only coverage for
+modern root RAR5 sets. Each exact opened private volume is framed independently
+and bound to its own UTF-8 isolated table before siblings become visible. Split
+roles, ordinals, metadata and known whole sizes must agree; packed-part CRCs stay
+distinct from the final whole-file CRC. Complete logical records bind the same
+strict assembled table used for exact-name extraction. Direct calls share one
+proof/read/process/output budget, including source copies and failed work.
+`RARSetVersion` is separate from standalone version/count evidence and omitted
+from JSON. Whole framing does not establish successful extraction or permission.
+The application leaves this opt-in false and still retains every RAR set; RAR4,
+old naming and nested sets receive no new coverage. A later writer requires a
+distinct proof and separate full recovery/verification gate
+([decision 0073](decisions/0073-read-only-rar5-set-coverage.md)).
 
 Private staging and a subprocess are not sandboxes. Go's
 [root-scoped filesystem APIs](https://go.dev/blog/osroot) are useful building blocks;

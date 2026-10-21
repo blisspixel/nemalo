@@ -176,6 +176,12 @@ verified, not when code exists. No stage has a time estimate.
    the exact source group and leaves. Existing proof IDs retain their meanings
    ([decision 0072](docs/decisions/0072-nested-rar-cleanup.md)); acceptance is
    tracked in issue 57 and RAR volume cleanup remains unfinished.
+   Read-only modern root RAR5 set coverage is implemented behind an internal
+   explicit opt-in, binding each physical volume to its isolated table and the
+   complete set to the exact assembled extraction table. Source-copy and proof
+   work share budgets; application cleanup keeps the flag false and every RAR
+   set. Acceptance remains tracked in issue 57
+   ([decision 0073](docs/decisions/0073-read-only-rar5-set-coverage.md)).
 3. **Audio access** (milestone 8). M4B and M4A byte ranges and decoded timing in
    content access, bounded ranges usable by an external player, and output
    demonstrated with a real audiobook reader or server.
@@ -430,8 +436,10 @@ ZIP/RAR/7z archives now traverse through a shared four-level archive-tree budget
 and exact member-chain provenance
 ([decision 0058](docs/decisions/0058-bounded-nested-intake.md)). Cleanup now reuses
 that tree with requested per-container coverage, a shared 16 MiB proof allowance
-and exact held-leaf bindings. RAR children, nested volume sets and every unproven
-tree remain preserved ([decision 0063](docs/decisions/0063-complete-archive-tree-cleanup.md)). `inspect --par2`
+and exact held-leaf bindings. Covered standalone RAR children use the distinct
+tree proof in [decision 0072](docs/decisions/0072-nested-rar-cleanup.md); nested
+volume sets and every unproven tree remain preserved
+([decision 0063](docs/decisions/0063-complete-archive-tree-cleanup.md)). `inspect --par2`
 now inventories bounded packet metadata and declared sets without verifying or
 repairing protected files. Recovery material stays preserved by ingest and
 cleanup ([decision 0059](docs/decisions/0059-par2-metadata-inventory.md)). Native
@@ -534,9 +542,15 @@ for restore and a new checked cleanup
 ([decision 0065](docs/decisions/0065-versioned-7z-coverage.md)).
 Standalone RAR5 book leaves use `rar5-frames/1`, a source identity and exact direct
 leaf selections under the same recoverable operations. Fresh purge repeats complete
-framing/reader/holding checks and binds the single source and leaf digest; RAR4,
-sets and nested RAR layouts remain preserved
+framing/reader/holding checks and binds the single source and leaf digest. This
+proof excludes RAR4, sets and nested RAR layouts
 ([decision 0066](docs/decisions/0066-standalone-rar5-cleanup.md)).
+Standalone RAR4 has its separate `rar4-frames/1` proof, and covered trees with
+standalone RAR nodes use `archive-tree/2`
+([decision 0070](docs/decisions/0070-standalone-rar4-cleanup.md),
+[decision 0072](docs/decisions/0072-nested-rar-cleanup.md)). RAR sets still stay;
+the internal modern RAR5 set accountant is read-only
+([decision 0073](docs/decisions/0073-read-only-rar5-set-coverage.md)).
 Disk-full and scanner-failure faults are injected in tests: a full disk
 during an import copy, a journal line, a cleanup copy, and an export, and a
 scanner that is unavailable, incomplete, failing, or timing out. Each leaves

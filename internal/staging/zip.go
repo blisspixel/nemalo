@@ -31,20 +31,26 @@ type Limits struct {
 	// It does not change intake eligibility or authorize source mutation.
 	Coverage bool
 	// RAR4Coverage explicitly opts into standalone RAR4 reader evidence when
-	// Coverage is set. Application cleanup requests this only for a RAR root,
-	// alongside its separate signature-bound proof and recovery contract.
+	// Coverage is set. Application cleanup uses the separate standalone or tree
+	// proof and recovery contract; this does not permit RAR4 volume coverage.
 	RAR4Coverage bool
 	// NestedRARCoverage opts into the same standalone framing/table proof for
 	// private RAR children when Coverage is set. RAR4 also needs RAR4Coverage.
-	// Application cleanup leaves this false until a separate tree proof exists.
+	// Application cleanup requests this only under its separate tree proof.
 	NestedRARCoverage bool
+	// RAR5SetCoverage requests read-only framing/table evidence for modern root
+	// RAR5 volume sets alongside Coverage. Application cleanup leaves it false.
+	RAR5SetCoverage bool
 	// ExpectedSources binds coverage snapshots to the application's root plan.
 	// SourceHashRemaining, when set, charges actual copy-hash reads to its budget.
 	ExpectedSources     map[string]SnapshotIdentity
 	SourceHashRemaining *int64
-	// Only ExtractTree enables traversal and shares its work across nodes.
+	// Only ExtractTree enables traversal. Direct covered sets also share work
+	// through this budget, with budgetOnly preserving their no-traversal boundary.
 	tree          *treeBudget
+	budgetOnly    bool
 	child         bool
+	snapshotReads bool
 	nestedBlocked map[string]bool
 }
 
@@ -83,6 +89,9 @@ type Extraction struct {
 	// RARContainers counts individually covered RAR nodes. A partial tree or
 	// failed output can still have covered nodes; this count grants no permission.
 	RARContainers int `json:"-"`
+	// RARSetVersion is measured separately from standalone containers. It grants
+	// no set cleanup permission and never supplies RARVersion/RARContainers.
+	RARSetVersion int `json:"-"`
 	// CoverageGap locates the first container without requested byte evidence.
 	// An empty chain names the outer container, not an archive member.
 	CoverageGap *CoverageGap `json:"coverage_gap,omitempty"`
@@ -216,9 +225,9 @@ func classify(entry *zip.File, supported func(string) bool, limits Limits) (stri
 		return "encrypted", "encrypted members are not extracted"
 	case entry.Method != zip.Store && entry.Method != zip.Deflate:
 		return "unsupported_method", fmt.Sprintf("compression method %d", entry.Method)
-	case limits.tree != nil && limits.nestedBlocked[name]:
+	case limits.nestedTraversal() && limits.nestedBlocked[name]:
 		return "nested_volume", "nested volume sets are not read; preserved in the outer archive"
-	case nestedArchive[strings.ToLower(path.Ext(name))] && (limits.tree == nil || !Supported(name)):
+	case nestedArchive[strings.ToLower(path.Ext(name))] && (!limits.nestedTraversal() || !Supported(name)):
 		return "nested_archive", "preserved in the archive; not extracted"
 	case !supported(name):
 		return "unsupported_format", "preserved in the archive"

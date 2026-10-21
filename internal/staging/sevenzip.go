@@ -271,7 +271,10 @@ func extractSnapshot(ctx context.Context, exe, kind, archive string, size int64,
 	if err != nil {
 		return x, err
 	}
-	if rarCoverage && !rarTableMatches(rarFiles, entries) {
+	if rarCoverage && !rarTableMatches(ctx, rarFiles, entries) {
+		if ctx.Err() != nil {
+			return x, ctx.Err()
+		}
 		return x, fmt.Errorf("%w: maintained reader table does not match every physical file record", rarCoverageError(kind))
 	}
 	x, err = extractListedSnapshot(ctx, exe, kind, archive, size, dst, supported, limits, entries)
@@ -378,7 +381,11 @@ func snapshotArchive(ctx context.Context, src *os.Root, name string, info fs.Fil
 	if err != nil {
 		return err
 	}
-	n, copyErr := copyArchiveBytes(ctx, limits, name, info, in, out)
+	var reader io.Reader = in
+	if limits.snapshotReads {
+		reader = io.NewSectionReader(limits.reader(in), 0, info.Size()+1)
+	}
+	n, copyErr := copyArchiveBytes(ctx, limits, name, info, reader, out)
 	closeErr := out.Close()
 	if err := errors.Join(copyErr, closeErr); err != nil {
 		return err
@@ -569,9 +576,9 @@ func classifySeven(e sevenEntry, supported func(string) bool, limits Limits) (st
 		return "special", "not a regular file"
 	case e.encrypted:
 		return "encrypted", "encrypted members are not extracted"
-	case limits.tree != nil && limits.nestedBlocked[name]:
+	case limits.nestedTraversal() && limits.nestedBlocked[name]:
 		return "nested_volume", "nested volume sets are not read; preserved in the outer archive"
-	case nestedArchive[strings.ToLower(path.Ext(name))] && (limits.tree == nil || !Supported(name)):
+	case nestedArchive[strings.ToLower(path.Ext(name))] && (!limits.nestedTraversal() || !Supported(name)):
 		return "nested_archive", "preserved in the archive; not extracted"
 	case !supported(name):
 		return "unsupported_format", "preserved in the archive"
@@ -732,6 +739,9 @@ func ExtractSet(ctx context.Context, src *os.Root, names []string, dst *os.Root,
 	var total int64
 	infos := make([]fs.FileInfo, len(names))
 	for i, name := range names {
+		if err := ctx.Err(); err != nil {
+			return x, err
+		}
 		gotSet, n, ok := VolumeOf(name)
 		if segmentedZIP {
 			gotSet, n, ok = ZIPSegmentOf(name)
@@ -751,7 +761,7 @@ func ExtractSet(ctx context.Context, src *os.Root, names []string, dst *os.Root,
 		if err != nil {
 			return x, err
 		}
-		if !info.Mode().IsRegular() || info.Size() < 1 || total+info.Size() > maxArchiveSnapshot {
+		if !info.Mode().IsRegular() || !volumeSizeFits(total, info.Size()) {
 			return x, errors.New("every volume must be a regular file, and the set at most 4 GiB")
 		}
 		infos[i], total = info, total+info.Size()
@@ -794,11 +804,36 @@ func ExtractSet(ctx context.Context, src *os.Root, names []string, dst *os.Root,
 		}
 		return x, err
 	}
-	kind, archive, err := snapshotRARSet(ctx, exe, src, names, infos, tmpRoot, tmp, old, total, limits)
+	var proof *rar5SetBinding
+	if limits.Coverage && limits.RAR5SetCoverage {
+		if old || limits.child {
+			return x, fmt.Errorf("%w: old-named or nested RAR set coverage is unsupported", ErrRAR5Coverage)
+		}
+		proof = &rar5SetBinding{}
+		if limits.tree == nil {
+			limits.tree = newTreeBudget(limits)
+			limits.budgetOnly = true
+		}
+		limits.snapshotReads = true
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, archiveDeadline(total))
+		defer cancel()
+	}
+	kind, archive, err := snapshotRARSet(ctx, exe, src, names, infos, tmpRoot, tmp, old, total, limits, proof)
 	if err != nil {
 		return x, err
 	}
+	if proof != nil {
+		x, err = extractListedSnapshot(ctx, exe, kind, archive, total, dst, supported, limits, proof.entries)
+		x.Whole, x.RARSetVersion = true, 5
+		return x, err
+	}
 	return extractSnapshot(ctx, exe, kind, archive, total, dst, supported, limits, nil)
+}
+
+// Check before adding untrusted file metadata, including values near MaxInt64.
+func volumeSizeFits(total, next int64) bool {
+	return total >= 0 && total <= maxArchiveSnapshot && next > 0 && next <= maxArchiveSnapshot-total
 }
 
 // archiveBlock reads the keys of the archive block of a listing without
