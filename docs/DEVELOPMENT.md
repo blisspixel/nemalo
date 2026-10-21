@@ -1,6 +1,6 @@
 # Development and operation
 
-Nemalo is an early Go CLI/TUI application. Go 1.27.2 is pinned in `go.mod`.
+Nemalo is an early Go CLI/TUI application. Go 1.27.3 is pinned in `go.mod`.
 The launcher may download that patched toolchain when the local Go installation is
 older; this does not replace the system installation. No Python or Node runtime is
 needed for the application, tests, or first-party tooling.
@@ -799,7 +799,7 @@ Kitty remain selectable. Omarchy 3 defaulted to Alacritty.
 
 Run the published `linux/amd64` archive. That build has cgo disabled, so it does
 not need Ubuntu's C library. Hosted CI runs it on Ubuntu, not on Omarchy or Arch.
-Building this tree from source requires Go 1.27.2.
+Building this tree from source requires Go 1.27.3.
 
 Library directories use `/proc/self/fd`, which Arch provides. Import hard-links
 the stored file inside the library directory. ext4 and btrfs both support that

@@ -161,7 +161,7 @@ nemalo read ~/books --root ~/books --asset sha256:HASH
 reports scanner setup, `nemalo tui` opens the terminal interface, and
 `nemalo check FILE --scan` checks a file you already have.
 
-To build from source instead, with Go 1.27.2 or a compatible supported toolchain,
+To build from source instead, with Go 1.27.3 or a compatible supported toolchain,
 run `go build -trimpath -o bin/ ./cmd/nemalo`; the binary is `bin/nemalo`
 (`bin/nemalo.exe` on Windows). Run `nemalo help` for an overview and `nemalo help COMMAND` for a command's options and limits. Local inventory and catalog operations are offline; explicit searches
 send queries to the selected provider. Sources are preserved.

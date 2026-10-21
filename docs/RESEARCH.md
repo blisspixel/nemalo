@@ -154,7 +154,7 @@ patches, advisories, compatibility, and contracts when implementation begins.
 
 | Surface | Observation and primary reference |
 | --- | --- |
-| Go | [Official downloads](https://go.dev/dl/?mode=json) list stable 1.27.2; `go.mod` pins it. The Go launcher selected/downloaded that toolchain without replacing the system installation. |
+| Go | [Official downloads](https://go.dev/dl/?mode=json) list stable 1.27.3; `go.mod` pins this security patch. [GO-2026-6809](https://pkg.go.dev/vuln/GO-2026-6809) affects `crypto/x509.Certificate.Verify` in 1.27.2 and is fixed in 1.27.3. Hosted Linux govulncheck found a reachable discovery HTTP path on 2026-10-21. The [release history](https://go.dev/doc/devel/release#go1.27.3) confirms the x509 security fix. The launcher selects the patched toolchain without replacing the system installation; third-party module pins are unchanged. |
 | TUI | [Bubble Tea v2.0.10](https://github.com/charmbracelet/bubbletea/releases/tag/v2.0.10) and Bubbles v2.2.1 pinned after reviewing current module versions; see the [terminal decision](decisions/0002-terminal-interfaces.md) |
 | MCP | Current [2026-07-28 specification](https://modelcontextprotocol.io/specification/2026-07-28) |
 | Go MCP SDK | Official [v1.8.0 stable release](https://github.com/modelcontextprotocol/go-sdk/releases/tag/v1.8.0), supporting that revision |
