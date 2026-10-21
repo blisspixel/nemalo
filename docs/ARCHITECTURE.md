@@ -490,6 +490,13 @@ roots containing nested archives remain outside this subset. `archive-tree/1`
 does not grant RAR authority
 ([decision 0066](decisions/0066-standalone-rar5-cleanup.md)).
 
+The separate `staging.RAR4Accounted` measures a strict standalone RAR4 header/data
+partition through the shared lifetime proof reader. It returns declared facts
+without reading payloads and refuses unlisted subblocks and unsupported metadata.
+It does not participate in extraction coverage or application permission. Existing
+RAR4 intake and preservation remain unchanged
+([decision 0067](decisions/0067-read-only-rar4-framing.md)).
+
 Private staging and a subprocess are not sandboxes. Go's
 [root-scoped filesystem APIs](https://go.dev/blog/osroot) are useful building blocks;
 external extraction needs a separately tested containment strategy. Linux isolation

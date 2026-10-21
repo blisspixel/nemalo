@@ -687,6 +687,12 @@ executables retain or refuse the unfamiliar proof. See
 [decision 0066](decisions/0066-standalone-rar5-cleanup.md); this is implemented source
 behavior, with acceptance evidence tracked in
 [issue 57](https://github.com/blisspixel/nemalo/issues/57).
+`staging.RAR4Accounted` separately measures a strict standalone subset read-only,
+without payload reads or integrity claims. It shares the 16 MiB lifetime proof
+reader and refuses subblocks, comments, encryption, volumes, ambiguous names and
+unsupported metadata. This grants no RAR4 extraction coverage or cleanup permission;
+acceptance evidence is tracked in issue 57. See
+[decision 0067](decisions/0067-read-only-rar4-framing.md).
 `library audit` on the library directory reports missing, changed, and review
 holdings and does not repair them. Snapshot audit still requires `--root`.
 An EPUB package identifier is recorded when it is an explicit ISBN, DOI, or

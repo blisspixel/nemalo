@@ -150,6 +150,9 @@ verified, not when code exists. No stage has a time estimate.
    with exact direct leaves, full fresh purge checks and grouped recovery
    ([decision 0066](docs/decisions/0066-standalone-rar5-cleanup.md)). RAR4, volume
    and nested layouts remain unfinished; this subset does not complete stage 2.
+   A separate read-only RAR4 framing accountant is implemented, with acceptance
+   tracked in issue 57. It grants no RAR4 cleanup or staging coverage
+   ([decision 0067](docs/decisions/0067-read-only-rar4-framing.md)).
 3. **Audio access** (milestone 8). M4B and M4A byte ranges and decoded timing in
    content access, bounded ranges usable by an external player, and output
    demonstrated with a real audiobook reader or server.

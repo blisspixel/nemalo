@@ -206,6 +206,9 @@ with `rar5-frames/1`, one exact source identity and one-component `archive_leave
 Fresh purge repeats the full check and binds its single-file group and leaf digest;
 recovery uses the supported immutable evidence and current remaining bytes/holdings.
 RAR4, sets, child RARs and RAR roots containing nested archives stay preserved.
+Decision 0067 permits separate read-only RAR4 framing measurements. They grant no
+staging coverage or cleanup authority; keep unsupported names/metadata preserved
+and require full verification before any later reader/application integration.
 Never broaden `archive-tree/1` to RAR. The application increment needs its own full
 local/native/hosted acceptance; implementation is not a release.
 Requested standalone RAR5 coverage binds every physical file record to one UTF-8

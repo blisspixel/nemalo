@@ -260,8 +260,7 @@ func readRAR5File(h *rar5Fields) (RAR5File, error) {
 		return f, fmt.Errorf("%w: unknown size, checksum, compression or file metadata", ErrRAR5Coverage)
 	}
 	f.Bytes, f.Name = int64(bytes), string(h.data)
-	if f.Name == "." || !utf8.ValidString(f.Name) || !fs.ValidPath(f.Name) || strings.ContainsAny(f.Name, "\\:\x00") ||
-		strings.ContainsFunc(f.Name, func(r rune) bool { return unicode.IsControl(r) || unicode.In(r, unicode.Cf) || r == '\ufffe' }) {
+	if !validRARName(f.Name) {
 		return f, fmt.Errorf("%w: unsupported member name", ErrRAR5Coverage)
 	}
 	switch f.HostOS {
@@ -296,8 +295,17 @@ func unambiguousRAR5Names(files []RAR5File) bool {
 		}
 		names[f.Name] = f.Directory
 	}
-	for _, f := range files {
-		for parent := path.Dir(f.Name); parent != "."; parent = path.Dir(parent) {
+	return unambiguousRARParents(names)
+}
+
+func validRARName(name string) bool {
+	return name != "." && utf8.ValidString(name) && fs.ValidPath(name) && !strings.ContainsAny(name, "\\:\x00") &&
+		!strings.ContainsFunc(name, func(r rune) bool { return unicode.IsControl(r) || unicode.In(r, unicode.Cf) || r == '\ufffe' })
+}
+
+func unambiguousRARParents(names map[string]bool) bool {
+	for name := range names {
+		for parent := path.Dir(name); parent != "."; parent = path.Dir(parent) {
 			if dir, exists := names[parent]; exists && !dir {
 				return false
 			}
