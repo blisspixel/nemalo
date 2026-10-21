@@ -122,7 +122,7 @@ func Extract7z(ctx context.Context, src *os.Root, name string, dst *os.Root, sup
 	if err != nil {
 		return x, err
 	}
-	if limits.Coverage && kind != "7z" && (!limits.rarCoverage(kind) || limits.child) {
+	if limits.Coverage && kind != "7z" && (!limits.rarCoverage(kind) || (limits.child && !limits.NestedRARCoverage)) {
 		return x, errors.New("RAR container bytes are not completely accounted for; the archive is preserved")
 	}
 	var rarFiles []rarBindingFile

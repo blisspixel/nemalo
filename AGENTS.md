@@ -209,8 +209,8 @@ Sets, child RARs and RAR roots containing nested archives stay preserved.
 Decision 0067 permits separate read-only RAR4 framing measurements. They grant no
 coverage or cleanup authority alone. Decision 0068 binds an explicitly opted-in
 standalone root to the maintained reader. Require Coverage plus RAR4Coverage.
-Never let RAR4 evidence fall through rar5-frames/1. Keep child/set coverage disabled
-until their separately versioned contracts and complete verification.
+Never let RAR4 evidence fall through rar5-frames/1. Keep set coverage disabled
+until its separately versioned contract and complete verification.
 Decision 0069 accounts for zero high-size words and exact mtime/ctime/atime
 metadata in RAR4 framing. Nonzero high words, unsupported fractions, unknown
 time fields, Unicode names and other extensions remain preserved. This adds no
@@ -225,7 +225,14 @@ words remain preserved. No public option, decoder or new dependency is added.
 Never broaden `archive-tree/1` to RAR. The application increment needs its own full
 local/native/hosted acceptance; implementation is not a release.
 Requested standalone RAR5 coverage binds every physical file record to one UTF-8
-reader table before exact-name extraction; child RAR coverage remains refused.
+reader table before exact-name extraction. Decision 0071 adds an explicit internal
+NestedRARCoverage opt-in alongside Coverage for the same standalone proof on
+checked private children; RAR4 also needs RAR4Coverage. Application services leave
+NestedRARCoverage false. Keep strict standalone child preflight and all shared
+proof/read/member/output/process/diagnostic/deadline limits, including failed work.
+Physical coverage alone grants no member eligibility, integrity or cleanup right.
+The new capability needs full local/native/exact-hosted verification before a later
+separately versioned tree proof and recovery increment can authorize nested cleanup.
 Historical RAR-named archive entries and old continuations without a supported
 proof cannot resume cleanup or purge, including pending purge intents. Preserve
 their recorded bytes for restore; member holdings alone confer no permission.

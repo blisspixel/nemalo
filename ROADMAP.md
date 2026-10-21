@@ -165,6 +165,11 @@ verified, not when code exists. No stage has a time estimate.
    tracked in issue 57 ([decision 0070](docs/decisions/0070-standalone-rar4-cleanup.md)).
    Unicode and unsupported metadata, volume sets, child RARs and RAR roots
    containing nested archives remain preserved; stage 2 is still unfinished.
+   Read-only nested RAR4/RAR5 coverage is now implemented behind an explicit
+   internal opt-in, reusing checked child snapshots, strict standalone preflight
+   and the shared framing/table/work limits. Application cleanup leaves that
+   flag off; acceptance is tracked in issue 57
+   ([decision 0071](docs/decisions/0071-opt-in-nested-rar-coverage.md)).
 3. **Audio access** (milestone 8). M4B and M4A byte ranges and decoded timing in
    content access, bounded ranges usable by an external player, and output
    demonstrated with a real audiobook reader or server.

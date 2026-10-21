@@ -521,6 +521,17 @@ before removal; unfamiliar proofs retain bytes. Unicode names, unsupported
 metadata, volumes, child RARs and RAR roots with nested archives stay preserved
 ([decision 0070](decisions/0070-standalone-rar4-cleanup.md)).
 
+Explicit internal `NestedRARCoverage` alongside `Coverage` extends the same
+read-only standalone proof to checked private RAR children; RAR4 still requires
+`RAR4Coverage`. Existing framing subsets and the strict reader preflight proving
+one standalone child are unchanged. All descendants share proof/read, output,
+member, diagnostic/process and deadline allowances, including failed attempts.
+The outer-only measured RAR version never comes from a child. Whole framing,
+output integrity, member eligibility and application permission remain separate.
+Application cleanup leaves the nested opt-in false, so no existing proof gains
+nested RAR authority and all such sources remain preserved
+([decision 0071](decisions/0071-opt-in-nested-rar-coverage.md)).
+
 Private staging and a subprocess are not sandboxes. Go's
 [root-scoped filesystem APIs](https://go.dev/blog/osroot) are useful building blocks;
 external extraction needs a separately tested containment strategy. Linux isolation

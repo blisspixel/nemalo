@@ -34,6 +34,10 @@ type Limits struct {
 	// Coverage is set. Application cleanup requests this only for a RAR root,
 	// alongside its separate signature-bound proof and recovery contract.
 	RAR4Coverage bool
+	// NestedRARCoverage opts into the same standalone framing/table proof for
+	// private RAR children when Coverage is set. RAR4 also needs RAR4Coverage.
+	// Application cleanup leaves this false until a separate tree proof exists.
+	NestedRARCoverage bool
 	// ExpectedSources binds coverage snapshots to the application's root plan.
 	// SourceHashRemaining, when set, charges actual copy-hash reads to its budget.
 	ExpectedSources     map[string]SnapshotIdentity

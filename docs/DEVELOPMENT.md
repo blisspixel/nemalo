@@ -696,7 +696,7 @@ acceptance evidence is tracked in issue 57. See
 An internal caller can explicitly request standalone RAR4 reader binding with
 both `Coverage` and `RAR4Coverage`. The same private snapshot and complete UTF-8
 table drive checked exact-name extraction through the common RAR matcher. This is
-not a CLI/JSON/MCP option. Child RARs and sets receive no new coverage.
+not a CLI/JSON/MCP option. This root-only capability added no child or set coverage.
 The capability requires separate verification and alone grants no application proof;
 see [decision 0068](decisions/0068-opt-in-rar4-reader-binding.md).
 RAR4 framing now measures known zero high packed/unpacked-size words and exact
@@ -718,6 +718,17 @@ bytes. Restore needs no reader and never replaces a target. Volumes, nested RARs
 RAR roots with nested archives, Unicode and unsupported metadata stay preserved.
 See [decision 0070](decisions/0070-standalone-rar4-cleanup.md); acceptance is tracked
 in issue 57 and this does not complete stage 2 or authorize a release.
+An explicit internal `NestedRARCoverage` plus `Coverage` now permits the same
+strict standalone framing/table evidence on checked private RAR children. RAR4
+also requires `RAR4Coverage`. No metadata or volume subset is broadened. Every
+child still needs the reader's standalone-container preflight and shares the
+whole tree's proof/read/member/output/diagnostic/process/deadline bounds. Failed
+work stays charged. Framed notes remain visible unsupported material; failed
+output integrity remains separate from physical coverage. Application cleanup
+leaves this nested flag false, so existing tree and standalone proofs gain no
+new authority and all nested RAR sources stay. See
+[decision 0071](decisions/0071-opt-in-nested-rar-coverage.md); acceptance remains
+tracked in issue 57 before a separately verified application increment.
 `library audit` on the library directory reports missing, changed, and review
 holdings and does not repair them. Snapshot audit still requires `--root`.
 An EPUB package identifier is recorded when it is an explicit ISBN, DOI, or

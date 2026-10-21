@@ -6,6 +6,9 @@ the remaining application/layout work is tracked in
 No RAR cleanup capability is established by this decision alone.
 The later [decision 0066](0066-standalone-rar5-cleanup.md) specifies the separately
 verified standalone cleanup subset and its distinct proof.
+Later [decision 0071](0071-opt-in-nested-rar-coverage.md) separately permits an
+explicitly opted-in read-only proof for checked standalone children, without
+expanding any existing application cleanup proof.
 
 ## Evidence and scope
 
