@@ -199,6 +199,25 @@ past its height. Nemalo pre-wraps original reports/details with the existing
 Lip Gloss grapheme-aware wrapper, retaining complete evidence independently of
 layout. Tests cover odd/even widths, long Japanese titles, reports, and focus.
 
+## EPUB URI inspection
+
+Reviewed 2026-10-22. The
+[EPUB XHTML contract](https://www.w3.org/TR/epub-33/#sec-xhtml)
+uses XML syntax. The
+[pinned HTML tokenizer](https://pkg.go.dev/golang.org/x/net@v0.60.0/html#Tokenizer.NextIsNotRawText)
+requires caller handling for raw-text transitions; an empty XHTML `textarea`
+must not hide a subsequent navigation link. The
+[URL parser](https://url.spec.whatwg.org/#concept-basic-url-parser)
+removes ASCII tabs and newlines before interpreting a scheme.
+
+Nemalo keeps the existing HTML text measurement and uses Go's existing
+namespace-aware XML decoder for bounded XHTML URI inspection. A private XLink
+prefix is not a new scheme, and an unrelated metadata namespace is not XLink.
+Both formats share the active-URI predicate. Decoding entities and examining
+normalized schemes adds review evidence without following a link, rendering a
+document, executing content or changing extraction rules. This is a limited
+indicator policy, not a sanitizer or complete rendering-security analysis.
+
 ## Evidence still required
 
 No competitor runtime comparison, complete source audit, Go benchmark, or plugin-host

@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Keep EPUBs with active URI indicators in review even when antivirus reports no
+  detections. Recognize encoded and whitespace-separated script schemes, data
+  navigation, and XHTML XLink aliases without treating metadata attributes as
+  navigation. Bound XML inspection and preserve static images, ordinary links,
+  extractor identities and eligible source continuations.
+
 - Read old-name RAR sets across supported later starting positions and letter
   rollovers by recognizing exact isolated-reader fallback names. Keep checked
   volume identity, split continuity and a clean assembled table; these sources

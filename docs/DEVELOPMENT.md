@@ -314,13 +314,27 @@ operation. No content is rendered, executed, or fetched from embedded links.
 Results include actual signature, measured bytes/hash, limited container evidence,
 review findings, limitations, and separate antivirus status. EPUB checks bound
 members and package entries to 10,000, ZIP metadata reads to 2 MiB, expanded bytes
-to 128 MiB total and 32 MiB each, and HTML tokens to 1 MiB. They check ZIP
+to 128 MiB total and 32 MiB each, and HTML/XML tokens to 1 MiB. XHTML URI
+inspection also stops at 256 nested elements. They check ZIP
 lengths/CRC, mimetype, container/manifest/spine references,
 then report titles/languages, HTML reading-order documents, images, and
 non-whitespace body-text characters. EPUB is internally ZIP; a plain ZIP or RAR
 does not pass its package checks. Page count stays unknown. Text metrics are not
 DOM validation or proof of semantic completeness. Positive script, event,
 embedded-resource, and encryption indicators require review; absence proves nothing.
+URI inspection recognizes entity-decoded and ASCII-tab/newline-separated
+`javascript:` and `vbscript:` values, plus `data:` navigation links. XHTML uses
+the standard XML decoder to recognize XLink namespace aliases and links after
+self-closing elements; unrelated namespaced metadata is not navigation.
+Malformed or over-budget XHTML cannot establish a passed inspection. Static
+data images remain unfetched resource evidence, and ordinary local, HTTP(S) and
+mail links retain their existing behavior. Active indicators require review even
+when an antivirus reports no detections. Source-bound reads refuse these access
+restrictions without returning partial text. This does not establish safe rendering
+or comprehensive active-content detection; extractor rules and IDs are unchanged.
+Existing holdings retain their historical disposition. An explicit import of the
+same source with `--scan --apply` records a fresh disposition; `library rescan`
+only selects eligible review holdings, not earlier checked holdings.
 Font obfuscation alone is recorded, not a finding
 ([decision 0036](decisions/0036-epub-font-obfuscation.md)). PDF checks walk the page
 tree and active content without reading page content

@@ -334,7 +334,7 @@ func inspectEPUB(ctx context.Context, r io.ReaderAt, size int64, c *Checks, visi
 		active     bool
 		external   bool
 	}
-	measured := map[string]htmlMeasurement{}
+	measured := map[[2]string]htmlMeasurement{}
 	var expanded uint64
 	for _, f := range z.File {
 		if err := ctx.Err(); err != nil {
@@ -462,18 +462,21 @@ func inspectEPUB(ctx context.Context, r io.ReaderAt, size int64, c *Checks, visi
 				c.EPUB.Images++
 			}
 			if item.Media == "application/xhtml+xml" || item.Media == "text/html" {
-				facts, ok := measured[name]
+				// The same member can have declarations with different parsing
+				// rules. An HTML measurement cannot stand in for XHTML inspection.
+				key := [2]string{name, item.Media}
+				facts, ok := measured[key]
 				if !ok {
 					data, err := member(files, name, 32<<20)
 					if err != nil {
 						return err
 					}
-					n, active, external, err := htmlPolicyContext(ctx, data)
+					n, active, external, err := htmlDocumentPolicyContext(ctx, data, item.Media == "application/xhtml+xml")
 					if err != nil {
 						return fmt.Errorf("EPUB document %q: %w", name, err)
 					}
 					facts = htmlMeasurement{n, active, external}
-					measured[name] = facts
+					measured[key] = facts
 				}
 				text[item.ID] = facts.characters
 				if facts.active || facts.external {
@@ -669,6 +672,10 @@ func htmlFactsContext(ctx context.Context, data []byte) (int, bool, error) {
 }
 
 func htmlPolicyContext(ctx context.Context, data []byte) (int, bool, bool, error) {
+	return htmlDocumentPolicyContext(ctx, data, false)
+}
+
+func htmlDocumentPolicyContext(ctx context.Context, data []byte, xhtml bool) (int, bool, bool, error) {
 	if !utf8.Valid(data) {
 		return 0, false, false, errors.New("non-UTF-8 document is unsupported")
 	}
@@ -683,6 +690,13 @@ func htmlPolicyContext(ctx context.Context, data []byte) (int, bool, bool, error
 		typ := z.Next()
 		if typ == html.ErrorToken {
 			if errors.Is(z.Err(), io.EOF) {
+				if xhtml {
+					// EPUB XHTML uses XML namespaces and empty-element syntax.
+					// Keep the existing HTML text measurement, but do not let its
+					// raw-text state hide XML navigation attributes.
+					xmlActive, err := xhtmlActiveURLs(ctx, data)
+					return count, active || xmlActive, external, err
+				}
 				return count, active, external, nil
 			}
 			return count, active, external, z.Err()
@@ -700,7 +714,11 @@ func htmlPolicyContext(ctx context.Context, data []byte) (int, bool, bool, error
 			}
 			for _, a := range token.Attr {
 				v := strings.ToLower(strings.TrimSpace(a.Val))
-				if strings.HasPrefix(a.Key, "on") || ((a.Key == "href" || a.Key == "src" || a.Key == "data") && strings.HasPrefix(v, "javascript:")) {
+				attribute := a.Key
+				if !xhtml && strings.HasPrefix(attribute, "xlink:") {
+					attribute = strings.TrimPrefix(attribute, "xlink:")
+				}
+				if strings.HasPrefix(a.Key, "on") || htmlActiveURL(token.Data, attribute, a.Val) {
 					active = true
 				}
 				if (a.Key == "src" || a.Key == "data") && (strings.Contains(v, ":") || strings.HasPrefix(v, "//")) {
@@ -724,6 +742,78 @@ func htmlPolicyContext(ctx context.Context, data []byte) (int, bool, bool, error
 			}
 		}
 	}
+}
+
+// xhtmlActiveURLs uses the same standard XML decoder as the structured reader.
+// Namespace aliases and self-closing raw-text elements must not change which
+// navigation attributes are examined. Invalid or over-budget XML is incomplete
+// inspection, never evidence for checked publication. No entities are fetched.
+func xhtmlActiveURLs(ctx context.Context, data []byte) (bool, error) {
+	z := xml.NewDecoder(bytes.NewReader(data))
+	active, depth := false, 0
+	for {
+		if err := ctx.Err(); err != nil {
+			return active, err
+		}
+		before := z.InputOffset()
+		token, err := z.Token()
+		if z.InputOffset()-before > 1<<20 {
+			return active, ErrLimit
+		}
+		if errors.Is(err, io.EOF) {
+			return active, nil
+		}
+		if err != nil {
+			return active, err
+		}
+		switch token := token.(type) {
+		case xml.StartElement:
+			depth++
+			if depth > 256 {
+				return active, ErrLimit
+			}
+			for _, a := range token.Attr {
+				if a.Name.Space == "" || a.Name.Space == "http://www.w3.org/1999/xlink" {
+					active = htmlActiveURL(token.Name.Local, a.Name.Local, a.Value) || active
+				}
+			}
+		case xml.EndElement:
+			depth--
+		}
+	}
+}
+
+// htmlActiveURL classifies a decoded attribute; it neither sanitizes nor follows
+// it. URL parsing removes ASCII tabs/newlines and surrounding C0 controls before
+// interpreting a scheme. Keep data images as unfetched resource evidence, rather
+// than treating every data resource as executable navigation.
+func htmlActiveURL(element, attribute, value string) bool {
+	switch attribute {
+	case "href", "src", "data":
+	default:
+		return false
+	}
+	value = strings.Map(func(r rune) rune {
+		if r == '\t' || r == '\n' || r == '\r' {
+			return -1
+		}
+		return r
+	}, value)
+	value = strings.TrimFunc(value, func(r rune) bool { return r <= 0x20 || unicode.IsSpace(r) })
+	scheme, _, found := strings.Cut(value, ":")
+	if !found {
+		return false
+	}
+	switch strings.ToLower(scheme) {
+	case "javascript", "vbscript":
+		return true
+	case "data":
+		if i := strings.LastIndexByte(element, ':'); i >= 0 {
+			element = element[i+1:]
+		}
+		return attribute == "href" && !strings.EqualFold(element, "image") && !strings.EqualFold(element, "feImage")
+	}
+	return false
 }
 
 // collectNavigation reads NAV and NCX members without changing package
