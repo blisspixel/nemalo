@@ -27,26 +27,52 @@ var recoveryCoveragePublish sync.Mutex
 var recoveryCounterTimestamp atomic.Int64
 var recoveryMergedCounterName = regexp.MustCompile(`^covcounters\.[0-9a-f]{32}\.0\.[0-9]+$`)
 
+type recoveryProcessSettings struct {
+	environment                      []string
+	directory, scratch, goExecutable string
+	testCounters, readerCounters     string
+}
+
+func captureRecoveryProcessSettings() (recoveryProcessSettings, error) {
+	directory, err := os.Getwd()
+	if err != nil {
+		return recoveryProcessSettings{}, err
+	}
+	goExecutable, err := exec.LookPath("go")
+	if err != nil {
+		return recoveryProcessSettings{}, err
+	}
+	return recoveryProcessSettings{environment: os.Environ(), directory: directory, scratch: os.TempDir(), goExecutable: goExecutable, testCounters: libraryTestCounters, readerCounters: archiveFixtureCounters}, nil
+}
+
 // The same compiled test executable retains race/coverage instrumentation.
 // Each covered child writes privately: concurrent Go metadata renames into a
 // shared directory can fail on Windows. Merge counters only after it exits.
 func recoveryProcess(ctx context.Context, root, selected, reader, digest string) ([]byte, error) {
+	settings, err := captureRecoveryProcessSettings()
+	if err != nil {
+		return nil, err
+	}
+	return recoveryProcessWithSettings(ctx, root, selected, reader, digest, settings)
+}
+
+func recoveryProcessWithSettings(ctx context.Context, root, selected, reader, digest string, settings recoveryProcessSettings) ([]byte, error) {
 	exe, err := os.Executable()
 	if err != nil {
 		return nil, err
 	}
 	args := []string{"-test.run=^" + regexp.QuoteMeta(root) + "$", "-test.count=1", "-test.v", "-test.timeout=4m"}
-	env := append(os.Environ(), rarRecoveryCaseEnv+"="+selected)
+	env := append(append([]string(nil), settings.environment...), rarRecoveryCaseEnv+"="+selected)
 	if reader != "" {
 		env = append(env, archiveFixtureEnv+"="+reader, archiveFixtureHashEnv+"="+digest)
 	}
 	var private, parent string
 	if testing.CoverMode() != "" {
-		parent = libraryTestCounters
+		parent = settings.testCounters
 		if parent == "" {
 			return nil, errors.New("covered recovery subprocess requires Go test's counter directory")
 		}
-		private, err = os.MkdirTemp("", "nemalo-recovery-counters-")
+		private, err = os.MkdirTemp(settings.scratch, "nemalo-recovery-counters-")
 		if err != nil {
 			return nil, err
 		}
@@ -63,14 +89,15 @@ func recoveryProcess(ctx context.Context, root, selected, reader, digest string)
 	}
 	cmd := exec.CommandContext(ctx, exe, args...)
 	cmd.Env = env
+	cmd.Dir = settings.directory
 	cmd.WaitDelay = time.Second
 	out := &recoveryProcessOutput{}
 	cmd.Stdout, cmd.Stderr = out, out
 	err = cmd.Run()
 	if err == nil && private != "" {
-		err = mergeRecoveryCoverage(ctx, private, parent, out)
+		err = mergeRecoveryCountersUsing(ctx, filepath.Join(private, "counters"), filepath.Join(private, "merged"), parent, out, settings)
 		if err == nil {
-			err = mergeRecoveryCounters(ctx, filepath.Join(private, "reader-counters"), filepath.Join(private, "reader-merged"), archiveFixtureCounters, out)
+			err = mergeRecoveryCountersUsing(ctx, filepath.Join(private, "reader-counters"), filepath.Join(private, "reader-merged"), settings.readerCounters, out, settings)
 		}
 	}
 	return out.bytes(), err
@@ -81,10 +108,18 @@ func mergeRecoveryCoverage(ctx context.Context, private, parent string, out *rec
 }
 
 func mergeRecoveryCounters(ctx context.Context, counters, merged, parent string, out *recoveryProcessOutput) error {
-	cmd := exec.CommandContext(ctx, "go", "tool", "covdata", "merge", "-i=.", "-o="+merged)
+	settings, err := captureRecoveryProcessSettings()
+	if err != nil {
+		return err
+	}
+	return mergeRecoveryCountersUsing(ctx, counters, merged, parent, out, settings)
+}
+
+func mergeRecoveryCountersUsing(ctx context.Context, counters, merged, parent string, out *recoveryProcessOutput, settings recoveryProcessSettings) error {
+	cmd := exec.CommandContext(ctx, settings.goExecutable, "tool", "covdata", "merge", "-i=.", "-o="+merged)
 	// Relative input names avoid covdata's comma-separated path ambiguity.
 	cmd.Dir = counters
-	cmd.Env = append(os.Environ(), "GOTOOLCHAIN="+runtime.Version(), "GOPROXY=off", "GOSUMDB=off")
+	cmd.Env = append(append([]string(nil), settings.environment...), "GOTOOLCHAIN="+runtime.Version(), "GOPROXY=off", "GOSUMDB=off")
 	cmd.Stdout, cmd.Stderr = out, out
 	cmd.WaitDelay = time.Second
 	if err := cmd.Run(); err != nil {
@@ -215,6 +250,18 @@ func runRecoveryProcesses(t *testing.T, selections []string) {
 	// Queue the roots together; parallel children alone still make each
 	// sequential root wait before the next recovery matrix can start.
 	t.Parallel()
+	if libraryRecoverySchedule != nil {
+		libraryRecoverySchedule.serialFinished()
+		root := t.Name()
+		for _, selected := range selections {
+			t.Run(selected, func(t *testing.T) {
+				t.Parallel()
+				out, err := libraryRecoverySchedule.collect(root, selected)
+				checkRecoveryResult(t, root, selected, out, err)
+			})
+		}
+		return
+	}
 	reader, err := stagingtest.Executable()
 	if err != nil {
 		t.Fatal(err)
@@ -232,23 +279,46 @@ func runRecoveryProcesses(t *testing.T, selections []string) {
 			ctx, cancel := context.WithTimeout(t.Context(), 5*time.Minute)
 			defer cancel()
 			out, err := recoveryProcess(ctx, root, selected, reader, digest)
-			if err != nil {
-				t.Fatalf("isolated recovery case %s: %v\n%s", selected, err, out)
-			}
-			if !bytes.Contains(out, []byte("=== RUN   "+root+"/"+selected+"\n")) || !bytes.Contains(out, []byte("--- PASS: "+root+"/"+selected+" (")) {
-				t.Fatalf("recovery subprocess did not execute its selected group %s\n%s", selected, out)
-			}
-			t.Logf("isolated recovery result:\n%s", out)
+			checkRecoveryResult(t, root, selected, out, err)
 		})
 	}
+}
+
+func checkRecoveryResult(t *testing.T, root, selected string, out []byte, err error) {
+	t.Helper()
+	if err != nil {
+		t.Fatalf("isolated recovery case %s: %v\n%s", selected, err, out)
+	}
+	if !bytes.Contains(out, []byte("=== RUN   "+root+"/"+selected+"\n")) || !bytes.Contains(out, []byte("--- PASS: "+root+"/"+selected+" (")) {
+		t.Fatalf("recovery subprocess did not execute its selected group %s\n%s", selected, out)
+	}
+	t.Logf("isolated recovery result:\n%s", out)
 }
 
 func TestRecoverySubprocessRejectsUnknownCase(t *testing.T) {
 	ctx, cancel := context.WithTimeout(t.Context(), 30*time.Second)
 	defer cancel()
-	out, err := recoveryProcess(ctx, "TestRARTreeRecoveryAcrossEveryOuterSetLayout", "unknown/case", "", "")
+	settings, err := captureRecoveryProcessSettings()
+	if err != nil {
+		t.Fatal(err)
+	}
+	settings.scratch = t.TempDir()
+	// Background workers must not inherit another serial fixture's temporary
+	// reader, PATH, working directory or scratch-directory environment.
+	hidden := t.TempDir()
+	t.Setenv("NEMALO_STAGINGTEST_7Z", hidden)
+	t.Setenv("PATH", hidden)
+	for _, name := range []string{"TMPDIR", "TEMP", "TMP"} {
+		t.Setenv(name, hidden)
+	}
+	t.Chdir(hidden)
+	out, err := recoveryProcessWithSettings(ctx, "TestRARTreeRecoveryAcrossEveryOuterSetLayout", "unknown/case", "", "", settings)
 	if err == nil || !bytes.Contains(out, []byte("unknown RAR recovery case")) {
 		t.Fatalf("unexecuted child case reported success: %v\n%s", err, out)
+	}
+	entries, err := os.ReadDir(hidden)
+	if err != nil || len(entries) != 0 {
+		t.Fatal("child used a later fixture's scratch directory", entries, err)
 	}
 }
 

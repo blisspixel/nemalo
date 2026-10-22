@@ -34,6 +34,7 @@ func TestMain(m *testing.M) {
 }
 
 func runLibraryTests(m *testing.M) int {
+	flag.Parse()
 	// The recovery matrix launches thousands of synthetic reader processes.
 	// Build the same handler without the rest of this test executable, retaining
 	// real process boundaries and the parent's race/coverage instrumentation.
@@ -96,7 +97,22 @@ func runLibraryTests(m *testing.M) int {
 			return 1
 		}
 	}
+	if defaultRecoverySchedule() {
+		var err error
+		libraryRecoverySchedule, err = startRecoverySchedule()
+		if err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			return 1
+		}
+		defer libraryRecoverySchedule.close()
+	}
 	code := m.Run()
+	if code == 0 && libraryRecoverySchedule != nil {
+		if err := libraryRecoverySchedule.complete(); err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			return 1
+		}
+	}
 	if code == 0 && testing.CoverMode() != "" && os.Getenv(rarRecoveryCaseEnv) == "" {
 		if err := finishArchiveFixtureCoverage(); err != nil {
 			fmt.Fprintln(os.Stderr, err)

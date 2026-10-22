@@ -933,16 +933,27 @@ their test executable for the same handler.
 
 Full library suites run independent RAR tree and RAR4/RAR5 set recovery groups in
 at most three isolated copies of that same compiled test executable across the
-matrices. Their top-level roots are parallel too: parallel children alone leave
-each sequential root waiting before the next matrix starts. All ordinary serial
-tests finish before these roots run, and fixtures/global changes stay inside
-the isolated children. The shared three-process limit spans every matrix and
+matrices. Default single-run suites start the isolated work before ordinary
+fixtures, with a frozen environment, working directory, scratch root, tool path
+and parent-owned reader. Two groups can overlap serial fixtures, reserving the
+third lane for those fixtures and their control helpers. When Go releases the
+parallel recovery roots after its serial phase, all three lanes become available.
+The roots collect each exact result once; missing, unknown or repeated selections
+fail. Shutdown cancels and joins workers before removing their private data.
+The overall package deadline starts before scheduled work, with the same timeout
+as Go's package alarm. Each child retains its four-minute timeout and five-minute
+execution context. Filtered, repeated, CPU-matrix, listed, benchmark and fuzz
+invocations, short runs and parallel limits below three retain ordinary test
+selection instead of reusing scheduled results.
+Fixture globals stay inside their isolated children. The shared three-lane bound
 overlaps filesystem waits without changing any case or durability operation.
 See [Go's rules for parallel tests](https://go.dev/blog/subtests).
 Each covered group writes its test and reader counters to separate private
 directories, avoiding concurrent metadata replacement on Windows. After the
 group succeeds, the running toolchain's offline `go tool covdata merge` combines
-each executable's counters. Serialized exclusive publication retains every
+each executable's counters in that group's private outputs. Only after serial
+fixtures finish do the roots publish those counters into the parent's directories.
+Serialized exclusive publication retains every
 merged counter; identical metadata is reused without replacement, and conflicts
 or missing counters fail the test. Stock merges use PID zero and wall-clock
 timestamps, which can give separate groups the same filename on Windows. Before

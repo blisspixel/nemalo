@@ -92,7 +92,7 @@ func TestRARTreePreviewRequiresNewProofAndExactLeaves(t *testing.T) {
 }
 
 func TestRARTreeRecoveryAcrossEveryOuterSetLayout(t *testing.T) {
-	versions, layouts := []int{4, 5}, []string{"zip_chunks", "zip_segments", "7z_chunks"}
+	versions, layouts := rarTreeRecoveryVersions, rarTreeRecoveryLayouts
 	selected := os.Getenv(rarRecoveryCaseEnv)
 	// A filtered invocation keeps Go's exact subtest selection. Full suites run
 	// independent groups in isolated processes, since fixtures change globals.
