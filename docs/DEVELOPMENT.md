@@ -920,12 +920,13 @@ inherited `GORACE` options, avoiding a one-second sleep per invocation. They rem
 race-instrumented with failure reporting; the running parent keeps its startup
 settings. See [Go's race options](https://go.dev/doc/articles/race_detector#Options).
 
-Outside coverage runs, library recovery tests build the shared synthetic reader
-as a small Go executable once per test process, rather than restarting the full
-library test executable for every reader call. The build uses the running
-toolchain offline and matches the parent's race instrumentation, which a test
-checks from the executable's build information. Coverage runs keep Go test's own
-instrumented executable and counter identity; the test checks this selection too.
+Library recovery tests build the shared synthetic reader as a small Go executable
+once in the parent suite. Isolated recovery children reuse that parent-owned
+file after checking its hash, handler identity, toolchain and instrumentation.
+The lazy offline build matches the parent's race and coverage instrumentation;
+a test verifies the executable's build information and rejects a different hash.
+This avoids repeatedly starting the full library test executable as the reader
+and rebuilding the small reader in every isolated group.
 Real child processes, production durability operations, every recovery case and
 the default test timeout remain in place. Other packages may continue to use
 their test executable for the same handler.
@@ -938,13 +939,18 @@ tests finish before these roots run, and fixtures/global changes stay inside
 the isolated children. The shared three-process limit spans every matrix and
 overlaps filesystem waits without changing any case or durability operation.
 See [Go's rules for parallel tests](https://go.dev/blog/subtests).
-Each covered group and its synthetic reader descendants write to a private
-counter directory, avoiding concurrent metadata replacement on Windows. After
-the group succeeds, the running toolchain's offline `go tool covdata merge`
-combines its counters. Serialized exclusive publication retains every merged
-counter in Go test's directory; identical metadata is reused without replacement,
-and conflicts or missing counters fail the test. The parent retains its final
-text profile. Race instrumentation, every case/assertion and real
+Each covered group writes its test and reader counters to separate private
+directories, avoiding concurrent metadata replacement on Windows. After the
+group succeeds, the running toolchain's offline `go tool covdata merge` combines
+each executable's counters. Serialized exclusive publication retains every
+merged counter; identical metadata is reused without replacement, and conflicts
+or missing counters fail the test. Go test selects its own executable's metadata
+when reporting, so the parent's TestMain also uses stock `covdata textfmt` to
+append the reader's records to Go's completed text profile. Original records,
+including uncovered code, remain intact. Raw counters from both executables
+remain available for full-suite coverage comparisons. See
+[Go's integration coverage tools](https://go.dev/doc/build-cover).
+Race instrumentation, every case/assertion and real
 durability operations stay enabled. Children have a four-minute timeout inside
 the parent's unchanged ten-minute package timeout. An unknown/unexecuted group
 or a failed child fails the parent. Explicit `-run` filters keep their original
