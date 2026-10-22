@@ -157,6 +157,9 @@ func runRARRecoveryProcesses(t *testing.T, versions []int, layouts []string) {
 
 func runRecoveryProcesses(t *testing.T, selections []string) {
 	t.Helper()
+	// Queue the roots together; parallel children alone still make each
+	// sequential root wait before the next recovery matrix can start.
+	t.Parallel()
 	root := t.Name()
 	for _, selected := range selections {
 		t.Run(selected, func(t *testing.T) {

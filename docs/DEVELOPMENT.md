@@ -930,9 +930,14 @@ Real child processes, production durability operations, every recovery case and
 the default test timeout remain in place. Other packages may continue to use
 their test executable for the same handler.
 
-Full library suites run independent RAR tree and RAR5 set recovery groups in at
-most three isolated copies of that same compiled test executable across both
-matrices. This isolates fixture environment/global changes and overlaps filesystem waits.
+Full library suites run independent RAR tree and RAR4/RAR5 set recovery groups in
+at most three isolated copies of that same compiled test executable across the
+matrices. Their top-level roots are parallel too: parallel children alone leave
+each sequential root waiting before the next matrix starts. All ordinary serial
+tests finish before these roots run, and fixtures/global changes stay inside
+the isolated children. The shared three-process limit spans every matrix and
+overlaps filesystem waits without changing any case or durability operation.
+See [Go's rules for parallel tests](https://go.dev/blog/subtests).
 Each covered group and its synthetic reader descendants write to a private
 counter directory, avoiding concurrent metadata replacement on Windows. After
 the group succeeds, the running toolchain's offline `go tool covdata merge`
