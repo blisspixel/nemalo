@@ -268,8 +268,8 @@ raw restore never replaces a target. RAR4, old-named and nested sets stay.
 Require actual preceding-binary retention/raw-restore evidence and the separate
 full local/native/exact-hosted gate; stage 2 remains unfinished.
 Decision 0075 adds read-only modern root RAR4 set coverage with all three explicit
-Coverage, RAR4Coverage and RAR4SetCoverage flags. Application cleanup leaves the
-new flag false and still requires root-set version 5. Each version adapts only
+Coverage, RAR4Coverage and RAR4SetCoverage flags. That read-only increment left the
+application flag false and required root-set version 5. Each version adapts only
 its own measured physical facts into the shared format-neutral continuation and
 table matcher; neither may borrow the other's opt-in or proof. Keep standalone
 RAR4 volume refusal, mandatory physical end ordinals/first roles, zero reserved
@@ -279,6 +279,16 @@ Share all proof/read/source-copy/process/output budgets, including failed work;
 direct work budgets never enable traversal. RARSetVersion=4 stays internal and
 separate from standalone facts and cleanup permission. Full read-only acceptance
 and issue readback must precede a distinct writer decision and its own full gate.
+Decision 0076 permits the separately bound modern root RAR4 set writer after
+that accepted prerequisite. Select rar4-set/1 only from measured root-set version
+4; version 5 keeps rar5-set/1. Reuse the same exact-parent part shape, held leaves,
+source-hash budgets, fresh whole-set purge and immutable partial recovery.
+Persisted shape checking alone cannot infer physical format; fresh purge must
+reproduce the recorded proof and partial recovery validates every known binding
+before independent removal. Older standalone/tree IDs never authorize RAR outer
+sets. Keep unsupported metadata, old names and nested sets preserved. Require
+actual accepted preceding-binary retention/raw restore and a separate full gate;
+unknown authority may retain bytes and complete with zero purged, without error.
 Historical RAR-named archive entries and old continuations without a supported
 proof cannot resume cleanup or purge, including pending purge intents. Preserve
 their recorded bytes for restore; member holdings alone confer no permission.

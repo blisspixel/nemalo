@@ -280,6 +280,10 @@ func testRARTreePurgeBindings(t *testing.T, fixture func(*testing.T) streamFixtu
 				p.ArchiveGroups[0].Proof = zipStreamProof
 			case "zip_segments":
 				p.ArchiveGroups[0].Proof = zipSegmentsProof
+			case "rar4_set":
+				p.ArchiveGroups[0].Proof = rar4SetProof
+			case "rar5_set":
+				p.ArchiveGroups[0].Proof = rar5SetProof
 			case "leaf_digest":
 				p.ArchiveGroups[0].LeafDigest = ""
 			case "index":
@@ -356,6 +360,10 @@ func testRARTreeIndependentShapes(t *testing.T, fixture func(*testing.T) streamF
 						e.ArchiveProof = archiveRARTreeProof
 					case "rar5_standalone_second":
 						e.ArchiveProof = rar5FramesProof
+					case "rar4_set_second":
+						e.ArchiveProof = rar4SetProof
+					case "rar5_set_second":
+						e.ArchiveProof = rar5SetProof
 					case "missing_leaves_second":
 						e.ArchiveLeaves = nil
 					}

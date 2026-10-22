@@ -25,6 +25,7 @@ type streamFixture struct {
 	names        []string
 	parts        [][]byte
 	archiveProof string
+	archives     []stagingtest.Archive
 }
 
 func streamZIPBytes(t *testing.T, book []byte, notes bool, comment string) []byte {
@@ -183,7 +184,7 @@ func testArchiveCleanupRefusals(t *testing.T, fixture zipFixtureFactory, kinds [
 				if f.proof() == zipSegmentsProof {
 					alias = "books/SEGMENTS.Z001"
 				}
-				if f.proof() == rar5SetProof {
+				if f.proof() == rar5SetProof || f.proof() == rar4SetProof {
 					alias = "books/SET.part0001.RAR"
 				}
 				if f.proof() == archiveTreeProof || f.proof() == archiveRARTreeProof {

@@ -266,7 +266,7 @@ func archivePermissions(m cleanupManifest, pm purgeManifest) (map[int]bool, erro
 			return nil, bad
 		}
 		switch group.Proof {
-		case zipStreamProof, zipSegmentsProof, archiveTreeProof, archiveRARTreeProof, rar5FramesProof, rar4FramesProof, rar5SetProof:
+		case zipStreamProof, zipSegmentsProof, archiveTreeProof, archiveRARTreeProof, rar5FramesProof, rar4FramesProof, rar5SetProof, rar4SetProof:
 			if group.Proof != e.ArchiveProof && (leafBoundArchiveProof(e.ArchiveProof) || leafBoundArchiveProof(group.Proof)) {
 				return nil, bad
 			}

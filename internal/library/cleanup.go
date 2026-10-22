@@ -988,6 +988,7 @@ func planArchive(ctx context.Context, src *os.Root, rel string, volumes []string
 	limits.RAR4Coverage = true
 	limits.NestedRARCoverage = true
 	limits.RAR5SetCoverage = rarSet
+	limits.RAR4SetCoverage = rarSet
 	limits.ExpectedSources = make(map[string]staging.SnapshotIdentity, len(before))
 	limits.SourceHashRemaining = hashRemaining
 	for i, f := range before {
@@ -1022,11 +1023,15 @@ func planArchive(ctx context.Context, src *os.Root, rel string, volumes []string
 	}
 	rarProof := ""
 	if rarSet {
-		if x.RARSetVersion != 5 {
+		switch x.RARSetVersion {
+		case 4:
+			rarProof = rar4SetProof
+		case 5:
+			rarProof = rar5SetProof
+		default:
 			e.Reason = "the checked outer RAR set has no supported cleanup proof; preserved"
 			return nil
 		}
-		rarProof = rar5SetProof
 	} else if rootRAR {
 		switch x.RARVersion {
 		case 4:

@@ -572,7 +572,7 @@ the whole held-set check and binds all indices and the canonical leaf digest.
 Immutable partial recovery checks remaining identities/holdings without joining
 missing parts or adopting replacements. Unknown authority retains bytes; known
 malformed bindings stop before independent removals. Restore returns raw originals
-without a reader or replacement. RAR4, old-named and nested volume sets remain
+without a reader or replacement. Old-named and nested volume sets remain
 preserved. This requires its own acceptance and preceding-binary checks
 ([decision 0074](decisions/0074-modern-rar5-set-cleanup.md)).
 
@@ -586,10 +586,20 @@ exact-table matcher, preserving RAR5 conditions without converting RAR4 into
 RAR5 authority. The same private per-volume and assembled tables, source-copy
 and shared work limits, output checks and direct-call traversal boundary apply.
 Root-set version 4 is internal evidence distinct from standalone facts. The
-application leaves the new flag false and still requires version 5 for its RAR5
-set writer. This adds no RAR4 set cleanup right, public option or decoder; old
+read-only increment left the new application flag false and required version 5
+for its RAR5 set writer. It added no RAR4 cleanup right, public option or decoder; old
 names and nested sets remain outside the contract
 ([decision 0075](decisions/0075-read-only-rar4-set-coverage.md)).
+
+Application cleanup now requests that RAR4 capability under distinct `rar4-set/1`,
+selected only by measured root version 4; version 5 retains `rar5-set/1`. Both reuse
+the exact-parent modern set shape, verified held leaves, whole-set fresh purge
+and immutable partial recovery. Shared persisted shape checks do not infer
+physical format: fresh purge must reproduce the exact recorded proof, and partial
+recovery binds the original proof, indices and leaf digest before any removal.
+No existing standalone/tree proof expands, and old-named/nested volume sets stay
+preserved. Separate full acceptance and actual preceding-binary retention/raw
+restore remain required ([decision 0076](decisions/0076-modern-rar4-set-cleanup.md)).
 
 Private staging and a subprocess are not sandboxes. Go's
 [root-scoped filesystem APIs](https://go.dev/blog/osroot) are useful building blocks;

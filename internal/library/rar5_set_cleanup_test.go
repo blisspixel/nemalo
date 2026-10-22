@@ -18,13 +18,18 @@ import (
 )
 
 func TestRAR5SetRecovery(t *testing.T) {
+	testRARSetRecovery(t, newRAR5SetCleanupFixture)
+}
+
+func testRARSetRecovery(t *testing.T, fixture zipFixtureFactory) {
+	t.Helper()
 	selected := os.Getenv(rarRecoveryCaseEnv)
 	if selected == "" && flag.Lookup("test.run").Value.String() == "" {
 		runRecoveryProcesses(t, []string{"direct"})
 		return
 	}
 	if selected != "" && selected != "direct" {
-		t.Fatalf("unknown RAR5 set recovery case %q", selected)
+		t.Fatalf("unknown RAR set recovery case %q", selected)
 	}
 	t.Run("direct", func(t *testing.T) {
 		for _, s := range []struct {
@@ -41,27 +46,36 @@ func TestRAR5SetRecovery(t *testing.T) {
 			{"purge_retry", testZIPPurgeBeforeIntentRechecksAndResumesKeepChanges},
 			{"refusals", testZIPCleanupRefusesUnaccountedSources},
 		} {
-			t.Run(s.name, func(t *testing.T) { s.run(t, newRAR5SetCleanupFixture) })
+			t.Run(s.name, func(t *testing.T) { s.run(t, fixture) })
 		}
 	})
 }
 
 func TestRAR5SetPartCountsAndNestedAuthority(t *testing.T) {
+	testRARSetPartCountsAndNestedAuthority(t, 5)
+}
+
+func testRARSetPartCountsAndNestedAuthority(t *testing.T, version int) {
+	t.Helper()
+	fixture, withChild := newRAR5SetCleanupFixture, newRAR5SetCleanupWithChild
+	if version == 4 {
+		fixture, withChild = newRAR4SetCleanupFixture, newRAR4SetCleanupWithChild
+	}
 	for _, count := range []int{2, 3, 7} {
 		for _, child := range []int{0, 4, 5} {
 			t.Run(fmt.Sprintf("%d/child_%d", count, child), func(t *testing.T) {
 				var f streamFixture
 				if child == 0 {
-					f = newRAR5SetCleanupFixture(t, count, nil)
+					f = fixture(t, count, nil)
 				} else {
-					f = newRAR5SetCleanupWithChild(t, count, "inside.rar", func(book []byte) ([]byte, []stagingtest.Archive) {
+					f = withChild(t, count, "inside.rar", func(book []byte) ([]byte, []stagingtest.Archive) {
 						body, profile := cleanupTreeRAR(child, nestedFile{"book.epub", book})
 						return body, []stagingtest.Archive{profile}
 					})
 				}
 				before := snapshotTree(t, f.folder)
 				p, err := Cleanup(context.Background(), CleanupRequest{Library: f.root, Folder: f.folder})
-				if err != nil || p.Move != 1 || len(p.Entries) != 1 || p.Entries[0].ArchiveProof != rar5SetProof || !supportedArchiveProof(p.Entries[0]) || !reflect.DeepEqual(before, snapshotTree(t, f.folder)) {
+				if err != nil || p.Move != 1 || len(p.Entries) != 1 || p.Entries[0].ArchiveProof != f.proof() || !supportedArchiveProof(p.Entries[0]) || !reflect.DeepEqual(before, snapshotTree(t, f.folder)) {
 					t.Fatal(p, err)
 				}
 				chain := []string{"book.epub"}
@@ -73,7 +87,7 @@ func TestRAR5SetPartCountsAndNestedAuthority(t *testing.T) {
 				}
 				c := f.cleanup(t)
 				q, err := Purge(context.Background(), PurgeRequest{Library: f.root, CleanupID: c.CleanupID})
-				if err != nil || q.Purge != count || len(q.ArchiveGroups) != 1 || q.ArchiveGroups[0].Proof != rar5SetProof || q.ArchiveGroups[0].LeafDigest != archiveLeafDigest(p.Entries[0]) {
+				if err != nil || q.Purge != count || len(q.ArchiveGroups) != 1 || q.ArchiveGroups[0].Proof != f.proof() || q.ArchiveGroups[0].LeafDigest != archiveLeafDigest(p.Entries[0]) {
 					t.Fatal(q, err)
 				}
 				if r, err := Restore(context.Background(), RestoreRequest{Library: f.root, CleanupID: c.CleanupID, Apply: true}); err != nil || r.Restore != count {
@@ -101,11 +115,11 @@ func TestRAR5SetCleanupResumeRejectsUnsupportedBindings(t *testing.T) {
 }
 
 func TestRAR5SetPendingPurgeRequiresExactAuthority(t *testing.T) {
-	testRARTreePurgeBindings(t, func(t *testing.T) streamFixture { return newRAR5SetCleanupFixture(t, 3, nil) }, "newer_tree", "rar4_standalone", "zip_stream", "zip_segments")
+	testRARTreePurgeBindings(t, func(t *testing.T) streamFixture { return newRAR5SetCleanupFixture(t, 3, nil) }, "newer_tree", "rar4_standalone", "zip_stream", "zip_segments", "rar4_set")
 }
 
 func TestRAR5SetIndependentKnownShapesBeforeAnyRemoval(t *testing.T) {
-	testRARTreeIndependentShapes(t, func(t *testing.T) streamFixture { return newRAR5SetCleanupFixture(t, 3, nil) }, "newer_tree_second", "rar5_standalone_second")
+	testRARTreeIndependentShapes(t, func(t *testing.T) streamFixture { return newRAR5SetCleanupFixture(t, 3, nil) }, "newer_tree_second", "rar5_standalone_second", "rar4_set_second")
 }
 
 func TestRAR5SetPartialRestorePreservesEveryOriginalAndReplacement(t *testing.T) {
@@ -113,10 +127,15 @@ func TestRAR5SetPartialRestorePreservesEveryOriginalAndReplacement(t *testing.T)
 }
 
 func TestRAR5SetRestorePublicationAndJournalInterruptions(t *testing.T) {
+	testRARSetRestorePublicationAndJournalInterruptions(t, newRAR5SetCleanupFixture)
+}
+
+func testRARSetRestorePublicationAndJournalInterruptions(t *testing.T, fixture zipFixtureFactory) {
+	t.Helper()
 	for _, stage := range []string{"linked", "restored"} {
 		for stop := 1; stop <= 3; stop++ {
 			t.Run(fmt.Sprintf("%s/%d", stage, stop), func(t *testing.T) {
-				f := newRAR5SetCleanupFixture(t, 3, nil)
+				f := fixture(t, 3, nil)
 				c := f.cleanup(t)
 				crash, calls := errors.New("interrupted set restore"), 0
 				cleanupHook = func(s string) error {
@@ -152,15 +171,29 @@ func TestRAR5SetRestorePublicationAndJournalInterruptions(t *testing.T) {
 }
 
 func TestRAR5SetUnlistedPhysicalRecordsPreserveEveryVolume(t *testing.T) {
+	testRARSetUnlistedPhysicalRecordsPreserveEveryVolume(t, 5)
+}
+
+func testRARSetUnlistedPhysicalRecordsPreserveEveryVolume(t *testing.T, version int) {
+	t.Helper()
+	fixture := newRAR5SetCleanupWithChild
+	if version == 4 {
+		fixture = newRAR4SetCleanupWithChild
+	}
 	for _, kind := range []string{"service", "tail", "header_crc"} {
 		for index := range 3 {
 			t.Run(fmt.Sprintf("%s/%d", kind, index), func(t *testing.T) {
-				f := newRAR5SetCleanupWithChild(t, 3, "book.epub", nil, func(i int, b []byte) []byte {
+				f := fixture(t, 3, "book.epub", nil, func(i int, b []byte) []byte {
 					if i != index {
 						return b
 					}
 					switch kind {
 					case "service":
+						if version == 4 {
+							at := len(b) - 9
+							out := append(bytes.Clone(b[:at]), cleanupRAR4Block(0x7a, 0x8000, make([]byte, 25), []byte("keep"))...)
+							return append(out, b[at:]...)
+						}
 						end := uint64(0)
 						if i < 2 {
 							end = 1
@@ -206,7 +239,12 @@ func TestRAR5SetUnlistedPhysicalRecordsPreserveEveryVolume(t *testing.T) {
 }
 
 func TestRAR5SetOldNamesCannotBorrowModernAuthority(t *testing.T) {
-	f := newRAR5SetCleanupFixture(t, 3, nil)
+	testRARSetOldNamesCannotBorrowModernAuthority(t, newRAR5SetCleanupFixture)
+}
+
+func testRARSetOldNamesCannotBorrowModernAuthority(t *testing.T, fixture zipFixtureFactory) {
+	t.Helper()
+	f := fixture(t, 3, nil)
 	for i, name := range f.names {
 		old := "books/old.rar"
 		if i > 0 {

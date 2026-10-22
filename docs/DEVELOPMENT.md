@@ -541,7 +541,7 @@ proof to the outer set. Neither `archive-tree/1` nor `archive-tree/2` accepts RA
 Fresh purge rechecks the complete held set and exact leaves; durable partial
 recovery binds the original proof, file indices and leaf digest without joining
 missing parts or adopting replacements. Raw restore needs no reader and replaces
-nothing. RAR4, old-named, nested sets and unsupported material stay preserved.
+nothing. Old-named, nested sets and unsupported material stay preserved.
 See [decision 0074](decisions/0074-modern-rar5-set-cleanup.md). Source implementation
 is separate from full acceptance, tracked in issue 57, and from a release.
 
@@ -554,10 +554,22 @@ Both versions share a format-neutral continuation/table matcher with separate
 declaration fingerprints and explicit capabilities. Standalone facts and earlier
 proof IDs keep their meanings. Source-copy and all work limits span every part
 and failed attempt; direct covered calls still do not enable traversal. The
-JSON-omitted root-set version 4 confers no cleanup permission: the application
-keeps this flag false and requires version 5 for its existing RAR5 set writer.
+JSON-omitted root-set version is separate from cleanup permission. That read-only
+increment kept the application flag false and required version 5 for its RAR5 writer.
 See [decision 0075](decisions/0075-read-only-rar4-set-coverage.md), with acceptance
 tracked in issue 57. This does not complete stage 2 or authorize a release.
+
+Application cleanup now also requests RAR4 set coverage for the same bounded
+modern root layouts and selects distinct `rar4-set/1` from measured version 4.
+Version 5 retains `rar5-set/1`; no filename or child selects outer authority.
+Both require complete physical/reader coverage, every verified held leaf and
+unchanged original hashes. Persisted set shapes share validation, while fresh
+purge compares the measured format and exact original proof. Immutable partial
+recovery binds original evidence and current remaining bytes/holdings without
+reconstructing a partly purged set. Unsupported metadata, old names and nested
+volume sets stay preserved. See [decision 0076](decisions/0076-modern-rar4-set-cleanup.md).
+Full local/native/hosted acceptance and actual preceding-executable retention and
+raw restore are tracked separately in issue 57; no release is included.
 
 Split ZIP byte chunks (`NAME.zip.001`, `.002`, ...; three or four numeric digits)
 are joined privately, checked as exactly one ordinary ZIP through installed

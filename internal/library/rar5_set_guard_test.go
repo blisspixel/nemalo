@@ -108,12 +108,18 @@ func newRAR5SetCleanupWithChild(t *testing.T, count int, name string, build func
 		a.Volumes = append(a.Volumes, stagingtest.Volume{Name: fmt.Sprintf("archive.part%04d.rar", i+1), Body: b, Header: header, Listing: listing, Code: 2})
 	}
 	a.Header = fmt.Sprintf("Type = Rar5\nPhysical Size = %d\nTotal Physical Size = %d\nMultivolume = +\nVolume Index = 0\nVolumes = %d\n", first, total, count)
-	stagingtest.InstallMany(t, append(children, a)...)
+	f.archives = append(children, a)
+	stagingtest.InstallMany(t, f.archives...)
 	return f
 }
 
 func TestRAR5SetCoverageRequiresDistinctCleanupAuthority(t *testing.T) {
-	f := newRAR5SetCleanupFixture(t, 3, nil)
+	testRARSetCoverageRequiresDistinctCleanupAuthority(t, 5, newRAR5SetCleanupFixture)
+}
+
+func testRARSetCoverageRequiresDistinctCleanupAuthority(t *testing.T, version int, fixture zipFixtureFactory) {
+	t.Helper()
+	f := fixture(t, 3, nil)
 	var book []byte
 	for _, b := range snapshotTree(t, filepath.Join(f.root, "assets")) {
 		book = b
@@ -133,9 +139,11 @@ func TestRAR5SetCoverageRequiresDistinctCleanupAuthority(t *testing.T) {
 	}
 	defer dst.Close()
 	l := staging.Defaults()
-	l.Coverage, l.RAR5SetCoverage = true, true
+	l.Coverage = true
+	l.RAR5SetCoverage = version == 5
+	l.RAR4Coverage, l.RAR4SetCoverage = version == 4, version == 4
 	x, err := staging.ExtractTree(context.Background(), src, names, dst, func(name string) bool { return name == "book.epub" }, l)
-	if err != nil || !x.Whole || !x.Complete || x.RARSetVersion != 5 || x.RARVersion != 0 || x.RARContainers != 0 {
+	if err != nil || !x.Whole || !x.Complete || x.RARSetVersion != version || x.RARVersion != 0 || x.RARContainers != 0 || len(x.Members) != 1 {
 		t.Fatal("read-only prerequisite failed", x, err)
 	}
 	if got, err := dst.ReadFile(x.Members[0].Staged); err != nil || !bytes.Equal(got, book) {
@@ -143,10 +151,10 @@ func TestRAR5SetCoverageRequiresDistinctCleanupAuthority(t *testing.T) {
 	}
 	before, held := snapshotTree(t, f.folder), snapshotTree(t, filepath.Join(f.root, "assets"))
 	p, err := Cleanup(context.Background(), CleanupRequest{Library: f.root, Folder: f.folder})
-	if err != nil || p.Move != 1 || len(p.Entries) != 1 || p.Entries[0].ArchiveProof != rar5SetProof || !supportedArchiveProof(p.Entries[0]) {
+	if err != nil || p.Move != 1 || len(p.Entries) != 1 || p.Entries[0].ArchiveProof != f.proof() || !supportedArchiveProof(p.Entries[0]) {
 		t.Fatal("set has no distinct complete authority", p, err)
 	}
-	for _, proof := range []string{archiveTreeProof, archiveRARTreeProof, rar4FramesProof, rar5FramesProof, zipStreamProof, zipSegmentsProof, "", "rar5-set/2"} {
+	for _, proof := range []string{archiveTreeProof, archiveRARTreeProof, rar4FramesProof, rar5FramesProof, zipStreamProof, zipSegmentsProof, "", fmt.Sprintf("rar%d-set/2", version)} {
 		e := p.Entries[0]
 		e.ArchiveProof = proof
 		if supportedArchiveProof(e) {

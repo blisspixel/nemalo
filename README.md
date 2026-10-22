@@ -107,10 +107,9 @@ published prereleases may lag:
   and rescan as durable jobs that outlive the connection.
 
 Cleanup supports bounded RAR4/RAR5 subsets in fully accounted trees whose book
-leaves are all held. Completely covered modern RAR5 sets qualify as one recoverable
-entry. Other RAR volume cleanup remains planned, along with a TUI view
-of jobs. Single-file import is not
-a full checked-library policy.
+leaves are all held. Completely covered modern RAR4/RAR5 sets qualify as one
+recoverable entry. Old-named and nested RAR volume cleanup remains planned, along
+with a TUI view of jobs. Single-file import is not a full checked-library policy.
 File checks report limited evidence, never a safety or completeness guarantee.
 See [current capabilities and limits](docs/DEVELOPMENT.md) and the [roadmap](ROADMAP.md).
 Native prerelease archives and checksums are on [GitHub Releases](https://github.com/blisspixel/nemalo/releases).

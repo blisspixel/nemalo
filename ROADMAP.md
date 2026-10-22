@@ -185,15 +185,21 @@ verified, not when code exists. No stage has a time estimate.
    Completely covered modern root RAR5 sets now have distinct `rar5-set/1`
    cleanup authority, one recoverable set entry, exact held leaves and whole-set
    fresh purge with immutable partial recovery. Existing proof IDs retain their
-   scopes. RAR4, old-named and nested sets remain preserved; stage 2 is unfinished.
+   scopes. Old-named and nested sets remain preserved; stage 2 is unfinished.
    Separate full acceptance remains tracked in issue 57
    ([decision 0074](docs/decisions/0074-modern-rar5-set-cleanup.md)).
    Modern root RAR4 sets now have separate internal read-only framing/table
    coverage with explicit opt-in. Physical ordinals, split roles, known metadata,
    shared work and complete logical selections are checked through the common
-   matcher. Application cleanup leaves this capability disabled; no existing
-   proof gains RAR4 set authority. Full acceptance remains tracked in issue 57
+   matcher. That read-only increment left application cleanup disabled and gave
+   no existing proof RAR4 set authority. Full acceptance is recorded in issue 57
    ([decision 0075](docs/decisions/0075-read-only-rar4-set-coverage.md)).
+   Completely covered modern root RAR4 sets now select distinct `rar4-set/1`
+   cleanup authority from measured format, with the same verified held-leaf,
+   whole-set fresh purge and immutable partial recovery protocol. RAR5 and older
+   proof meanings stay unchanged. Implementation is separate from full acceptance,
+   tracked in issue 57 ([decision 0076](docs/decisions/0076-modern-rar4-set-cleanup.md)).
+   Old-named and nested volume sets remain preserved; stage 2 remains unfinished.
 3. **Audio access** (milestone 8). M4B and M4A byte ranges and decoded timing in
    content access, bounded ranges usable by an external player, and output
    demonstrated with a real audiobook reader or server.
