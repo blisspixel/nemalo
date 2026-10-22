@@ -445,9 +445,6 @@ func TestRAR5NestedRootsRequireNewProofAndVolumesStay(t *testing.T) {
 				writeTree(t, f.folder, map[string][]byte{second: []byte("synthetic continuation")})
 				saved := staging.SevenZip
 				staging.SevenZip = func() (string, error) {
-					if kind == "old_set" {
-						t.Fatal("unsupported old RAR set reached reader")
-					}
 					// Naming a standalone RAR5 plus arbitrary bytes as parts
 					// cannot satisfy the new physical and reader set proof.
 					probes++
@@ -473,8 +470,8 @@ func TestRAR5NestedRootsRequireNewProofAndVolumesStay(t *testing.T) {
 			if err != nil || p.Move != wantMove || p.Keep != len(before)-wantMove || !reflect.DeepEqual(before, snapshotTree(t, f.folder)) {
 				t.Fatal(p, err)
 			}
-			if kind == "modern_set" && probes == 0 {
-				t.Fatal("malformed modern set did not exercise reader refusal")
+			if (kind == "modern_set" || kind == "old_set") && probes == 0 {
+				t.Fatal("malformed set did not exercise reader refusal")
 			}
 			if kind == "nested_root" && p.Entries[0].ArchiveProof != "archive-tree/2" {
 				t.Fatal("nested root borrowed standalone authority", p)

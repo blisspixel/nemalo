@@ -167,11 +167,13 @@ families, unlinked boundaries, and unknown ordinals; never infer set identity
 from names/counts alone. Decision 0077 permits only exact generated old-name
 fallbacks for isolated identity probes; continuity and a clean assembled listing
 still precede extraction. These diagnostics confer no coverage or cleanup authority.
-Decision 0078 adds read-only root old-name set coverage only with
+Decision 0078 adds root old-name set coverage only with
 `OldRARSetCoverage`, `Coverage` and the selected format's set capabilities.
-Every application caller leaves the old-name flag false. Its JSON-omitted
+Its accepted read-only increment kept every application flag false. Its JSON-omitted
 `OldRARSetVersion` cannot supply modern set, standalone, tree or cleanup proof.
-Keep public modern RAR4 framing strict and preserve nested volume sets.
+Decision 0079 selects distinct old-name cleanup authority only under the complete
+root-set policy below. Keep public modern RAR4 framing strict and preserve nested
+volume sets.
 RAR volume cleanup requires the separate bounded proof
 below; unsupported sets stay preserved. Split ZIPs are decision
 0057: byte chunks join privately, true segments require consistent reader
@@ -294,9 +296,21 @@ source-hash budgets, fresh whole-set purge and immutable partial recovery.
 Persisted shape checking alone cannot infer physical format; fresh purge must
 reproduce the recorded proof and partial recovery validates every known binding
 before independent removal. Older standalone/tree IDs never authorize RAR outer
-sets. Keep unsupported metadata, old names and nested sets preserved. Require
+sets. These modern proofs exclude old names and nested sets. Preserve unsupported
+metadata. Require
 actual accepted preceding-binary retention/raw restore and a separate full gate;
 unknown authority may retain bytes and complete with zero purged, without error.
+Decision 0079 permits completely covered old-name root RAR4/RAR5 sets after
+0078's all-six hosted acceptance and exact issue readback at 1e927a2. Validate
+the closed 2..901-name family separately, request the old capability only there,
+and select rar4-old-set/1 or rar5-old-set/1 from measured OldRARSetVersion=4/5
+with modern set facts zero. Keep every previous proof's layout scope unchanged.
+Reuse exact held leaves, expected/final source hashes, shared budgets, whole-set
+fresh purge and immutable partial recovery. A pending unknown old layout may
+cause an earlier executable to refuse without closing the intent: verify retained
+bytes, use canonical purge --stop, then test no-reader raw restore. Current
+recovery uses separate snapshots. Keep nested volume sets and unsupported material
+preserved; full writer acceptance and stage 2 remain separate.
 Historical RAR-named archive entries and old continuations without a supported
 proof cannot resume cleanup or purge, including pending purge intents. Preserve
 their recorded bytes for restore; member holdings alone confer no permission.

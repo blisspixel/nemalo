@@ -33,6 +33,8 @@ var fixtureSchedule = []struct {
 	{"TestSplitZIPCleanupAndPurgeRecovery", []string{"stream", "segments"}},
 	{"TestRAR4SetPartCountsAndNestedAuthority", []string{""}},
 	{"TestRAR5SetPartCountsAndNestedAuthority", []string{""}},
+	{"TestOldRAR4SetPartCountsAndNestedAuthority", []string{""}},
+	{"TestOldRAR5SetPartCountsAndNestedAuthority", []string{""}},
 }
 
 func fixtureGroups(root string) []string {
@@ -155,7 +157,7 @@ func startRecoverySchedule() (*recoverySchedule, error) {
 		ctx, cancel = context.WithCancel(context.Background())
 	}
 	s := &recoverySchedule{cancel: cancel, workspace: workspace, jobs: make(map[recoveryCase]*scheduledRecoveryCase), started: time.Now()}
-	cases := []recoveryCase{{"TestRAR4SetRecovery", "direct"}, {"TestRAR5SetRecovery", "direct"}}
+	cases := []recoveryCase{{"TestRAR4SetRecovery", "direct"}, {"TestRAR5SetRecovery", "direct"}, {"TestOldRAR4SetRecovery", "direct"}, {"TestOldRAR5SetRecovery", "direct"}}
 	for _, version := range rarTreeRecoveryVersions {
 		for _, layout := range rarTreeRecoveryLayouts {
 			cases = append(cases, recoveryCase{"TestRARTreeRecoveryAcrossEveryOuterSetLayout", fmt.Sprintf("%d/%s", version, layout)})

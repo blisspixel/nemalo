@@ -110,11 +110,18 @@ verified, not when code exists. No stage has a time estimate.
    across later starting positions and letter rollover, without adding cleanup
    authority ([decision 0077](docs/decisions/0077-old-rar-isolated-probe-names.md)).
    Read-only root old-name RAR4/RAR5 coverage is implemented under a separate
-   internal opt-in and measured old-set field. All application callers leave it
-   disabled; old-name cleanup and nested-volume work remain unfinished. Native
+   internal opt-in and measured old-set field. That read-only increment kept
+   application cleanup disabled. Native
    stored and compressed reference checks passed, with full hosted acceptance
    tracked in issue 57 before any old-name writer decision
    ([decision 0078](docs/decisions/0078-read-only-old-name-rar-set-coverage.md)).
+   Completely covered old-name root sets now use separate `rar4-old-set/1` and
+   `rar5-old-set/1`, with exact held leaves, expected/final source hashes, fresh
+   whole-set purge and immutable partial recovery. Earlier proofs retain their
+   scopes. Native predecessor retention/raw restore and separate current recovery
+   checks passed; full writer acceptance is tracked in issue 57. Nested volume
+   work keeps stage 2 unfinished
+   ([decision 0079](docs/decisions/0079-old-name-rar-set-cleanup.md)).
    Split ZIP intake now handles byte chunks and true disk segments through
    checked private snapshots
    ([decision 0057](docs/decisions/0057-split-zip-intake.md)).
@@ -194,7 +201,7 @@ verified, not when code exists. No stage has a time estimate.
    Completely covered modern root RAR5 sets now have distinct `rar5-set/1`
    cleanup authority, one recoverable set entry, exact held leaves and whole-set
    fresh purge with immutable partial recovery. Existing proof IDs retain their
-   scopes. Old-named and nested sets remain preserved; stage 2 is unfinished.
+   scopes. That modern proof excludes old-name and nested sets; stage 2 is unfinished.
    Separate full acceptance remains tracked in issue 57
    ([decision 0074](docs/decisions/0074-modern-rar5-set-cleanup.md)).
    Modern root RAR4 sets now have separate internal read-only framing/table
@@ -208,7 +215,7 @@ verified, not when code exists. No stage has a time estimate.
    whole-set fresh purge and immutable partial recovery protocol. RAR5 and older
    proof meanings stay unchanged. Implementation is separate from full acceptance,
    tracked in issue 57 ([decision 0076](docs/decisions/0076-modern-rar4-set-cleanup.md)).
-   Old-named and nested volume sets remain preserved; stage 2 remains unfinished.
+   Nested volume sets remain preserved; stage 2 remains unfinished.
 3. **Audio access** (milestone 8). M4B and M4A byte ranges and decoded timing in
    content access, bounded ranges usable by an external player, and output
    demonstrated with a real audiobook reader or server.
@@ -575,10 +582,14 @@ proof excludes RAR4, sets and nested RAR layouts
 Standalone RAR4 has its separate `rar4-frames/1` proof, and covered trees with
 standalone RAR nodes use `archive-tree/2`
 ([decision 0070](docs/decisions/0070-standalone-rar4-cleanup.md),
-[decision 0072](docs/decisions/0072-nested-rar-cleanup.md)). Modern root RAR5 sets
-now use their separate `rar5-set/1` contract, while RAR4, old-named and nested
-sets stay preserved
-([decision 0074](docs/decisions/0074-modern-rar5-set-cleanup.md)).
+[decision 0072](docs/decisions/0072-nested-rar-cleanup.md)). Modern root RAR4/RAR5
+sets use distinct `rar4-set/1` and `rar5-set/1` contracts
+([decision 0076](docs/decisions/0076-modern-rar4-set-cleanup.md)). Completely
+covered old-name root sets use separate `rar4-old-set/1` and `rar5-old-set/1`
+with the same whole-set preservation and recovery protocol
+([decision 0079](docs/decisions/0079-old-name-rar-set-cleanup.md)). Nested volume
+sets and every unsupported or uncertain source remain preserved. Full writer
+acceptance is tracked in issue 57; stage 2 remains unfinished.
 Disk-full and scanner-failure faults are injected in tests: a full disk
 during an import copy, a journal line, a cleanup copy, and an export, and a
 scanner that is unavailable, incomplete, failing, or timing out. Each leaves

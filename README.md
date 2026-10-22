@@ -26,7 +26,7 @@ No telemetry or required AI service.
   and MCP services, with coverage gaps reported.
 
 Published prereleases may lag the source tree. Checks provide limited evidence,
-never a safety or completeness guarantee. Old-named and nested RAR volume cleanup,
+never a safety or completeness guarantee. Nested RAR volume cleanup,
 M4B/M4A content ranges, cited evidence and some interface work remain planned.
 See [capabilities and limits](docs/DEVELOPMENT.md), the [roadmap](ROADMAP.md), and
 [published releases](https://github.com/blisspixel/nemalo/releases).

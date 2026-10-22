@@ -119,6 +119,32 @@ func archiveSetParts(e CleanupEntry, extension string) ([]string, bool) {
 	return parts, true
 }
 
+// Old names have their own closed shape. Recognizing this layout for generic
+// group retention must never expand a modern or standalone proof's scope.
+func oldRARSetParts(e CleanupEntry) ([]string, bool) {
+	if e.Kind != "archive" || len(e.Files) < 2 || len(e.Files) > 901 || e.Path != e.Files[0].Path || !strings.EqualFold(path.Ext(e.Path), ".rar") {
+		return nil, false
+	}
+	set, _, ok := staging.OldRARVolumeOf(e.Files[1].Path)
+	if !ok || !sameArchiveFamily(set, e.Path) {
+		return nil, false
+	}
+	var total int64
+	parts := make([]string, len(e.Files))
+	for i, f := range e.Files {
+		other, ordinal, ok := staging.OldRARVolumeOf(f.Path)
+		if i == 0 {
+			other, ordinal, ok = f.Path, 1, true
+		}
+		if !ok || ordinal != i+1 || !sameArchiveFamily(other, set) || path.Dir(f.Path) != path.Dir(e.Path) || !validRelative(f.Path) || !validHash(f.SHA256) || f.Bytes < 1 || f.Bytes > 256<<20 || total > (4<<30)-f.Bytes {
+			return nil, false
+		}
+		total += f.Bytes
+		parts[i] = path.Base(f.Path)
+	}
+	return parts, true
+}
+
 // Fresh authorization requires the complete set. Later partial recovery uses
 // only the immutable, supported proof bound into its already durable intent.
 func planArchivePurge(ctx context.Context, store *os.Root, m cleanupManifest, lines []Holding, files []PurgeFile, verified map[string]bool) ([]PurgeArchiveGroup, error) {
@@ -266,7 +292,7 @@ func archivePermissions(m cleanupManifest, pm purgeManifest) (map[int]bool, erro
 			return nil, bad
 		}
 		switch group.Proof {
-		case zipStreamProof, zipSegmentsProof, archiveTreeProof, archiveRARTreeProof, rar5FramesProof, rar4FramesProof, rar5SetProof, rar4SetProof:
+		case zipStreamProof, zipSegmentsProof, archiveTreeProof, archiveRARTreeProof, rar5FramesProof, rar4FramesProof, rar5SetProof, rar4SetProof, rar4OldSetProof, rar5OldSetProof:
 			if group.Proof != e.ArchiveProof && (leafBoundArchiveProof(e.ArchiveProof) || leafBoundArchiveProof(group.Proof)) {
 				return nil, bad
 			}

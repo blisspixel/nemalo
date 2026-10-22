@@ -597,14 +597,33 @@ part of the closed 2..901-name family. Public modern RAR4 framing remains strict
 nested volume sets and unsupported records stay refused. Old facts use separate,
 JSON-omitted `OldRARSetVersion`; modern and standalone facts remain zero. Shared
 source, proof, process, diagnostic and output budgets include failed work.
-All application callers keep the new flag false: even a fully covered old set
-with every leaf held remains preserved by cleanup preview and apply. Generated
+The initial read-only increment kept every application flag false: even a fully
+covered old set with every leaf held stayed preserved by preview and apply. Generated
 native stored sets through 901 parts and compressed references at 2, 3 and 7
 parts returned exact independently expected bytes; hidden records omitted by the
 reader were refused before extraction. These measurements do not validate every
-RAR variant. Full hosted acceptance is tracked in issue 57; an old-name writer
-requires a later decision after that acceptance. See
+RAR variant. This read-only prerequisite passed all six hosted jobs at `1e927a2`;
+its acceptance receipt was posted and read back in issue 57 before the separate
+old-name writer decision. See
 [decision 0078](decisions/0078-read-only-old-name-rar-set-coverage.md).
+
+After that prerequisite's accepted hosted run, application cleanup now requests
+the old capability for a separately validated root layout and selects distinct
+`rar4-old-set/1` or `rar5-old-set/1` from measured old-set facts. Modern and
+standalone proofs retain their scopes. Every exact leaf must be held with verified
+bytes, snapshots must match planned hashes, and original sources must rehash
+unchanged. Fresh purge repeats the complete proof and exact leaf check. Partial
+recovery binds the immutable original proof, indices and leaf digest, with fresh
+remaining-byte and holding checks; it never reconstructs a missing set or adopts
+a replacement. Raw restore needs no archive reader and replaces nothing.
+The accepted preceding executable retained unfamiliar plans and pending groups;
+after canonical stop it restored remaining originals without a reader and reported
+absent parts honestly. Separate current-version snapshots resumed whole and
+partial purges. These native pending states were constructed durable snapshots,
+not observed crashes. Unsupported records, ambiguous families, unheld material
+and nested volume sets stay preserved. See
+[decision 0079](decisions/0079-old-name-rar-set-cleanup.md); full writer acceptance
+remains tracked in issue 57, and this is not a release.
 
 Split ZIP byte chunks (`NAME.zip.001`, `.002`, ...; three or four numeric digits)
 are joined privately, checked as exactly one ordinary ZIP through installed

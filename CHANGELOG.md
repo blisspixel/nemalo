@@ -2,10 +2,16 @@
 
 ## Unreleased
 
+- Clean completely covered old-name root RAR4/RAR5 sets under distinct versioned
+  proofs after exact held-leaf and source checks. Fresh purge repeats the whole
+  proof; partial recovery uses immutable original evidence and verified remaining
+  bytes. Earlier proofs retain their scopes, raw restore replaces nothing, and
+  unsupported material and nested volume sets stay preserved.
+
 - Add opt-in read-only old-name RAR4/RAR5 set coverage with distinct internal
   evidence, strict physical and reader-table binding, and shared work limits.
-  Application cleanup keeps this capability disabled and preserves every old-name
-  source; nested volume sets remain unsupported.
+  This read-only increment kept application cleanup disabled until its separate
+  verified writer contract; nested volume sets remain unsupported.
 
 - Keep EPUBs with active URI indicators in review even when antivirus reports no
   detections. Recognize encoded and whitespace-separated script schemes, data

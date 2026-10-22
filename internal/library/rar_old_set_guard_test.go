@@ -6,10 +6,8 @@ import (
 	"encoding/binary"
 	"fmt"
 	"hash/crc32"
-	"os"
 	"path/filepath"
 	"reflect"
-	"strings"
 	"testing"
 
 	"github.com/blisspixel/nemalo/internal/safeio"
@@ -17,38 +15,14 @@ import (
 	"github.com/blisspixel/nemalo/internal/staging/stagingtest"
 )
 
-func TestOldRARReadOnlyCoverageCannotAuthorizeCleanup(t *testing.T) {
+func TestOldRARSetCoverageRequiresDistinctCleanupAuthority(t *testing.T) {
 	for _, version := range []int{4, 5} {
 		t.Run(fmt.Sprint(version), func(t *testing.T) {
-			fixture := newRAR5SetCleanupFixture
+			fixture := newOldRAR5SetFixture
 			if version == 4 {
-				fixture = newRAR4SetCleanupFixture
+				fixture = newOldRAR4SetFixture
 			}
 			f := fixture(t, 3, nil)
-			a := &f.archives[len(f.archives)-1]
-			for i, name := range f.names {
-				if err := os.Remove(filepath.Join(f.folder, filepath.FromSlash(name))); err != nil {
-					t.Fatal(err)
-				}
-				private, original := "archive.rar", "books/set.rar"
-				if i > 0 {
-					private, original = fmt.Sprintf("archive.r%02d", i-1), fmt.Sprintf("books/set.r%02d", i-1)
-				}
-				if version == 4 {
-					h := f.parts[i][7:20]
-					binary.LittleEndian.PutUint16(h[3:], binary.LittleEndian.Uint16(h[3:])&^0x10)
-					binary.LittleEndian.PutUint16(h, uint16(crc32.ChecksumIEEE(h[2:])))
-				}
-				f.names[i] = original
-				writeTree(t, f.folder, map[string][]byte{original: f.parts[i]})
-				a.Volumes[i].Name, a.Volumes[i].Body = private, f.parts[i]
-				header := strings.ReplaceAll(a.Volumes[i].Header, " NewVolName", "")
-				if i < 2 {
-					header = strings.ReplaceAll(header, fmt.Sprintf("archive.part%04d.rar", i+2), fmt.Sprintf("archive.r%02d", i))
-				}
-				a.Volumes[i].Header = header
-			}
-			stagingtest.InstallMany(t, f.archives...)
 			src, err := safeio.OpenRoot(f.folder)
 			if err != nil {
 				t.Fatal(err)
@@ -82,13 +56,47 @@ func TestOldRARReadOnlyCoverageCannotAuthorizeCleanup(t *testing.T) {
 			}
 			before := snapshotTree(t, f.folder)
 			p, err := Cleanup(context.Background(), CleanupRequest{Library: f.root, Folder: f.folder})
-			if err != nil || p.Move != 0 || p.Keep != len(names) {
-				t.Fatal("old evidence supplied cleanup authority", p, err)
+			if err != nil || p.Move != 1 || p.Keep != 0 || len(p.Entries) != 1 || p.Entries[0].ArchiveProof != f.proof() || !supportedArchiveProof(p.Entries[0]) || !reflect.DeepEqual(before, snapshotTree(t, f.folder)) {
+				t.Fatal("old set has no distinct complete authority", p, err)
+			}
+			for _, proof := range []string{rar4SetProof, rar5SetProof, rar4FramesProof, rar5FramesProof, archiveTreeProof, archiveRARTreeProof, "", "rar4-old-set/2", "rar5-old-set/2"} {
+				e := p.Entries[0]
+				e.ArchiveProof = proof
+				if supportedArchiveProof(e) {
+					t.Fatal("old layout borrowed another proof", proof)
+				}
 			}
 			r, err := Cleanup(context.Background(), CleanupRequest{Library: f.root, Folder: f.folder, Apply: p.Digest})
-			if err != nil || r.Moved != 0 || !reflect.DeepEqual(before, snapshotTree(t, f.folder)) || !reflect.DeepEqual(held, snapshotTree(t, filepath.Join(f.root, "assets"))) {
-				t.Fatal("source or holding changed", r, err)
+			if err != nil || r.Moved != 1 || !reflect.DeepEqual(held, snapshotTree(t, filepath.Join(f.root, "assets"))) {
+				t.Fatal("cleanup or holding changed", r, err)
+			}
+			f.assertParts(t, filepath.Join(r.HoldingArea, "files"))
+			restored, err := Restore(context.Background(), RestoreRequest{Library: f.root, CleanupID: r.CleanupID, Apply: true})
+			if err != nil || restored.Restore != len(names) || !reflect.DeepEqual(before, snapshotTree(t, f.folder)) {
+				t.Fatal("raw restore differs", restored, err)
 			}
 		})
+	}
+}
+
+func TestOldRAR4NamesCannotOverridePhysicalModernNamingFlags(t *testing.T) {
+	f := newOldRAR4SetFixture(t, 3, nil)
+	for i, b := range f.parts {
+		h := b[7:20]
+		binary.LittleEndian.PutUint16(h[3:], binary.LittleEndian.Uint16(h[3:])|0x10)
+		binary.LittleEndian.PutUint16(h, uint16(crc32.ChecksumIEEE(h[2:])))
+		writeTree(t, f.folder, map[string][]byte{f.names[i]: b})
+	}
+	// The injected reader still claims the exact old-name layout. Physical
+	// framing must refuse before any extracted leaf can authorize cleanup.
+	stagingtest.InstallMany(t, f.archives...)
+	before := snapshotTree(t, f.folder)
+	p, err := Cleanup(context.Background(), CleanupRequest{Library: f.root, Folder: f.folder})
+	if err != nil || p.Move != 0 || p.Keep != len(f.names) || !reflect.DeepEqual(before, snapshotTree(t, f.folder)) {
+		t.Fatal("renaming granted incompatible RAR4 authority", p, err)
+	}
+	r, err := Cleanup(context.Background(), CleanupRequest{Library: f.root, Folder: f.folder, Apply: p.Digest})
+	if err != nil || r.Moved != 0 || !reflect.DeepEqual(before, snapshotTree(t, f.folder)) {
+		t.Fatal("incompatible physical flags moved", r, err)
 	}
 }

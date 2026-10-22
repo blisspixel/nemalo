@@ -104,3 +104,24 @@ three-worker schedule and deadlines; preserve assertions, instrumentation,
 coverage thresholds and real durability operations. Self-review consequential
 changes. Post and read back acceptance while issue 57 is open. Nested volumes
 keep stage 2 unfinished, and no later stage or release is included.
+
+## Initial native evidence
+
+Installed 7-Zip 26.04 passed seventeen generated lifecycles: stored sets at
+2/3/7/103/901 parts for each format, four combinations with standalone RAR4/RAR5
+children, complete first/last-volume siblings and an empty directory for each
+format, and RAR4 zero-reserved end fields. Cleanup, exact raw restore and fresh
+whole-set purge passed. The actual accepted preceding executable retained
+unfamiliar fresh plans and restored exact originals with no reader on PATH.
+Both formats retained hidden service records omitted by ordinary reader tables,
+unheld book bytes and unheld notes. Compressed references at 2/3/7 parts matched
+independently expected output; these binary outputs establish no book eligibility.
+
+Eight independent constructed durable purge snapshots exercised whole and partial
+states for each format and consumer. The predecessor refused unfamiliar pending
+groups with zero removed, canonical stop completed, and no-reader raw restore
+retained exact remaining bytes and reported an absent part as not held. Separate
+current snapshots resumed whole and partial purges without reopening the reader
+or reconstructing missing parts. These are constructed states, not observed
+crashes or power-loss experiments. Full local and hosted acceptance remains
+separate and tracked in issue 57.

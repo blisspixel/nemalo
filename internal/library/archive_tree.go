@@ -20,9 +20,11 @@ const rar5FramesProof = "rar5-frames/1"
 const rar4FramesProof = "rar4-frames/1"
 const rar5SetProof = "rar5-set/1"
 const rar4SetProof = "rar4-set/1"
+const rar4OldSetProof = "rar4-old-set/1"
+const rar5OldSetProof = "rar5-old-set/1"
 
 func leafBoundArchiveProof(proof string) bool {
-	return proof == archiveTreeProof || proof == archiveRARTreeProof || proof == rar5FramesProof || proof == rar4FramesProof || proof == rar5SetProof || proof == rar4SetProof
+	return proof == archiveTreeProof || proof == archiveRARTreeProof || proof == rar5FramesProof || proof == rar4FramesProof || proof == rar5SetProof || proof == rar4SetProof || proof == rar4OldSetProof || proof == rar5OldSetProof
 }
 
 func knownArchiveProof(proof string) bool {
@@ -123,6 +125,10 @@ func equalArchiveLeaves(a, b []CleanupArchiveLeaf) bool {
 }
 
 func supportedArchiveProof(e CleanupEntry) bool {
+	if e.ArchiveProof == rar4OldSetProof || e.ArchiveProof == rar5OldSetProof {
+		_, layout := oldRARSetParts(e)
+		return layout && validArchiveLeaves(e)
+	}
 	if e.ArchiveProof == rar5SetProof || e.ArchiveProof == rar4SetProof {
 		_, layout := archiveSetParts(e, ".rar")
 		return layout && validArchiveLeaves(e)
@@ -181,6 +187,9 @@ func archiveEntryParts(e CleanupEntry) ([]string, bool) {
 		return zipSetParts(e)
 	}
 	if strings.EqualFold(path.Ext(e.Path), ".rar") {
+		if parts, old := oldRARSetParts(e); old {
+			return parts, true
+		}
 		return archiveSetParts(e, ".rar")
 	}
 	return archiveSetParts(e, ".7z")

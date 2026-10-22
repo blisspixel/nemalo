@@ -57,12 +57,17 @@ func TestRAR5SetPartCountsAndNestedAuthority(t *testing.T) {
 
 func testRARSetPartCountsAndNestedAuthority(t *testing.T, version int) {
 	t.Helper()
-	if runScheduledFixtures(t, []string{""}) {
-		return
-	}
 	fixture, withChild := newRAR5SetCleanupFixture, newRAR5SetCleanupWithChild
 	if version == 4 {
 		fixture, withChild = newRAR4SetCleanupFixture, newRAR4SetCleanupWithChild
+	}
+	testRARSetPartCountsWithFixtures(t, fixture, withChild)
+}
+
+func testRARSetPartCountsWithFixtures(t *testing.T, fixture zipFixtureFactory, withChild func(*testing.T, int, string, func([]byte) ([]byte, []stagingtest.Archive), ...func(int, []byte) []byte) streamFixture) {
+	t.Helper()
+	if runScheduledFixtures(t, []string{""}) {
+		return
 	}
 	for _, count := range []int{2, 3, 7} {
 		for _, child := range []int{0, 4, 5} {
@@ -257,9 +262,8 @@ func testRARSetOldNamesCannotBorrowModernAuthority(t *testing.T, fixture zipFixt
 			t.Fatal(err)
 		}
 	}
-	saved := staging.SevenZip
-	staging.SevenZip = func() (string, error) { t.Fatal("unsupported layout reached reader"); return "", nil }
-	t.Cleanup(func() { staging.SevenZip = saved })
+	// The old shape may now request its separate proof, but this reader's
+	// modern-volume identity cannot establish the required old-name evidence.
 	before := snapshotTree(t, f.folder)
 	p, err := Cleanup(context.Background(), CleanupRequest{Library: f.root, Folder: f.folder})
 	if err != nil || p.Move != 0 || p.Keep != 3 || !reflect.DeepEqual(before, snapshotTree(t, f.folder)) {

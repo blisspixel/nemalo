@@ -187,6 +187,9 @@ func testArchiveCleanupRefusals(t *testing.T, fixture zipFixtureFactory, kinds [
 				if f.proof() == rar5SetProof || f.proof() == rar4SetProof {
 					alias = "books/SET.part0001.RAR"
 				}
+				if f.proof() == rar4OldSetProof || f.proof() == rar5OldSetProof {
+					alias = "books/set.z01" // A conflicting continuation, also distinct on Windows.
+				}
 				if f.proof() == archiveTreeProof || f.proof() == archiveRARTreeProof {
 					base := strings.ToUpper(filepath.Base(f.names[0]))
 					if isZIPChunk(f.names[0]) {

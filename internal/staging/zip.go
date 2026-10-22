@@ -45,8 +45,8 @@ type Limits struct {
 	// alongside Coverage and RAR4Coverage, under its distinct application proof.
 	RAR4SetCoverage bool
 	// OldRARSetCoverage additionally requests root old-name set evidence with
-	// Coverage and the selected format's set flags. Application cleanup keeps
-	// this false; old evidence cannot supply a modern set proof.
+	// Coverage and the selected format's set flags, under its distinct
+	// application proof. Old evidence cannot supply a modern set proof.
 	OldRARSetCoverage bool
 	// ExpectedSources binds coverage snapshots to the application's root plan.
 	// SourceHashRemaining, when set, charges actual copy-hash reads to its budget.

@@ -278,10 +278,7 @@ func TestRAR4NestedSourcesRequireNewProofAndVolumesStay(t *testing.T) {
 				writeTree(t, f.folder, map[string][]byte{first: f.parts[0], second: []byte("synthetic continuation")})
 				saved := staging.SevenZip
 				staging.SevenZip = func() (string, error) {
-					if kind == "old_set" {
-						t.Fatal("unsupported old set reached reader")
-					}
-					// Modern layouts may be probed for the new RAR5 proof.
+					// Both layouts may request their separate measured proof.
 					// This reader reports a standalone RAR4, never set authority.
 					probes++
 					return saved()
@@ -306,8 +303,8 @@ func TestRAR4NestedSourcesRequireNewProofAndVolumesStay(t *testing.T) {
 			if err != nil || p.Move != wantMove || !reflect.DeepEqual(before, snapshotTree(t, f.folder)) {
 				t.Fatal("RAR4 scope changed", p, err)
 			}
-			if kind == "modern_set" && probes == 0 {
-				t.Fatal("malformed modern set did not exercise reader refusal")
+			if (kind == "modern_set" || kind == "old_set") && probes == 0 {
+				t.Fatal("malformed set did not exercise reader refusal")
 			}
 			if wantMove == 1 && p.Entries[0].ArchiveProof != "archive-tree/2" {
 				t.Fatal("RAR4 nested source borrowed an existing proof", p)
