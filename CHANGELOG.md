@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Read old-name RAR sets across supported later starting positions and letter
+  rollovers by recognizing exact isolated-reader fallback names. Keep checked
+  volume identity, split continuity and a clean assembled table; these sources
+  still cannot gain cleanup authority from intake diagnostics alone.
+
 - Change the tagline to "Knowledge is power." in help, the terminal interface and
   packaged guides. Shorten the README and refresh its application-view captures;
   detailed capabilities and limitations remain in the linked operation guides.

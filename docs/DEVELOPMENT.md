@@ -518,6 +518,11 @@ volumes, aliases, overlapping naming families, and inconclusive boundaries stay
 preserved. This includes valid sets with no member split across a boundary,
 since ordinals alone do not establish that those volumes belong together.
 The set is at most 4 GiB and 1,000 volumes (901 in the old letter naming range).
+Old-name identity probes accept only exact private reader fallback names at the
+supported later RAR4 positions and RAR5 letter rollovers. They still require
+matching split continuity and a clean assembled listing before extraction;
+they grant no physical coverage or cleanup authority
+([decision 0077](decisions/0077-old-rar-isolated-probe-names.md)).
 Unsupported RAR sets remain preserved by cleanup; the modern RAR5 subset below
 requires a separate complete physical proof. See
 [decision 0046](decisions/0046-archive-volume-sets.md) and

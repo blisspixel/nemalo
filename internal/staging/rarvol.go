@@ -190,6 +190,18 @@ func rarVolumeHeader(out []byte, code int, kind string, size int64, index int, o
 	}
 	problem, hasError := keys["ERROR"]
 	missingNext := hasError && next != "" && problem == "Missing volume : "+next
+	// The maintained reader generates different next names when opened at
+	// these old-name positions in isolation. Only exact private names qualify;
+	// continuity and a clean assembled table still precede extraction. This
+	// identity probe grants no physical coverage or source cleanup authority.
+	if hasError && old && index > 0 && index < 900 && next == rarSnapshotName(true, index+1) {
+		switch {
+		case kind == "Rar" && index >= 3:
+			missingNext = missingNext || problem == "Missing volume : "+rarSnapshotName(true, index)+".r00"
+		case kind == "Rar5" && index%100 == 0:
+			missingNext = missingNext || problem == fmt.Sprintf("Missing volume : archive.%c100", 'r'+(index-1)/100)
+		}
+	}
 	return (code == 0 && !hasError && !splitDiagnostic) || (code == 2 && (!hasError || missingNext) && (missingNext || splitDiagnostic))
 }
 

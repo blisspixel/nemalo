@@ -26,6 +26,9 @@ The [RAR5 reader](https://github.com/ip7z/7zip/blob/26.04/CPP/7zip/Archive/Rar/R
 also explains its isolated split-continuation diagnostic.
 These are reference contracts, not code incorporated into Nemalo. Do not upgrade
 the installed executable. Insufficient reader evidence preserves the set.
+Decision [0077](0077-old-rar-isolated-probe-names.md) adds only exact private
+old-name fallback diagnostics for isolated probes, retaining every other
+identity, continuity and clean-assembly requirement and no cleanup authority.
 
 - Shared ingest/cleanup grouping recognizes an actual `NAME.rar` only when
   siblings `NAME.r00`, `.r01`, through `.r99`, `.s00`, through `.z99` are present.

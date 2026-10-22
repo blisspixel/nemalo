@@ -106,6 +106,9 @@ verified, not when code exists. No stage has a time estimate.
    split continuity before reading an assembled set; inconclusive sets stay
    preserved and cleanup requires the separate coverage contract below
    ([decision 0056](docs/decisions/0056-rar-volume-identity.md)).
+   Exact old-name isolated-reader fallback diagnostics now preserve those checks
+   across later starting positions and letter rollover, without adding cleanup
+   authority ([decision 0077](docs/decisions/0077-old-rar-isolated-probe-names.md)).
    Split ZIP intake now handles byte chunks and true disk segments through
    checked private snapshots
    ([decision 0057](docs/decisions/0057-split-zip-intake.md)).

@@ -164,7 +164,10 @@ beside a packet; ingest reuses Import. RAR volume sets require isolated format,
 role, ordinal, and size evidence plus matching split members across every
 boundary and an error-free assembled listing. Preserve aliases, overlapping
 families, unlinked boundaries, and unknown ordinals; never infer set identity
-from names/counts alone. RAR volume cleanup requires the separate bounded proof
+from names/counts alone. Decision 0077 permits only exact generated old-name
+fallbacks for isolated identity probes; continuity and a clean assembled listing
+still precede extraction. These diagnostics confer no coverage or cleanup authority.
+RAR volume cleanup requires the separate bounded proof
 below; unsupported sets stay preserved. Split ZIPs are decision
 0057: byte chunks join privately, true segments require consistent reader
 evidence through every part. Segment cleanup is decision 0062: validate raw disk
