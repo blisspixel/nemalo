@@ -950,9 +950,12 @@ Real child processes, production durability operations, every recovery case and
 the default test timeout remain in place. Other packages may continue to use
 their test executable for the same handler.
 
-Full library suites run independent RAR tree and RAR4/RAR5 set recovery groups in
-at most three isolated copies of that same compiled test executable across the
-matrices. Default single-run suites start the isolated work before ordinary
+Full library suites run independent RAR tree and RAR4/RAR5 set recovery groups,
+archive-tree and split-ZIP cleanup matrices, and RAR4/RAR5 part-count matrices in
+at most three isolated copies of that same compiled test executable. The fixture
+groups retain their original bodies and test names. Registered groups must match
+the original selections exactly; unknown, missing and repeated results fail.
+Default single-run suites start the isolated work before ordinary
 fixtures, with a frozen environment, working directory, scratch root, tool path
 and parent-owned reader. Two groups can overlap serial fixtures, reserving the
 third lane for those fixtures and their control helpers. When Go releases the

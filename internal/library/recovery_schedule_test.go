@@ -7,7 +7,9 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"strconv"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -18,6 +20,64 @@ import (
 var libraryRecoverySchedule *recoverySchedule
 var rarTreeRecoveryVersions = []int{4, 5}
 var rarTreeRecoveryLayouts = []string{"zip_chunks", "zip_segments", "7z_chunks"}
+
+const fixtureCasePrefix = "fixture:"
+
+// These fixed groups keep the original fixture bodies and Go test selections.
+// They share the recovery workers rather than adding another concurrency pool.
+var fixtureSchedule = []struct {
+	root   string
+	groups []string
+}{
+	{"TestArchiveTreeCleanupAndPurgeRecovery", []string{"zip_chunks", "zip_segments", "7z_chunks"}},
+	{"TestSplitZIPCleanupAndPurgeRecovery", []string{"stream", "segments"}},
+	{"TestRAR4SetPartCountsAndNestedAuthority", []string{""}},
+	{"TestRAR5SetPartCountsAndNestedAuthority", []string{""}},
+}
+
+func fixtureGroups(root string) []string {
+	for _, item := range fixtureSchedule {
+		if item.root == root {
+			return item.groups
+		}
+	}
+	return nil
+}
+
+func runScheduledFixtures(t *testing.T, groups []string) bool {
+	t.Helper()
+	root := t.Name()
+	if !slices.Equal(groups, fixtureGroups(root)) {
+		t.Fatal("fixture schedule does not include exactly the original groups")
+	}
+	if selected := os.Getenv(rarRecoveryCaseEnv); selected != "" {
+		if !strings.HasPrefix(selected, fixtureCasePrefix) || !slices.Contains(groups, strings.TrimPrefix(selected, fixtureCasePrefix)) {
+			t.Fatal("unknown isolated fixture group", selected)
+		}
+		return false
+	}
+	if libraryRecoverySchedule == nil {
+		return false // Filtered, repeated and constrained runs keep ordinary execution.
+	}
+	t.Parallel()
+	libraryRecoverySchedule.serialFinished()
+	collect := func(t *testing.T, group string) {
+		t.Helper()
+		out, err := libraryRecoverySchedule.collect(root, fixtureCasePrefix+group)
+		checkRecoveryResult(t, root, group, out, err)
+	}
+	for _, group := range groups {
+		if group == "" {
+			collect(t, group)
+		} else {
+			t.Run(group, func(t *testing.T) {
+				t.Parallel()
+				collect(t, group)
+			})
+		}
+	}
+	return true
+}
 
 type recoveryCase struct{ root, selected string }
 type recoveryCaseResult struct {
@@ -101,7 +161,17 @@ func startRecoverySchedule() (*recoverySchedule, error) {
 			cases = append(cases, recoveryCase{"TestRARTreeRecoveryAcrossEveryOuterSetLayout", fmt.Sprintf("%d/%s", version, layout)})
 		}
 	}
+	for _, item := range fixtureSchedule {
+		for _, group := range item.groups {
+			cases = append(cases, recoveryCase{item.root, fixtureCasePrefix + group})
+		}
+	}
 	for i, key := range cases {
+		if s.jobs[key] != nil {
+			cancel()
+			_ = os.RemoveAll(workspace)
+			return nil, errors.New("duplicate isolated test group")
+		}
 		job := &scheduledRecoveryCase{done: make(chan recoveryCaseResult, 1), settings: settings}
 		job.settings.scratch = workspace
 		if testing.CoverMode() != "" {

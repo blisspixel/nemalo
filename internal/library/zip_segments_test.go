@@ -105,10 +105,18 @@ func newSegmentFixture(t *testing.T, count int, build func([]byte) []byte) strea
 // Both layouts use precisely the same acceptance scenarios and assertions.
 // The segmented fixture exercises the terminal .zip through every crash window.
 func TestSplitZIPCleanupAndPurgeRecovery(t *testing.T) {
-	for _, layout := range []struct {
+	layouts := []struct {
 		name    string
 		fixture zipFixtureFactory
-	}{{"stream", newStreamFixture}, {"segments", newSegmentFixture}} {
+	}{{"stream", newStreamFixture}, {"segments", newSegmentFixture}}
+	groups := make([]string, len(layouts))
+	for i, layout := range layouts {
+		groups[i] = layout.name
+	}
+	if runScheduledFixtures(t, groups) {
+		return
+	}
+	for _, layout := range layouts {
 		t.Run(layout.name, func(t *testing.T) {
 			for _, scenario := range []struct {
 				name string

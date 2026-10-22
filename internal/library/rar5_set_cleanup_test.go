@@ -57,6 +57,9 @@ func TestRAR5SetPartCountsAndNestedAuthority(t *testing.T) {
 
 func testRARSetPartCountsAndNestedAuthority(t *testing.T, version int) {
 	t.Helper()
+	if runScheduledFixtures(t, []string{""}) {
+		return
+	}
 	fixture, withChild := newRAR5SetCleanupFixture, newRAR5SetCleanupWithChild
 	if version == 4 {
 		fixture, withChild = newRAR4SetCleanupFixture, newRAR4SetCleanupWithChild

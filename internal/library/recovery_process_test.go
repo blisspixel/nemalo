@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"runtime"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -56,12 +57,30 @@ func recoveryProcess(ctx context.Context, root, selected, reader, digest string)
 	return recoveryProcessWithSettings(ctx, root, selected, reader, digest, settings)
 }
 
+func recoveryRunPattern(root, selected string) (string, error) {
+	pattern := "^" + regexp.QuoteMeta(root) + "$"
+	if strings.HasPrefix(selected, fixtureCasePrefix) {
+		group := strings.TrimPrefix(selected, fixtureCasePrefix)
+		if !slices.Contains(fixtureGroups(root), group) {
+			return "", errors.New("unknown isolated fixture group")
+		}
+		if group != "" {
+			pattern += "/^" + regexp.QuoteMeta(group) + "$"
+		}
+	}
+	return pattern, nil
+}
+
 func recoveryProcessWithSettings(ctx context.Context, root, selected, reader, digest string, settings recoveryProcessSettings) ([]byte, error) {
+	pattern, err := recoveryRunPattern(root, selected)
+	if err != nil {
+		return nil, err
+	}
 	exe, err := os.Executable()
 	if err != nil {
 		return nil, err
 	}
-	args := []string{"-test.run=^" + regexp.QuoteMeta(root) + "$", "-test.count=1", "-test.v", "-test.timeout=4m"}
+	args := []string{"-test.run=" + pattern, "-test.count=1", "-test.v", "-test.timeout=4m"}
 	env := append(append([]string(nil), settings.environment...), rarRecoveryCaseEnv+"="+selected)
 	if reader != "" {
 		env = append(env, archiveFixtureEnv+"="+reader, archiveFixtureHashEnv+"="+digest)
@@ -289,10 +308,33 @@ func checkRecoveryResult(t *testing.T, root, selected string, out []byte, err er
 	if err != nil {
 		t.Fatalf("isolated recovery case %s: %v\n%s", selected, err, out)
 	}
-	if !bytes.Contains(out, []byte("=== RUN   "+root+"/"+selected+"\n")) || !bytes.Contains(out, []byte("--- PASS: "+root+"/"+selected+" (")) {
+	name := root
+	if selected != "" {
+		name += "/" + selected
+	}
+	if !bytes.Contains(out, []byte("=== RUN   "+name+"\n")) || !bytes.Contains(out, []byte("--- PASS: "+name+" (")) {
 		t.Fatalf("recovery subprocess did not execute its selected group %s\n%s", selected, out)
 	}
 	t.Logf("isolated recovery result:\n%s", out)
+}
+
+func TestFixtureProcessSelectionKeepsExactTestGroups(t *testing.T) {
+	for _, tc := range []struct{ root, selected, want string }{
+		{"TestArchiveTreeCleanupAndPurgeRecovery", "fixture:zip_chunks", "^TestArchiveTreeCleanupAndPurgeRecovery$/^zip_chunks$"},
+		{"TestSplitZIPCleanupAndPurgeRecovery", "fixture:segments", "^TestSplitZIPCleanupAndPurgeRecovery$/^segments$"},
+		{"TestRAR4SetPartCountsAndNestedAuthority", "fixture:", "^TestRAR4SetPartCountsAndNestedAuthority$"},
+		{"TestRAR5SetRecovery", "direct", "^TestRAR5SetRecovery$"},
+		{"TestRARTreeRecoveryAcrossEveryOuterSetLayout", "4/zip_chunks", "^TestRARTreeRecoveryAcrossEveryOuterSetLayout$"},
+		{"Unknown", "fixture:", ""},
+		{"TestArchiveTreeCleanupAndPurgeRecovery", "fixture:", ""},
+		{"TestSplitZIPCleanupAndPurgeRecovery", "fixture:segments/other", ""},
+		{"TestSplitZIPCleanupAndPurgeRecovery", "fixture:.*", ""},
+	} {
+		got, err := recoveryRunPattern(tc.root, tc.selected)
+		if got != tc.want || (err != nil) != (tc.want == "") {
+			t.Fatal(tc, got, err)
+		}
+	}
 }
 
 func TestRecoverySubprocessRejectsUnknownCase(t *testing.T) {

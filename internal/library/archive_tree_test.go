@@ -130,7 +130,11 @@ func newCleanupTreeFixtureWithChild(t *testing.T, layout string, count int, chil
 }
 
 func TestArchiveTreeCleanupAndPurgeRecovery(t *testing.T) {
-	for _, layout := range []string{"zip_chunks", "zip_segments", "7z_chunks"} {
+	layouts := []string{"zip_chunks", "zip_segments", "7z_chunks"}
+	if runScheduledFixtures(t, layouts) {
+		return
+	}
+	for _, layout := range layouts {
 		t.Run(layout, func(t *testing.T) {
 			factory := func(t *testing.T, count int, build func([]byte) []byte) streamFixture {
 				return newCleanupTreeFixture(t, layout, count, build)
