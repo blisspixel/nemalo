@@ -10,8 +10,10 @@ import (
 	"path/filepath"
 	"regexp"
 	"runtime"
+	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -22,6 +24,8 @@ const rarRecoveryCaseEnv = "NEMALO_TEST_RAR_RECOVERY_CASE"
 
 var recoveryProcessSlots = make(chan struct{}, 3)
 var recoveryCoveragePublish sync.Mutex
+var recoveryCounterTimestamp atomic.Int64
+var recoveryMergedCounterName = regexp.MustCompile(`^covcounters\.[0-9a-f]{32}\.0\.[0-9]+$`)
 
 // The same compiled test executable retains race/coverage instrumentation.
 // Each covered child writes privately: concurrent Go metadata renames into a
@@ -86,7 +90,45 @@ func mergeRecoveryCounters(ctx context.Context, counters, merged, parent string,
 	if err := cmd.Run(); err != nil {
 		return fmt.Errorf("merge recovery counters: %w", err)
 	}
+	if err := nameRecoveryCounters(merged, time.Now().UnixNano()); err != nil {
+		return err
+	}
 	return publishRecoveryCoverage(merged, parent)
+}
+
+// Stock covdata merge uses PID zero and wall time, so independent merges can
+// choose the same name on a coarse clock. Assign unique increasing timestamps
+// within this publisher before copying. Keep the metadata hash, PID and bytes;
+// Go's own tools still read and combine every counter. Publication stays strict.
+func nameRecoveryCounters(merged string, now int64) error {
+	entries, err := os.ReadDir(merged)
+	if err != nil {
+		return err
+	}
+	for _, entry := range entries {
+		name := entry.Name()
+		if !strings.HasPrefix(name, "covcounters.") {
+			continue
+		}
+		if !entry.Type().IsRegular() || !recoveryMergedCounterName.MatchString(name) {
+			return fmt.Errorf("unexpected merged counter name %q", name)
+		}
+		var stamp int64
+		for {
+			previous := recoveryCounterTimestamp.Load()
+			stamp = max(now, previous+1)
+			if recoveryCounterTimestamp.CompareAndSwap(previous, stamp) {
+				break
+			}
+		}
+		next := name[:strings.LastIndexByte(name, '.')+1] + strconv.FormatInt(stamp, 10)
+		if next != name {
+			if err := os.Rename(filepath.Join(merged, name), filepath.Join(merged, next)); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
 }
 
 func publishRecoveryCoverage(merged, parent string) error {
@@ -217,6 +259,55 @@ func TestRecoveryCoveragePublication(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
+	t.Run("colliding merged timestamps preserve every counter", func(t *testing.T) {
+		parent := t.TempDir()
+		var wg sync.WaitGroup
+		for i := range 8 {
+			merged := t.TempDir()
+			write(merged, "covmeta."+strings.Repeat("a", 32), "same metadata")
+			write(merged, "covcounters."+strings.Repeat("a", 32)+".0.1", strconv.Itoa(i))
+			wg.Go(func() {
+				// Force the same original name and the same clock for all groups.
+				if err := nameRecoveryCounters(merged, 1); err != nil {
+					t.Error(err)
+					return
+				}
+				if err := publishRecoveryCoverage(merged, parent); err != nil {
+					t.Error(err)
+				}
+			})
+		}
+		wg.Wait()
+		entries, err := os.ReadDir(parent)
+		if err != nil || len(entries) != 9 {
+			t.Fatalf("colliding groups lost counters: %v %v", entries, err)
+		}
+		seen := make(map[string]bool)
+		for _, entry := range entries {
+			if !strings.HasPrefix(entry.Name(), "covcounters.") {
+				continue
+			}
+			data, err := os.ReadFile(filepath.Join(parent, entry.Name()))
+			if err != nil || !recoveryMergedCounterName.MatchString(entry.Name()) || seen[string(data)] {
+				t.Fatalf("counter replaced or malformed: %s %q %v", entry.Name(), data, err)
+			}
+			seen[string(data)] = true
+		}
+		for i := range 8 {
+			if !seen[strconv.Itoa(i)] {
+				t.Fatalf("lost group %d", i)
+			}
+		}
+		bad := t.TempDir()
+		write(bad, "covcounters.invalid.0.1", "retain malformed evidence")
+		if err := nameRecoveryCounters(bad, 1); err == nil {
+			t.Fatal("malformed merged name accepted")
+		}
+		data, err := os.ReadFile(filepath.Join(bad, "covcounters.invalid.0.1"))
+		if err != nil || string(data) != "retain malformed evidence" {
+			t.Fatal("malformed input changed", string(data), err)
+		}
+	})
 	t.Run("concurrent groups preserve every counter", func(t *testing.T) {
 		parent := t.TempDir()
 		var wg sync.WaitGroup

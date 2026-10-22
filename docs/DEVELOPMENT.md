@@ -944,7 +944,14 @@ directories, avoiding concurrent metadata replacement on Windows. After the
 group succeeds, the running toolchain's offline `go tool covdata merge` combines
 each executable's counters. Serialized exclusive publication retains every
 merged counter; identical metadata is reused without replacement, and conflicts
-or missing counters fail the test. Go test selects its own executable's metadata
+or missing counters fail the test. Stock merges use PID zero and wall-clock
+timestamps, which can give separate groups the same filename on Windows. Before
+publication, the parent assigns increasing unique timestamps to those filenames,
+retaining their metadata hashes, PID and exact counter bytes. A constant-clock
+regression preserves every concurrent group's distinct payload; a separate check
+uses actual covered reader invocations and the stock Go report to prove both
+invocations contribute. Existing overwrite/conflict checks remain in place.
+Go test selects its own executable's metadata
 when reporting, so the parent's TestMain also uses stock `covdata textfmt` to
 append the reader's records to Go's completed text profile. Original records,
 including uncovered code, remain intact. Raw counters from both executables
