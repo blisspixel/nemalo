@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Change the tagline to "Knowledge is power." in help, the terminal interface and
+  packaged guides. Shorten the README and refresh its application-view captures;
+  detailed capabilities and limitations remain in the linked operation guides.
+
 ## 0.1.0-alpha.17
 
 Seventeenth native prerelease. This remains an early library, not 1.0. The roadmap now orders the remaining 1.0 work by dependency and brings cited evidence for agent-led reading before 1.0 ([decision 0048](docs/decisions/0048-cited-evidence-before-1-0.md)). Holdings relate by the identifiers their sources declare, collections of exact selections are resolved against the library and acquired idempotently, and 7z archives and split sets can be cleaned up after import.

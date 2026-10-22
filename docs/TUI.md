@@ -206,12 +206,20 @@ proof the file is safe. See
 
 ## Application-view captures
 
-These are rendered terminal frames from the actual Go application model, using
-the real external catalog and live Archive results, captured 2026-10-08. They are
-not OS screenshots or mockups. Downloaded content and private paths are excluded.
+These application-view captures were refreshed on 2026-10-22 from the current Go
+TUI model at 116 columns and 36 rows, in its supported no-color mode. Frames are
+rendered as fixed-width text to PNG; they are not OS window screenshots.
+Holdings come from a fresh offline snapshot of validation copies of Montaigne's
+essays, A Vindication of the Rights of Woman and Pride and Prejudice. Five files
+resolve to three exact-byte assets; the repeated copies remain visible as locations.
+Discovery searches the checked-in Gutenberg catalog subset locally, without a
+provider request. Reading uses the actual source-bound terminal reader over
+Pride and Prejudice. Displayed catalog/root names are portable aliases; private
+paths are excluded. Capture work runs no scanner, acquires no files and changes
+no existing library. The captures demonstrate these views, not every workflow.
 
-![Multilingual EPUB holdings and selected evidence](images/tui-holdings.png)
+![EPUB holdings, duplicate locations and selected historical evidence](images/tui-holdings.png)
 
-![Internet Archive discovery and selected source evidence](images/tui-discovery.png)
+![Local Gutenberg discovery and selected catalog evidence](images/tui-discovery.png)
 
-![Bounded source reading from Alice's Adventures in Wonderland](images/tui-reading.png)
+![Source-bound terminal reading from Pride and Prejudice](images/tui-reading.png)

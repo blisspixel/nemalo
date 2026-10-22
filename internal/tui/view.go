@@ -177,7 +177,7 @@ func (m *model) contextLine() string {
 func (m *model) top() string {
 	brand := m.paint("Nemalo", accent, true)
 	if m.width >= 70 {
-		brand += "   Find knowledge. Care for it. Realize its potential."
+		brand += "   Knowledge is power."
 	}
 	return brand + "\n" + m.navigation() + "\n\n" + m.paint(clipWords(m.contextLine(), max(1, m.width-2)), muted, false) + "\n" + m.fields()
 }

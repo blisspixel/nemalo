@@ -12,7 +12,7 @@ import (
 
 // overview is the one-screen help, grouped by the path a book takes.
 const overview = `Nemalo VERSION
-Find knowledge. Care for it. Realize its potential.
+Knowledge is power.
 
 Usage: nemalo <command> [options]
 

@@ -1,7 +1,7 @@
 # Nemalo development instructions
 
 Use the product name `Nemalo`, CLI/integration identifiers `nemalo`, and tagline
-"Find knowledge. Care for it. Realize its potential."
+"Knowledge is power."
 
 ## Orient first
 

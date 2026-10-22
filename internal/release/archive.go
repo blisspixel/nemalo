@@ -40,7 +40,7 @@ func Archive(directory, version string, target Target, binary, license, notices 
 	if target.OS == "windows" {
 		name += ".exe"
 	}
-	usage := []byte(fmt.Sprintf("Nemalo %s\n\nFind knowledge. Care for it. Realize its potential.\n\nRun ./nemalo help (nemalo.exe help on Windows).\nThis is an early prerelease; see capability limits before handling a library.\nGuide: https://github.com/blisspixel/nemalo/blob/main/docs/DEVELOPMENT.md\nNo downloaded books or personal library data are included.\n", version))
+	usage := []byte(fmt.Sprintf("Nemalo %s\n\nKnowledge is power.\n\nRun ./nemalo help (nemalo.exe help on Windows).\nThis is an early prerelease; see capability limits before handling a library.\nGuide: https://github.com/blisspixel/nemalo/blob/main/docs/DEVELOPMENT.md\nNo downloaded books or personal library data are included.\n", version))
 	files := []struct {
 		name string
 		data []byte
