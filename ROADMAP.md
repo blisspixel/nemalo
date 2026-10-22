@@ -109,6 +109,12 @@ verified, not when code exists. No stage has a time estimate.
    Exact old-name isolated-reader fallback diagnostics now preserve those checks
    across later starting positions and letter rollover, without adding cleanup
    authority ([decision 0077](docs/decisions/0077-old-rar-isolated-probe-names.md)).
+   Read-only root old-name RAR4/RAR5 coverage is implemented under a separate
+   internal opt-in and measured old-set field. All application callers leave it
+   disabled; old-name cleanup and nested-volume work remain unfinished. Native
+   stored and compressed reference checks passed, with full hosted acceptance
+   tracked in issue 57 before any old-name writer decision
+   ([decision 0078](docs/decisions/0078-read-only-old-name-rar-set-coverage.md)).
    Split ZIP intake now handles byte chunks and true disk segments through
    checked private snapshots
    ([decision 0057](docs/decisions/0057-split-zip-intake.md)).

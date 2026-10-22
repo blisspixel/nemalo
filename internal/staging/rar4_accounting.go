@@ -29,10 +29,10 @@ type RAR4File struct {
 // payloads, decompressing, checking file contents or granting write permission.
 // Shared-tree callers must also wrap source with Limits.proofReader.
 func RAR4Accounted(ctx context.Context, source io.ReaderAt, size int64) ([]RAR4File, error) {
-	return rar4Accounted(ctx, source, size, nil)
+	return rar4Accounted(ctx, source, size, nil, false)
 }
 
-func rar4Accounted(ctx context.Context, source io.ReaderAt, size int64, volume *RAR4Volume) ([]RAR4File, error) {
+func rar4Accounted(ctx context.Context, source io.ReaderAt, size int64, volume *RAR4Volume, old bool) ([]RAR4File, error) {
 	fail := func(reason string) ([]RAR4File, error) { return nil, fmt.Errorf("%w: %s", ErrRAR4Coverage, reason) }
 	if size < 7 || size > maxArchiveSnapshot {
 		return fail("source size exceeds supported bounds")
@@ -86,8 +86,12 @@ func rar4Accounted(ctx context.Context, source io.ReaderAt, size int64, volume *
 				return fail("unsupported main metadata or volume")
 			}
 			if volume != nil {
-				if flags&0x11 != 0x11 {
-					return fail("missing modern volume flags")
+				want := uint16(0x11)
+				if old {
+					want = 1
+				}
+				if flags&0x11 != want {
+					return fail("volume naming flags disagree with requested layout")
 				}
 				volume.First, volume.Solid = flags&0x100 != 0, flags&8 != 0
 			}
@@ -190,7 +194,11 @@ func rar4Accounted(ctx context.Context, source io.ReaderAt, size int64, volume *
 					return fail("nonzero reserved volume end metadata")
 				}
 				volume.Ordinal, volume.More = int(binary.LittleEndian.Uint16(h[7:9])), flags&1 != 0
-				if volume.Ordinal >= 1000 || volume.First != (volume.Ordinal == 0) {
+				maximum := 1000
+				if old {
+					maximum = 901
+				}
+				if volume.Ordinal >= maximum || volume.First != (volume.Ordinal == 0) {
 					return fail("first volume role disagrees with ordinal")
 				}
 			}

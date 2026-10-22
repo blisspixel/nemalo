@@ -42,8 +42,12 @@ type Limits struct {
 	// RAR5 volume sets alongside Coverage, under its distinct application proof.
 	RAR5SetCoverage bool
 	// RAR4SetCoverage requests read-only modern root RAR4 set evidence only
-	// alongside Coverage and RAR4Coverage. Application cleanup leaves it false.
+	// alongside Coverage and RAR4Coverage, under its distinct application proof.
 	RAR4SetCoverage bool
+	// OldRARSetCoverage additionally requests root old-name set evidence with
+	// Coverage and the selected format's set flags. Application cleanup keeps
+	// this false; old evidence cannot supply a modern set proof.
+	OldRARSetCoverage bool
 	// ExpectedSources binds coverage snapshots to the application's root plan.
 	// SourceHashRemaining, when set, charges actual copy-hash reads to its budget.
 	ExpectedSources     map[string]SnapshotIdentity
@@ -95,6 +99,9 @@ type Extraction struct {
 	// RARSetVersion is measured separately from standalone containers. It grants
 	// no set cleanup permission and never supplies RARVersion/RARContainers.
 	RARSetVersion int `json:"-"`
+	// OldRARSetVersion measures only an explicitly covered old-name root set.
+	// It cannot supply modern set, standalone, tree or cleanup authority.
+	OldRARSetVersion int `json:"-"`
 	// CoverageGap locates the first container without requested byte evidence.
 	// An empty chain names the outer container, not an archive member.
 	CoverageGap *CoverageGap `json:"coverage_gap,omitempty"`

@@ -30,8 +30,12 @@ type rar4VolumeMetadata struct {
 // payloads. Set callers must additionally share Limits.proofReader across parts.
 // RAR4Accounted retains its refusal of every volume and split declaration.
 func RAR4VolumeAccounted(ctx context.Context, source io.ReaderAt, size int64) (RAR4Volume, error) {
+	return rar4VolumeAccounted(ctx, source, size, false)
+}
+
+func rar4VolumeAccounted(ctx context.Context, source io.ReaderAt, size int64, old bool) (RAR4Volume, error) {
 	volume := RAR4Volume{}
-	if _, err := rar4Accounted(ctx, source, size, &volume); err != nil {
+	if _, err := rar4Accounted(ctx, source, size, &volume, old); err != nil {
 		return RAR4Volume{}, err
 	}
 	return volume, nil

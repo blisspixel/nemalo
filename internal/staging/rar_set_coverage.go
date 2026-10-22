@@ -10,6 +10,7 @@ import (
 // explicit caller capabilities. Neither version grants the other's evidence.
 type rarSetBinding struct {
 	allow4, allow5 bool
+	old            bool
 	version        int
 	four           rar4SetBinding
 	five           rar5SetBinding
@@ -33,7 +34,7 @@ func (p *rarSetBinding) coverageKind(kind string) error {
 
 func (p *rarSetBinding) accountVolume(ctx context.Context, kind string, source io.ReaderAt, size int64, entries []sevenEntry, index, count, members int) error {
 	if kind == "Rar" {
-		v, err := RAR4VolumeAccounted(ctx, source, size)
+		v, err := rar4VolumeAccounted(ctx, source, size, p.old)
 		if err != nil {
 			return err
 		}

@@ -98,3 +98,24 @@ That later decision needs distinct proof IDs, fresh whole-set purge, immutable
 partial recovery and preceding-executable retention/raw-restore evidence. No
 existing proof expands here. Stage 2, nested-volume work and a release remain
 unfinished.
+
+## Initial implementation evidence
+
+Generated native stored sets passed at 2, 3, 7, 103 and 901 parts for each
+format through installed 7-Zip 26.04. All ten outputs matched the independently
+generated 5,289-byte PDF, SHA-256
+`7b107681bdc12e37ef7e1f2b125c9ac32c70d955c093974da04f6aa1b7c5615c`.
+Each reported only its selected old-set version. Cleanup preview and apply
+moved zero and left all sources identical, with the exact book already held.
+Both formats refused valid hidden service records that the native reader's
+ordinary assembled listing silently omitted, before extracting any output.
+
+Compressed references repartitioned at 2, 3 and 7 parts passed with independent
+expected output: RAR4 returned 64 bytes, SHA-256
+`353d5f7a0789034186922e5834f666f36fa1f98e18f53fb4140b336ba090a923`;
+RAR5 returned 1,200 bytes, SHA-256
+`588870a2dade35c2650fbb7898c9a9c7f21fce7c281198604e8d0c9737f2c375`.
+Those binary outputs establish no book eligibility. A bounded 30-second,
+two-worker fuzz run of the private old RAR4 mode passed 1,283,253 executions.
+These are limited measurements, not broad conformance or a safety guarantee.
+Full local and hosted acceptance remains separate and tracked in issue 57.

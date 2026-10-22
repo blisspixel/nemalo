@@ -167,6 +167,11 @@ families, unlinked boundaries, and unknown ordinals; never infer set identity
 from names/counts alone. Decision 0077 permits only exact generated old-name
 fallbacks for isolated identity probes; continuity and a clean assembled listing
 still precede extraction. These diagnostics confer no coverage or cleanup authority.
+Decision 0078 adds read-only root old-name set coverage only with
+`OldRARSetCoverage`, `Coverage` and the selected format's set capabilities.
+Every application caller leaves the old-name flag false. Its JSON-omitted
+`OldRARSetVersion` cannot supply modern set, standalone, tree or cleanup proof.
+Keep public modern RAR4 framing strict and preserve nested volume sets.
 RAR volume cleanup requires the separate bounded proof
 below; unsupported sets stay preserved. Split ZIPs are decision
 0057: byte chunks join privately, true segments require consistent reader

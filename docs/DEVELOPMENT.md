@@ -590,6 +590,22 @@ volume sets stay preserved. See [decision 0076](decisions/0076-modern-rar4-set-c
 Full local/native/hosted acceptance and actual preceding-executable retention and
 raw restore are tracked separately in issue 57; no release is included.
 
+Read-only root old-name RAR4/RAR5 coverage is implemented behind a separate
+internal `OldRARSetCoverage` capability, requiring `Coverage` and the selected
+format's set flags. The same physical framer and table matcher account for each
+part of the closed 2..901-name family. Public modern RAR4 framing remains strict;
+nested volume sets and unsupported records stay refused. Old facts use separate,
+JSON-omitted `OldRARSetVersion`; modern and standalone facts remain zero. Shared
+source, proof, process, diagnostic and output budgets include failed work.
+All application callers keep the new flag false: even a fully covered old set
+with every leaf held remains preserved by cleanup preview and apply. Generated
+native stored sets through 901 parts and compressed references at 2, 3 and 7
+parts returned exact independently expected bytes; hidden records omitted by the
+reader were refused before extraction. These measurements do not validate every
+RAR variant. Full hosted acceptance is tracked in issue 57; an old-name writer
+requires a later decision after that acceptance. See
+[decision 0078](decisions/0078-read-only-old-name-rar-set-coverage.md).
+
 Split ZIP byte chunks (`NAME.zip.001`, `.002`, ...; three or four numeric digits)
 are joined privately, checked as exactly one ordinary ZIP through installed
 7-Zip, and extracted by the existing Go ZIP reader. True ZIP segments

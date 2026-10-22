@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Add opt-in read-only old-name RAR4/RAR5 set coverage with distinct internal
+  evidence, strict physical and reader-table binding, and shared work limits.
+  Application cleanup keeps this capability disabled and preserves every old-name
+  source; nested volume sets remain unsupported.
+
 - Keep EPUBs with active URI indicators in review even when antivirus reports no
   detections. Recognize encoded and whitespace-separated script schemes, data
   navigation, and XHTML XLink aliases without treating metadata attributes as
