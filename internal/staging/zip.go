@@ -38,19 +38,19 @@ type Limits struct {
 	// private RAR children when Coverage is set. RAR4 also needs RAR4Coverage.
 	// Application cleanup requests this only under its separate tree proof.
 	NestedRARCoverage bool
-	// RAR5SetCoverage requests read-only framing/table evidence for modern root
-	// RAR5 volume sets alongside Coverage, under its distinct application proof.
+	// RAR5SetCoverage requests RAR5 set framing/table evidence with Coverage.
+	// Child sets also need NestedVolumeSets; root evidence stays root-only.
 	RAR5SetCoverage bool
-	// RAR4SetCoverage requests read-only modern root RAR4 set evidence only
-	// alongside Coverage and RAR4Coverage, under its distinct application proof.
+	// RAR4SetCoverage requests RAR4 set evidence with Coverage and RAR4Coverage.
+	// Child sets also need NestedVolumeSets; each application proof is separate.
 	RAR4SetCoverage bool
-	// OldRARSetCoverage additionally requests root old-name set evidence with
+	// OldRARSetCoverage additionally requests old-name set evidence with
 	// Coverage and the selected format's set flags, under its distinct
 	// application proof. Old evidence cannot supply a modern set proof.
 	OldRARSetCoverage bool
 	// NestedVolumeSets opts into checked child groups during tree traversal.
 	// Coverage additionally requires the selected format's existing capabilities.
-	// Application callers keep this false until separately verified authority.
+	// Applications request intake or their separately versioned tree proof.
 	NestedVolumeSets bool
 	// ExpectedSources binds coverage snapshots to the application's root plan.
 	// SourceHashRemaining, when set, charges actual copy-hash reads to its budget.

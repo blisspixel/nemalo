@@ -98,6 +98,11 @@ func newSegmentFixture(t *testing.T, count int, build func([]byte) []byte) strea
 		a.Volumes = append(a.Volumes, stagingtest.Volume{Name: private, Body: part})
 		a.Headers[private] = fmt.Sprintf("Type = zip\nPhysical Size = %d\nTotal Physical Size = %d\nEmbedded Stub Size = 4\nMultivolume = +\nVolume Index = %d\nVolumes = %d\n", len(part), len(s.Raw), i, count)
 	}
+	for _, part := range f.parts {
+		profile := a
+		profile.Body = part
+		f.archives = append(f.archives, profile)
+	}
 	stagingtest.Install(t, a)
 	return f
 }

@@ -72,12 +72,20 @@ func TestNestedVolumeReadOnlyEvidenceCannotAuthorizeExistingCleanup(t *testing.T
 				}
 				before := snapshotTree(t, f.folder)
 				p, err := Cleanup(context.Background(), CleanupRequest{Library: f.root, Folder: f.folder})
-				if err != nil || p.Move != 0 || p.Keep != 1 {
-					t.Fatal("nested evidence borrowed an existing writer", p, err)
+				if err != nil || p.Move != 1 || p.Keep != 0 || len(p.Entries) != 1 || p.Entries[0].ArchiveProof != archiveVolumeTreeProof || !supportedArchiveProof(p.Entries[0]) || !reflect.DeepEqual(before, snapshotTree(t, f.folder)) {
+					t.Fatal("nested evidence did not select its distinct writer", p, err)
 				}
 				r, err := Cleanup(context.Background(), CleanupRequest{Library: f.root, Folder: f.folder, Apply: p.Digest})
-				if err != nil || r.Moved != 0 || !reflect.DeepEqual(before, snapshotTree(t, f.folder)) || !reflect.DeepEqual(held, snapshotTree(t, filepath.Join(f.root, "assets"))) {
-					t.Fatal("read-only nested evidence changed source or holding", r, err)
+				if err != nil || r.Moved != 1 || len(snapshotTree(t, f.folder)) != 0 || !reflect.DeepEqual(held, snapshotTree(t, filepath.Join(f.root, "assets"))) {
+					t.Fatal("distinct cleanup failed or changed its holding", r, err)
+				}
+				q, err := Purge(context.Background(), PurgeRequest{Library: f.root, CleanupID: r.CleanupID})
+				if err != nil || q.Purge != 1 || len(q.ArchiveGroups) != 1 || q.ArchiveGroups[0].Proof != archiveVolumeTreeProof || q.ArchiveGroups[0].LeafDigest != archiveLeafDigest(p.Entries[0]) {
+					t.Fatal("fresh purge lost new tree authority", q, err)
+				}
+				restored, err := Restore(context.Background(), RestoreRequest{Library: f.root, CleanupID: r.CleanupID, Apply: true})
+				if err != nil || restored.Restore != 1 || !reflect.DeepEqual(before, snapshotTree(t, f.folder)) {
+					t.Fatal("raw originals did not restore exactly", restored, err)
 				}
 			})
 		}

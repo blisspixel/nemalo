@@ -114,3 +114,22 @@ documentation checks and actual all-six hosted success on the final commit.
 Post/read exact acceptance while issue 57 remains open. Audit its remaining stage 2
 requirements before closure; unsupported metadata and uncertain sources remain
 preserved. Later audio, evidence, interface and post-1.0 work follows roadmap order.
+
+## Measured implementation evidence
+
+The implementation passed `go run ./cmd/verify`, including pinned Staticcheck,
+offline tests, 86.5% aggregate coverage and govulncheck with no reported
+vulnerabilities. The full native-cgo race suite passed. Its library run retained
+all 1,386 preceding recovery leaf cases and passed 1,612 current leaf cases;
+the package completed in 148.631 seconds. Windows cross-vet and local document
+link/anchor and whitespace checks passed. These are local results, not hosted
+acceptance or a release.
+
+Generated native Linux validation passed 39 positive cleanup/raw-restore/fresh-
+purge lifecycles, eight unsupported or unheld retention cases and 16 independent
+whole/partial durable recovery snapshots. Installed 7-Zip was 26.04. The actual
+accepted preceding executable retained unfamiliar authority and restored original
+bytes without an archive reader. Current partial recovery used separate snapshots
+and no reconstruction. The [stage 2 audit](../VALIDATION.md#stage-2-archive-intake-and-recoverable-cleanup)
+records coverage and limitations. Exact-final hosted acceptance and readback
+remain required in issue 57 before closure or later-stage implementation.

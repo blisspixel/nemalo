@@ -560,7 +560,8 @@ proof to the outer set. Neither `archive-tree/1` nor `archive-tree/2` accepts RA
 Fresh purge rechecks the complete held set and exact leaves; durable partial
 recovery binds the original proof, file indices and leaf digest without joining
 missing parts or adopting replacements. Raw restore needs no reader and replaces
-nothing. Old-named, nested sets and unsupported material stay preserved.
+nothing. That proof excludes old-name and nested-set layouts; their separate
+authorities are described below. Unsupported material stays preserved.
 See [decision 0074](decisions/0074-modern-rar5-set-cleanup.md). Source implementation
 is separate from full acceptance, tracked in issue 57, and from a release.
 
@@ -568,7 +569,8 @@ An additional internal read-only `RAR4SetCoverage` requires both `Coverage` and
 `RAR4Coverage` for modern root RAR4 sets. Physical framing binds exact end
 ordinals/roles, known metadata, split records and the same isolated/assembled
 tables used for extraction. Optional reserved end bytes must be exactly seven
-zeros; volume-wide CRC declarations, old naming and nested sets stay unsupported.
+zeros. That original scope excluded old naming and nested sets; volume-wide CRC
+declarations remain unsupported.
 Both versions share a format-neutral continuation/table matcher with separate
 declaration fingerprints and explicit capabilities. Standalone facts and earlier
 proof IDs keep their meanings. Source-copy and all work limits span every part
@@ -594,7 +596,8 @@ Read-only root old-name RAR4/RAR5 coverage is implemented behind a separate
 internal `OldRARSetCoverage` capability, requiring `Coverage` and the selected
 format's set flags. The same physical framer and table matcher account for each
 part of the closed 2..901-name family. Public modern RAR4 framing remains strict;
-nested volume sets and unsupported records stay refused. Old facts use separate,
+That original increment refused nested volume sets; unsupported records still
+stay refused. Old facts use separate,
 JSON-omitted `OldRARSetVersion`; modern and standalone facts remain zero. Shared
 source, proof, process, diagnostic and output budgets include failed work.
 The initial read-only increment kept every application flag false: even a fully
@@ -621,7 +624,7 @@ after canonical stop it restored remaining originals without a reader and report
 absent parts honestly. Separate current-version snapshots resumed whole and
 partial purges. These native pending states were constructed durable snapshots,
 not observed crashes. Unsupported records, ambiguous families, unheld material
-and nested volume sets stay preserved. See
+and nested volume sets were outside those root-only proofs. See
 [decision 0079](decisions/0079-old-name-rar-set-cleanup.md); full writer acceptance
 remains tracked in issue 57, and this is not a release.
 
@@ -634,11 +637,32 @@ name, even when it appears last in the outer table. Failed or uncertain parts
 prevent the whole group, and all children share depth, output, proof, read,
 process and diagnostic limits. JSON-omitted `CoveredVolumeSets` measures covered
 child sets separately from root and standalone facts; it grants no cleanup right.
-All application callers keep this opt-in false. Native generated combinations
+That read-only increment kept application callers false. Native generated combinations
 returned exact independently expected bytes, while application cleanup retained
-even fully covered sets with held leaves. Full hosted acceptance remains tracked
-in issue 57 before any separate nested writer decision. See
+even fully covered sets with held leaves. This prerequisite and the test-only
+counter-housekeeping correction passed all six hosted jobs at `1f63374`, with
+exact acceptance readback before the separate writer decision. See
 [decision 0080](decisions/0080-opt-in-nested-volume-set-coverage.md).
+
+Application intake now explicitly enables the checked child groups through the
+same tree and Import services. Preview, apply, repeat and lost-staging recovery
+retain exact original first-part labels; uncertain parts never become book
+imports. Incomplete trees report failure while independent verified leaves can
+still import. Sources remain intact on intake.
+
+Cleanup now requests full child coverage and selects distinct `archive-tree/3`
+only with measured covered child sets, complete output, every verified held leaf
+and bound unchanged original bytes. Root RAR format/layout facts stay independent.
+Only /3 accepts safe exact first-part chains for chunks and disk segments. A child
+set with no file leaves beside a direct held book also needs /3. Old-name RAR
+chains can share historical standalone syntax; fresh purge must reproduce actual
+authority rather than guess from names. The existing durable group binds the
+proof, original indices and canonical leaf digest; partial recovery verifies
+remaining bytes and holdings without reconstructing a missing tree. Earlier IDs
+and receipts keep their meanings, and raw restore needs no reader. Unsupported,
+incomplete and uncertain sources stay preserved. Writer acceptance is recorded
+in issue 57 before closure; no release is included. See
+[decision 0082](decisions/0082-nested-volume-tree-cleanup.md).
 
 Split ZIP byte chunks (`NAME.zip.001`, `.002`, ...; three or four numeric digits)
 are joined privately, checked as exactly one ordinary ZIP through installed
@@ -689,15 +713,17 @@ member staging, so an outer snapshot can need 5 GiB of temporary space in total.
 Traversal and extraction are sequential; a subprocess is not a memory sandbox.
 
 Nested ZIPs require installed 7-Zip to establish one ordinary container before
-the Go extractor reads the same private bytes. Nested RARs must explicitly
-declare one non-volume container. Recognized nested sets, unsupported archive
-types, and missing reader capabilities stay preserved with reasons. Tree intake
+the Go extractor reads the same private bytes. Standalone nested RARs must explicitly
+declare one non-volume container; complete recognized nested sets use the checked
+group adapter. Uncertain groups, unsupported archive types and missing reader
+capabilities stay preserved with reasons. Tree intake
 refuses every occurrence of a duplicate member name; it never cites an ambiguous
 first occurrence. Depth/work limits or corrupt children make ingest incomplete,
 while separately verified leaves can still import. Cleanup can move a complete
-nested ZIP/7z tree only when every container's original bytes are accounted for
+nested tree only when every container's original bytes are accounted for
 and every non-directory leaf is held with currently verified stored bytes.
-RAR children, nested sets, comments, unknown metadata, unheld notes and incomplete
+/1 remains limited to ZIP/7z nodes; standalone RARs require /2 and covered nested
+volume sets require /3. Comments, unknown metadata, unheld notes and incomplete
 trees preserve the whole outer source/set.
 
 Cleanup requests coverage through the same tree. ZIP proof work shares 16 MiB
@@ -855,8 +881,9 @@ shape and binding is checked before any purge group removes bytes. Unknown proof
 versions retain copies for restore. Fresh purge repeats the full tree check and
 binds the exact original indices and canonical leaf digest; partial recovery never
 reconstructs missing parts or adopts replacements. Earlier executables refuse or
-retain unfamiliar authority; raw restore is tested separately. Unsupported RAR volume sets,
-nested volume sets, unsupported metadata and unheld material remain preserved.
+retain unfamiliar authority; raw restore is tested separately. Unsupported RAR
+volume variants, metadata and unheld material remain preserved. Covered nested
+sets use the separate /3 contract above.
 See [decision 0072](decisions/0072-nested-rar-cleanup.md), tracked in issue 57;
 RAR volume cleanup still leaves roadmap stage 2 unfinished.
 `library audit` on the library directory reports missing, changed, and review

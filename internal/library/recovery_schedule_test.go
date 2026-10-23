@@ -35,6 +35,7 @@ var fixtureSchedule = []struct {
 	{"TestRAR5SetPartCountsAndNestedAuthority", []string{""}},
 	{"TestOldRAR4SetPartCountsAndNestedAuthority", []string{""}},
 	{"TestOldRAR5SetPartCountsAndNestedAuthority", []string{""}},
+	{"TestNestedVolumeTreeRecovery", []string{"zip_chunks", "rar5_set"}},
 }
 
 func fixtureGroups(root string) []string {

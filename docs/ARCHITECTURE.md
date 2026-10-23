@@ -610,10 +610,25 @@ the set reader. Leaves retain the exact original first-member chain. All groups
 share the existing tree allowances, including child snapshot and join reads;
 failed work does not refund them. JSON-omitted `CoveredVolumeSets` measures
 requested child-set physical evidence separately from root and standalone facts.
-All application callers keep the opt-in false, and cleanup explicitly retains
-measured child sets rather than expanding any existing proof. Separate hosted
-acceptance and writer authority remain required
+That read-only increment left application callers false and explicitly retained
+measured child sets rather than expanding any existing proof. Its separate
+hosted acceptance preceded writer authority
 ([decision 0080](decisions/0080-opt-in-nested-volume-set-coverage.md)).
+
+After accepted read-only and counter-housekeeping gates at `1f63374`, application
+intake explicitly requests checked child groups while retaining sources. Cleanup
+requests full coverage and selects `archive-tree/3` only from measured child-set
+evidence, complete output, every current verified held leaf and unchanged expected
+original bytes. Root RAR format/layout facts remain independent prerequisites.
+Only /3's leaf validator accepts safe exact first-part selections; previous IDs
+and validators retain their scopes. A covered child with no file leaf still
+requires /3 beside a direct held book. Old-name chains can share standalone syntax,
+so fresh purge reproduces actual authority rather than guessing from suffixes.
+The existing group intent binds /3, original indices and canonical leaf digest;
+partial recovery checks immutable evidence and remaining bytes/holdings without
+reconstruction. Restore returns raw originals without a reader. No schema field,
+decoder, module or runtime was added. Writer acceptance is tracked in issue 57
+([decision 0082](decisions/0082-nested-volume-tree-cleanup.md)).
 
 Private staging and a subprocess are not sandboxes. Go's
 [root-scoped filesystem APIs](https://go.dev/blog/osroot) are useful building blocks;

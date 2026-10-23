@@ -45,6 +45,7 @@ func newFlatSevenFixture(t *testing.T, count int, build func([]byte) []byte) str
 	if count > 1 {
 		profile.Volumes = []stagingtest.Volume{{Name: "archive.7z", Body: body}}
 	}
+	f.archives = []stagingtest.Archive{profile}
 	stagingtest.Install(t, profile)
 	return f
 }

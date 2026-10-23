@@ -302,6 +302,48 @@ Git. Synthetic regression tests separately cover directory/file replacement,
 nonblocking special-file acquisition on Unix, overlapping compressed members,
 lifetime parser work budgets, and parse-equivalent terminal-control escaping.
 
+## Stage 2 archive intake and recoverable cleanup
+
+This audit covers the bounded stage 2 contracts, including
+[nested volume trees](decisions/0082-nested-volume-tree-cleanup.md). It does not
+establish broad archive conformance, safety, a release, or native installed-reader
+behavior on every platform. Exact-final hosted results and issue closure are
+recorded in [issue 57](https://github.com/blisspixel/nemalo/issues/57).
+
+| Acceptance item | Evidence and boundary |
+| --- | --- |
+| Old-style and modern RAR, split ZIP/7z, nested archives | Shared canonical grouping and checked adapters; isolated roles/ordinals, split continuity, raw supported framing and exact reader/output binding. Missing, encrypted, ambiguous and unsupported material stays preserved. See staging's [nested-set tests](../internal/staging/nested_volume_test.go) and [physical/reader failures](../internal/staging/nested_volume_binding_test.go). |
+| Depth, work, output and cancellation | Shared four-level, member, expanded-byte, per-part, read/proof, process, diagnostic and deadline allowances, including failed work. [Budget tests](../internal/staging/nested_volume_budget_test.go) cover charged failures and active cancellation; sources remain unchanged. External decoder memory is not an OS sandbox guarantee. |
+| Paths and filesystem confinement | Flat generated staging names and capability-bound opens; exact original names remain provenance. Existing replacement, alias and native Windows junction/symbolic-link tests exercise boundaries. Hosted reparse cases must pass without skips. |
+| Complete member accounting and source preservation | Intake handles all seven child layouts, preview/apply/repeat and exact pending-leaf recovery. Incomplete groups retain their parts while independently verified leaves may import. [Intake tests](../internal/library/nested_volume_ingest_test.go) also require changed pending bytes to stop before other imports. |
+| Recoverable cleanup and purge | Distinct proofs bind current holdings and original byte identities. [Layout tests](../internal/library/nested_volume_cleanup_test.go) cover every outer layout and child selection syntax. [Recovery tests](../internal/library/nested_volume_recovery_test.go) reuse per-part interruption, current-holding, replacement and immutable binding checks under the same three-worker and timeout gates. Fresh purge repeats the complete tree; partial recovery never reconstructs it. |
+| Multiple groups and metadata-only children | [Interleaved group tests](../internal/library/nested_volume_groups_test.go) require every leaf held and bind repeated holdings to distinct selections. A [covered empty directory child](../internal/library/nested_volume_empty_test.go) beside a direct leaf still needs the new measured authority. A zero-entry ZIP remains outside the existing ZIP proof. |
+| PAR2 inventory and retention | [Metadata tests](../internal/inventory/par2_test.go) and [library retention tests](../internal/library/par2_test.go) keep packet checksums, declarations and protected-file verification separate. No repair or protected-file opens are inferred from names. |
+
+Generated native Linux fixtures outside the checkout passed 39 cleanup,
+byte-exact raw-restore and fresh-purge lifecycles through installed 7-Zip 26.04,
+covering all eleven outer layouts and seven child layouts compositionally, plus
+a child with no file leaves. Eight hidden-service, missing-part, corrupt-header
+or unheld-leaf cases retained sources. The actual accepted preceding executable
+retained unfamiliar cleanup/purge plans and restored exact original bytes with
+no archive reader available.
+
+Sixteen independent constructed durable snapshots cover preceding/current
+consumers, whole/partial purges, ZIP-chunk/old-RAR outer sets and RAR/chunk child
+chains. The preceding executable completed with zero purged for unfamiliar
+RAR-named chains and refused unfamiliar chunk syntax. Refused intents were
+closed through canonical stop before raw restore; missing parts were reported
+honestly. Separate current snapshots completed using immutable original evidence
+without a reader or reconstruction. These constructed snapshots are distinct
+from the unit tests' observed interruption hooks, and neither simulates power loss.
+
+All normal tests use synthetic Go fixtures and injected readers/scanners. Real
+user libraries, personal downloads, installed scanners and public providers were
+not used for this archive validation. Installed-reader native evidence here is
+Linux-specific. Native Go CI covers Linux/macOS/Windows, including race and
+cgo-free smokes, with exact-final writer acceptance required in issue 57. Broader
+host/reader validation and production release gates remain separate roadmap work.
+
 ## Source contracts reviewed on 2026-10-08
 
 - Gutenberg [robot policy](https://www.gutenberg.org/policy/robot_access.html),

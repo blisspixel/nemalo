@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- Read complete supported nested volume sets through shared intake, preserving
+  original source chains and every continuation. Completely covered trees with
+  verified held leaves use distinct `archive-tree/3`; fresh purge repeats the
+  whole proof and partial recovery binds the original evidence without
+  reconstruction. Earlier proof scopes stay unchanged, raw restore needs no
+  reader, and unsupported or uncertain sources stay preserved.
+
 - Add internal opt-in nested-volume intake and read-only coverage through the
   existing checked set adapters. Preserve every original part and source chain,
   share work limits across groups, and refuse ambiguous or failed parts. All

@@ -26,8 +26,8 @@ No telemetry or required AI service.
   and MCP services, with coverage gaps reported.
 
 Published prereleases may lag the source tree. Checks provide limited evidence,
-never a safety or completeness guarantee. Nested RAR volume cleanup,
-M4B/M4A content ranges, cited evidence and some interface work remain planned.
+never a safety or completeness guarantee. M4B/M4A content ranges, cited evidence
+and some interface work remain planned.
 See [capabilities and limits](docs/DEVELOPMENT.md), the [roadmap](ROADMAP.md), and
 [published releases](https://github.com/blisspixel/nemalo/releases).
 
@@ -92,5 +92,6 @@ capture method, with a discovery view and keyboard controls.
 
 Contributing: read [AGENTS.md](AGENTS.md), then run `go run ./cmd/verify` and
 `go test -race ./...` (race checks require a native C compiler).
+Security reports: see the [reporting policy](SECURITY.md).
 
 Licensed under [Apache 2.0](LICENSE). Downloaded content retains its own rights.

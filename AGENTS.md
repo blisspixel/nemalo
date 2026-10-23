@@ -179,9 +179,9 @@ Decision 0079 selects distinct old-name cleanup authority only under the complet
 root-set policy below. Keep public modern RAR4 framing strict and preserve nested
 volume sets.
 Decision 0080 adds internal `NestedVolumeSets` for bounded tree intake and
-read-only coverage of the existing set layouts. All application callers keep it
-false. Share canonical `staging.VolumeSets`, verify every part before a private
-fixed-name group, preserve exact original chains and charge child joins to shared
+read-only coverage of the existing set layouts. That accepted increment kept all
+application callers false. Share canonical `staging.VolumeSets`, verify every part
+before a private fixed-name group, preserve exact original chains and charge child joins to shared
 read limits. `CoveredVolumeSets` is JSON-omitted physical evidence, never write
 authority; existing proofs must retain these sources. Require its full hosted
 acceptance and exact open-issue readback before any nested-volume writer decision.
@@ -320,8 +320,23 @@ Reuse exact held leaves, expected/final source hashes, shared budgets, whole-set
 fresh purge and immutable partial recovery. A pending unknown old layout may
 cause an earlier executable to refuse without closing the intent: verify retained
 bytes, use canonical purge --stop, then test no-reader raw restore. Current
-recovery uses separate snapshots. Keep nested volume sets and unsupported material
-preserved; full writer acceptance and stage 2 remain separate.
+recovery uses separate snapshots. That root-only writer left nested volume sets
+preserved; their separate authority is decision 0082 below.
+Decision 0082 follows 0080/0081's exact all-six acceptance and open-issue readback
+at 1f63374. Application intake requests NestedVolumeSets without coverage; cleanup
+requests every selected child format capability independently of root naming.
+Validate root RAR format/layout facts separately, then select archive-tree/3 only
+from measured CoveredVolumeSets>0 plus complete whole-tree output, verified held
+leaves, expected/final source hashes and all existing bounds. A covered child
+with no file leaves beside a direct held book still needs /3. Keep earlier IDs'
+actual scopes and leaf validators unchanged; /3 alone accepts safe exact first-part
+selectors. Old-name RAR chains can share historical standalone syntax: fresh
+purge must reproduce /3 from physical evidence, and pending operations bind the
+original approved digest/proof, indices and leaf digest. Never relabel receipts,
+reconstruct missing parts or adopt replacements. Actual predecessor refusal or
+zero-purged retention and no-reader raw restore need separate native verification.
+Keep uncertain and unsupported sources; full writer acceptance and stage 2 audit
+remain separate gates, with the final receipt read back while issue 57 is open.
 Historical RAR-named archive entries and old continuations without a supported
 proof cannot resume cleanup or purge, including pending purge intents. Preserve
 their recorded bytes for restore; member holdings alone confer no permission.

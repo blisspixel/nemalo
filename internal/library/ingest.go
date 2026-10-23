@@ -86,7 +86,7 @@ func Ingest(ctx context.Context, request IngestRequest) (result IngestResult, er
 	result = IngestResult{SchemaVersion: 1, Applied: request.Apply, Items: []IngestItem{}, Limitations: []string{
 		"The folder and its archives are preserved. Nothing is moved or deleted; cleanup is a separate, later step.",
 		"Only EPUB, PDF, MP3, M4B, and M4A files, completed intake packets, and supported archive members are imported. RAR, 7z, split ZIPs, and nested ZIPs need installed 7-Zip. Unsupported variants stay listed.",
-		"Each outer archive tree has four archive levels, 10,000 members, and a shared 1 GiB copy allowance including failed attempts. Nested volume sets stay preserved.",
+		"Each outer archive tree has four archive levels, 10,000 members, and a shared 1 GiB copy allowance including failed attempts. Complete supported nested sets use the same checked adapters and shared bounds; uncertain sets remain preserved.",
 		"Each import is assessed and journaled like library import. A no-detection scan is not proof of safety.",
 	}}
 	defer func() {
@@ -394,7 +394,9 @@ func ingestArchive(ctx context.Context, src *os.Root, folder, dir string, u inge
 	if len(names) == 0 {
 		names = []string{rel}
 	}
-	members, extractErr = staging.ExtractTree(ctx, src, names, stage, supportedImport, staging.Defaults())
+	limits := staging.Defaults()
+	limits.NestedVolumeSets = true
+	members, extractErr = staging.ExtractTree(ctx, src, names, stage, supportedImport, limits)
 	if errors.Is(extractErr, staging.ErrNoArchiveTool) {
 		// Without 7-Zip a RAR, 7z, or split ZIP is listed and preserved.
 		item.Outcome, item.Detail = "not_imported", extractErr.Error()

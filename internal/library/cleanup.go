@@ -125,7 +125,7 @@ func cleanupLimitations() []string {
 	return []string{
 		"Only files whose exact bytes the library holds, with stored bytes verified, move. Everything else stays, with its reason.",
 		"Moved sources go to the library's cleanup holding area and can be restored. library purge removes held copies the library holds, after its own preview.",
-		"An archive moves only when every member is a directory or a held file, with complete container accounting. Supported trees may contain standalone RAR4/RAR5 archives. Completely covered supported root RAR sets move together; unsupported RAR sets stay. Intake packets move as their receipt, intent, and content.",
+		"An archive moves only when every member is a directory or a held file, with complete container accounting. Supported trees may contain covered standalone archives and complete volume sets. Every original source set moves together; unsupported or uncertain sets stay. Intake packets move as their receipt, intent, and content.",
 		"Directory-entry durability across power loss depends on the filesystem.",
 	}
 }
@@ -993,9 +993,10 @@ func planArchive(ctx context.Context, src *os.Root, rel string, volumes []string
 	limits.Coverage = true
 	limits.RAR4Coverage = true
 	limits.NestedRARCoverage = true
-	limits.RAR5SetCoverage = rarSet
-	limits.RAR4SetCoverage = rarSet
-	limits.OldRARSetCoverage = oldRARSet
+	// Child sets need their own capabilities independently of the outer layout.
+	// Root format/layout facts are still checked below before any authority.
+	limits.RAR5SetCoverage, limits.RAR4SetCoverage, limits.OldRARSetCoverage = true, true, true
+	limits.NestedVolumeSets = true
 	limits.ExpectedSources = make(map[string]staging.SnapshotIdentity, len(before))
 	limits.SourceHashRemaining = hashRemaining
 	for i, f := range before {
@@ -1026,10 +1027,6 @@ func planArchive(ctx context.Context, src *os.Root, rel string, volumes []string
 	if x.CoverageGap != nil {
 		encoded, _ := textsafe.MarshalJSON(x.CoverageGap.Chain, false)
 		e.Reason = "container " + string(encoded) + " is not completely accounted for: " + textsafe.Visible(x.CoverageGap.Detail) + "; the archive is preserved"
-		return nil
-	}
-	if x.CoveredVolumeSets != 0 {
-		e.Reason = "nested volume coverage has no supported cleanup proof; the archive is preserved"
 		return nil
 	}
 	rarProof := ""
@@ -1131,7 +1128,9 @@ func planArchive(ctx context.Context, src *os.Root, rel string, volumes []string
 	}
 	e.Disposition, e.Reason, e.Files, e.Holdings = "move", "every member is held with verified stored bytes", before, ids
 	e.ArchiveProof = zipProof
-	if rarSet {
+	if x.CoveredVolumeSets > 0 {
+		e.ArchiveProof, e.ArchiveLeaves = archiveVolumeTreeProof, leaves
+	} else if rarSet {
 		e.ArchiveProof, e.ArchiveLeaves = rarProof, leaves
 	} else if nested && x.RARContainers > 0 {
 		e.ArchiveProof, e.ArchiveLeaves = archiveRARTreeProof, leaves

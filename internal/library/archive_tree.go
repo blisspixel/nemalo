@@ -16,6 +16,7 @@ import (
 
 const archiveTreeProof = "archive-tree/1"
 const archiveRARTreeProof = "archive-tree/2"
+const archiveVolumeTreeProof = "archive-tree/3"
 const rar5FramesProof = "rar5-frames/1"
 const rar4FramesProof = "rar4-frames/1"
 const rar5SetProof = "rar5-set/1"
@@ -24,7 +25,7 @@ const rar4OldSetProof = "rar4-old-set/1"
 const rar5OldSetProof = "rar5-old-set/1"
 
 func leafBoundArchiveProof(proof string) bool {
-	return proof == archiveTreeProof || proof == archiveRARTreeProof || proof == rar5FramesProof || proof == rar4FramesProof || proof == rar5SetProof || proof == rar4SetProof || proof == rar4OldSetProof || proof == rar5OldSetProof
+	return proof == archiveTreeProof || proof == archiveRARTreeProof || proof == archiveVolumeTreeProof || proof == rar5FramesProof || proof == rar4FramesProof || proof == rar5SetProof || proof == rar4SetProof || proof == rar4OldSetProof || proof == rar5OldSetProof
 }
 
 func knownArchiveProof(proof string) bool {
@@ -82,6 +83,14 @@ func entryHasRARFiles(e CleanupEntry) bool {
 }
 
 func validArchiveLeaves(e CleanupEntry) bool {
+	return validArchiveLeafSelections(e, false)
+}
+
+func validArchiveProofLeaves(e CleanupEntry) bool {
+	return validArchiveLeafSelections(e, e.ArchiveProof == archiveVolumeTreeProof)
+}
+
+func validArchiveLeafSelections(e CleanupEntry, volumeSets bool) bool {
 	if len(e.ArchiveLeaves) < 1 || len(e.ArchiveLeaves) > 10000 || len(e.ArchiveLeaves) != len(e.Holdings) {
 		return false
 	}
@@ -99,7 +108,7 @@ func validArchiveLeaves(e CleanupEntry) bool {
 				if !supportedImport(name) {
 					return false
 				}
-			} else if ext := strings.ToLower(path.Ext(name)); ext != ".zip" && ext != ".7z" && ext != ".rar" {
+			} else if !archiveContainerSelection(name, volumeSets) {
 				return false
 			}
 		}
@@ -110,6 +119,20 @@ func validArchiveLeaves(e CleanupEntry) bool {
 		seen[string(key)] = true
 	}
 	return true
+}
+
+func archiveContainerSelection(name string, volumeSets bool) bool {
+	if volumeSets {
+		if set, ordinal, ok := staging.VolumeOf(name); ok {
+			ext := strings.ToLower(path.Ext(set))
+			return ordinal == 1 && (ext == ".zip" || ext == ".7z" || ext == ".rar")
+		}
+		if _, ordinal, ok := staging.ZIPSegmentOf(name); ok {
+			return ordinal == 1
+		}
+	}
+	ext := strings.ToLower(path.Ext(name))
+	return ext == ".zip" || ext == ".7z" || ext == ".rar"
 }
 
 func archiveLeafDigest(e CleanupEntry) string {
@@ -125,6 +148,10 @@ func equalArchiveLeaves(a, b []CleanupArchiveLeaf) bool {
 }
 
 func supportedArchiveProof(e CleanupEntry) bool {
+	if e.ArchiveProof == archiveVolumeTreeProof {
+		_, layout := archiveEntryParts(e)
+		return layout && validArchiveProofLeaves(e)
+	}
 	if e.ArchiveProof == rar4OldSetProof || e.ArchiveProof == rar5OldSetProof {
 		_, layout := oldRARSetParts(e)
 		return layout && validArchiveLeaves(e)

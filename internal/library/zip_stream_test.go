@@ -77,7 +77,9 @@ func newStreamFixture(t *testing.T, count int, build func([]byte) []byte) stream
 		f.parts = append(f.parts, part)
 		writeTree(t, f.folder, map[string][]byte{name: part})
 	}
-	stagingtest.Install(t, stagingtest.Archive{Kind: "-tzip", Header: fmt.Sprintf("Type = zip\nPhysical Size = %d\n", len(body)), Volumes: []stagingtest.Volume{{Name: "archive.zip", Body: body}}})
+	profile := stagingtest.Archive{Body: body, Kind: "-tzip", Header: fmt.Sprintf("Type = zip\nPhysical Size = %d\n", len(body)), Volumes: []stagingtest.Volume{{Name: "archive.zip", Body: body}}}
+	f.archives = []stagingtest.Archive{profile}
+	stagingtest.Install(t, profile)
 	return f
 }
 
@@ -198,6 +200,22 @@ func testArchiveCleanupRefusals(t *testing.T, fixture zipFixtureFactory, kinds [
 						base = strings.TrimSuffix(base, ".Z01") + ".Z001"
 					}
 					alias = filepath.ToSlash(filepath.Join(filepath.Dir(f.names[0]), base))
+				}
+				if f.proof() == archiveVolumeTreeProof {
+					first := f.names[0]
+					set, _, numbered := staging.VolumeOf(first)
+					base := strings.ToUpper(filepath.Base(first))
+					switch {
+					case numbered && strings.EqualFold(filepath.Ext(set), ".rar"):
+						base = strings.TrimSuffix(filepath.Base(set), filepath.Ext(set)) + ".part0001.RAR"
+					case numbered:
+						base = strings.TrimSuffix(base, ".001") + ".0001"
+					case strings.EqualFold(filepath.Ext(first), ".rar"):
+						base = strings.TrimSuffix(filepath.Base(first), filepath.Ext(first)) + ".z01"
+					default:
+						base = strings.TrimSuffix(base, ".Z01") + ".Z001"
+					}
+					alias = filepath.ToSlash(filepath.Join(filepath.Dir(first), base))
 				}
 				writeTree(t, f.folder, map[string][]byte{alias: f.parts[0]})
 			case "missing_tool":

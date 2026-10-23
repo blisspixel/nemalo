@@ -254,7 +254,7 @@ func archivePermissions(m cleanupManifest, pm purgeManifest) (map[int]bool, erro
 	permissions := map[int]bool{}
 	bad := fmt.Errorf("%w: invalid archive purge binding", ErrStateReview)
 	for _, e := range m.Entries {
-		if e.Disposition == "move" && len(e.ArchiveLeaves) != 0 && !validArchiveLeaves(e) {
+		if e.Disposition == "move" && len(e.ArchiveLeaves) != 0 && !validArchiveProofLeaves(e) {
 			return nil, bad
 		}
 		if e.Disposition == "move" && knownArchiveProof(e.ArchiveProof) && !supportedArchiveProof(e) {
@@ -292,7 +292,7 @@ func archivePermissions(m cleanupManifest, pm purgeManifest) (map[int]bool, erro
 			return nil, bad
 		}
 		switch group.Proof {
-		case zipStreamProof, zipSegmentsProof, archiveTreeProof, archiveRARTreeProof, rar5FramesProof, rar4FramesProof, rar5SetProof, rar4SetProof, rar4OldSetProof, rar5OldSetProof:
+		case zipStreamProof, zipSegmentsProof, archiveTreeProof, archiveRARTreeProof, archiveVolumeTreeProof, rar5FramesProof, rar4FramesProof, rar5SetProof, rar4SetProof, rar4OldSetProof, rar5OldSetProof:
 			if group.Proof != e.ArchiveProof && (leafBoundArchiveProof(e.ArchiveProof) || leafBoundArchiveProof(group.Proof)) {
 				return nil, bad
 			}

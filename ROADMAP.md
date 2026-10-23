@@ -119,16 +119,27 @@ verified, not when code exists. No stage has a time estimate.
    `rar5-old-set/1`, with exact held leaves, expected/final source hashes, fresh
    whole-set purge and immutable partial recovery. Earlier proofs retain their
    scopes. Native predecessor retention/raw restore and separate current recovery
-   checks passed; full writer acceptance is tracked in issue 57. Nested volume
-   work keeps stage 2 unfinished
+   checks passed; full writer acceptance is tracked in issue 57. That root-only
+   increment left nested-volume work unfinished
    ([decision 0079](docs/decisions/0079-old-name-rar-set-cleanup.md)).
    Internal opt-in nested-volume intake and read-only coverage now reuse those
    checked adapters for modern/old RAR4/RAR5, split 7z and both split ZIP layouts.
-   Every part, source chain and shared work limit remains accounted for. All
-   application callers keep the opt-in false; this supplies no cleanup authority.
+   Every part, source chain and shared work limit remains accounted for. That
+   read-only increment kept application callers false and supplied no cleanup authority.
    Native generated checks passed, with full hosted acceptance tracked in issue 57
    before any separate writer decision
    ([decision 0080](docs/decisions/0080-opt-in-nested-volume-set-coverage.md)).
+   That read-only prerequisite and its test-only counter-housekeeping correction
+   passed all six hosted jobs at `1f63374`, with exact acceptance readback while
+   issue 57 stayed open. Complete nested-volume intake and cleanup now reuse the
+   same checked groups under distinct `archive-tree/3`. Root facts, held leaves,
+   original hashes, fresh whole-tree purge and immutable partial recovery remain
+   required. Full writer acceptance and the final stage 2 audit remain tracked
+   in issue 57 ([decision 0082](docs/decisions/0082-nested-volume-tree-cleanup.md)).
+   Status: implemented for these bounded intake and cleanup contracts. The
+   [acceptance audit](docs/VALIDATION.md#stage-2-archive-intake-and-recoverable-cleanup)
+   records tested behavior and limits. Exact-final hosted writer acceptance is
+   recorded in issue 57 before closure or later-stage implementation.
    Split ZIP intake now handles byte chunks and true disk segments through
    checked private snapshots
    ([decision 0057](docs/decisions/0057-split-zip-intake.md)).
@@ -222,7 +233,8 @@ verified, not when code exists. No stage has a time estimate.
    whole-set fresh purge and immutable partial recovery protocol. RAR5 and older
    proof meanings stay unchanged. Implementation is separate from full acceptance,
    tracked in issue 57 ([decision 0076](docs/decisions/0076-modern-rar4-set-cleanup.md)).
-   Nested volume sets remain preserved; stage 2 remains unfinished.
+   Those root proofs exclude nested volume sets; their separate /3 writer and
+   acceptance audit are described above.
 3. **Audio access** (milestone 8). M4B and M4A byte ranges and decoded timing in
    content access, bounded ranges usable by an external player, and output
    demonstrated with a real audiobook reader or server.
@@ -448,7 +460,7 @@ test dependency remains in the application.
 
 ## Milestone 2: inspect and stage local downloads
 
-Status: partial. Inventory, standalone file checks, and folder ingest with ZIP
+Status: implemented within the bounded contracts below. Inventory, standalone file checks, and folder ingest with ZIP
 extraction into private staging exist
 ([decision 0017](docs/decisions/0017-folder-and-zip-ingest.md)). RAR and 7z
 members are extracted through an installed 7-Zip, by exact name to standard
@@ -478,15 +490,17 @@ and exact member-chain provenance
 ([decision 0058](docs/decisions/0058-bounded-nested-intake.md)). Cleanup now reuses
 that tree with requested per-container coverage, a shared 16 MiB proof allowance
 and exact held-leaf bindings. Covered standalone RAR children use the distinct
-tree proof in [decision 0072](docs/decisions/0072-nested-rar-cleanup.md); nested
-volume sets and every unproven tree remain preserved
+tree proof in [decision 0072](docs/decisions/0072-nested-rar-cleanup.md); covered
+nested volume sets use separate `archive-tree/3`
+([decision 0082](docs/decisions/0082-nested-volume-tree-cleanup.md)). Every unproven tree remains preserved
 ([decision 0063](docs/decisions/0063-complete-archive-tree-cleanup.md)). `inspect --par2`
 now inventories bounded packet metadata and declared sets without verifying or
 repairing protected files. Recovery material stays preserved by ingest and
 cleanup ([decision 0059](docs/decisions/0059-par2-metadata-inventory.md)). Native
 Windows junction/symbolic-link tests now run without privilege-based skips
 ([decision 0008](docs/decisions/0008-filesystem-and-display-boundaries.md)). Full
-milestone acceptance still needs the remaining archive cleanup evidence.
+milestone acceptance is recorded in issue 57, with
+[bounded evidence and limits](docs/VALIDATION.md#stage-2-archive-intake-and-recoverable-cleanup).
 Depends on milestone 1.
 
 Deliver recursive inventory, file-signature checks, ZIP handling, additional archive
@@ -554,7 +568,7 @@ Acceptance:
 
 ## Milestone 4: recoverable cleanup and maintenance
 
-Status: partial. Plan-based source cleanup into a recoverable holding area,
+Status: implemented within the bounded contracts below. Plan-based source cleanup into a recoverable holding area,
 journaled crash recovery, and restore are implemented in CLI, JSON, and TUI
 ([decision 0022](docs/decisions/0022-recoverable-source-cleanup.md)). `library
 purge` removes a completed cleanup's held copies whose bytes the library holds
@@ -594,9 +608,12 @@ sets use distinct `rar4-set/1` and `rar5-set/1` contracts
 ([decision 0076](docs/decisions/0076-modern-rar4-set-cleanup.md)). Completely
 covered old-name root sets use separate `rar4-old-set/1` and `rar5-old-set/1`
 with the same whole-set preservation and recovery protocol
-([decision 0079](docs/decisions/0079-old-name-rar-set-cleanup.md)). Nested volume
-sets and every unsupported or uncertain source remain preserved. Full writer
-acceptance is tracked in issue 57; stage 2 remains unfinished.
+([decision 0079](docs/decisions/0079-old-name-rar-set-cleanup.md)). Covered nested
+volume trees use `archive-tree/3` under the same recovery protocol
+([decision 0082](docs/decisions/0082-nested-volume-tree-cleanup.md)); unsupported
+or uncertain sources remain preserved. Exact-final writer acceptance is recorded
+in issue 57 before closure. See the
+[acceptance audit](docs/VALIDATION.md#stage-2-archive-intake-and-recoverable-cleanup).
 Disk-full and scanner-failure faults are injected in tests: a full disk
 during an import copy, a journal line, a cleanup copy, and an export, and a
 scanner that is unavailable, incomplete, failing, or timing out. Each leaves
