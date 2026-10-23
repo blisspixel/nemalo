@@ -154,6 +154,11 @@ verified, not when code exists. No stage has a time estimate.
 5. **Interfaces and platforms** (milestone 6 and the TUI workstream). TUI views
    for jobs, collections, and evidence; the MCP host and platform matrix; native
    macOS and Windows runs of destructive and recovery paths, and of the installers.
+   The shared passive `jobs snapshot` prerequisite for
+   [issue 59](https://github.com/blisspixel/nemalo/issues/59) is implemented in
+   source under [decision 0088](docs/decisions/0088-non-mutating-library-job-snapshot.md).
+   The issue records verification; its optional panel, explicit reader handoff
+   and native lifecycle acceptance remain open. This does not complete stage 5.
 6. **1.0 release candidate.** Freeze and document the on-disk formats (journals,
    holdings, bookmarks, packets), JSON envelopes, extractor IDs, and the evidence
    contract; upgrade alpha libraries in place or refuse them with a clear path;

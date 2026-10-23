@@ -224,24 +224,31 @@ func validateManaged(root *os.Root, libraryID string) error {
 	if err != nil {
 		return err
 	}
+	_, _, err = parseManagedJournals(ops, holds, libraryID)
+	return err
+}
+
+// parseManagedJournals is the canonical operations/holdings relationship check.
+// A newly initialized empty library has neither journal.
+func parseManagedJournals(ops, holds []byte, libraryID string) ([]operation, []Holding, error) {
 	if ops == nil && holds == nil {
-		return nil
+		return nil, nil, nil
 	}
 	if libraryID == "" || (holds != nil && ops == nil) {
-		return ErrStateReview
+		return nil, nil, ErrStateReview
 	}
 	events, err := parseOperations(ops, libraryID)
 	if err != nil {
-		return ErrStateReview
+		return nil, nil, ErrStateReview
 	}
 	lines, err := parseHoldings(holds, libraryID)
 	if err != nil {
-		return ErrStateReview
+		return nil, nil, ErrStateReview
 	}
 	if err := consistent(events, lines); err != nil {
-		return ErrStateReview
+		return nil, nil, ErrStateReview
 	}
-	return nil
+	return events, lines, nil
 }
 
 func readOptional(root *os.Root, name string, max int) ([]byte, error) {

@@ -937,7 +937,47 @@ in the state folder, which outlives the call and the connection; the server
 finishes running jobs before it exits, and a job whose process ended is
 recorded as interrupted ([decision 0045](decisions/0045-durable-mcp-jobs.md)).
 `nemalo jobs list`, `jobs get ID`, and `jobs cancel ID` read and cancel the
-same jobs from a terminal.
+same jobs from a terminal. Opening their store can reconcile abandoned owners
+and prune old history. They are not passive polling APIs.
+
+`nemalo jobs snapshot LIBRARY [--limit N] [--json]` instead uses the shared
+non-mutating application service. It observes an explicitly selected existing
+library and existing configured state/jobs directory without creating either,
+acquiring job locks, reconciling owners, pruning, repairing tails or opening
+stored content and historical receipt/source paths. The result is
+`nemalo-job-snapshot/1`, with observation times, recorded status/progress,
+relationship evidence, work counters, coarse problems and explicit coverage.
+Raw requests/results/errors, private paths and unrelated job details are omitted.
+Unfinished ownership is `not_observed`, including abandoned recorded running jobs.
+An empty observation does not prove that no unbound legacy work exists.
+
+New rescan jobs record an immutable `nemalo-job-library/1` declaration.
+`acquisition_start` optionally accepts an initialized scoped `library` to record
+the intended context; it grants no import or library write authority. Omission
+leaves intake behavior unchanged. Legacy completed rescan results can bind an
+exact library ID; legacy acquisitions need exact current recorded packet
+provenance, source selection and bytes/hash. Recording positions and formats
+remain distinct, and held tracks do not establish a complete held recording.
+An unknown context never falls back to a legacy rule. A path/title alone cannot
+bind a job. During an active library writer only the immutable initialization
+identity is observed; mutable holdings and their acquisition relationships are
+unavailable until a shared read lock is available.
+
+The passive operation examines at most 4,096 directory entries, 6 MiB per job
+journal, 32 MiB of actual journal reads including failed work, and 10,004 records
+per journal. Return limit is 20 by default and 1-100 explicitly; ordering is
+newest recorded creation time with an ID tie-break within observed records.
+At exactly the directory ceiling, completeness remains unestablished without
+an extra uncounted EOF probe, so that observation is conservatively incomplete.
+Safely encoded data is at most 1 MiB. A 15-second service deadline includes
+library validation; shorter caller deadlines win. Filesystem calls may still
+stall. Incomplete observations return their bounded valid observations and exit
+nonzero; cancellation, library identity changes and capability/close failures
+invalidate scoped output. Complete lines are validated strictly; a torn trailing
+line remains untouched and supplies no committed fact. This prerequisite does
+not implement a panel or complete issue 59; see
+[decision 0088](decisions/0088-non-mutating-library-job-snapshot.md).
+
 Tool paths must resolve inside a `--scope`
 directory or the configured library and review folders. Stdout carries protocol
 messages only. See [agent integration](AGENT-INTEGRATION.md) and

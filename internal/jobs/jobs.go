@@ -53,6 +53,7 @@ type Job struct {
 	Created  string    `json:"created"`
 	Updated  string    `json:"updated"`
 	Request  any       `json:"request"`
+	Context  any       `json:"context,omitempty"`
 	Progress *Progress `json:"progress,omitempty"`
 	// Result is the operation's own result when it returned one, success or
 	// not; Error is its error.
@@ -71,6 +72,7 @@ type record struct {
 	At            string          `json:"at"`
 	Kind          string          `json:"kind,omitempty"`
 	Request       json.RawMessage `json:"request,omitempty"`
+	Context       json.RawMessage `json:"context,omitempty"`
 	Progress      *Progress       `json:"progress,omitempty"`
 	Status        string          `json:"status,omitempty"`
 	Result        json.RawMessage `json:"result,omitempty"`
@@ -80,6 +82,7 @@ type record struct {
 
 const (
 	maxRequest   = 64 << 10
+	maxContext   = 4 << 10
 	maxResult    = 1 << 20
 	maxJournal   = 4 << 20
 	maxProgress  = 10000
@@ -185,9 +188,22 @@ func fileID(id string) string { return strings.TrimPrefix(id, "job:") }
 // Start records a queued job and runs it when a slot is free. The request is
 // recorded as given, so it should hold only what the job needs.
 func (s *Store) Start(kind string, request any, run Run) (Job, error) {
+	return s.StartWithContext(kind, request, nil, run)
+}
+
+// StartWithContext records an optional immutable declaration beside the request.
+// Context confers no authority; domain relationships belong to the application.
+func (s *Store) StartWithContext(kind string, request, binding any, run Run) (Job, error) {
 	req, err := json.Marshal(request)
 	if err != nil || len(req) > maxRequest {
 		return Job{}, errors.New("a job request must be JSON of at most 64 KiB")
+	}
+	var association []byte
+	if binding != nil {
+		association, err = json.Marshal(binding)
+		if err != nil || len(association) > maxContext {
+			return Job{}, errors.New("a job context must be JSON of at most 4 KiB")
+		}
 	}
 	s.mu.Lock()
 	if s.closed {
@@ -198,7 +214,7 @@ func (s *Store) Start(kind string, request any, run Run) (Job, error) {
 		s.mu.Unlock()
 		return Job{}, ErrBusy
 	}
-	id, lock, err := s.create(kind, req)
+	id, lock, err := s.create(kind, req, association)
 	if err != nil {
 		s.mu.Unlock()
 		return Job{}, err
@@ -233,7 +249,7 @@ func (s *Store) unfinishedElsewhere() int {
 
 // create makes a job's lock, held from here to the end of its run, and its
 // first journal line.
-func (s *Store) create(kind string, req []byte) (string, *os.File, error) {
+func (s *Store) create(kind string, req, association []byte) (string, *os.File, error) {
 	raw := make([]byte, 16)
 	if _, err := rand.Read(raw); err != nil {
 		return "", nil, err
@@ -247,7 +263,7 @@ func (s *Store) create(kind string, req []byte) (string, *os.File, error) {
 		_ = lock.Close()
 		return "", nil, err
 	}
-	if err := s.append(id, record{Event: Queued, Kind: kind, Request: req}, true); err != nil {
+	if err := s.append(id, record{Event: Queued, Kind: kind, Request: req, Context: association}, true); err != nil {
 		_ = safeio.Unlock(lock)
 		_ = lock.Close()
 		return "", nil, err
@@ -564,11 +580,14 @@ func (s *Store) read(id string) (Job, error) {
 		return Job{}, err
 	}
 	defer f.Close()
-	data, err := io.ReadAll(io.LimitReader(f, maxJournal+maxResult+1))
+	data, err := io.ReadAll(io.LimitReader(f, MaxObservedJournalBytes+1))
 	if err != nil {
 		return Job{}, err
 	}
-	j := Job{ID: id, Owner: "none"}
+	if len(data) > MaxObservedJournalBytes {
+		return Job{}, fmt.Errorf("job %s exceeds its journal read allowance", id)
+	}
+	j := JournalJob{ID: id}
 	lines := bytes.Split(data, []byte{'\n'})
 	for i, line := range lines {
 		if len(line) == 0 {
@@ -581,26 +600,14 @@ func (s *Store) read(id string) (Job, error) {
 			}
 			return Job{}, fmt.Errorf("job %s has an unreadable journal line", id)
 		}
-		j.Updated = r.At
-		switch r.Event {
-		case Queued:
-			j.Kind, j.Request, j.Created, j.Status = r.Kind, decoded(r.Request), r.At, Queued
-		case Running:
-			if !final(j.Status) {
-				j.Status = Running
-			}
-		case "progress":
-			j.Progress = r.Progress
-		case "finished":
-			if !final(j.Status) {
-				j.Status, j.Result, j.Error, j.Detail = r.Status, decoded(r.Result), r.Error, r.Detail
-			}
-		}
+		j.fold(r)
 	}
 	if j.Created == "" {
 		return Job{}, fmt.Errorf("job %s has no start record", id)
 	}
-	return j, nil
+	return Job{ID: j.ID, Kind: j.Kind, Status: j.Status, Created: j.Created, Updated: j.Updated,
+		Request: decoded(j.Request), Context: decoded(j.Context), Progress: j.Progress,
+		Result: decoded(j.Result), Error: j.Error, Detail: j.Detail, Owner: "none"}, nil
 }
 
 // decoded is recorded JSON as a plain value, or nil.

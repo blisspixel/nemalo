@@ -252,16 +252,22 @@ A collection file is JSON: {"schema_version":1,"name":"...","items":[
   {"source":"arxiv:IDvN","file":"IDvN.pdf","note":"optional"}]}
 Items are exact selections; titles and identifiers are not matched.
 `,
-	"jobs": `nemalo jobs list
+	"jobs": `nemalo jobs snapshot LIBRARY [--limit N] [--json]
+  Observe existing selected-library job relationships without creating,
+  reconciling, pruning or repairing state. Default 20 jobs; maximum 100.
+  Recorded queued/running status does not prove live progress or ownership.
+  Unbound legacy jobs are omitted; incomplete observations exit nonzero.
+nemalo jobs list
   List durable jobs that MCP servers started, newest first.
 nemalo jobs get job:ID
   Show one job: status, last progress, and its result or error.
 nemalo jobs cancel job:ID
   Ask the process running the job to stop it.
 
-Jobs run only inside nemalo mcp serve --allow-write. A job whose process
-ended before it finished is recorded as interrupted; start it again, with
-resume for an acquisition.
+Jobs run only inside nemalo mcp serve --allow-write. list/get and opening a
+write-enabled MCP store may reconcile abandoned jobs and prune old history;
+use snapshot for passive observation. A reconciling read records an abandoned
+job as interrupted; start it again, with resume for an acquisition.
 `,
 	"bookmark": `nemalo bookmark enable LIBRARY
   Allow explicit local bookmarks in this library.

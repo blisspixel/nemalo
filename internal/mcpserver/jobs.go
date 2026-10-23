@@ -22,6 +22,7 @@ type acquisitionInput struct {
 	File            string `json:"file,omitempty" jsonschema:"exact name of one EPUB, PDF, MP3, M4B, or M4A file the evaluation lists; omit with recording_format"`
 	RecordingFormat string `json:"recording_format,omitempty" jsonschema:"a declared recording format the evaluation lists, such as 64Kbps MP3, to acquire every track in order"`
 	Output          string `json:"output" jsonschema:"absolute path of a new intake folder whose parent is inside a configured scope"`
+	Library         string `json:"library,omitempty" jsonschema:"optional initialized scoped library to record as intended context only; grants no import or library write authority"`
 	MaxBytes        int64  `json:"max_bytes,omitempty" jsonschema:"byte budget; defaults to the format's limit, or 4 GiB for a recording"`
 	Resume          bool   `json:"resume,omitempty" jsonschema:"continue an interrupted acquisition into its existing output folder"`
 	NoScan          bool   `json:"no_scan,omitempty" jsonschema:"skip the post-download antivirus scan"`
@@ -53,6 +54,17 @@ func addJobs(r *registrar, service app.Service, opts Options, scopes scope) {
 				if (in.File == "") == (in.RecordingFormat == "") {
 					return jobs.Job{}, errors.New("give exactly one of file or recording_format")
 				}
+				var binding any
+				if in.Library != "" {
+					lib, err := scopes.path(in.Library)
+					if err != nil {
+						return jobs.Job{}, err
+					}
+					binding, err = service.JobContext(ctx, lib)
+					if err != nil {
+						return jobs.Job{}, err
+					}
+				}
 				if in.RecordingFormat != "" {
 					req := acquisition.RecordingRequest{SourceID: in.SourceID, Format: in.RecordingFormat, Output: output, MaxBytes: in.MaxBytes, Resume: in.Resume, NoScan: in.NoScan}
 					if req.MaxBytes == 0 {
@@ -61,7 +73,7 @@ func addJobs(r *registrar, service app.Service, opts Options, scopes scope) {
 					if err := req.Validate(); err != nil {
 						return jobs.Job{}, err
 					}
-					return store.Start("acquire_recording", req, func(ctx context.Context, report func(jobs.Progress)) (any, error) {
+					return store.StartWithContext("acquire_recording", req, binding, func(ctx context.Context, report func(jobs.Progress)) (any, error) {
 						req.Progress = func(phase string, done, total int64) {
 							report(jobs.Progress{Phase: phase, Done: done, Total: total, Unit: "tracks"})
 						}
@@ -79,7 +91,7 @@ func addJobs(r *registrar, service app.Service, opts Options, scopes scope) {
 				if err := req.Validate(); err != nil {
 					return jobs.Job{}, err
 				}
-				return store.Start("acquire", req, func(ctx context.Context, report func(jobs.Progress)) (any, error) {
+				return store.StartWithContext("acquire", req, binding, func(ctx context.Context, report func(jobs.Progress)) (any, error) {
 					req.Progress = func(phase string, done, total int64) {
 						report(jobs.Progress{Phase: phase, Done: done, Total: total, Unit: "bytes"})
 					}
@@ -99,7 +111,11 @@ func addJobs(r *registrar, service app.Service, opts Options, scopes scope) {
 				return jobs.Job{}, err
 			}
 			req := library.RescanRequest{Library: lib, Apply: true}
-			return store.Start("library_rescan", map[string]string{"library": lib}, func(ctx context.Context, report func(jobs.Progress)) (any, error) {
+			binding, err := service.JobContext(ctx, lib)
+			if err != nil {
+				return jobs.Job{}, err
+			}
+			return store.StartWithContext("library_rescan", map[string]string{"library": lib}, binding, func(ctx context.Context, report func(jobs.Progress)) (any, error) {
 				report(jobs.Progress{Phase: "rescan"})
 				return service.Rescan(ctx, req)
 			})

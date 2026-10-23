@@ -1,7 +1,9 @@
 # 0088: non-mutating library job observations
 
-Status: decision recorded before Go implementation, 2026-10-23. Not implemented,
-stage accepted or released. This is the shared prerequisite in
+Status: decision recorded before Go implementation, 2026-10-23; the shared Go
+prerequisite is now implemented in source. Full acceptance is recorded separately
+in the issue receipt; the optional consumer, stage 5 and a release remain unfinished.
+This is the shared prerequisite in
 [issue 59](https://github.com/blisspixel/nemalo/issues/59), after milestone 9's
 [exact acceptance receipt](https://github.com/blisspixel/nemalo/issues/39#issuecomment-6376290156)
 at `51bb249`. The optional Omarchy consumer remains separate work. This decision
@@ -41,7 +43,7 @@ An applied rescan holds the library writer lock throughout its scan, so ordinary
 LibraryStatus correctly returns busy. Do not weaken that API or read mutable
 holdings through an active writer. Add a distinct library observation over the
 same canonical two-record initialization journal from
-[decision 0006](0006-library-identity-and-initialization.md). That journal is
+[decision 0006](0006-library-control-state.md). That journal is
 immutable after successful initialization under Nemalo's protocol.
 
 Open the explicit root/control capabilities, validate the existing bounded control
@@ -100,7 +102,9 @@ incomplete. Unrelated per-user requests/results never appear in public output.
 
 ## Bounded journal mechanics
 
-Directory enumeration examines at most 4,096 entries in bounded batches. Read at
+Directory enumeration examines at most 4,096 entries in bounded batches. Reaching
+the exact ceiling cannot establish EOF with an additional uncounted probe; report
+incomplete coverage conservatively. Read at
 most 6 MiB per journal and 32 MiB of actual journal bytes per request, including
 failed work. Fold at most 10,004 records per journal. The application operation
 has a 15-second ceiling including library observation; a shorter caller deadline

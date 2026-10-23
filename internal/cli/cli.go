@@ -796,6 +796,28 @@ func Execute(ctx context.Context, args []string, out, errOut io.Writer, service 
 		}
 		return write(nil, errors.New("use collection diff BEFORE AFTER, collection status COLLECTION LIBRARY, or collection acquire COLLECTION LIBRARY --output INTAKE [--apply]"), 2)
 	case "jobs":
+		if action == "snapshot" {
+			count := 0
+			if visited(flags, "limit") {
+				count = *limit
+				if count < 1 || count > 100 {
+					return write(nil, errors.New("--limit must be 1-100"), 2)
+				}
+			}
+			if flags.NArg() != 1 {
+				return write(nil, errors.New("use jobs snapshot LIBRARY [--limit N]"), 2)
+			}
+			data, err := service.JobSnapshot(ctx, app.JobSnapshotRequest{Library: flags.Arg(0), JobsDirectory: filepath.Join(p.State, "jobs"), Limit: count})
+			code := 0
+			if err != nil || data.Status != "observed" {
+				code = 1
+			}
+			return write(data, err, code)
+		}
+		// Reject invalid actions before opening the reconciling writer store.
+		if !(action == "list" && flags.NArg() == 0 || (action == "get" || action == "cancel") && flags.NArg() == 1) {
+			return write(nil, errors.New("use jobs snapshot LIBRARY, jobs list, jobs get ID, or jobs cancel ID"), 2)
+		}
 		// The durable jobs MCP servers started, from their journals.
 		store, err := jobs.Open(filepath.Join(p.State, "jobs"), 1, 0)
 		if err != nil {
@@ -1077,6 +1099,8 @@ func flagApplies(command, action, name string) bool {
 		}
 	}
 	switch command {
+	case "jobs":
+		return action == "snapshot" && name == "limit"
 	case "collection":
 		return action == "acquire" && (name == "output" || name == "apply" || name == "max-total-bytes" || name == "max-recording-bytes" || name == "no-scan" || name == "on-detection")
 	case "acquire":
@@ -1205,6 +1229,9 @@ func printData(out io.Writer, data any) error {
 		return err
 	case jobs.Job:
 		_, err := io.WriteString(out, present.Job(value))
+		return err
+	case app.JobSnapshotResult:
+		_, err := io.WriteString(out, present.JobSnapshot(value))
 		return err
 	case library.RestoreResult:
 		_, err := io.WriteString(out, present.Restore(value))

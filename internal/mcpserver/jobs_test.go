@@ -105,6 +105,9 @@ func TestJobToolsRunAcquisitionAndRescanDurably(t *testing.T) {
 	if j.Status != jobs.Succeeded || j.Kind != "acquire" || j.Result.(map[string]any)["complete"] != true {
 		t.Fatalf("%+v", j)
 	}
+	if j.Context != nil {
+		t.Fatal("omitted acquisition library invented context", j.Context)
+	}
 	if _, err := os.Stat(filepath.Join(intake, "packet", "receipt.json")); err != nil {
 		t.Fatal("the job did not write its packet", err)
 	}
@@ -123,6 +126,10 @@ func TestJobToolsRunAcquisitionAndRescanDurably(t *testing.T) {
 	if rescan.Status != jobs.Succeeded || rescan.Kind != "library_rescan" {
 		t.Fatalf("%+v", rescan)
 	}
+	binding, ok := rescan.Context.(map[string]any)
+	if !ok || binding["schema"] != "nemalo-job-library/1" || binding["library_id"] == "" {
+		t.Fatal("rescan omitted immutable context", rescan.Context)
+	}
 	_, env = call(t, s, "job_list", map[string]any{})
 	if listed, _ := env["data"].([]any); len(listed) != 2 {
 		t.Fatal(env)
@@ -137,6 +144,46 @@ func TestJobToolsRunAcquisitionAndRescanDurably(t *testing.T) {
 	}
 	if res, _ := call(t, elsewhere, "job_get", map[string]any{"id": id}); !res.IsError {
 		t.Fatal("a job outside scope was read")
+	}
+}
+
+func TestAcquisitionContextRequiresExplicitInitializedScopedLibrary(t *testing.T) {
+	root := t.TempDir()
+	state, err := library.Initialize(context.Background(), root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	intake := t.TempDir()
+	uninitialized := t.TempDir()
+	store, err := jobs.Open(filepath.Join(t.TempDir(), "jobs"), 1, 2)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { store.Close(); _ = store.Wait(context.Background()) })
+	service := app.Service{Scanner: cleanScanner{}, Providers: map[string]app.Searcher{"archive": archiveStub{body: "%PDF-1.7\n%%EOF"}}}
+	s := connect(t, service, Options{Scopes: []string{root, intake, uninitialized}, Write: true, Network: true, Jobs: store, Version: "test"})
+	for _, lib := range []string{t.TempDir(), uninitialized, filepath.Join(root, "missing")} {
+		res, env := call(t, s, "acquisition_start", map[string]any{"source_id": "archive:demo", "file": "paper.pdf", "output": filepath.Join(intake, "refused"), "library": lib, "no_scan": true})
+		if !res.IsError {
+			t.Fatal("invalid context started job", env)
+		}
+	}
+	list, err := store.List()
+	if err != nil || len(list) != 0 {
+		t.Fatal("refused contexts created jobs", list, err)
+	}
+	res, env := call(t, s, "acquisition_start", map[string]any{"source_id": "archive:demo", "file": "paper.pdf", "output": filepath.Join(intake, "selected"), "library": root, "no_scan": true})
+	if res.IsError {
+		t.Fatal(env)
+	}
+	j := waitJob(t, store, env["data"].(map[string]any)["id"].(string))
+	binding, ok := j.Context.(map[string]any)
+	if !ok || binding["library_id"] != state.LibraryID || binding["schema"] != "nemalo-job-library/1" {
+		t.Fatal(j)
+	}
+	page, err := library.FindManaged(context.Background(), root, "", "all", "all", 20, 0)
+	if err != nil || len(page.Holdings) != 0 {
+		t.Fatal("declared context imported content", page, err)
 	}
 }
 

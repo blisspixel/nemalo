@@ -163,6 +163,18 @@ cancellation, and restart reconciliation. Application jobs do not depend on an
 MCP connection remaining open. Protocol-specific async capabilities can be added
 only after verifying the chosen SDK and host support them.
 
+New rescan starts record an immutable selected-library declaration. With the
+existing write/network permissions, `acquisition_start` may additionally name an
+initialized scoped `library` as intended context; this neither imports its output
+nor grants library write authority. Omission preserves ordinary intake behavior.
+Existing `job_get`/`job_list` retain their reconciling write behavior and are not
+passive panel polls. The CLI/shared-service `jobs snapshot LIBRARY` provides
+bounded, non-mutating selected-library observations without a new MCP tool,
+job lock probes, raw request/result output or invented legacy targets. Recorded
+running status is not proof of live work. See
+[decision 0088](decisions/0088-non-mutating-library-job-snapshot.md) and the
+[operation contract](DEVELOPMENT.md#mcp-server).
+
 ## Permissions and untrusted content
 
 Read-only exposure is the default. Inspection with staging and network search

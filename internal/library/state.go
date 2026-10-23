@@ -228,6 +228,10 @@ func readJournal(f *os.File) ([]journalEvent, error) {
 	if err != nil {
 		return nil, err
 	}
+	return parseInitializationJournal(b)
+}
+
+func parseInitializationJournal(b []byte) ([]journalEvent, error) {
 	if len(b) == 0 || len(b) > maxJournalBytes || b[len(b)-1] != '\n' {
 		return nil, ErrStateReview
 	}
@@ -352,15 +356,20 @@ func openControl(directory string, write bool) (*control, bool, error) {
 	return &control{root, lock}, created, nil
 }
 
-func validateControl(root *os.Root) error {
+func validateControl(root *os.Root) (err error) {
 	f, err := root.Open(".")
 	if err != nil {
 		return err
 	}
-	defer f.Close()
-	entries, err := f.ReadDir(-1)
-	if err != nil {
+	defer func() { err = errors.Join(err, f.Close()) }()
+	// Seven names are supported. An eighth is already a refusal; an
+	// untrusted directory must not cause an unbounded allocation first.
+	entries, err := f.ReadDir(8)
+	if err != nil && !errors.Is(err, io.EOF) {
 		return err
+	}
+	if len(entries) > 7 {
+		return ErrStateReview
 	}
 	seen := map[string]fs.DirEntry{}
 	for _, entry := range entries {

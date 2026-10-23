@@ -5,8 +5,32 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/blisspixel/nemalo/internal/app"
 	"github.com/blisspixel/nemalo/internal/jobs"
 )
+
+// JobSnapshot displays recorded facts without implying a live owner check.
+func JobSnapshot(r app.JobSnapshotResult) string {
+	var b strings.Builder
+	fmt.Fprintf(&b, "Job observation: %s\n", words(r.Status))
+	field(&b, "Library identity", Line(r.LibraryID))
+	field(&b, "Catalog observation", words(r.Catalog))
+	field(&b, "Relationships", words(r.Coverage))
+	fmt.Fprintf(&b, "Jobs: %d\n", len(r.Jobs))
+	for _, j := range r.Jobs {
+		fmt.Fprintf(&b, "%s %s, recorded %s, owner %s, %s\n", Line(j.ID), Line(j.Kind), words(j.RecordedStatus), words(j.Owner), words(j.Relationship))
+	}
+	if r.Truncated {
+		b.WriteString("Result limit reached; only the newest observed matches are shown.\n")
+	}
+	for _, p := range r.Work.Problems {
+		fmt.Fprintf(&b, "Incomplete: %s\n", words(p))
+	}
+	for _, limitation := range r.Limitations {
+		fmt.Fprintf(&b, "%s\n", Line(limitation))
+	}
+	return b.String()
+}
 
 // Jobs lists durable jobs, one line each.
 func Jobs(list []jobs.Job) string {
