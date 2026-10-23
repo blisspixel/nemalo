@@ -15,7 +15,8 @@ import (
 const archiveLevels = 4
 
 // ExtractTree reads one outer archive or checked volume set and its supported
-// standalone children. Every node shares work limits; existing Extract callers
+// standalone children, plus opt-in checked child volume sets. Every node shares
+// work limits; existing Extract callers
 // keep their single-container behavior. dst is a fresh, caller-owned private
 // staging root, removed by the caller after import or on failure.
 func ExtractTree(ctx context.Context, src *os.Root, names []string, dst *os.Root, supported func(string) bool, limits Limits) (Extraction, error) {
@@ -86,6 +87,7 @@ func extractTree(ctx context.Context, src *os.Root, names []string, dst *os.Root
 		result.Complete = result.Complete && x.Complete
 		result.Whole = result.Whole && x.Whole
 		result.RARContainers += x.RARContainers
+		result.CoveredVolumeSets += x.CoveredVolumeSets
 		if depth == 1 && len(files) == 1 {
 			result.RARVersion = x.RARVersion
 		}
@@ -96,12 +98,71 @@ func extractTree(ctx context.Context, src *os.Root, names []string, dst *os.Root
 		if !x.Whole {
 			gap(chain, "a comment, leading data, or bytes beyond the archive's members prevent complete accounting")
 		}
-		for _, m := range x.Members {
+		var groups map[int]*nestedVolumeGroup
+		if limits.NestedVolumeSets {
+			groups = nestedMemberGroups(x.Members)
+		}
+		consumed := map[int]bool{}
+		for i, m := range x.Members {
 			if err := ctx.Err(); err != nil {
 				return err
 			}
+			if consumed[i] {
+				continue
+			}
+			if group := groups[i]; group != nil {
+				first := len(result.Members)
+				reported := 0
+				for _, at := range group.report {
+					if consumed[at] {
+						continue
+					}
+					consumed[at] = true
+					reported++
+					part := x.Members[at]
+					part.Chain = append(append([]string{}, chain...), part.Name)
+					part.Staged = ""
+					part.Disposition, part.Detail = "nested_archive", "a part of the nested set read through "+group.first+"; originals remain in the outer source"
+					result.Members = append(result.Members, part)
+				}
+				groupChain := append(append([]string{}, chain...), group.first)
+				groupErr := error(nil)
+				switch {
+				case group.reason != "":
+					groupErr = errors.New(group.reason)
+				case depth >= archiveLevels:
+					groupErr = errors.New("the archive tree's four-level nesting limit was reached; child contents remain preserved")
+				default:
+					groupErr = visitNestedVolumeGroup(ctx, stage, x.Members, group, func(root *os.Root, names []string) error {
+						return visit(root, names, groupChain, depth+1)
+					})
+				}
+				if groupErr != nil {
+					result.Complete, result.Whole = false, false
+					gap(groupChain, groupErr.Error())
+					for at := first; at < first+reported; at++ {
+						result.Members[at].Disposition, result.Members[at].Detail = "nested_volume", groupErr.Error()
+					}
+					result.Members[first].Disposition = "failed"
+					// Failed preparation still owns its flat staging files.
+					for _, at := range group.ordered {
+						if file := x.Members[at].Staged; file != "" {
+							if removeErr := stage.Remove(file); removeErr != nil && !errors.Is(removeErr, os.ErrNotExist) {
+								return errors.Join(groupErr, removeErr)
+							}
+						}
+					}
+				}
+				if ctx.Err() != nil {
+					return ctx.Err()
+				}
+				continue
+			}
 			m.Chain = append(append([]string{}, chain...), m.Name)
 			if m.Disposition != "extracted" {
+				if limits.NestedVolumeSets && m.Disposition == "nested_volume" {
+					result.Complete = false
+				}
 				if limits.Coverage && (Supported(m.Name) || m.Disposition == "nested_volume" || m.Disposition == "nested_archive") {
 					result.Whole = false
 					gap(m.Chain, m.Detail)

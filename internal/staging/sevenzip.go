@@ -302,6 +302,7 @@ func extractListedSnapshot(ctx context.Context, exe, kind, archive string, size 
 			names[i] = e.name
 		}
 		limits.nestedBlocked = nestedVolumes(names)
+		limits.nestedAllowed = nestedVolumeTargets(names, limits)
 	}
 	count, folders := map[string]int{}, map[string]bool{}
 	for _, e := range entries {
@@ -576,11 +577,11 @@ func classifySeven(e sevenEntry, supported func(string) bool, limits Limits) (st
 		return "special", "not a regular file"
 	case e.encrypted:
 		return "encrypted", "encrypted members are not extracted"
-	case limits.nestedTraversal() && limits.nestedBlocked[name]:
+	case limits.nestedTraversal() && limits.nestedBlocked[name] && !limits.nestedAllowed[name]:
 		return "nested_volume", "nested volume sets are not read; preserved in the outer archive"
 	case nestedArchive[strings.ToLower(path.Ext(name))] && (!limits.nestedTraversal() || !Supported(name)):
 		return "nested_archive", "preserved in the archive; not extracted"
-	case !supported(name):
+	case !supported(name) && !limits.nestedAllowed[name]:
 		return "unsupported_format", "preserved in the archive"
 	case e.size > limits.MemberBytes:
 		return "too_large", "member exceeds the per-file budget"
@@ -717,8 +718,19 @@ func VolumeOf(name string) (set string, number int, ok bool) {
 // checked in isolated snapshots for matching roles, ordinals, and split-member
 // continuity before an error-free assembled listing must account for all
 // volumes; otherwise the set is refused and every volume preserved.
-func ExtractSet(ctx context.Context, src *os.Root, names []string, dst *os.Root, supported func(string) bool, limits Limits) (Extraction, error) {
-	x := Extraction{Members: []Member{}}
+func ExtractSet(ctx context.Context, src *os.Root, names []string, dst *os.Root, supported func(string) bool, limits Limits) (x Extraction, err error) {
+	x = Extraction{Members: []Member{}}
+	defer func() {
+		if limits.child {
+			x.RARSetVersion, x.OldRARSetVersion = 0, 0
+			if limits.NestedVolumeSets && limits.Coverage && x.Whole {
+				x.CoveredVolumeSets = 1
+			}
+		}
+	}()
+	if limits.child && limits.NestedVolumeSets {
+		limits.snapshotReads = true
+	}
 	if len(names) < 2 || len(names) > 1000 {
 		return x, errors.New("a volume set has 2 to 1,000 volumes")
 	}
@@ -806,7 +818,7 @@ func ExtractSet(ctx context.Context, src *os.Root, names []string, dst *os.Root,
 	}
 	var proof *rarSetBinding
 	if limits.Coverage && (limits.RAR5SetCoverage || (limits.RAR4Coverage && limits.RAR4SetCoverage)) {
-		if (old && !limits.OldRARSetCoverage) || limits.child {
+		if (old && !limits.OldRARSetCoverage) || (limits.child && !limits.NestedVolumeSets) {
 			coverageErr := ErrRAR5Coverage
 			if !limits.RAR5SetCoverage {
 				coverageErr = ErrRAR4Coverage
@@ -886,7 +898,11 @@ func joinVolumes(ctx context.Context, src *os.Root, names []string, infos []fs.F
 			_ = out.Close()
 			return err
 		}
-		n, copyErr := copyArchiveBytes(ctx, limits, name, infos[i], in, out)
+		var reader io.Reader = in
+		if limits.snapshotReads {
+			reader = io.NewSectionReader(limits.reader(in), 0, infos[i].Size()+1)
+		}
+		n, copyErr := copyArchiveBytes(ctx, limits, name, infos[i], reader, out)
 		after, statErr := in.Stat()
 		_ = in.Close()
 		if copyErr != nil || statErr != nil || n != infos[i].Size() || after.Size() != infos[i].Size() || !after.ModTime().Equal(infos[i].ModTime()) {

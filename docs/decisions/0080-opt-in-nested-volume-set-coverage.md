@@ -113,3 +113,39 @@ nested-volume writer decision. That decision needs distinct authority, fresh
 whole-tree purge, immutable partial recovery and actual preceding-executable
 retention/raw restore. Stage 2 and this issue remain unfinished; no release or
 later roadmap stage is included.
+
+## Measured local implementation evidence
+
+The implementation relocates canonical grouping without changing its library
+projection, stages only verified flat parts under fixed private names, and reuses
+the existing set adapters. All application callers keep the new opt-in false;
+cleanup additionally rejects measured child-set evidence under existing proofs.
+No decoder, module, executable, public option or persisted schema was added.
+
+Synthetic offline tests cover both RAR formats and naming layouts, the three
+other set layouts, arbitrary tables, independent interleaved groups, ancestor
+coverage and depth, selected capabilities, unsafe/type/encryption/method/folder
+refusals, missing readers, physical and reader-table failures, output integrity,
+shared allowances including failed copies, active cancellation and deadlines,
+JSON omission and application preview/apply retention with exact held leaves.
+Earlier root grouping, parser, recovery and refusal suites still pass. The final
+patch was self-reviewed for path provenance, private-part removal, root-only
+facts, capability selection and shared read accounting.
+
+Generated native fixtures outside the checkout passed 32 combinations with exact
+independently generated held leaves: seven child layouts under ZIP, 7z, RAR4
+and RAR5, plus nested old-name RAR5 under modern/old RAR4/RAR5 root sets. Eight
+additional cases cover hidden service records, missing middle parts, physical
+CRC corruption and unheld leaves for both formats. All 40 application cleanup
+previews and applies moved zero and retained byte-identical original sources.
+The primary 28-case book was 6,189 bytes, SHA-256
+`fc8e68a3b62ad0ad40d25885e08c194afa187e9baa0b24b5889087b487fef0fd`.
+The installed reader reported 7-Zip 26.04; its executable SHA-256 was
+`f802383f13b8331aabaf779def00a356c8d2b8148255170b75b03028f4d23ad4`.
+These checks establish neither broad format conformance nor a safety guarantee.
+
+Canonical local verification passed at 86.5% aggregate statement coverage;
+library/staging covered suites took 28.495/17.164 seconds. Full native-cgo race
+passed, including library/staging at 91.663/34.539 seconds. Windows cross-vet,
+local documentation links/anchors and whitespace checks passed. Exact-final
+hosted acceptance remains tracked in issue 57 and must precede a writer decision.

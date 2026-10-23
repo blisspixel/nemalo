@@ -48,6 +48,10 @@ type Limits struct {
 	// Coverage and the selected format's set flags, under its distinct
 	// application proof. Old evidence cannot supply a modern set proof.
 	OldRARSetCoverage bool
+	// NestedVolumeSets opts into checked child groups during tree traversal.
+	// Coverage additionally requires the selected format's existing capabilities.
+	// Application callers keep this false until separately verified authority.
+	NestedVolumeSets bool
 	// ExpectedSources binds coverage snapshots to the application's root plan.
 	// SourceHashRemaining, when set, charges actual copy-hash reads to its budget.
 	ExpectedSources     map[string]SnapshotIdentity
@@ -59,6 +63,7 @@ type Limits struct {
 	child         bool
 	snapshotReads bool
 	nestedBlocked map[string]bool
+	nestedAllowed map[string]bool
 }
 
 // Defaults bound one archive. EPUB, PDF, MP3, and MP4 audio are compressed, so a
@@ -102,6 +107,9 @@ type Extraction struct {
 	// OldRARSetVersion measures only an explicitly covered old-name root set.
 	// It cannot supply modern set, standalone, tree or cleanup authority.
 	OldRARSetVersion int `json:"-"`
+	// CoveredVolumeSets counts requested, completely framed child sets only.
+	// Names, successful intake and this count alone grant no write permission.
+	CoveredVolumeSets int `json:"-"`
 	// CoverageGap locates the first container without requested byte evidence.
 	// An empty chain names the outer container, not an archive member.
 	CoverageGap *CoverageGap `json:"coverage_gap,omitempty"`
@@ -168,6 +176,7 @@ func extractZipFile(ctx context.Context, src *os.Root, name string, dst *os.Root
 			names[i] = entry.Name
 		}
 		limits.nestedBlocked = nestedVolumes(names)
+		limits.nestedAllowed = nestedVolumeTargets(names, limits)
 	}
 	var total int64
 	x.Complete = true
@@ -235,11 +244,11 @@ func classify(entry *zip.File, supported func(string) bool, limits Limits) (stri
 		return "encrypted", "encrypted members are not extracted"
 	case entry.Method != zip.Store && entry.Method != zip.Deflate:
 		return "unsupported_method", fmt.Sprintf("compression method %d", entry.Method)
-	case limits.nestedTraversal() && limits.nestedBlocked[name]:
+	case limits.nestedTraversal() && limits.nestedBlocked[name] && !limits.nestedAllowed[name]:
 		return "nested_volume", "nested volume sets are not read; preserved in the outer archive"
 	case nestedArchive[strings.ToLower(path.Ext(name))] && (!limits.nestedTraversal() || !Supported(name)):
 		return "nested_archive", "preserved in the archive; not extracted"
-	case !supported(name):
+	case !supported(name) && !limits.nestedAllowed[name]:
 		return "unsupported_format", "preserved in the archive"
 	case int64(min(entry.UncompressedSize64, 1<<62)) > limits.MemberBytes:
 		return "too_large", "member exceeds the per-file budget"

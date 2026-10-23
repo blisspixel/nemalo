@@ -122,6 +122,13 @@ verified, not when code exists. No stage has a time estimate.
    checks passed; full writer acceptance is tracked in issue 57. Nested volume
    work keeps stage 2 unfinished
    ([decision 0079](docs/decisions/0079-old-name-rar-set-cleanup.md)).
+   Internal opt-in nested-volume intake and read-only coverage now reuse those
+   checked adapters for modern/old RAR4/RAR5, split 7z and both split ZIP layouts.
+   Every part, source chain and shared work limit remains accounted for. All
+   application callers keep the opt-in false; this supplies no cleanup authority.
+   Native generated checks passed, with full hosted acceptance tracked in issue 57
+   before any separate writer decision
+   ([decision 0080](docs/decisions/0080-opt-in-nested-volume-set-coverage.md)).
    Split ZIP intake now handles byte chunks and true disk segments through
    checked private snapshots
    ([decision 0057](docs/decisions/0057-split-zip-intake.md)).

@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Add internal opt-in nested-volume intake and read-only coverage through the
+  existing checked set adapters. Preserve every original part and source chain,
+  share work limits across groups, and refuse ambiguous or failed parts. All
+  application callers keep the opt-in disabled; existing cleanup proofs gain no
+  authority from the separate internal child-set evidence.
+
 - Clean completely covered old-name root RAR4/RAR5 sets under distinct versioned
   proofs after exact held-leaf and source checks. Fresh purge repeats the whole
   proof; partial recovery uses immutable original evidence and verified remaining

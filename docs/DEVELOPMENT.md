@@ -625,6 +625,21 @@ and nested volume sets stay preserved. See
 [decision 0079](decisions/0079-old-name-rar-set-cleanup.md); full writer acceptance
 remains tracked in issue 57, and this is not a release.
 
+An internal `NestedVolumeSets` opt-in now permits tree intake and requested
+read-only coverage of the existing modern/old RAR4/RAR5, split 7z, ZIP chunk and
+ZIP segment layouts. Every part must independently pass outer extraction before
+the same checked set adapter reads fixed private names. Grouping uses the shared
+canonical volume-family rules; leaf provenance retains the original first member
+name, even when it appears last in the outer table. Failed or uncertain parts
+prevent the whole group, and all children share depth, output, proof, read,
+process and diagnostic limits. JSON-omitted `CoveredVolumeSets` measures covered
+child sets separately from root and standalone facts; it grants no cleanup right.
+All application callers keep this opt-in false. Native generated combinations
+returned exact independently expected bytes, while application cleanup retained
+even fully covered sets with held leaves. Full hosted acceptance remains tracked
+in issue 57 before any separate nested writer decision. See
+[decision 0080](decisions/0080-opt-in-nested-volume-set-coverage.md).
+
 Split ZIP byte chunks (`NAME.zip.001`, `.002`, ...; three or four numeric digits)
 are joined privately, checked as exactly one ordinary ZIP through installed
 7-Zip, and extracted by the existing Go ZIP reader. True ZIP segments

@@ -174,6 +174,13 @@ Its accepted read-only increment kept every application flag false. Its JSON-omi
 Decision 0079 selects distinct old-name cleanup authority only under the complete
 root-set policy below. Keep public modern RAR4 framing strict and preserve nested
 volume sets.
+Decision 0080 adds internal `NestedVolumeSets` for bounded tree intake and
+read-only coverage of the existing set layouts. All application callers keep it
+false. Share canonical `staging.VolumeSets`, verify every part before a private
+fixed-name group, preserve exact original chains and charge child joins to shared
+read limits. `CoveredVolumeSets` is JSON-omitted physical evidence, never write
+authority; existing proofs must retain these sources. Require its full hosted
+acceptance and exact open-issue readback before any nested-volume writer decision.
 RAR volume cleanup requires the separate bounded proof
 below; unsupported sets stay preserved. Split ZIPs are decision
 0057: byte chunks join privately, true segments require consistent reader

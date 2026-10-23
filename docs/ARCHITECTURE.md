@@ -601,6 +601,20 @@ No existing standalone/tree proof expands, and old-named/nested volume sets stay
 preserved. Separate full acceptance and actual preceding-binary retention/raw
 restore remain required ([decision 0076](decisions/0076-modern-rar4-set-cleanup.md)).
 
+Internal `NestedVolumeSets` adds opt-in tree intake and read-only coverage for
+the existing modern/old RAR4/RAR5, split 7z and split ZIP adapters. Canonical
+volume-family grouping is shared in `internal/staging`, with the library's
+existing projection retained. Every original part must pass ordinary extraction
+and integrity checks before fixed private names expose one complete group to
+the set reader. Leaves retain the exact original first-member chain. All groups
+share the existing tree allowances, including child snapshot and join reads;
+failed work does not refund them. JSON-omitted `CoveredVolumeSets` measures
+requested child-set physical evidence separately from root and standalone facts.
+All application callers keep the opt-in false, and cleanup explicitly retains
+measured child sets rather than expanding any existing proof. Separate hosted
+acceptance and writer authority remain required
+([decision 0080](decisions/0080-opt-in-nested-volume-set-coverage.md)).
+
 Private staging and a subprocess are not sandboxes. Go's
 [root-scoped filesystem APIs](https://go.dev/blog/osroot) are useful building blocks;
 external extraction needs a separately tested containment strategy. Linux isolation

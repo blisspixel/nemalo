@@ -1028,6 +1028,10 @@ func planArchive(ctx context.Context, src *os.Root, rel string, volumes []string
 		e.Reason = "container " + string(encoded) + " is not completely accounted for: " + textsafe.Visible(x.CoverageGap.Detail) + "; the archive is preserved"
 		return nil
 	}
+	if x.CoveredVolumeSets != 0 {
+		e.Reason = "nested volume coverage has no supported cleanup proof; the archive is preserved"
+		return nil
+	}
 	rarProof := ""
 	if rarSet {
 		if oldRARSet && x.RARSetVersion == 0 {
