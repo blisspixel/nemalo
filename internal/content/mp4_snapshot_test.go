@@ -202,3 +202,33 @@ func TestPacketSnapshotLifetimeBudgetChargesFailedReadsAndCancellation(t *testin
 		t.Fatal(n, err, r.remaining)
 	}
 }
+
+func TestMP4SnapshotRevalidationRejectsSameBytesFromDifferentNamedFile(t *testing.T) {
+	dir := packetScratch(t)
+	data := mp4Audio(4)
+	err := withMP4Snapshot(context.Background(), bytes.NewReader(data), int64(len(data)), digest(data), func(snapshot *mp4Snapshot) error {
+		if err := snapshot.revalidate(context.Background()); err != nil {
+			t.Fatal("unchanged private snapshot refused", err)
+		}
+		// Two independent real files exercise named/retained identity on every
+		// platform without requiring a rename of an open Windows file. Hashes
+		// alone cannot distinguish these exact bytes.
+		other := snapshot.path + ".replacement"
+		if err := os.WriteFile(other, data, 0600); err != nil {
+			t.Fatal(err)
+		}
+		if copied, err := os.ReadFile(other); err != nil || !bytes.Equal(copied, data) {
+			t.Fatal("named fixture has different bytes", err)
+		}
+		named, err := safeio.Lstat(other)
+		if err != nil || os.SameFile(snapshot.identity, named) {
+			t.Fatal("fixture did not create an independent physical identity", err)
+		}
+		snapshot.path = other
+		return snapshot.revalidate(context.Background())
+	})
+	if !errors.Is(err, errPacketSnapshotChanged) {
+		t.Fatal("same-byte named replacement was admitted", err)
+	}
+	scratchEmpty(t, dir)
+}

@@ -8,8 +8,10 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
+	"syscall"
 	"testing"
 
 	"github.com/blisspixel/nemalo/internal/decode"
@@ -224,6 +226,7 @@ func TestPCMFailureAndPrivateRevalidationNeverExposeCollectedBytes(t *testing.T)
 			if err != nil {
 				t.Fatal(err)
 			}
+			var deniedReplacement error
 			failure := func(ctx context.Context, path, format string, size int64, q decode.PCMRequest) (decode.PCMRange, error) {
 				out, err := adapter(ctx, path, format, size, q)
 				if err != nil {
@@ -246,7 +249,18 @@ func TestPCMFailureAndPrivateRevalidationNeverExposeCollectedBytes(t *testing.T)
 					}
 				case "replaced_private":
 					if err := os.Rename(path, path+".old"); err != nil {
-						t.Fatal(err)
+						// Native Windows retains a handle that denies replacement.
+						// Accept only that exact denial, prove the private bytes
+						// stayed intact, and still discard the adapter's payload.
+						if runtime.GOOS != "windows" || !errors.Is(err, syscall.Errno(32)) {
+							t.Fatal(err)
+						}
+						private, readErr := os.ReadFile(path)
+						if readErr != nil || !bytes.Equal(private, before) {
+							t.Fatal("denied replacement changed private bytes", readErr)
+						}
+						deniedReplacement = err
+						return out, err
 					}
 					if err := os.WriteFile(path, before, 0600); err != nil {
 						t.Fatal(err)
@@ -259,6 +273,13 @@ func TestPCMFailureAndPrivateRevalidationNeverExposeCollectedBytes(t *testing.T)
 			out, err := GetWithDecoder(context.Background(), req, failure)
 			noPCM(t, out, err)
 			want := map[string]string{"late_error": "unsupported_extraction", "cancelled": "cancelled", "budget": "budget_exceeded", "unavailable": "unavailable", "mutated_private": "changed_source", "replaced_private": "changed_source", "bad_measurement": "malformed_content"}[name]
+			if deniedReplacement != nil {
+				want = "unsupported_extraction"
+				if !errors.Is(err, deniedReplacement) {
+					t.Fatal("native replacement denial was lost", err)
+				}
+				t.Log("Windows denied the open-file replacement; private bytes unchanged and no payload delivered")
+			}
 			if out.Status != want {
 				t.Fatal(out.Status, want, err)
 			}

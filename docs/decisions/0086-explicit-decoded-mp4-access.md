@@ -150,4 +150,7 @@ named-identity check, without requiring an otherwise forbidden rename. Skip no
 case, accept no other rename error and retain all existing assertions, limits and
 durability. The final named lookup uses the existing `safeio.Lstat`, which captures
 Windows file identity when observed rather than deferring it until `SameFile`.
-Repeat full local/native/exact-hosted acceptance on the corrected head.
+A separate verbose Windows CI step repeats both private-snapshot roots so its
+native denial and every failure case can be audited without inferring them from
+a package summary. Repeat full local/native/exact-hosted acceptance on the
+corrected head.

@@ -134,9 +134,9 @@ func TestPluginSkillUsesPortableFrontmatter(t *testing.T) {
 	if c := fields["compatibility"]; len(c) > 500 {
 		t.Fatal("compatibility length", len(c))
 	}
-	// Every tool the skill names exists on a server with network and write
-	// tools enabled.
-	server, err := mcpserver.New(app.Service{}, mcpserver.Options{Scopes: []string{t.TempDir()}, Network: true, Write: true, Version: Version})
+	// Every tool the skill names exists on a server with its independent
+	// network, write and decoder tools enabled.
+	server, err := mcpserver.New(app.Service{}, mcpserver.Options{Scopes: []string{t.TempDir()}, Network: true, Write: true, Decode: true, Version: Version})
 	if err != nil {
 		t.Fatal(err)
 	}

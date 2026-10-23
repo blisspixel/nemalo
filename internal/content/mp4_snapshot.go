@@ -91,7 +91,7 @@ func (s *mp4Snapshot) revalidate(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	named, err := os.Lstat(s.path)
+	named, err := safeio.Lstat(s.path)
 	if err != nil {
 		return err
 	}

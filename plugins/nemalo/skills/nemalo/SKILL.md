@@ -8,13 +8,13 @@ compatibility: Requires the nemalo executable on PATH and an MCP host that start
 # Nemalo library
 
 Nemalo keeps a local library of EPUB, PDF, MP3, M4B, and M4A files with recorded
-provenance. Its default MCP tools read. Optional write and network tools require
-the server permissions described below.
+provenance. Its default MCP tools read. Optional write, network and installed
+decoder tools require independent server permissions described below.
 
 ## Start
 
 1. Call `nemalo_capabilities` once. It lists the folders the tools may read
-   (`scopes`), whether catalog tools are enabled, and content limits.
+   (`scopes`), the enabled tools and permissions, and content limits.
 2. Use absolute paths inside those scopes. A path outside them, or one that does
    not exist, returns the same error; ask the user for the right folder instead
    of guessing.
@@ -90,9 +90,21 @@ the server permissions described below.
   offsets, and a cursor; read the cursor back before quoting.
 - MP3 holdings read as `mpeg-audio/1`: probed timing, declared tags and chapters,
   and decodable byte ranges. Nothing is decoded or transcribed.
-- M4B and M4A holdings list as `mp4-audio/1` with `content_units`: timing from
-  the sample tables and declared chapters. There are no ranges to read; a
-  person plays the file with `nemalo library open`.
+- M4B and M4A `mp4-audio/1` lists sample-table timing and declared chapters.
+  Explicit `mp4-audio/2` also reads bounded original packets and initialization;
+  these bytes are not a playable MP4. Packet ticks do not establish decoded
+  sample or edited player positions. A person can play a verified whole-file
+  copy with `nemalo library open`.
+- Only when capabilities list `content_decode_units` and `content_decode_read`,
+  those separately enabled tools can run installed FFmpeg for `mp4-pcm/1`.
+  Use them for an explicit request for decoded audio, never as a fallback for
+  ordinary reading. Even units require a full sequential decode, up to 2 GiB
+  private disk, 8 GiB streamed PCM and five minutes per call. Reads return at
+  most 64 KiB of playable mono WAV, with exact decoder-output sample bounds and
+  a full-output hash. This is not a transcript or a mapping to source packets,
+  chapters or presentation times. Pass the returned cursor to the same explicit
+  decoder tool; changed output refuses a stale reference. Existing content
+  tools never decode. Write or network permission does not enable these tools.
 - To show a person a book a page at a time, call `content_read` with
   `max_bytes` near 2000, show the text verbatim with any gaps, and continue
   with the returned cursor only when they ask for the next page. For reading
