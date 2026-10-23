@@ -248,6 +248,14 @@ not applied. MP4 samples cannot be played apart from their container, so
 there is no `read`: `library open` or `library export` gives a player a
 verified copy. See [decision 0039](decisions/0039-mp4-audio-samples.md).
 
+Stage 3 preparation adds an internal packet index through the same checked
+parser ([decision 0083](decisions/0083-source-bound-mp4-packet-evidence.md)). It
+retains exact source spans and media-table ticks with bounded packet reads;
+this is not yet a public representation, playable output or decoded timing.
+The existing representation and decoder opt-in remain unchanged. Public ranges,
+initialization, timing coverage and player acceptance are tracked in
+[issue 60](https://github.com/blisspixel/nemalo/issues/60).
+
 ## Bounds and failures
 
 - Catalog: existing strict 16 MiB snapshot loader; explicit paths at most 4096 bytes.

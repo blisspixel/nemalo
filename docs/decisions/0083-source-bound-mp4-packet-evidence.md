@@ -24,11 +24,19 @@ MP4 parser. Keep `ProbeMP4`, `nemalo.mp4.samples/2` and public `mp4-audio/1`
 behavior unchanged. Give the distinct packet rules their own extractor identity.
 The new index retains the selected track's bounded, already validated tables
 and the same open offset reader. It owns no file and never reopens a pathname.
+Read the ordinary eight-byte box header first, extending it only for an explicit
+64-bit size. This removes the old unconditional header lookahead into media
+bytes without changing the accepted grammar, findings or summary representation.
 The caller must keep that handle alive and bind results to its checked source
-identity; application integration will reuse content's existing opened-handle
-and final whole-source hash checks.
+identity. Public packet delivery must parse and read a checked immutable private
+snapshot, copied and hashed from the capability-bound source handle. Reuse the
+existing source identity and final checks, but do not assume that a subsequent
+hash alone binds earlier transient reads of a mutable file. Charge actual copy
+and hash work, failures, temporary disk and cancellation to explicit bounds.
 
-Select only one clear audio track with no assessment finding. Preserve explicit
+Select only one clear audio track with one sample description and no assessment
+finding. Multiple descriptions remain unsupported even if the older assessment
+finds their summary fields equivalent. Preserve explicit
 unsupported results for fragments, protection, inconsistent tables, mixed sample
 descriptions, misplaced/overlapping samples and unknown codecs. Existing notes
 remain separate from findings. No new parser subset or checked policy is added.
@@ -74,3 +82,28 @@ the checkout. Keep packet agreement separate from the documented decoder-state
 counterexample and actual playback. Require self-review, canonical verification,
 full native-cgo race, documentation checks and actual hosted evidence before
 claiming the increment verified. Issue 60 remains open for its unmet acceptance.
+
+## Initial native evidence
+
+Generated Linux fixtures outside the checkout were compared with installed
+FFmpeg/FFprobe 9.0.2: AAC at 44.1 kHz stereo and 22.05 kHz mono, ALAC at 48 kHz
+stereo, MP3 in MP4 and Opus in MP4. All 829 packets matched reference byte
+positions, sizes and start ticks; next starts and declared stream end matched
+the table intervals. Every delivered payload matched the original source slice,
+and source files remained unchanged. Layouts included movie metadata before and
+after media. FFprobe used its fixed MOV demuxer, file-only protocol and disabled
+edit-list application for this media-table comparison.
+
+FFprobe reported the final MP3 packet's codec duration as 1,152 ticks, while the
+container table ended it after 421 ticks. This is a measured distinction between
+packet decoding and declared media-table duration, not a reason to rewrite the
+source evidence. The other four profiles' reported packet durations matched.
+No PCM equivalence, real-player acceptance or broad codec support is established
+by these packet comparisons. Canonical and hosted checks remain separate gates.
+
+Local canonical verification passed at 86.6% aggregate coverage, including pinned
+Staticcheck and govulncheck with no reported vulnerabilities. Full native-cgo
+repository race tests passed, with the library package completing in 171.692
+seconds. Windows audio cross-vet and document links/anchors/whitespace checks
+passed. These are local results; exact hosted acceptance is tracked in issue 60
+and the remaining public stage 3 work stays open.

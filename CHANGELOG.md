@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Prepare internal exact MP4 packet selections through the existing parser,
+  preserving source byte positions and media-table timing with bounded reads.
+  This is groundwork for audio ranges; public `mp4-audio/1` remains units-only
+  and no decoder is added to content access.
+
 - Read complete supported nested volume sets through shared intake, preserving
   original source chains and every continuation. Completely covered trees with
   verified held leaves use distinct `archive-tree/3`; fresh purge repeats the
@@ -12,19 +17,20 @@
 - Add internal opt-in nested-volume intake and read-only coverage through the
   existing checked set adapters. Preserve every original part and source chain,
   share work limits across groups, and refuse ambiguous or failed parts. All
-  application callers keep the opt-in disabled; existing cleanup proofs gain no
-  authority from the separate internal child-set evidence.
+  application callers stayed disabled in that read-only increment; existing
+  proof IDs gained no authority from its separate child-set evidence.
 
 - Clean completely covered old-name root RAR4/RAR5 sets under distinct versioned
   proofs after exact held-leaf and source checks. Fresh purge repeats the whole
   proof; partial recovery uses immutable original evidence and verified remaining
   bytes. Earlier proofs retain their scopes, raw restore replaces nothing, and
-  unsupported material and nested volume sets stay preserved.
+  unsupported material stays preserved. Nested sets need the separate tree
+  authority above.
 
 - Add opt-in read-only old-name RAR4/RAR5 set coverage with distinct internal
   evidence, strict physical and reader-table binding, and shared work limits.
   This read-only increment kept application cleanup disabled until its separate
-  verified writer contract; nested volume sets remain unsupported.
+  verified writer contract; that root-only evidence did not cover nested sets.
 
 - Keep EPUBs with active URI indicators in review even when antivirus reports no
   detections. Recognize encoded and whitespace-separated script schemes, data

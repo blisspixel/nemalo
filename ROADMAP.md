@@ -245,6 +245,10 @@ verified, not when code exists. No stage has a time estimate.
    [issue 60](https://github.com/blisspixel/nemalo/issues/60). The
    [AAC range research](docs/RESEARCH.md#aac-range-boundaries-and-decoder-state)
    records a decoder-state constraint that the design must resolve.
+   Internal exact packet evidence now reuses the checked MP4 tables under
+   [decision 0083](docs/decisions/0083-source-bound-mp4-packet-evidence.md).
+   Public ranges, initialization, timing coverage and real-player acceptance
+   remain unfinished; `mp4-audio/1` is still units-only.
 4. **Cited evidence and agent reading** (milestone 9). A versioned evidence
    result over the content services, documented citation export, and agent
    guidance for reading a work from its own structure. Depends on stages 1 and

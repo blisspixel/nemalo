@@ -257,6 +257,11 @@ PCM equivalence from tones alone, silently add a decoder to content access or
 equate a small output with bounded preparation. A playable local reference must
 use the existing verified-copy handoff and explicit user selection. Keep current
 extractor/representation contracts while evaluating a separate versioned one.
+Packet delivery must also bind parser metadata and payload to the same verified
+immutable snapshot. A later whole-file hash of a mutable source cannot by itself
+authenticate bytes read earlier and subsequently changed back. Reuse checked
+opens and copy/hash mechanisms with explicit read, temporary-disk and cancellation
+bounds when integrating public packet access.
 
 ## Evidence still required
 

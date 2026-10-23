@@ -194,6 +194,12 @@ func (p *mp4Parser) walk(data []byte, depth int, visit func(typ string, body []b
 func ProbeMP4(ctx context.Context, r interface {
 	ReadAt([]byte, int64) (int, error)
 }, size int64) (MP4, error) {
+	return probeMP4Tables(ctx, r, size, nil)
+}
+
+func probeMP4Tables(ctx context.Context, r interface {
+	ReadAt([]byte, int64) (int, error)
+}, size int64, packets *MP4PacketIndex) (MP4, error) {
 	m := MP4{Compatible: []string{}, MediaData: []Region{}, Chapters: []Chapter{}, Findings: []string{}, Notes: []string{}, Decoded: "not_decoded"}
 	p := &mp4Parser{ctx: ctx}
 	var movie []byte
@@ -221,7 +227,7 @@ func ProbeMP4(ctx context.Context, r interface {
 			m.Notes = append(m.Notes, MP4TrailingRegion)
 			break
 		}
-		h, err := read(off, min(16, size-off))
+		h, err := read(off, 8)
 		if err != nil {
 			return m, err
 		}
@@ -231,10 +237,17 @@ func ProbeMP4(ctx context.Context, r interface {
 		case boxSize == 0:
 			boxSize = size - off
 		case boxSize == 1:
-			if len(h) < 16 || be64(h[8:]) > math.MaxInt64 {
+			if size-off < 16 {
 				return m, errMP4Malformed
 			}
-			boxSize, header = int64(be64(h[8:])), 16
+			large, err := read(off+8, 8)
+			if err != nil {
+				return m, err
+			}
+			if be64(large) > math.MaxInt64 {
+				return m, errMP4Malformed
+			}
+			boxSize, header = int64(be64(large)), 16
 		}
 		if i == 0 && typ != "ftyp" {
 			return m, ErrNotMP4
@@ -413,6 +426,9 @@ func ProbeMP4(ctx context.Context, r interface {
 		m.Notes = appendOnce(m.Notes, MP4DeclaredDiffers)
 	}
 	p.chapters(r, size, tracks, a, &m)
+	if packets != nil {
+		packets.source, packets.track, packets.size = r, a, size
+	}
 	return m, nil
 }
 
