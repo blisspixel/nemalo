@@ -133,3 +133,21 @@ full native-cgo race, links/examples, all six exact hosted jobs and Go/Actions
 CodeQL. Keep [issue 60](https://github.com/blisspixel/nemalo/issues/60) open until
 the full stage acceptance receipt is posted and read back while open. Cited
 evidence, interface/platform and release gates follow the roadmap's order.
+
+### Native verification correction
+
+The first application head, `d0ae20c`, passed local verification, native
+CLI/reference/player checks, five hosted jobs and Go/Actions CodeQL. Its
+[Windows canonical gate](https://github.com/blisspixel/nemalo/actions/runs/40015192622)
+failed in the new replacement fixture: Windows refused renaming the retained
+open snapshot with `ERROR_SHARING_VIOLATION`. The library suite passed; Windows
+race, reparse and binary smokes were skipped. This is failed acceptance evidence.
+
+Test the actual native denial explicitly, including unchanged private bytes and
+no delivered payload, and retain actual replacement refusal where the OS permits
+it. Add a portable same-bytes/different-file fixture for the retained-handle versus
+named-identity check, without requiring an otherwise forbidden rename. Skip no
+case, accept no other rename error and retain all existing assertions, limits and
+durability. The final named lookup uses the existing `safeio.Lstat`, which captures
+Windows file identity when observed rather than deferring it until `SameFile`.
+Repeat full local/native/exact-hosted acceptance on the corrected head.
