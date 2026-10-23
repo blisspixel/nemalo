@@ -281,18 +281,31 @@ func readOptional(root *os.Root, name string, max int) ([]byte, error) {
 // tornTail reports a journal whose last line was cut short by an interrupted
 // write.
 func tornTail(root *os.Root, name string) bool {
+	torn, _ := checkedTornTail(root, name)
+	return torn
+}
+
+// checkedTornTail keeps inspection failures distinct from a complete journal.
+// The legacy report helper above retains its boolean contract.
+func checkedTornTail(root *os.Root, name string) (torn bool, err error) {
 	f, err := openRegular(root, name, os.O_RDONLY)
 	if err != nil {
-		return false
+		return false, err
 	}
-	defer f.Close()
+	defer func() { err = errors.Join(err, f.Close()) }()
 	st, err := f.Stat()
-	if err != nil || st.Size() == 0 {
-		return false
+	if err != nil {
+		return false, err
+	}
+	if st.Size() == 0 {
+		return false, nil
 	}
 	var tail [1]byte
 	_, err = f.ReadAt(tail[:], st.Size()-1)
-	return err == nil && tail[0] != '\n'
+	if err != nil {
+		return false, err
+	}
+	return tail[0] != '\n', nil
 }
 
 // dropTornTail cuts an unterminated last line from a journal open for

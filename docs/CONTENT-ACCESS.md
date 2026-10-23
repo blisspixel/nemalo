@@ -70,6 +70,71 @@ Final source symlinks and special files are refused; `os.Root` confines traversa
 Source reads write nothing and never execute content. Only an explicit resource
 read returns local embedded bytes; it never fetches links or renders those bytes.
 
+## Evidence and citation export
+
+Managed `content read` supports optional `--evidence` through the shared
+application service. Ordinary reads retain their existing JSON; only opted-in
+results add `evidence`, schema `nemalo-evidence/1`. This implementation is local
+work pending full hosted and milestone 9 semantic acceptance, not a release.
+
+```sh
+nemalo content read /path/library --root /path/library --asset sha256:HASH --unit 1 --max-bytes 4096 --evidence --json
+nemalo content read /path/library --root /path/library --asset sha256:HASH --unit 1 --max-bytes 4096 --evidence-reference REFERENCE --json
+nemalo library citation /path/library --asset sha256:HASH --json
+```
+
+`REFERENCE` is the earlier result's `evidence.reference`, not its continuation.
+Repeat the original `evidence.selection` explicitly, including representation,
+range selector or original cursor, and max-bytes. A different requested bound
+fails even when it would produce identical bytes. The token contains no paths,
+selectors or decoder authority. It compares asset/library, the full selected
+holding and portable metadata digests, extractor, representation ID and a
+versioned digest of the actual result plus selection. It is not a signature or
+authorization credential. Unsupported or ambiguous selections can return their
+existing diagnostics without a quotation or evidence reference.
+
+Evidence retains exact source `quotation` and its locator, or delivered audio
+SHA-256/byte count and the original typed range. EPUB text offsets and PDF pages,
+MP3 encoded samples, MP4 packet ordinals and decoder-output samples remain
+different coordinate systems. PCM evidence retains the full-output identity in
+the enclosing result; audio is not a transcript. The original result continues
+to carry structured parts, printed page labels, declared navigation/page ends,
+initialization evidence, clocks, gaps and stop facts. Evidence coverage names only
+the returned range's unit, not every inventoried unit or the whole work.
+An end-of-source marker does not prove earlier units were read.
+
+Only an initialized managed library can supply evidence metadata. Recorded work,
+edition/version, source and recording relationships are declarations, with their
+origins, omissions, conflicts and user narration match/withdrawal states retained.
+They are not fresh rights or safety checks. Metadata reads hold a shared reader
+lock through retrieval and refuse torn journal tails without repairing them.
+The portable metadata view omits private intake paths and transfer URLs and is
+at most 256 KiB after safe JSON encoding; oversized views are refused instead of
+dropping identities. The full safely encoded result stays within 1 MiB. A
+five-minute outer deadline includes metadata work; existing shorter retrieval or
+caller deadlines still apply. Nothing initializes or mutates the library or
+records reading. Any metadata, retrieval, reference, encoding or close failure
+discards all quotation, resource bytes, evidence and continuation.
+
+MCP uses optional `evidence` and `evidence_reference` only on `content_read` and
+explicitly enabled `content_decode_read`. Scopes and existing per-call decoder
+permission still apply. CLI decoded evidence still requires `--decode`; a
+reference never selects a decoder by itself. Units, locate, raw source, resources,
+TUI and snapshot reads retain their earlier contracts.
+
+`library citation` and scoped read-only MCP `library_citation` export schema
+`nemalo-citation/1`: a standard CSL-JSON item array in `csl_json`, separately from
+Nemalo's `metadata`, field provenance/candidates, `metadata_sha256`, unknown fields
+and limitations. Pass only that array to a CSL processor. Exact asset IDs identify
+items; only unambiguous recorded titles, languages and classified ISBN/DOI values
+are projected. Author, date, publisher, edition label and bibliographic type stay
+unknown; `document` is an explicit generic fallback. A narrator is not an author,
+and a different paper version supplies no missing metadata or license. Citation
+export reads committed journals only, works when stored content is missing and
+marks bytes `not_revalidated`. It never opens arbitrary receipt paths or contacts
+providers. See [decision 0087](decisions/0087-source-bound-evidence-and-citations.md)
+for the exact reference encoding and pinned CSL schema.
+
 ## Version 1 text and references
 
 The shared request requires schema version 1; CLI commands select that version.

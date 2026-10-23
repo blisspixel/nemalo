@@ -125,6 +125,8 @@ func Execute(ctx context.Context, args []string, out, errOut io.Writer, service 
 	flags.StringVar(&contentRequest.Part, "part", "", "exact source part ID")
 	flags.StringVar(&contentRequest.Navigation, "navigation", "", "epub-nav/1 source: nav-doc or ncx")
 	flags.StringVar(&contentRequest.Label, "label", "", "epub-page-list/1 page label")
+	flags.BoolVar(&contentRequest.Evidence, "evidence", false, "return source-bound evidence for this managed content read")
+	flags.StringVar(&contentRequest.EvidenceReference, "evidence-reference", "", "compare this explicit read with an earlier evidence reference")
 	representationID := flags.String("representation-id", "", "sha256: representation id observed for this location")
 	bookmarkInput := flags.String("input", "", "bookmark export to import")
 	replaceBookmarks := flags.Bool("replace", false, "replace differing bookmark locations on import")
@@ -517,6 +519,16 @@ func Execute(ctx context.Context, args []string, out, errOut io.Writer, service 
 				return write(nil, errors.New("use library check LIBRARY"), 2)
 			}
 			data, err := service.CheckLibrary(ctx, flags.Arg(0))
+			if err != nil {
+				return write(data, err, 1)
+			}
+			return write(data, nil, 0)
+		}
+		if action == "citation" {
+			if flags.NArg() != 1 || contentRequest.AssetID == "" {
+				return write(nil, errors.New("use library citation LIBRARY --asset sha256:HASH [--json]"), 2)
+			}
+			data, err := service.Citation(ctx, flags.Arg(0), contentRequest.AssetID)
 			if err != nil {
 				return write(data, err, 1)
 			}
@@ -990,6 +1002,9 @@ func flagApplies(command, action, name string) bool {
 		return true
 	}
 	if command == "content" {
+		if name == "evidence" || name == "evidence-reference" {
+			return action == "read"
+		}
 		if action != "units" && action != "read" && action != "source" && action != "resource" && action != "locate" && action != "navigation" && action != "pages" {
 			return false
 		}
@@ -1041,6 +1056,8 @@ func flagApplies(command, action, name string) bool {
 			return name == "source"
 		case "narration":
 			return name == "declaration" || name == "retract" || name == "apply" || name == "plan"
+		case "citation":
+			return name == "asset"
 		case "related":
 			return name == "asset" || name == "limit" || name == "offset"
 		case "check":
@@ -1206,6 +1223,9 @@ func printData(out io.Writer, data any) error {
 		return err
 	case library.ManagedPage:
 		_, err := io.WriteString(out, present.ManagedHoldings(value))
+		return err
+	case app.CitationResult:
+		_, err := io.WriteString(out, present.Citation(value))
 		return err
 	case library.Audit:
 		_, err := io.WriteString(out, present.Audit(value))

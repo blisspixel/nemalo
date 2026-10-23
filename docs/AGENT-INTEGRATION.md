@@ -39,9 +39,22 @@ nemalo mcp serve --scope /path/to/library --allow-network
 ```
 
 Implemented tools are all read-only: `nemalo_capabilities`, `library_status`,
-`library_list`, `library_recordings`, `library_related`, `collection_diff`, `collection_status`, `library_audit`, `library_check`, `file_check` (no antivirus), and
+`library_list`, `library_recordings`, `library_related`, `library_citation`, `collection_diff`, `collection_status`, `library_audit`, `library_check`, `file_check` (no antivirus), and
 `content_capabilities`, `content_units`, `content_navigation`, `content_pages`, `content_read`, `content_locate`, `content_source`,
-`content_resource`. `content_navigation` lists source-declared EPUB contents;
+`content_resource`.
+`library_citation` exports a selected managed holding's recorded declarations as
+the standard `csl_json` item array, with separate unknown fields and provenance.
+It opens neither stored bodies nor acquisition receipt paths. `content_read`
+and independently enabled `content_decode_read` accept optional `evidence: true`
+or `evidence_reference` for a managed read. Repeat all original `selection`
+parameters explicitly when comparing a reference; it supplies no paths or decoder
+permission. Evidence names the exact returned range and metadata, reports gaps
+and bounds, and contains no generated interpretation or consumption record.
+Other operations reject these options. The shared portable skill covers
+question-led structural reading, qualification and explicit unread coverage.
+See [evidence and citation export](CONTENT-ACCESS.md#evidence-and-citation-export).
+
+`content_navigation` lists source-declared EPUB contents;
 a read of one entry uses `content_read` with representation `epub-nav/1`.
 `collection_diff` takes `before` and `after` collection-file paths inside scope
 and compares their exact selections, notes, names, and retained order, with both

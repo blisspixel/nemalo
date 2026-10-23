@@ -9,11 +9,19 @@ needed for the application, tests, or first-party tooling.
 
 `help`, `version`, `doctor`, `search`, `evaluate`, `catalog fetch`, `acquire`, `inspect`, `check`, `library snapshot`,
 `library list`, `library audit`, `library check`, `library import`, `library ingest`, `library cleanup`, `library restore`, `library purge`,
-`library rescan`, `library recordings`,
+`library rescan`, `library recordings`, `library citation`,
 `library open`, `library export`, `library init`, `library status`, `bookmark`,
 `content units`, `content navigation`,
 `content read`, `content locate`, `content source`, `content resource`, `content capabilities`,
 `read`, `mcp serve`, `jobs`, and `tui` are implemented.
+Managed `content read` can add `--evidence`, or compare the same explicit
+selection with `--evidence-reference TOKEN`. `library citation LIBRARY --asset ID`
+exports recorded metadata as CSL-JSON plus an uncertainty/provenance sidecar.
+These are read-only and offline; citation export opens no stored bodies, and
+evidence keeps each representation's existing retrieval and decoder boundaries.
+See [evidence and citation export](CONTENT-ACCESS.md#evidence-and-citation-export).
+Milestone 9's actual semantic-output review and full hosted acceptance remain
+outstanding; implemented interfaces alone do not complete the stage.
 `collection diff`, `collection status`, and `collection acquire` compare exact
 declarations, resolve holdings, and acquire missing selections.
 Search defaults to Open Library work metadata; `--source archive` selects Internet

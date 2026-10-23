@@ -67,9 +67,24 @@ type Request struct {
 	// Label selects an epub-page-list/1 marker by its exact declared label.
 	// Several markers with that label are returned as candidates.
 	Label string
+	// Evidence is opt-in application-service augmentation of a managed read.
+	Evidence          bool
+	EvidenceReference string
 }
 
 func (r Request) Validate() error {
+	if len(r.EvidenceReference) > 2048 || ((r.Evidence || r.EvidenceReference != "") && (r.UnitsOnly || r.Find != "" || r.Resource || r.Representation == "epub-source/1")) {
+		return errors.New("evidence applies only to content reads; its reference is at most 2048 bytes")
+	}
+	if (r.Evidence || r.EvidenceReference != "") && r.Representation == "" && r.Cursor != "" && !strings.HasPrefix(r.Cursor, pcmCursorPrefix) {
+		c, err := parseCursor(r.Cursor)
+		if err != nil {
+			return err
+		}
+		if c.Representation == "epub-source/1" {
+			return errors.New("source access does not support evidence")
+		}
+	}
 	if r.SchemaVersion != 1 || r.Catalog == "" || r.Root == "" || len(r.Catalog) > 4096 || len(r.Root) > 4096 || len(r.AssetID) != 71 || !strings.HasPrefix(r.AssetID, "sha256:") {
 		return errors.New("content requires a catalog, explicit root, and sha256: asset ID")
 	}
@@ -144,6 +159,7 @@ type Locator struct {
 }
 
 type Result struct {
+	Evidence         *Evidence     `json:"evidence,omitempty"`
 	SchemaVersion    int           `json:"schema_version"`
 	Status           string        `json:"status"`
 	AssetID          string        `json:"asset_id"`
@@ -259,6 +275,9 @@ func GetWithDecoder(ctx context.Context, req Request, decoder PCMDecoder) (resul
 	}()
 	if err = req.Validate(); err != nil {
 		return result, err
+	}
+	if req.Evidence || req.EvidenceReference != "" {
+		return result, errors.New("evidence requires the shared application service")
 	}
 	result.AssetID = req.AssetID
 	callerCtx := ctx

@@ -176,6 +176,14 @@ func New(service app.Service, opts Options) (*mcp.Server, error) {
 			}
 			return service.Related(ctx, library.RelatedRequest{Directory: dir, Holding: in.Asset, Limit: limit, Offset: in.Offset})
 		})
+	add(&r, "library_citation", "Export one exact holding's recorded citation declarations as CSL-JSON plus provenance, ambiguity and unknown fields. Reads canonical journals only, without opening stored content or receipt paths, probing audio, contacting providers, decoding or changing state. Byte status is not revalidated. Private intake paths and transfer URLs are omitted; the generic document type is an export fallback, not a bibliographic assertion.", false,
+		func(ctx context.Context, in citationInput) (app.CitationResult, error) {
+			dir, err := scopes.path(in.Library)
+			if err != nil {
+				return app.CitationResult{}, err
+			}
+			return service.Citation(ctx, dir, in.Asset)
+		})
 	add(&r, "library_audit", "Audit stored bytes: an initialized library directory alone compares managed holdings; a catalog file with an explicit root compares a snapshot. Reports findings and changes nothing.", false,
 		func(ctx context.Context, in auditInput) (any, error) {
 			catalog, err := scopes.path(in.Catalog)
@@ -515,6 +523,11 @@ type relatedInput struct {
 	Offset  int    `json:"offset,omitempty" jsonschema:"groups to skip, from total_groups"`
 }
 
+type citationInput struct {
+	Library string `json:"library" jsonschema:"an existing initialized library inside the configured scopes"`
+	Asset   string `json:"asset" jsonschema:"exact selected holding ID, sha256: followed by 64 lowercase hex digits"`
+}
+
 type auditInput struct {
 	Catalog string `json:"catalog" jsonschema:"an initialized library directory, or a catalog snapshot file when root is given"`
 	Root    string `json:"root,omitempty" jsonschema:"explicit directory the snapshot catalog describes; required for a snapshot file"`
@@ -527,20 +540,22 @@ type checkInput struct {
 }
 
 type contentInput struct {
-	Catalog        string `json:"catalog" jsonschema:"catalog snapshot file, or the library directory for a managed holding"`
-	Root           string `json:"root" jsonschema:"explicit source root; for a managed holding, the same library directory"`
-	Asset          string `json:"asset" jsonschema:"exact asset ID, sha256: followed by 64 lowercase hex digits"`
-	Representation string `json:"representation,omitempty" jsonschema:"epub-text/2 (default), epub-text/1, epub-structure/1, epub-nav/1 for one declared contents entry, epub-page-list/1 from one declared page label, pdf-text/1 for PDF, mpeg-audio/1 for MP3, mp4-audio/1 for M4B and M4A (units only), or explicit mp4-audio/2 for original packets and untrusted initialization (verified private copy may need 2 GiB temporary disk and 4 GiB source reads); a cursor keeps its own"`
-	Unit           int    `json:"unit,omitempty" jsonschema:"zero-based reading-order unit, zero-based physical page index for pdf-text/1, or the declared entry order for epub-nav/1, 0-9999"`
-	TextOffset     int    `json:"text_offset,omitempty" jsonschema:"zero-based UTF-8 byte offset inside the unit, or relative to a declared entry for epub-nav/1"`
-	Navigation     string `json:"navigation,omitempty" jsonschema:"nav-doc or ncx; required when reading epub-nav/1 and the book declares both"`
-	Label          string `json:"label,omitempty" jsonschema:"exact declared page label for an epub-page-list/1 read, such as iv; several markers with one label are listed as candidates"`
-	MaxBytes       int    `json:"max_bytes,omitempty" jsonschema:"bytes to return, 4-65536, default 4096"`
-	Cursor         string `json:"cursor,omitempty" jsonschema:"continuation or reference cursor exactly as returned; not combinable with unit or text_offset"`
-	Part           string `json:"part,omitempty" jsonschema:"exact structured part ID such as id:note-1; structured and source reads only"`
-	Sample         int64  `json:"sample,omitempty" jsonschema:"encoded sample where an mpeg-audio/1 read starts"`
-	Packet         *int   `json:"packet,omitempty" jsonschema:"zero-based original packet for an mp4-audio/2 read; not combinable with units, a cursor or another representation"`
-	PCMSample      *int64 `json:"pcm_sample,omitempty" jsonschema:"zero-based decoder-output sample; only explicit content_decode_read, not units or a cursor"`
+	Evidence          bool   `json:"evidence,omitempty" jsonschema:"return source-bound evidence for a managed read only; no interpretation or reading state"`
+	EvidenceReference string `json:"evidence_reference,omitempty" jsonschema:"compare this explicitly repeated read with an earlier evidence reference; grants no scope or decoder permission"`
+	Catalog           string `json:"catalog" jsonschema:"catalog snapshot file, or the library directory for a managed holding"`
+	Root              string `json:"root" jsonschema:"explicit source root; for a managed holding, the same library directory"`
+	Asset             string `json:"asset" jsonschema:"exact asset ID, sha256: followed by 64 lowercase hex digits"`
+	Representation    string `json:"representation,omitempty" jsonschema:"epub-text/2 (default), epub-text/1, epub-structure/1, epub-nav/1 for one declared contents entry, epub-page-list/1 from one declared page label, pdf-text/1 for PDF, mpeg-audio/1 for MP3, mp4-audio/1 for M4B and M4A (units only), or explicit mp4-audio/2 for original packets and untrusted initialization (verified private copy may need 2 GiB temporary disk and 4 GiB source reads); a cursor keeps its own"`
+	Unit              int    `json:"unit,omitempty" jsonschema:"zero-based reading-order unit, zero-based physical page index for pdf-text/1, or the declared entry order for epub-nav/1, 0-9999"`
+	TextOffset        int    `json:"text_offset,omitempty" jsonschema:"zero-based UTF-8 byte offset inside the unit, or relative to a declared entry for epub-nav/1"`
+	Navigation        string `json:"navigation,omitempty" jsonschema:"nav-doc or ncx; required when reading epub-nav/1 and the book declares both"`
+	Label             string `json:"label,omitempty" jsonschema:"exact declared page label for an epub-page-list/1 read, such as iv; several markers with one label are listed as candidates"`
+	MaxBytes          int    `json:"max_bytes,omitempty" jsonschema:"bytes to return, 4-65536, default 4096"`
+	Cursor            string `json:"cursor,omitempty" jsonschema:"continuation or reference cursor exactly as returned; not combinable with unit or text_offset"`
+	Part              string `json:"part,omitempty" jsonschema:"exact structured part ID such as id:note-1; structured and source reads only"`
+	Sample            int64  `json:"sample,omitempty" jsonschema:"encoded sample where an mpeg-audio/1 read starts"`
+	Packet            *int   `json:"packet,omitempty" jsonschema:"zero-based original packet for an mp4-audio/2 read; not combinable with units, a cursor or another representation"`
+	PCMSample         *int64 `json:"pcm_sample,omitempty" jsonschema:"zero-based decoder-output sample; only explicit content_decode_read, not units or a cursor"`
 }
 
 type searchInput struct {
@@ -572,6 +587,9 @@ func defaultInt(v, d int) int {
 // contentRequest maps tool input onto the shared request, after scoping both
 // catalog and root. The operation fixes the representation where the CLI does.
 func contentRequest(s scope, in contentInput, operation string) (content.Request, error) {
+	if (in.Evidence || in.EvidenceReference != "") && operation != "read" && operation != "decode_read" {
+		return content.Request{}, errors.New("evidence applies only to content_read or explicitly enabled content_decode_read")
+	}
 	catalog, err := s.path(in.Catalog)
 	if err != nil {
 		return content.Request{}, err
@@ -580,7 +598,7 @@ func contentRequest(s scope, in contentInput, operation string) (content.Request
 	if err != nil {
 		return content.Request{}, err
 	}
-	req := content.Request{SchemaVersion: 1, Catalog: catalog, Root: root, AssetID: in.Asset, Unit: in.Unit, Offset: in.TextOffset, MaxBytes: defaultInt(in.MaxBytes, 4096), Cursor: in.Cursor, Representation: in.Representation, Part: in.Part, Sample: in.Sample, Packet: in.Packet, PCMSample: in.PCMSample, Navigation: in.Navigation, Label: in.Label}
+	req := content.Request{SchemaVersion: 1, Catalog: catalog, Root: root, AssetID: in.Asset, Unit: in.Unit, Offset: in.TextOffset, MaxBytes: defaultInt(in.MaxBytes, 4096), Cursor: in.Cursor, Representation: in.Representation, Part: in.Part, Sample: in.Sample, Packet: in.Packet, PCMSample: in.PCMSample, Navigation: in.Navigation, Label: in.Label, Evidence: in.Evidence, EvidenceReference: in.EvidenceReference}
 	switch operation {
 	case "decode_units", "decode_read":
 		if req.Representation != "" && req.Representation != content.PCMRepresentation {

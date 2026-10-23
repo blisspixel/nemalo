@@ -554,6 +554,9 @@ func (s Service) AuditManaged(ctx context.Context, directory string) (library.Ma
 }
 
 func (s Service) Content(ctx context.Context, req content.Request) (content.Result, error) {
+	if req.Evidence || req.EvidenceReference != "" {
+		return s.contentEvidence(ctx, req)
+	}
 	return content.GetWithDecoder(ctx, req, s.PCMDecoder)
 }
 

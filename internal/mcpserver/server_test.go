@@ -140,7 +140,7 @@ func TestToolsAreReadOnlyAndNetworkIsExplicit(t *testing.T) {
 	calls := 0
 	service := app.Service{Providers: map[string]app.Searcher{"openlibrary": catalog{&calls}}, Scanner: noScanner{t}}
 	offline := toolNames(t, connect(t, service, Options{Scopes: []string{t.TempDir()}, Version: "test"}))
-	want := []string{"collection_diff", "collection_status", "content_capabilities", "content_locate", "content_navigation", "content_pages", "content_read", "content_resource", "content_source", "content_units", "file_check", "library_audit", "library_check", "library_list", "library_recordings", "library_related", "library_status", "nemalo_capabilities"}
+	want := []string{"collection_diff", "collection_status", "content_capabilities", "content_locate", "content_navigation", "content_pages", "content_read", "content_resource", "content_source", "content_units", "file_check", "library_audit", "library_check", "library_citation", "library_list", "library_recordings", "library_related", "library_status", "nemalo_capabilities"}
 	if !slices.Equal(offline, want) {
 		t.Fatal("offline tools", offline)
 	}
@@ -154,7 +154,7 @@ func TestToolsAreReadOnlyAndNetworkIsExplicit(t *testing.T) {
 	}
 	_, env = call(t, online, "nemalo_capabilities", map[string]any{})
 	data := env["data"].(map[string]any)
-	if data["read_only"] != true || data["network"] != true || len(data["tools"].([]any)) != 20 {
+	if data["read_only"] != true || data["network"] != true || len(data["tools"].([]any)) != 21 {
 		t.Fatal("capabilities", data)
 	}
 }

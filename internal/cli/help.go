@@ -182,6 +182,10 @@ nemalo library related LIBRARY [--asset sha256:HASH] [--limit 10] [--offset 0]
   Group holdings that share an identifier an EPUB package or a source's
   metadata states, versions of one arXiv paper, files of one source item,
   or a narration. Nothing is merged, and titles are never compared.
+nemalo library citation LIBRARY --asset sha256:HASH [--json]
+  Export recorded citation declarations as CSL-JSON with a provenance and
+  unknown-field sidecar. No stored content, receipts or provider is opened.
+  Byte status is not revalidated; this is not a fresh integrity or rights check.
 nemalo library cleanup LIBRARY FOLDER [--apply --plan DIGEST]
   Move sources the library holds into a recoverable holding area; the
   preview lists every entry and a plan digest.
@@ -307,6 +311,9 @@ nemalo content capabilities
 
 Read options:
   --unit 0, --text-offset 0, --max-bytes 4096, --cursor TOKEN
+  --evidence returns exact source evidence for a managed content read only.
+  --evidence-reference TOKEN compares an explicitly repeated bounded read.
+  Neither option grants decoder permission or records reading state.
   --representation epub-text/2|epub-text/1|epub-structure/1|epub-nav/1|
                    epub-page-list/1|pdf-text/1|mpeg-audio/1|
                    mp4-audio/1|mp4-audio/2|mp4-pcm/1

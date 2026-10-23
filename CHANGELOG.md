@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+- Add opt-in `nemalo-evidence/1` to managed content reads, with exact source
+  quotations or delivered audio hashes, typed ranges, declared identities and
+  single-request coverage. Replay compares metadata, the original explicit
+  selection and the complete retrieved result; it grants no scope or decoder
+  permission. Add read-only CSL-JSON citation export with separate unknowns and
+  provenance, and shared agent guidance for structural reading and qualification.
+  Stage-wide semantic and hosted acceptance remain outstanding.
+
 - Add explicit `mp4-pcm/1` content access with `--decode` on every invocation,
   including continuation. Reuse the installed FFmpeg adapter to measure and hash
   a complete sequential output while retaining only bounded samples, returned

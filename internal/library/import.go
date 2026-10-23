@@ -1165,34 +1165,17 @@ func (r importReader) Read(p []byte) (int, error) {
 // ManagedAsset resolves one committed holding for offline content reads.
 // The returned location is relative to the library root.
 func ManagedAsset(ctx context.Context, directory, assetID string) (Asset, string, error) {
-	if !validAssetID(assetID) {
-		return Asset{}, "", errors.New("invalid asset ID")
-	}
-	abs, err := filepath.Abs(directory)
+	var asset Asset
+	var libraryID string
+	err := withManagedHolding(ctx, directory, assetID, func(_ *control, _ string, holding Holding, _ []Holding) error {
+		asset = Asset{ID: holding.ID, SHA256: holding.SHA256, Bytes: holding.Bytes, Locations: []Location{{Path: filepath.FromSlash(holding.Path), CandidateKind: "managed_holding"}}}
+		libraryID = holding.LibraryID
+		return nil
+	})
 	if err != nil {
 		return Asset{}, "", err
 	}
-	state, err := LibraryStatus(ctx, abs)
-	if err != nil || state.Status != "initialized" {
-		if err == nil {
-			err = errors.New("content library is not initialized")
-		}
-		return Asset{}, "", err
-	}
-	control, _, err := openControl(abs, false)
-	if err != nil {
-		return Asset{}, "", err
-	}
-	defer control.close()
-	_, lines, err := lockedManaged(control, state.LibraryID)
-	if err != nil {
-		return Asset{}, "", err
-	}
-	holding, ok := latestHoldings(lines)[assetID]
-	if !ok {
-		return Asset{}, "", errors.New("asset not present in managed holdings")
-	}
-	return Asset{ID: holding.ID, SHA256: holding.SHA256, Bytes: holding.Bytes, Locations: []Location{{Path: filepath.FromSlash(holding.Path), CandidateKind: "managed_holding"}}}, state.LibraryID, nil
+	return asset, libraryID, nil
 }
 
 // ManagedAudit compares committed holdings with their stored bytes.

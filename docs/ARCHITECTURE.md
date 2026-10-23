@@ -288,6 +288,20 @@ Declared EPUB contents are `epub-nav/1`
 page labels are `epub-page-list/1`
 ([decision 0031](decisions/0031-epub-page-list.md)).
 
+Opt-in `nemalo-evidence/1` augments managed reads in `internal/app` using the same
+content retrieval. A non-mutating library reader lock holds selected journal
+metadata stable throughout the range retrieval. The portable declaration view is
+bounded to 256 KiB; original stored bytes are independently revalidated. Exact
+quotations/audio payload hashes, typed locators and single-range coverage remain
+separate from caller interpretations. Versioned references compare complete
+metadata context, retrieval and explicit selection without supplying paths or
+permissions. Every failure discards the payload. Shared `library citation` and
+`library_citation` export CSL-JSON separately from provenance and unknown fields,
+without opening stored bodies or historical receipt paths. See
+[decision 0087](decisions/0087-source-bound-evidence-and-citations.md) and the
+[public contract](CONTENT-ACCESS.md#evidence-and-citation-export). Semantic-output
+and hosted stage acceptance remain outstanding.
+
 Expand bounded text extraction and search per supported format. Derived indexes key
 on asset hash and extractor version; rebuild them without modifying originals.
 Reference EPUB spine/fragment locations, PDF page locations, and audio track/time

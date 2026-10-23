@@ -18,6 +18,40 @@ Its line endings and dash typography are normalized. An offline test requires al
 an EPUB wrapper, so file extension and container validity are insufficient evidence
 that the selected resource is a full text edition.
 
+## Cited evidence and citation export
+
+On 2026-10-23, local verification of the
+[evidence/citation contract](CONTENT-ACCESS.md#evidence-and-citation-export)
+passed formatting, build, vet, pinned Staticcheck, offline tests, 86.9% aggregate
+statement coverage and govulncheck with no reported vulnerabilities. Full native
+cgo race tests and Windows cross-vet passed. Focused synthetic checks cover exact
+EPUB/PDF ranges, gaps, legacy result parity, original audio clocks and payload
+hashes, complete decoded-output identity, canonical replay and different requested
+bounds, metadata conflicts/withdrawal/limits, shared-reader writer exclusion,
+cancellation, failure discard, scopes and independent decoder permission.
+
+The compiled CLI and an actual stdio MCP process returned identical data for
+four permitted fixture selections and their exact replays: Pride and Prejudice
+declared contents, Attention Is All You Need version 7 PDF page index 7, The Art
+of War MP3 bytes, and a cached LibriVox MP4 decoded range. The last explicitly
+invoked FFmpeg n9.0.2, returning 500 mono samples at decoder-output positions
+10000..10500 in a 1044-byte WAV, with complete sequential output identity. It
+does not establish original-packet, chapter or presentation mapping. File
+inventories and hashes of the copied validation libraries remained unchanged.
+This installed-tool/process evidence is Linux-specific; all native hosted
+platform acceptance is still required.
+
+Actual CLI citation item arrays for Pride and Prejudice and arXiv
+`1706.03762v7`/`v1` passed the official CSL draft-07 input schema pinned in
+[decision 0087](decisions/0087-source-bound-evidence-and-citations.md), using the
+existing pinned Go JSON Schema validator. Unknown bibliographic fields remained
+outside the standard item array. Version 1 retained its unknown-license statement
+rather than borrowing version 7's declaration. No provider, scanner or metadata
+network request ran during those native calls. This run used fixture copies
+outside the checkout and kept full local reports alongside them. Semantic reading
+review and the exact hosted gate remain separate
+outstanding stage acceptance work; these mechanical checks do not close issue 39.
+
 ## Original MP4 packet access
 
 On 2026-10-23, the actual CLI JSON `mp4-audio/2` path returned 829 original

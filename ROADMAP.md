@@ -799,7 +799,12 @@ Acceptance:
 
 ## Milestone 9: cited evidence and agent reading
 
-Status: planned. The pre-1.0 part of
+Status: implementation in progress, not stage accepted. Selected journal metadata,
+CSL-JSON citation export and opt-in managed evidence/replay are implemented locally
+through shared services, CLI JSON and scoped MCP. Focused synthetic checks cover
+exact ranges, replay, permission separation, conflicts and failure discard.
+Actual semantic-output review and full local/native/exact-hosted verification
+remain outstanding. The pre-1.0 part of
 [issue 37](https://github.com/blisspixel/nemalo/issues/37) and
 [issue 38](https://github.com/blisspixel/nemalo/issues/38)
 ([decision 0048](docs/decisions/0048-cited-evidence-before-1-0.md)). Depends on

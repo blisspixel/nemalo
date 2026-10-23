@@ -18,6 +18,11 @@ func Content(r content.Result) string {
 	fmt.Fprintf(&b, "Source access: %s\n", words(r.Status))
 	field(&b, "Asset", Line(r.AssetID))
 	field(&b, "Representation", Line(r.Representation))
+	if e := r.Evidence; e != nil {
+		field(&b, "Evidence", Line(e.Schema)+" | "+words(e.Kind)+" | single returned range")
+		field(&b, "Evidence reference", Line(e.Reference))
+		notes(&b, "Evidence limit", e.Limitations)
+	}
 	// An audio track is one unit, described by its index below. A page list
 	// lists its markers instead of the spine units.
 	if r.Status == "units_available" && r.Audio == nil && r.MP4 == nil && r.MP4Packets == nil && r.MP4PCM == nil && r.Representation != "epub-page-list/1" {
