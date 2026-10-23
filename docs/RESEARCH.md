@@ -218,6 +218,46 @@ normalized schemes adds review evidence without following a link, rendering a
 document, executing content or changing extraction rules. This is a limited
 indicator policy, not a sanitizer or complete rendering-security analysis.
 
+## AAC range boundaries and decoder state
+
+Reviewed 2026-10-23 for [roadmap stage 3](../ROADMAP.md#order-of-work-to-10)
+and [issue 60](https://github.com/blisspixel/nemalo/issues/60). This is design
+evidence, not an implemented range contract. Existing `mp4-audio/1` remains
+units-only and decoding remains the explicit `check --decode` operation.
+
+[Apple's AAC timing description](https://developer.apple.com/documentation/quicktime-file-format/background_aac_encoding)
+distinguishes encoder priming from decoder preroll. Its
+[track-structure contract](https://developer.apple.com/documentation/quicktime-file-format/using_track_structures_to_represent_encode_delay_explictly)
+combines edit-list and sample-group evidence; movie duration and media start
+can use different timescales. Packet counts or container milliseconds alone
+cannot establish a presented PCM sample position.
+
+The maintained [FFmpeg 9.0.2 AAC decoder](https://github.com/FFmpeg/FFmpeg/blob/n9.0.2/libavcodec/aac/aacdec.c)
+initializes noise-generator state at decoder creation, and
+[perceptual noise substitution](https://github.com/FFmpeg/FFmpeg/blob/n9.0.2/libavcodec/aac/aacdec_proc_template.c)
+advances it across packets. This predicts that bounded transform-history preroll
+need not reproduce a whole-stream decode byte-for-byte. No decoder code was
+copied, ported or added to Nemalo.
+
+A controlled native experiment generated three eight-second, mono 44.1 kHz
+AAC-LC streams outside the checkout with installed FFmpeg 9.0.2: a tone and pink
+noise with noise substitution disabled, and the same seeded noise with it enabled.
+Each had 346 packets and 354,304 decoded samples. Exact source packet interval
+`[100,120)` was decoded to signed 16-bit PCM and compared with the same
+decoder's whole-stream output after discarding preroll. One, two, four and ten
+preceding packets matched exactly in the disabled cases. With substitution
+enabled, 20,473 to 20,478 of 20,480 samples differed, with maximum absolute
+differences of 6,496 to 7,983. Replaying all 100 preceding packets matched.
+This establishes a counterexample to generic bit-exact short preroll, not
+invalid audio or a failure of ordinary player seeking.
+
+The range design must keep exact source-byte selection, container initialization,
+encoded timing, decoder output and actual playback distinct. It must not infer
+PCM equivalence from tones alone, silently add a decoder to content access or
+equate a small output with bounded preparation. A playable local reference must
+use the existing verified-copy handoff and explicit user selection. Keep current
+extractor/representation contracts while evaluating a separate versioned one.
+
 ## Evidence still required
 
 No competitor runtime comparison, complete source audit, Go benchmark, or plugin-host

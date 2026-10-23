@@ -133,3 +133,12 @@ bytes without an archive reader. Current partial recovery used separate snapshot
 and no reconstruction. The [stage 2 audit](../VALIDATION.md#stage-2-archive-intake-and-recoverable-cleanup)
 records coverage and limitations. Exact-final hosted acceptance and readback
 remain required in issue 57 before closure or later-stage implementation.
+
+The writer passed [all six hosted jobs](https://github.com/blisspixel/nemalo/actions/runs/39979388201)
+and [Go/Actions CodeQL](https://github.com/blisspixel/nemalo/actions/runs/39979384451)
+at `1a9e67b6e6d6b8f2236e88517373769ee43b3bd3`. Windows library covered/race
+suites took 389.873/421.067 seconds under the unchanged deadline; native reparse
+cases passed without skips and cgo-free native smokes passed on all three OSes.
+The [final acceptance receipt](https://github.com/blisspixel/nemalo/issues/57#issuecomment-6368967562)
+was read back byte-for-byte while issue 57 remained open, before its closure.
+The bounded stage 2 audit passed. No release is included.

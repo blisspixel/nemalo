@@ -134,12 +134,14 @@ verified, not when code exists. No stage has a time estimate.
    issue 57 stayed open. Complete nested-volume intake and cleanup now reuse the
    same checked groups under distinct `archive-tree/3`. Root facts, held leaves,
    original hashes, fresh whole-tree purge and immutable partial recovery remain
-   required. Full writer acceptance and the final stage 2 audit remain tracked
-   in issue 57 ([decision 0082](docs/decisions/0082-nested-volume-tree-cleanup.md)).
-   Status: implemented for these bounded intake and cleanup contracts. The
+   required. The writer passed all six hosted jobs and Go/Actions CodeQL at
+   `1a9e67b`; its [final receipt](https://github.com/blisspixel/nemalo/issues/57#issuecomment-6368967562)
+   was read back exactly while issue 57 was open, before closure
+   ([decision 0082](docs/decisions/0082-nested-volume-tree-cleanup.md)).
+   Status: implemented and verified for these bounded intake and cleanup contracts. The
    [acceptance audit](docs/VALIDATION.md#stage-2-archive-intake-and-recoverable-cleanup)
-   records tested behavior and limits. Exact-final hosted writer acceptance is
-   recorded in issue 57 before closure or later-stage implementation.
+   records tested behavior and limits. This source acceptance is separate from
+   production release and broader host/reader conformance.
    Split ZIP intake now handles byte chunks and true disk segments through
    checked private snapshots
    ([decision 0057](docs/decisions/0057-split-zip-intake.md)).
@@ -173,7 +175,8 @@ verified, not when code exists. No stage has a time estimate.
    split sets. Historical unversioned 7z entries retain every part for restore;
    acceptance is tracked in [issue 58](https://github.com/blisspixel/nemalo/issues/58)
    ([decision 0065](docs/decisions/0065-versioned-7z-coverage.md)).
-   RAR volume cleanup remains unfinished; an unsupported RAR child preserves its outer source.
+   That increment did not authorize RAR volume cleanup. An unsupported RAR child
+   still preserves its outer source under every later proof.
    A standalone read-only RAR5 framing accountant now binds physical records to
    the maintained reader's exact table. Historical RAR entries without a supported
    proof stay for restore. This framing evidence alone does not authorize cleanup;
@@ -197,8 +200,8 @@ verified, not when code exists. No stage has a time estimate.
    `rar4-frames/1`, selected only from the checked outer signature, exact held
    leaves and the same version-bound purge/recovery protocol. Acceptance is
    tracked in issue 57 ([decision 0070](docs/decisions/0070-standalone-rar4-cleanup.md)).
-   Unicode and unsupported metadata remain preserved. Volume authority is separate,
-   and stage 2 is still unfinished.
+   Unicode and unsupported metadata remain preserved. That standalone increment
+   did not authorize volumes or finish stage 2.
    Read-only nested RAR4/RAR5 coverage is now implemented behind an explicit
    internal opt-in, reusing checked child snapshots, strict standalone preflight
    and the shared framing/table/work limits. Its initial application guard kept
@@ -209,7 +212,7 @@ verified, not when code exists. No stage has a time estimate.
    children. Every leaf must be held, and fresh purge and durable recovery bind
    the exact source group and leaves. Existing proof IDs retain their meanings
    ([decision 0072](docs/decisions/0072-nested-rar-cleanup.md)); acceptance is
-   tracked in issue 57 and RAR volume cleanup remains unfinished.
+   tracked in issue 57. That tree increment did not authorize RAR outer sets.
    Read-only modern root RAR5 set coverage is implemented behind an internal
    explicit opt-in, binding each physical volume to its isolated table and the
    complete set to the exact assembled extraction table. Source-copy and proof
@@ -219,7 +222,8 @@ verified, not when code exists. No stage has a time estimate.
    Completely covered modern root RAR5 sets now have distinct `rar5-set/1`
    cleanup authority, one recoverable set entry, exact held leaves and whole-set
    fresh purge with immutable partial recovery. Existing proof IDs retain their
-   scopes. That modern proof excludes old-name and nested sets; stage 2 is unfinished.
+   scopes. That modern proof excludes old-name and nested sets; their later
+   separate authorities and acceptance are recorded above.
    Separate full acceptance remains tracked in issue 57
    ([decision 0074](docs/decisions/0074-modern-rar5-set-cleanup.md)).
    Modern root RAR4 sets now have separate internal read-only framing/table
@@ -237,7 +241,10 @@ verified, not when code exists. No stage has a time estimate.
    acceptance audit are described above.
 3. **Audio access** (milestone 8). M4B and M4A byte ranges and decoded timing in
    content access, bounded ranges usable by an external player, and output
-   demonstrated with a real audiobook reader or server.
+   demonstrated with a real audiobook reader or server. Next active work:
+   [issue 60](https://github.com/blisspixel/nemalo/issues/60). The
+   [AAC range research](docs/RESEARCH.md#aac-range-boundaries-and-decoder-state)
+   records a decoder-state constraint that the design must resolve.
 4. **Cited evidence and agent reading** (milestone 9). A versioned evidence
    result over the content services, documented citation export, and agent
    guidance for reading a work from its own structure. Depends on stages 1 and
@@ -634,7 +641,8 @@ explicit action with a separate preview.
 
 Acceptance:
 
-- `cleanup --dry-run` lists exact dispositions and reasons for a completed import run.
+- `library cleanup LIBRARY FOLDER` previews exact dispositions and reasons without
+  `--apply`; applying requires that recorded plan.
 - Applying a plan rechecks source identities and destination checksums, refusing changed inputs.
 - Append durable intent before mutation and durable completion afterward.
 - Test crashes before/after copying, verification, publication, catalog updates, and source moves.
