@@ -7,6 +7,7 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
+	"github.com/blisspixel/nemalo/internal/app"
 	"github.com/blisspixel/nemalo/internal/content"
 	"github.com/blisspixel/nemalo/internal/discovery"
 	"github.com/blisspixel/nemalo/internal/library"
@@ -45,6 +46,23 @@ func (m *model) populate(data any) {
 	m.entries, m.selected, m.details, m.evidence = nil, 0, false, false
 	line, words, list := present.Line, present.Words, present.List
 	switch p := data.(type) {
+	case app.JobSnapshotResult:
+		for _, j := range p.Jobs {
+			detail := rows("Job", line(j.ID), "Kind", words(j.Kind), "Recorded status", words(j.RecordedStatus), "Created", line(j.Created), "Updated", line(j.Updated), "Owner observation", words(j.Owner), "Relationship", words(j.Relationship), "Journal integrity", words(j.Integrity))
+			detail += rows("Observed at", line(p.Finished))
+			if j.Progress != nil {
+				detail += rows("Recorded phase", line(j.Progress.Phase), "Recorded progress", fmt.Sprintf("%d of %d %s", j.Progress.Done, j.Progress.Total, line(j.Progress.Unit)))
+			}
+			if j.ErrorRecorded {
+				detail += "An error was recorded. Raw error text is omitted.\n"
+			}
+			if j.HeldTracks > 0 {
+				detail += fmt.Sprintf("Related held tracks: %d. This does not establish a complete held recording.\n", j.HeldTracks)
+			}
+			detail += "\nRecorded outcome only. Unfinished owner liveness is not observed.\n"
+			detail += "F5 shows observation scope, coverage and limits.\n"
+			m.entries = append(m.entries, entry{title: line(j.ID), summary: joinParts(words(j.Kind), "recorded "+words(j.RecordedStatus)), detail: detail})
+		}
 	case discovery.Evaluation:
 		if p.Access == discovery.OpenLibraryEditionList {
 			for _, edition := range p.Editions {

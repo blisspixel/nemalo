@@ -977,6 +977,10 @@ invalidate scoped output. Complete lines are validated strictly; a torn trailing
 line remains untouched and supplies no committed fact. This prerequisite does
 not implement a panel or complete issue 59; see
 [decision 0088](decisions/0088-non-mutating-library-job-snapshot.md).
+The TUI's explicit F10 action in State uses this same service and configured
+jobs directory, with selectable recorded summaries and coverage details.
+It refreshes only on F10 and preserves the existing cancellation/generation
+checks. No TUI job writer, polling timer or cancellation command is added.
 
 Tool paths must resolve inside a `--scope`
 directory or the configured library and review folders. Stdout carries protocol

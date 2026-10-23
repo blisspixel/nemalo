@@ -238,6 +238,9 @@ func Execute(ctx context.Context, args []string, out, errOut io.Writer, service 
 	if service.Handoff == "" && p.State != "" {
 		service.Handoff = filepath.Join(p.State, "handoff")
 	}
+	if service.JobsDirectory == "" && p.State != "" {
+		service.JobsDirectory = filepath.Join(p.State, "jobs")
+	}
 	service.UseGutenbergCatalog(c.GutenbergCatalog)
 	// next prints the command that continues the first-book path after human output.
 	next := func(code int, step string) int {
@@ -807,7 +810,7 @@ func Execute(ctx context.Context, args []string, out, errOut io.Writer, service 
 			if flags.NArg() != 1 {
 				return write(nil, errors.New("use jobs snapshot LIBRARY [--limit N]"), 2)
 			}
-			data, err := service.JobSnapshot(ctx, app.JobSnapshotRequest{Library: flags.Arg(0), JobsDirectory: filepath.Join(p.State, "jobs"), Limit: count})
+			data, err := service.JobSnapshot(ctx, app.JobSnapshotRequest{Library: flags.Arg(0), JobsDirectory: service.JobsDirectory, Limit: count})
 			code := 0
 			if err != nil || data.Status != "observed" {
 				code = 1

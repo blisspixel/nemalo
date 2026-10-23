@@ -143,3 +143,38 @@ func TestJobsCommandsReadTheStateJournals(t *testing.T) {
 		t.Fatal("jobs get without an ID", code)
 	}
 }
+
+func TestTerminalReceivesTheConfiguredPassiveJobsDirectoryWithoutCreatingIt(t *testing.T) {
+	saved := stdinTerminal
+	stdinTerminal = func() bool { return true }
+	t.Cleanup(func() { stdinTerminal = saved })
+	root := t.TempDir()
+	state := filepath.Join(root, "state")
+	for _, override := range []string{"", filepath.Join(root, "alternate-jobs")} {
+		called := false
+		code := Execute(context.Background(), []string{"tui"}, &bytes.Buffer{}, &bytes.Buffer{}, app.Service{JobsDirectory: override}, func(string) string { return "" }, func() (config.Paths, error) {
+			return config.Paths{Config: filepath.Join(root, "missing.json"), State: state}, nil
+		}, func(_ context.Context, s app.Service) error {
+			called = true
+			want := override
+			if want == "" {
+				want = filepath.Join(state, "jobs")
+			}
+			if s.JobsDirectory != want {
+				t.Fatalf("terminal jobs path %q, want %q", s.JobsDirectory, want)
+			}
+			return nil
+		})
+		if code != 0 || !called {
+			t.Fatal(code, called)
+		}
+		if _, err := os.Stat(state); !errors.Is(err, os.ErrNotExist) {
+			t.Fatal("terminal setup initialized state", err)
+		}
+		if override != "" {
+			if _, err := os.Stat(override); !errors.Is(err, os.ErrNotExist) {
+				t.Fatal("terminal setup created overridden store", err)
+			}
+		}
+	}
+}

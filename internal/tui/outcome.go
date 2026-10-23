@@ -4,6 +4,7 @@ import (
 	"strings"
 
 	"github.com/blisspixel/nemalo/internal/acquisition"
+	"github.com/blisspixel/nemalo/internal/app"
 	"github.com/blisspixel/nemalo/internal/assessment"
 	"github.com/blisspixel/nemalo/internal/library"
 )
@@ -21,13 +22,17 @@ const (
 
 // resultOutcome reads an operation's outcome from its result. An error, a
 // detection, or a failed item is a failure; a completed write is done; a
-// finished check that found something is attention. Listings and reads stay
-// unmarked.
+// finished check that found something is attention. Complete listings and reads
+// stay unmarked; incomplete passive observations need attention.
 func resultOutcome(data any, err error) outcome {
 	if err != nil {
 		return outcomeFailed
 	}
 	switch v := data.(type) {
+	case app.JobSnapshotResult:
+		if v.Status != "observed" {
+			return outcomeAttention
+		}
 	case acquisition.Result:
 		switch {
 		case strings.HasPrefix(v.Status, "detected_"):

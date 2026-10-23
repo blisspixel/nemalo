@@ -49,6 +49,7 @@ item's other files for a new, deliberate review. See
 | F7 in State | Review initialization of an explicit existing folder |
 | F8 in State | Review import of the folder and one source; no antivirus scan |
 | Ctrl+R in State | Review a rescan of review holdings that lack scan evidence |
+| F10 in State | Observe bounded recorded jobs for the selected existing library, without reconciliation, polling or job cancellation |
 | Ctrl+N in two-field forms | Switch between fields, including the Gutenberg catalog and the State source |
 | Ctrl+A in snapshot | Toggle historical health metadata |
 | e in Archive, Gutenberg, or Open Library results | Prepare selected-item evaluation, without requesting it. A Gutenberg catalog row lists no files. An Open Library work lists editions on Enter. e on an edition row selects that edition |
@@ -88,6 +89,19 @@ PageUp/PageDown. Initialization is not import; see
 [decision 0009](decisions/0009-managed-epub-import.md),
 [decision 0012](decisions/0012-scan-on-acquire-quarantine-and-rescan.md), and
 [the state contract](decisions/0006-library-control-state.md).
+
+F10 observes recent selected-library job relationships through the same passive
+snapshot service as `nemalo jobs snapshot`. It reads only on that explicit key:
+opening State, changing focus and resizing do not poll. Results label recorded
+outcomes and unobserved ownership; a recorded running job can be abandoned.
+F6 and Enter browse summaries/details, and F5 shows coverage and limitations.
+An incomplete observation is marked for attention. Escape cancels an observation;
+results from a cancelled generation cannot replace a later selection.
+Missing state stays missing, and jobs, holdings and disabled bookmarks stay
+unchanged. The action neither starts nor cancels jobs, probes owners, imports
+content or opens a stored asset. Enter in the form still reads library status.
+The [snapshot contract](decisions/0088-non-mutating-library-job-snapshot.md)
+defines its relationships, bounds and legacy omissions.
 
 ## Source access
 
@@ -206,7 +220,7 @@ proof the file is safe. See
 
 ## Application-view captures
 
-These application-view captures were refreshed on 2026-10-22 from the current Go
+These application-view captures were refreshed on 2026-10-23 from the current Go
 TUI model at 116 columns and 36 rows, in its supported no-color mode. Frames are
 rendered as fixed-width text to PNG; they are not OS window screenshots.
 Holdings come from a fresh offline snapshot of validation copies of Montaigne's
@@ -217,9 +231,15 @@ provider request. Reading uses the actual source-bound terminal reader over
 Pride and Prejudice. Displayed catalog/root names are portable aliases; private
 paths are excluded. Capture work runs no scanner, acquires no files and changes
 no existing library. The captures demonstrate these views, not every workflow.
+The Jobs view uses synthetic canonical state with disabled bookmarks and an
+abandoned recorded running job with a torn tail. Its observation timestamp and
+uncertain owner stay distinct from the older recorded progress. Repeated
+observations preserve the fixture bytes; the view does not start a scan.
 
 ![EPUB holdings, duplicate locations and selected historical evidence](images/tui-holdings.png)
 
 ![Local Gutenberg discovery and selected catalog evidence](images/tui-discovery.png)
 
 ![Source-bound terminal reading from Pride and Prejudice](images/tui-reading.png)
+
+![Explicit job observation with a torn journal and unobserved owner](images/tui-jobs.png)

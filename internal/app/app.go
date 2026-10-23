@@ -91,8 +91,11 @@ func (s Service) AcquireRecording(ctx context.Context, request acquisition.Recor
 }
 
 type Service struct {
-	Providers map[string]Searcher
-	Scanner   assessment.Scanner
+	// JobsDirectory is configured per-user state for passive observations.
+	// Naming it grants no write authority and does not open or create a store.
+	JobsDirectory string
+	Providers     map[string]Searcher
+	Scanner       assessment.Scanner
 	// PCMDecoder is the optional installed adapter for explicitly authorized
 	// decoded content requests. Nil uses the default; tests inject it.
 	PCMDecoder content.PCMDecoder

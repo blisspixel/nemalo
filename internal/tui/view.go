@@ -140,7 +140,7 @@ func (m *model) contextLine() string {
 		return fmt.Sprintf("Offline | Bookmark only on m | Asset %s", present.Exact(m.reader.asset))
 	}
 	if m.mode == "state" {
-		return "Enter status | F7 init | F8 import | F9 cleanup | Ctrl+P purge | Ctrl+R rescan"
+		return "Enter status | F10 jobs | F7 init | F8 import | F9 cleanup | Ctrl+P purge | Ctrl+R rescan"
 	}
 	if m.mode == "search" {
 		if m.source == "gutenberg" {

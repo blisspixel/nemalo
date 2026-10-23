@@ -13,6 +13,8 @@ import (
 func JobSnapshot(r app.JobSnapshotResult) string {
 	var b strings.Builder
 	fmt.Fprintf(&b, "Job observation: %s\n", words(r.Status))
+	field(&b, "Observation started", Line(r.Started))
+	field(&b, "Observation finished", Line(r.Finished))
 	field(&b, "Library identity", Line(r.LibraryID))
 	field(&b, "Catalog observation", words(r.Catalog))
 	field(&b, "Relationships", words(r.Coverage))

@@ -361,6 +361,14 @@ func (m *model) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 			data = []byte(present.Recording(value))
 		case library.State:
 			data = []byte(present.LibraryState(value))
+		case app.JobSnapshotResult:
+			data = []byte(present.JobSnapshot(value))
+			if msg.err == nil {
+				m.status = "Recorded job observation at " + present.Line(value.Finished) + ". F10 refreshes."
+				if value.Status != "observed" {
+					m.status = "Incomplete recorded job observation at " + present.Line(value.Finished) + ". F10 refreshes."
+				}
+			}
 		case discovery.Evaluation:
 			data = []byte(present.Evaluation(value))
 		case library.Snapshot:
@@ -442,6 +450,9 @@ func (m *model) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		if msg.String() == "ctrl+p" && m.mode == "state" && !m.busy {
 			return m, m.requestPurge()
+		}
+		if msg.String() == "f10" && m.mode == "state" {
+			return m, m.observeJobs()
 		}
 		if handled, cmd := m.browserKey(msg.String()); handled {
 			return m, cmd

@@ -159,6 +159,8 @@ verified, not when code exists. No stage has a time estimate.
    source under [decision 0088](docs/decisions/0088-non-mutating-library-job-snapshot.md).
    The issue records verification; its optional panel, explicit reader handoff
    and native lifecycle acceptance remain open. This does not complete stage 5.
+   State's explicit F10 Jobs view consumes the same passive service; collection
+   and evidence interface work and the broader host/platform acceptance remain.
 6. **1.0 release candidate.** Freeze and document the on-disk formats (journals,
    holdings, bookmarks, packets), JSON envelopes, extractor IDs, and the evidence
    contract; upgrade alpha libraries in place or refuse them with a clear path;
