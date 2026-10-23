@@ -71,7 +71,7 @@ func recoveryRunPattern(root, selected string) (string, error) {
 	return pattern, nil
 }
 
-func recoveryProcessWithSettings(ctx context.Context, root, selected, reader, digest string, settings recoveryProcessSettings) ([]byte, error) {
+func recoveryProcessWithSettings(ctx context.Context, root, selected, reader, digest string, settings recoveryProcessSettings) (output []byte, resultErr error) {
 	pattern, err := recoveryRunPattern(root, selected)
 	if err != nil {
 		return nil, err
@@ -95,7 +95,11 @@ func recoveryProcessWithSettings(ctx context.Context, root, selected, reader, di
 		if err != nil {
 			return nil, err
 		}
-		defer os.RemoveAll(private)
+		defer func() {
+			if cleanupErr := removeCoverageScratch(private); cleanupErr != nil {
+				resultErr = errors.Join(resultErr, fmt.Errorf("remove private recovery counters: %w", cleanupErr))
+			}
+		}()
 		for _, name := range []string{"counters", "merged", "reader-counters", "reader-merged"} {
 			if err := os.Mkdir(filepath.Join(private, name), 0700); err != nil {
 				return nil, err

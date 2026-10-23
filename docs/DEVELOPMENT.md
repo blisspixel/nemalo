@@ -1000,6 +1000,13 @@ Real child processes, production durability operations, every recovery case and
 the default test timeout remain in place. Other packages may continue to use
 their test executable for the same handler.
 
+After required counters have been merged and published, caller-owned coverage
+scratch is walked without following links, its files removed with `os.Remove`,
+then its directories removed in reverse order. Cleanup errors fail verification.
+This test-only housekeeping avoids recursive Windows handle churn without
+changing application cleanup, fixture bodies, instrumentation or durability calls.
+See [decision 0081](decisions/0081-coverage-counter-scratch-cleanup.md).
+
 Full library suites run independent RAR tree and RAR4/RAR5 set recovery groups,
 archive-tree and split-ZIP cleanup matrices, and RAR4/RAR5 part-count matrices in
 at most three isolated copies of that same compiled test executable. The fixture

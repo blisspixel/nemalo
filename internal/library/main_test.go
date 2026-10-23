@@ -33,7 +33,7 @@ func TestMain(m *testing.M) {
 	os.Exit(runLibraryTests(m))
 }
 
-func runLibraryTests(m *testing.M) int {
+func runLibraryTests(m *testing.M) (code int) {
 	flag.Parse()
 	// The recovery matrix launches thousands of synthetic reader processes.
 	// Build the same handler without the rest of this test executable, retaining
@@ -90,7 +90,12 @@ func runLibraryTests(m *testing.M) int {
 				fmt.Fprintln(os.Stderr, err)
 				return 1
 			}
-			defer os.RemoveAll(archiveFixtureCounters)
+			defer func() {
+				if err := removeCoverageScratch(archiveFixtureCounters); err != nil {
+					fmt.Fprintln(os.Stderr, "remove reader coverage scratch:", err)
+					code = 1
+				}
+			}()
 		}
 		if err := os.Setenv("GOCOVERDIR", archiveFixtureCounters); err != nil {
 			fmt.Fprintln(os.Stderr, err)
@@ -106,7 +111,7 @@ func runLibraryTests(m *testing.M) int {
 		}
 		defer libraryRecoverySchedule.close()
 	}
-	code := m.Run()
+	code = m.Run()
 	if code == 0 && libraryRecoverySchedule != nil {
 		if err := libraryRecoverySchedule.complete(); err != nil {
 			fmt.Fprintln(os.Stderr, err)

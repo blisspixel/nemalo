@@ -75,6 +75,10 @@ Run `go run ./cmd/verify` for formatting, build, vet, pinned Staticcheck, offlin
 tests, enforced 80% aggregate coverage, and govulncheck. Run `go test -race ./...`
 with a native C compiler and cgo enabled. CI uses the same checks on all three OSes
 and smokes a cgo-free executable. Tools are pinned in `go.mod`, not installed globally.
+Decision 0081 changes only owned coverage-counter scratch after child exit and
+required merge/publication. Preserve counters, cases, instrumentation, worker
+limits, deadlines and production durability; never use it for application sources,
+stores or recovery fixtures.
 For docs, check links/anchors, examples, consistency, whitespace, and citations.
 Hosted CI passes require an actual hosted run; a local pass is not equivalent.
 
