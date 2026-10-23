@@ -38,6 +38,21 @@ native-cgo race, Windows cross-vet and actual all-six/CodeQL acceptance. Install
 player conformance and later evidence implementation do not follow from a local
 scheduling result. CI repair precedes publication of issue 39's feature work.
 
+Local correction verification passed: all twelve ordinary filtered roots,
+canonical verifier (86.8% aggregate coverage, no reported Go vulnerabilities),
+full native-cgo repository race, Windows cross-vet and document checks. Exact
+comparison retained all 1,615 original leaf identities among 1,616 current cases,
+adding the unpublished-counter retention test. All 9,659 production coverage
+blocks remained present, with no previously covered block becoming zero.
+The fresh covered process observed 52.664 seconds before and 44.794 after;
+serial time changed from 29.394 to 14.699 seconds, with 43 to 55 scheduled groups
+and 91.103 to 97.137 seconds of scheduled work. Full corrected library race
+process time was 141.694 seconds. These are local observations, not controlled
+performance benchmarks or native Windows acceptance. A fresh exact hosted gate
+remains required.
+
+## Earlier accepted design and verification
+
 Status: accepted design, 2026-10-23. Test infrastructure only, tracked in
 [issue 60](https://github.com/blisspixel/nemalo/issues/60). No application behavior,
 cleanup authority, fixture content, storage or durability change is authorized.

@@ -40,6 +40,18 @@ var fixtureSchedule = []struct {
 	{"TestOldRARSetExactRecoveryBindings", []string{"4", "5"}},
 	{"TestNestedVolumeCleanupBindsAllOuterAndChildSelectionLayouts", nestedVolumeCleanupGroups()},
 	{"TestFlatSevenVersionedSetRecovery", []string{""}},
+	{"TestOldRARSetFreshPurgeRejectsOtherFormatAndLayout", []string{""}},
+	{"TestOldRARSetRestoreInterruptionsAndReplacements", []string{""}},
+	{"TestRAR4SetPendingPurgeRequiresExactAuthority", []string{""}},
+	{"TestRAR4SetIndependentKnownShapesBeforeAnyRemoval", []string{""}},
+	{"TestRAR5SetPendingPurgeRequiresExactAuthority", []string{""}},
+	{"TestRAR5SetIndependentKnownShapesBeforeAnyRemoval", []string{""}},
+	{"TestRARTreePreviewRequiresNewProofAndExactLeaves", []string{""}},
+	{"TestRARTreeSingleArchiveCleanupRestoreAndPurge", []string{""}},
+	{"TestRARTreeRootRARRecoveryUsesTreeAuthority", []string{""}},
+	{"TestRARTreeUnknownAndMalformedPurgeBindingsRetainBytes", []string{""}},
+	{"TestRARTreeIndependentGroupsValidateKnownShapesBeforeAnyRemoval", []string{""}},
+	{"TestRARTreeCleanupResumeRejectsUnsupportedProofsBeforeWrites", []string{""}},
 }
 
 // These names are the original independent lifecycle leaves. Go prints their
@@ -332,11 +344,11 @@ func (s *recoverySchedule) complete() error {
 	return nil
 }
 
-func (s *recoverySchedule) close() {
+func (s *recoverySchedule) close(published bool) error {
 	s.cancel()
 	s.serialFinished()
 	s.wait.Wait()
-	_ = os.RemoveAll(s.workspace)
+	return finishCoverageScratch(s.workspace, published)
 }
 
 func TestRecoveryScheduleRequiresExactConsumption(t *testing.T) {

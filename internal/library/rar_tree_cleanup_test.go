@@ -58,6 +58,9 @@ func newCleanupRARTreeFixture(t *testing.T, layout string, version, count int, b
 }
 
 func TestRARTreePreviewRequiresNewProofAndExactLeaves(t *testing.T) {
+	if runScheduledFixtures(t, fixtureGroups(t.Name())) {
+		return
+	}
 	for _, version := range []int{4, 5} {
 		for _, layout := range []string{"zip", "7z", "zip_chunks", "zip_segments", "7z_chunks"} {
 			t.Run(fmt.Sprintf("%d/%s", version, layout), func(t *testing.T) {
@@ -144,6 +147,9 @@ func TestRARTreeRecoveryAcrossEveryOuterSetLayout(t *testing.T) {
 }
 
 func TestRARTreeSingleArchiveCleanupRestoreAndPurge(t *testing.T) {
+	if runScheduledFixtures(t, fixtureGroups(t.Name())) {
+		return
+	}
 	for _, layout := range []string{"zip", "7z"} {
 		t.Run(layout, func(t *testing.T) {
 			factory := func(t *testing.T) streamFixture { return newCleanupRARTreeFixture(t, layout, 4, 1, nil) }
@@ -220,6 +226,9 @@ func newRARootTreeFixture(t *testing.T, version int, build func([]byte) []byte) 
 }
 
 func TestRARTreeRootRARRecoveryUsesTreeAuthority(t *testing.T) {
+	if runScheduledFixtures(t, fixtureGroups(t.Name())) {
+		return
+	}
 	for _, version := range []int{4, 5} {
 		t.Run(fmt.Sprint(version), func(t *testing.T) {
 			factory := func(t *testing.T, build func([]byte) []byte) streamFixture {
@@ -247,6 +256,9 @@ func TestRARTreeRootRARRecoveryUsesTreeAuthority(t *testing.T) {
 }
 
 func TestRARTreeUnknownAndMalformedPurgeBindingsRetainBytes(t *testing.T) {
+	if runScheduledFixtures(t, fixtureGroups(t.Name())) {
+		return
+	}
 	testRARTreePurgeBindings(t, func(t *testing.T) streamFixture { return newCleanupRARTreeFixture(t, "zip_chunks", 5, 3, nil) })
 }
 
@@ -322,6 +334,9 @@ func testRARTreePurgeBindings(t *testing.T, fixture func(*testing.T) streamFixtu
 }
 
 func TestRARTreeIndependentGroupsValidateKnownShapesBeforeAnyRemoval(t *testing.T) {
+	if runScheduledFixtures(t, fixtureGroups(t.Name())) {
+		return
+	}
 	testRARTreeIndependentShapes(t, func(t *testing.T) streamFixture { return newCleanupRARTreeFixture(t, "zip", 4, 1, nil) })
 }
 
@@ -398,6 +413,9 @@ func testRARTreeIndependentShapes(t *testing.T, fixture func(*testing.T) streamF
 }
 
 func TestRARTreeCleanupResumeRejectsUnsupportedProofsBeforeWrites(t *testing.T) {
+	if runScheduledFixtures(t, fixtureGroups(t.Name())) {
+		return
+	}
 	for _, version := range []int{4, 5} {
 		t.Run(fmt.Sprint(version), func(t *testing.T) {
 			testTreeCleanupResumeBindings(t, func(t *testing.T) streamFixture { return newCleanupRARTreeFixture(t, "zip_chunks", version, 3, nil) }, "old_tree", "standalone")

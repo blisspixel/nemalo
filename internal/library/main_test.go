@@ -91,7 +91,7 @@ func runLibraryTests(m *testing.M) (code int) {
 				return 1
 			}
 			defer func() {
-				if err := removeCoverageScratch(archiveFixtureCounters); err != nil {
+				if err := finishCoverageScratch(archiveFixtureCounters, code == 0); err != nil {
 					fmt.Fprintln(os.Stderr, "remove reader coverage scratch:", err)
 					code = 1
 				}
@@ -109,7 +109,12 @@ func runLibraryTests(m *testing.M) (code int) {
 			fmt.Fprintln(os.Stderr, err)
 			return 1
 		}
-		defer libraryRecoverySchedule.close()
+		defer func() {
+			if err := libraryRecoverySchedule.close(code == 0); err != nil {
+				fmt.Fprintln(os.Stderr, "remove recovery coverage scratch:", err)
+				code = 1
+			}
+		}()
 	}
 	code = m.Run()
 	if code == 0 && libraryRecoverySchedule != nil {

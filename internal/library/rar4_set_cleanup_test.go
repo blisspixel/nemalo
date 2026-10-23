@@ -27,10 +27,16 @@ func TestRAR4SetCleanupResumeRejectsUnsupportedBindings(t *testing.T) {
 }
 
 func TestRAR4SetPendingPurgeRequiresExactAuthority(t *testing.T) {
+	if runScheduledFixtures(t, fixtureGroups(t.Name())) {
+		return
+	}
 	testRARTreePurgeBindings(t, func(t *testing.T) streamFixture { return newRAR4SetCleanupFixture(t, 3, nil) }, "newer_tree", "rar4_standalone", "zip_stream", "zip_segments", "rar5_set")
 }
 
 func TestRAR4SetIndependentKnownShapesBeforeAnyRemoval(t *testing.T) {
+	if runScheduledFixtures(t, fixtureGroups(t.Name())) {
+		return
+	}
 	testRARTreeIndependentShapes(t, func(t *testing.T) streamFixture { return newRAR4SetCleanupFixture(t, 3, nil) }, "newer_tree_second", "rar5_standalone_second", "rar5_set_second")
 }
 

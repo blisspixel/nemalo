@@ -9,6 +9,42 @@ import (
 	"testing"
 )
 
+// A failed child or publication can leave live descendant writes or unmerged
+// evidence. Retain owned counters then; cleanup never changes that failed result.
+func finishCoverageScratch(root string, published bool) error {
+	if !published {
+		fmt.Fprintln(os.Stderr, "retained unpublished coverage scratch:", root)
+		return nil
+	}
+	return removeCoverageScratch(root)
+}
+
+func TestCoverageScratchRetainsUnpublishedBytes(t *testing.T) {
+	root := filepath.Join(t.TempDir(), "owned-counters")
+	if err := os.Mkdir(root, 0700); err != nil {
+		t.Fatal(err)
+	}
+	file := filepath.Join(root, "temporary-unmerged-counter")
+	if err := os.WriteFile(file, []byte("retain before publication"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	if err := finishCoverageScratch(root, false); err != nil {
+		t.Fatal(err)
+	}
+	if data, err := os.ReadFile(file); err != nil || string(data) != "retain before publication" {
+		t.Fatal("unpublished counters were removed", err)
+	}
+	if err := finishCoverageScratch(root, true); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Lstat(root); !errors.Is(err, os.ErrNotExist) {
+		t.Fatal("published owned scratch remains", err)
+	}
+	if err := finishCoverageScratch(root+"\x00", true); err == nil {
+		t.Fatal("successful-run cleanup failure was hidden")
+	}
+}
+
 // Only caller-owned coverage scratch reaches this helper, after all child
 // processes and required counter publication have finished. WalkDir does not
 // follow links. Keep every production/fixture cleanup on its original path.

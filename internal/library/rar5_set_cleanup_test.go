@@ -123,10 +123,16 @@ func TestRAR5SetCleanupResumeRejectsUnsupportedBindings(t *testing.T) {
 }
 
 func TestRAR5SetPendingPurgeRequiresExactAuthority(t *testing.T) {
+	if runScheduledFixtures(t, fixtureGroups(t.Name())) {
+		return
+	}
 	testRARTreePurgeBindings(t, func(t *testing.T) streamFixture { return newRAR5SetCleanupFixture(t, 3, nil) }, "newer_tree", "rar4_standalone", "zip_stream", "zip_segments", "rar4_set")
 }
 
 func TestRAR5SetIndependentKnownShapesBeforeAnyRemoval(t *testing.T) {
+	if runScheduledFixtures(t, fixtureGroups(t.Name())) {
+		return
+	}
 	testRARTreeIndependentShapes(t, func(t *testing.T) streamFixture { return newRAR5SetCleanupFixture(t, 3, nil) }, "newer_tree_second", "rar5_standalone_second", "rar4_set_second")
 }
 

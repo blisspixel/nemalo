@@ -39,6 +39,9 @@ func TestOldRARSetExactRecoveryBindings(t *testing.T) {
 }
 
 func TestOldRARSetFreshPurgeRejectsOtherFormatAndLayout(t *testing.T) {
+	if runScheduledFixtures(t, fixtureGroups(t.Name())) {
+		return
+	}
 	for _, version := range []int{4, 5} {
 		for _, substitute := range []string{rar4OldSetProof, rar5OldSetProof, rar4SetProof, rar5SetProof, archiveRARTreeProof, "rar-old-set/future", ""} {
 			if substitute == fmt.Sprintf("rar%d-old-set/1", version) {
@@ -83,6 +86,9 @@ func TestOldRAR5SetPartCountsAndNestedAuthority(t *testing.T) {
 }
 
 func TestOldRARSetRestoreInterruptionsAndReplacements(t *testing.T) {
+	if runScheduledFixtures(t, fixtureGroups(t.Name())) {
+		return
+	}
 	for _, fixture := range []struct {
 		name string
 		make zipFixtureFactory

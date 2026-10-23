@@ -98,7 +98,7 @@ func recoveryProcessWithSettings(ctx context.Context, root, selected, reader, di
 			return nil, err
 		}
 		defer func() {
-			if cleanupErr := removeCoverageScratch(private); cleanupErr != nil {
+			if cleanupErr := finishCoverageScratch(private, resultErr == nil); cleanupErr != nil {
 				resultErr = errors.Join(resultErr, fmt.Errorf("remove private recovery counters: %w", cleanupErr))
 			}
 		}()
