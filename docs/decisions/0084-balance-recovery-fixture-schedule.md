@@ -94,9 +94,12 @@ all Windows work timings. The whole nested-volume layout group also combines
 Use one ordered queue and exactly three workers sharing the existing token
 limit and reserved ordinary lane. Dispatch the existing larger nested/tree
 groups before smaller standalone groups, with stable order within each class.
-Split only the nested-volume layout scheduling item by its existing exact outer
-Go subtest groups; retain every original leaf body and name, including all
-seven `zip` child layouts. Do not split a lifecycle or add another process pool.
+Split only the nested-volume layout scheduling item by its existing exact Go
+leaf selectors; retain every original leaf body and name, including all seven
+`zip` child layouts. Anchor every path component of a multi-component selector.
+The receipt must still prove the exact selected leaf ran and passed; implicit
+outer groups have no separate Go result header. Do not split a lifecycle or add
+another process pool.
 Include actual start/end timing in failed scheduled receipts as well as success.
 
 Preserve all existing captured environments, cases, assertions, counter merging,
