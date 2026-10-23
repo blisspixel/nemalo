@@ -1,5 +1,43 @@
 # 0084: balance the existing recovery fixture schedule
 
+## Revision: remaining serial archive fixtures and failed counter retention
+
+The source accepted at `5091ce7` passed all six hosted jobs and Go/Actions CodeQL.
+The subsequent documentation-only `cf8957f` failed Windows canonical verification
+in [run 40021076060](https://github.com/blisspixel/nemalo/actions/runs/40021076060).
+The ordinary serial phase ended at 9m33.180s, so several queued recovery groups
+had only 27 seconds before the unchanged ten-minute allowance expired. The library
+process failed at 603.659 seconds. Windows race, boundary and binary steps were
+skipped; the other five jobs and CodeQL passed. This is failed evidence, not a
+regression claim against the separately accepted stage 3 receipt.
+
+A fresh Linux covered baseline retained the exact current fixtures and completed
+in 52.664 seconds: serial phase 29.394 seconds, 43 scheduled groups and 91.103
+seconds of aggregate scheduled work. Profiling identifies twelve substantial
+ordinary archive roots: old-set restore, modern RAR4/RAR5 pending-purge and
+independent-shape checks, RAR tree previews/root recovery/single-archive lifecycle,
+resume bindings, independent groups, unknown bindings and old-set fresh purge.
+Move those intact roots into the existing fixed queue with one exact root group
+each. Do not split their lifecycles, alter their assertions or add workers. Keep
+ordinary filtered execution and exact RUN/PASS consumption. All original leaf
+identities must survive; new instrumentation tests are additional.
+
+The failed log also shows attempted removal of temporary counter files while
+timed-out descendants could still be exiting. This is a secondary failure, not
+an explanation of the original latency. Enforce decision 0081's existing ordering:
+retain owned private counter directories after child/merge/publication failure,
+and retain the schedule and reader counter roots unless the entire test run and
+required final counter publication succeed. Report retained paths and cleanup
+errors. Remove successful owned scratch through the existing no-follow helper;
+never apply this to production sources, stores or recovery fixture directories.
+
+Keep all counters and their merges, real processes, instrumentation, the same
+three-worker ceiling and reserved ordinary lane, child/package deadlines and
+production durability. Require fresh exact-case comparison, canonical verifier,
+native-cgo race, Windows cross-vet and actual all-six/CodeQL acceptance. Installed
+player conformance and later evidence implementation do not follow from a local
+scheduling result. CI repair precedes publication of issue 39's feature work.
+
 Status: accepted design, 2026-10-23. Test infrastructure only, tracked in
 [issue 60](https://github.com/blisspixel/nemalo/issues/60). No application behavior,
 cleanup authority, fixture content, storage or durability change is authorized.
