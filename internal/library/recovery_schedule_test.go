@@ -38,8 +38,23 @@ var fixtureSchedule = []struct {
 	{"TestNestedVolumeTreeRecovery", []string{"zip_chunks", "rar5_set"}},
 	{"TestNestedVolumeRestoreAndImmutableKnownBindings", []string{"zip_chunks", "rar5_set"}},
 	{"TestOldRARSetExactRecoveryBindings", []string{"4", "5"}},
-	{"TestNestedVolumeCleanupBindsAllOuterAndChildSelectionLayouts", []string{""}},
+	{"TestNestedVolumeCleanupBindsAllOuterAndChildSelectionLayouts", nestedVolumeCleanupGroups()},
 	{"TestFlatSevenVersionedSetRecovery", []string{""}},
+}
+
+// These names are the original independent lifecycle leaves. Go prints their
+// complete names, not a separate result for an implicit slash-created parent.
+func nestedVolumeCleanupGroups() []string {
+	var groups []string
+	for _, outer := range nestedVolumeOuterLayouts {
+		groups = append(groups, outer+"/old5")
+	}
+	for _, inner := range nestedVolumeChildLayouts {
+		if inner != "old5" {
+			groups = append(groups, "zip/"+inner)
+		}
+	}
+	return groups
 }
 
 func fixtureGroups(root string) []string {
@@ -173,6 +188,11 @@ func startRecoverySchedule() (*recoverySchedule, error) {
 			cases = append(cases, recoveryCase{item.root, fixtureCasePrefix + group})
 		}
 	}
+	// Larger nested/tree groups go first. Stable ties retain their declared
+	// order; goroutine/token contention must not choose the dispatch order.
+	slices.SortStableFunc(cases, func(a, b recoveryCase) int {
+		return recoveryWorkClass(a) - recoveryWorkClass(b)
+	})
 	for i, key := range cases {
 		if s.jobs[key] != nil {
 			cancel()
@@ -198,24 +218,63 @@ func startRecoverySchedule() (*recoverySchedule, error) {
 	// Two isolated groups can overlap them; all three lanes become available
 	// when Go releases the parallel roots after the serial phase.
 	recoveryProcessSlots <- struct{}{}
+	s.startWorkers(ctx, cases, recoveryProcessSlots, func(key recoveryCase) recoveryCaseResult {
+		child, stop := context.WithTimeout(ctx, 5*time.Minute)
+		defer stop()
+		began := time.Now()
+		out, err := recoveryProcessWithSettings(child, key.root, key.selected, reader, digest, s.jobs[key].settings)
+		return recoveryCaseResult{output: out, err: err, began: began, ended: time.Now()}
+	})
+	return s, nil
+}
+
+func recoveryWorkClass(key recoveryCase) int {
+	switch key.root {
+	case "TestNestedVolumeRestoreAndImmutableKnownBindings", "TestNestedVolumeTreeRecovery":
+		return 0
+	case "TestRARTreeRecoveryAcrossEveryOuterSetLayout":
+		return 1
+	case "TestArchiveTreeCleanupAndPurgeRecovery":
+		return 2
+	default:
+		return 3
+	}
+}
+
+// Acquire a lane before taking the next queued item. A reserved ordinary lane
+// must not privately strand a large item while later jobs pass it. Cancellation
+// reports every unstarted selection, so collectors cannot wait forever.
+func (s *recoverySchedule) startWorkers(ctx context.Context, cases []recoveryCase, slots chan struct{}, run func(recoveryCase) recoveryCaseResult) {
+	pending := make(chan recoveryCase, len(cases))
 	for _, key := range cases {
-		job := s.jobs[key]
+		pending <- key
+	}
+	close(pending)
+	for range cap(slots) {
 		s.wait.Go(func() {
-			select {
-			case recoveryProcessSlots <- struct{}{}:
-				defer func() { <-recoveryProcessSlots }()
-			case <-ctx.Done():
-				job.done <- recoveryCaseResult{err: ctx.Err()}
-				return
+			for {
+				select {
+				case slots <- struct{}{}:
+				case <-ctx.Done():
+					for key := range pending {
+						s.jobs[key].done <- recoveryCaseResult{err: ctx.Err()}
+					}
+					return
+				}
+				key, ok := <-pending
+				if !ok {
+					<-slots
+					return
+				}
+				result := recoveryCaseResult{err: ctx.Err()}
+				if result.err == nil {
+					result = run(key)
+				}
+				s.jobs[key].done <- result
+				<-slots
 			}
-			child, stop := context.WithTimeout(ctx, 5*time.Minute)
-			defer stop()
-			began := time.Now()
-			out, err := recoveryProcessWithSettings(child, key.root, key.selected, reader, digest, job.settings)
-			job.done <- recoveryCaseResult{output: out, err: err, began: began, ended: time.Now()}
 		})
 	}
-	return s, nil
 }
 
 func (s *recoverySchedule) serialFinished() {
@@ -252,7 +311,7 @@ func (s *recoverySchedule) collect(root, selected string) ([]byte, error) {
 			r.err = publishRecoveryCoverage(job.settings.readerCounters, archiveFixtureCounters)
 		}
 	}
-	if r.err == nil {
+	if !r.began.IsZero() {
 		s.mu.Lock()
 		serialEnd := s.serialEnd
 		s.mu.Unlock()

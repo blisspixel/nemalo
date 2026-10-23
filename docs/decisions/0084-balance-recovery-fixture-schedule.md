@@ -111,3 +111,12 @@ reusing the old library result, compare all 1,612 preceding leaf identities,
 then require a new exact all-six hosted gate and Go/Actions CodeQL. No decoder
 implementation starts before this repair's acceptance; the separately approved
 decoded-access design remains the next stage 3 increment.
+
+The revision's ordinary layout fixtures and ten repetitions of queue/selector
+tests passed under race detection. Canonical verification passed at 86.7%
+aggregate coverage with no reported Go vulnerabilities; the library covered
+suite took 49.123 seconds. The full native-cgo race command passed; the library
+process reported 163.558 seconds. Exact comparison retained all 1,612 preceding
+leaf identities and added three queue-test leaves, with none missing. Windows
+cross-vet and document checks passed. These local observations do not establish
+a speed improvement or Windows acceptance. A new exact hosted gate is required.

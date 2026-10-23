@@ -65,7 +65,9 @@ func recoveryRunPattern(root, selected string) (string, error) {
 			return "", errors.New("unknown isolated fixture group")
 		}
 		if group != "" {
-			pattern += "/^" + regexp.QuoteMeta(group) + "$"
+			for _, component := range strings.Split(group, "/") {
+				pattern += "/^" + regexp.QuoteMeta(component) + "$"
+			}
 		}
 	}
 	return pattern, nil
@@ -331,7 +333,11 @@ func TestFixtureProcessSelectionKeepsExactTestGroups(t *testing.T) {
 		{"TestNestedVolumeRestoreAndImmutableKnownBindings", "fixture:rar5_set", "^TestNestedVolumeRestoreAndImmutableKnownBindings$/^rar5_set$"},
 		{"TestOldRARSetExactRecoveryBindings", "fixture:4", "^TestOldRARSetExactRecoveryBindings$/^4$"},
 		{"TestOldRARSetExactRecoveryBindings", "fixture:5", "^TestOldRARSetExactRecoveryBindings$/^5$"},
-		{"TestNestedVolumeCleanupBindsAllOuterAndChildSelectionLayouts", "fixture:", "^TestNestedVolumeCleanupBindsAllOuterAndChildSelectionLayouts$"},
+		{"TestNestedVolumeCleanupBindsAllOuterAndChildSelectionLayouts", "fixture:zip/old5", "^TestNestedVolumeCleanupBindsAllOuterAndChildSelectionLayouts$/^zip$/^old5$"},
+		{"TestNestedVolumeCleanupBindsAllOuterAndChildSelectionLayouts", "fixture:old5_set/old5", "^TestNestedVolumeCleanupBindsAllOuterAndChildSelectionLayouts$/^old5_set$/^old5$"},
+		{"TestNestedVolumeCleanupBindsAllOuterAndChildSelectionLayouts", "fixture:", ""},
+		{"TestNestedVolumeCleanupBindsAllOuterAndChildSelectionLayouts", "fixture:zip", ""},
+		{"TestNestedVolumeCleanupBindsAllOuterAndChildSelectionLayouts", "fixture:zip/old5/other", ""},
 		{"TestFlatSevenVersionedSetRecovery", "fixture:", "^TestFlatSevenVersionedSetRecovery$"},
 		{"TestOldRARSetExactRecoveryBindings", "fixture:6", ""},
 		{"TestNestedVolumeRestoreAndImmutableKnownBindings", "fixture:zip_chunks/other", ""},
