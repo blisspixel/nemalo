@@ -72,3 +72,39 @@ retained all 1,612 original library leaf identities, with no missing cases.
 Windows library cross-vet and document links/anchors/whitespace checks passed.
 These observations are local evidence, not hosted acceptance or a controlled
 performance benchmark. Actual exact-final all-six results remain required.
+
+## Revision: deterministic bounded dispatch
+
+The preceding scheduling increment passed all six hosted jobs and Go/Actions
+CodeQL at `c95696e`. A later unchanged-library run at `a9e170c` failed Windows
+canonical verification in [run 40000361799](https://github.com/blisspixel/nemalo/actions/runs/40000361799).
+The nested-volume layout child stopped before completing its original cases,
+and the package reached its unchanged ten-minute alarm while cleaning the
+schedule workspace. Windows race, reparse and binary smokes were skipped. The
+new content tests and the other five jobs passed. That failed gate is not
+acceptance of the public packet increment.
+
+Inspection found that one goroutine per group competes for worker tokens, so
+the declared case list does not determine dispatch order. Successful native
+Linux traces already show later declared jobs starting before earlier ones.
+The failed trace does not record its child's actual start, and cannot establish
+all Windows work timings. The whole nested-volume layout group also combines
+17 independent leaf lifecycles behind one scheduling item.
+
+Use one ordered queue and exactly three workers sharing the existing token
+limit and reserved ordinary lane. Dispatch the existing larger nested/tree
+groups before smaller standalone groups, with stable order within each class.
+Split only the nested-volume layout scheduling item by its existing exact outer
+Go subtest groups; retain every original leaf body and name, including all
+seven `zip` child layouts. Do not split a lifecycle or add another process pool.
+Include actual start/end timing in failed scheduled receipts as well as success.
+
+Preserve all existing captured environments, cases, assertions, counter merging,
+owned-scratch cleanup, real subprocesses, instrumentation, worker limits,
+deadlines and production durability. Test reserved-lane behavior, exact queue
+consumption, cancellation of unstarted work and unchanged selector identities.
+Run ordinary filtered fixtures, the full verifier and native-cgo race without
+reusing the old library result, compare all 1,612 preceding leaf identities,
+then require a new exact all-six hosted gate and Go/Actions CodeQL. No decoder
+implementation starts before this repair's acceptance; the separately approved
+decoded-access design remains the next stage 3 increment.
