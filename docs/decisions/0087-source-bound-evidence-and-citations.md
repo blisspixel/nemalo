@@ -46,6 +46,9 @@ callback can keep the selected metadata stable while the existing content servic
 retrieves and revalidates bytes. Test nested shared reads and writer exclusion on
 all native platforms. Explicit full decoded evidence can retain the reader lock
 for the existing five-minute ceiling; never upgrade it to write authority.
+Metadata refuses a torn control-journal tail without repairing it. Ordinary
+content lookup retains its existing complete-prefix semantics; a recoverable
+partial append must not appear as complete evidence metadata.
 
 Reuse canonical recording derivation with no source probing, keeping declared
 source/format/track selection, complete ordered-byte identity, provider narration
