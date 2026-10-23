@@ -69,9 +69,12 @@ and malformed hashes fail. This is an integrity comparison, not a signature or
 an authorization credential.
 
 Required token fields, in canonical order, are `schema_version`, `asset_id`,
-`library_id`, `holding_sha256`, `extractor`, `representation_id` and
+`library_id`, `holding_sha256`, `metadata_sha256`, `extractor`, `representation_id` and
 `retrieval_sha256`. The holding digest hashes the canonical selected journal
-record, including declarations, before its bounded portable projection.
+record, including declarations, before its bounded portable projection. The
+metadata digest additionally binds the complete portable view, including current
+recording relationships and user statements; a different track's change cannot
+silently attach a new recording identity to a replayed passage.
 For retrieval digest version 1, copy the successful `content.Result`, clear
 `Evidence`, `Limitations`, `SourcePath` and `CatalogID`, serialize with Go's
 `encoding/json`, decode with `UseNumber`, then reserialize the resulting objects
