@@ -139,8 +139,10 @@ type mp4Track struct {
 }
 
 type mp4Parser struct {
-	ctx   context.Context
-	boxes int
+	ctx           context.Context
+	boxes         int
+	movieScale    uint32
+	movieDuration uint64
 }
 
 func be16(b []byte) uint16 { return binary.BigEndian.Uint16(b) }
@@ -376,6 +378,9 @@ func probeMP4Tables(ctx context.Context, r interface {
 				total += uint64(e[0]) * uint64(e[1])
 			}
 			m.EncodedDurationMs = toMs(total, t.timescale)
+			if packets != nil {
+				packets.clock.EncodedMediaTicks = total
+			}
 			for _, c := range chunks {
 				m.SampleBytes += c.size
 			}
@@ -428,6 +433,9 @@ func probeMP4Tables(ctx context.Context, r interface {
 	p.chapters(r, size, tracks, a, &m)
 	if packets != nil {
 		packets.source, packets.track, packets.size = r, a, size
+		packets.clock.MediaTimescale, packets.clock.DeclaredMediaTicks = a.timescale, a.duration
+		packets.clock.MovieTimescale, packets.clock.DeclaredMovieTicks = p.movieScale, p.movieDuration
+		packets.clock.EditList = a.editList
 	}
 	return m, nil
 }
@@ -482,6 +490,7 @@ func (p *mp4Parser) movie(data []byte, m *MP4) ([]*mp4Track, error) {
 		return nil, err
 	}
 	m.MovieDurationMs = toMs(movieDuration, movieScale)
+	p.movieScale, p.movieDuration = movieScale, movieDuration
 	if neroFound {
 		m.ChapterSource = "nero_chpl"
 		m.Chapters = nero

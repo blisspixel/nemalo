@@ -64,6 +64,17 @@ uses private scratch up to 2 GiB and may read 4 GiB from the source, with the
 service's five-minute deadline; it changes no library or selected source state
 and needs neither write nor network permission. No decoder or player runs.
 See the [packet contract](CONTENT-ACCESS.md#original-mp4-packets-mp4-audio2).
+`--allow-decode` independently registers `content_decode_units` and
+`content_decode_read`, which explicitly select `mp4-pcm/1` through the same
+application service. Write/network permission grants no decoder permission;
+existing content tools reject decoded access even when these tools are enabled.
+The new tools need scoped catalog/root paths and return actual decoder-output
+samples with a full-output hash; a read carries a bounded playable mono WAV.
+A continuation still needs the explicitly named decoder tool. Units also perform
+a full decode. Per-call preparation can require 2 GiB private disk, 8 GiB streamed
+PCM and five minutes; no full waveform is stored. No player, consumption record,
+source/library mutation or network is introduced. See the
+[decoded contract](CONTENT-ACCESS.md#explicit-decoded-mp4-access-mp4-pcm1).
 `catalog_search` and `catalog_evaluate` exist only with
 `--allow-network`. They search Open Library and Internet Archive.
 Gutenberg search, `evaluate --files`, and `acquire gutenberg:NUMBER` are CLI

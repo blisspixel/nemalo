@@ -222,6 +222,12 @@ sample-entry evidence. This ephemeral preparation changes no library state and
 creates no playable range or decoder authority; the shared content service owns
 its budgets, source binding and cleanup
 ([decision 0085](decisions/0085-verified-mp4-packet-access.md)).
+Separately authorized `mp4-pcm/1` reuses that source preparation and the existing
+installed decoder adapter. Every request opts in; existing MCP content tools
+never decode. A complete sequential output hash binds measured sample ranges,
+returned as bounded derived WAV bytes without creating a holding or playback
+history. Declared clocks, original packets and decoder-output samples stay
+distinct ([decision 0086](decisions/0086-explicit-decoded-mp4-access.md)).
 Any decoder/probe must run with resource limits, no network access where containment
 permits, and no interactive opening. Report probe coverage and failures. Exporting
 to Audiobookshelf can follow later without making that server a dependency.

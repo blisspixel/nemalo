@@ -467,3 +467,41 @@ func TestMP4PacketSampleDescriptionIsBoundedOriginalCopy(t *testing.T) {
 		})
 	}
 }
+
+func TestMP4ClockRetainsExactVersionOneDeclarations(t *testing.T) {
+	const mediaTicks uint64 = 1<<56 + 77
+	const movieTicks uint64 = 1<<55 + 123
+	s := defaultSpec()
+	ftyp := box("ftyp", []byte("M4A "), u32(0))
+	movie := func(base int64) []byte {
+		track := table(&s, []uint32{3, 5}, 2, []int64{base}, audioEntry(s), "soun", 1, 44100, 1024, 0)
+		old := box("mdhd", zeros(12), u32(44100), u32(2048), u16(0x15c7), zeros(2))
+		replacement := box("mdhd", []byte{1, 0, 0, 0}, zeros(16), u32(44100), u64(mediaTicks), u16(0x15c7), zeros(2))
+		if bytes.Count(track, old) != 1 {
+			t.Fatal("fixture media header")
+		}
+		track = bytes.Replace(track, old, replacement, 1)
+		binary.BigEndian.PutUint32(track, uint32(len(track)))
+		parent := bytes.Index(track, []byte("mdia")) - 4
+		binary.BigEndian.PutUint32(track[parent:], binary.BigEndian.Uint32(track[parent:])+12)
+		return box("moov", box("mvhd", []byte{1, 0, 0, 0}, zeros(16), u32(1000), u64(movieTicks), zeros(80)), track)
+	}
+	base := int64(len(ftyp) + len(movie(0)) + 8)
+	data := slices.Concat(ftyp, movie(base), box("mdat", []byte{1, 2, 3, 4, 5, 6, 7, 8}))
+	index, err := IndexMP4(context.Background(), bytes.NewReader(data), int64(len(data)))
+	if err != nil {
+		t.Fatal(index.Summary, err)
+	}
+	clock, err := index.Clock()
+	if err != nil || clock.DeclaredMediaTicks != mediaTicks || clock.DeclaredMovieTicks != movieTicks || clock.EncodedMediaTicks != 2048 || clock.MediaTimescale != 44100 || clock.MovieTimescale != 1000 || clock.EditList {
+		t.Fatal("declarations rounded, saturated or borrowed", clock, err)
+	}
+	index.Summary.MovieDurationMs, index.Summary.MediaDurationMs, index.Summary.EncodedDurationMs = 0, 0, 0
+	again, err := index.Clock()
+	if err != nil || again != clock {
+		t.Fatal("mutable summary changed clock evidence", again, err)
+	}
+	if _, err := (MP4PacketIndex{}).Clock(); !errors.Is(err, ErrMP4PacketUnsupported) {
+		t.Fatal("empty index acquired clock evidence", err)
+	}
+}

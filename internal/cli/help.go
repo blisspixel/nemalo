@@ -309,9 +309,10 @@ Read options:
   --unit 0, --text-offset 0, --max-bytes 4096, --cursor TOKEN
   --representation epub-text/2|epub-text/1|epub-structure/1|epub-nav/1|
                    epub-page-list/1|pdf-text/1|mpeg-audio/1|
-                   mp4-audio/1|mp4-audio/2
+                   mp4-audio/1|mp4-audio/2|mp4-pcm/1
   --navigation nav-doc|ncx, --label LABEL (epub-page-list/1),
   --part ID, --sample N (mpeg-audio/1), --packet N (mp4-audio/2)
+  --decode, --pcm-sample N (mp4-pcm/1 only)
 
 The default epub-text/2 omits images, tables, mathematics, and media from the
 text and locates each omission as a gap. A continuation keeps the
@@ -330,6 +331,11 @@ not skip packets. This is not a playable M4B header or decoded timing. Each
 call prepares a verified private copy, up to 2 GiB temporary disk and 4 GiB
 source reads, with a five-minute bound and caller cancellation. Earlier
 representations keep their existing limits.
+Explicit mp4-pcm/1 units/read also require --decode on every call, including
+continuation. --pcm-sample is a decoded output sample, not an encoded sample
+or packet. A read returns a bounded mono PCM WAV in --json, identified by the
+complete sequential output hash. Each call may stream 8 GiB of PCM, prepare
+2 GiB private disk, and use five minutes; earlier content paths never decode.
 Extraction is not rendered layout or acknowledgement of reading.
 `,
 	"read": `nemalo read CATALOG|LIBRARY --root DIRECTORY --asset sha256:HASH [options]
@@ -351,6 +357,8 @@ Options:
   --scope DIRECTORY  repeatable; the configured library and review folders
                      are added
   --allow-network    catalog search and evaluation
+  --allow-decode     separate content_decode_units/read tools; installed
+                     FFmpeg, full sequential work, bounded derived WAV output
   --allow-write      library import preview and apply; apply stores only
                      the plan a preview returned and never changes a source
   --transport stdio

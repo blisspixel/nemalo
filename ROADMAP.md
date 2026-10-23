@@ -132,9 +132,13 @@ verified, not when code exists. No stage has a time estimate.
    hosted jobs and Go/Actions CodeQL at `9e248a8`; its
    [acceptance receipt](https://github.com/blisspixel/nemalo/issues/60#issuecomment-6372689487)
    was read back while issue 60 remained open. Next is the separately approved
-   [explicit decoded-access design](docs/decisions/0086-explicit-decoded-mp4-access.md),
-   not yet implemented. Decoded timing, playable range handoff and complete
-   real-player acceptance remain unfinished; `mp4-audio/1` is still units-only.
+   [explicit decoded-access design](docs/decisions/0086-explicit-decoded-mp4-access.md).
+   It is implemented as `mp4-pcm/1`, with synthetic CLI/MCP tests and native
+   full-reference/player evidence including AAC noise substitution and a cached
+   LibriVox audiobook. Canonical local verification and native-cgo race passed;
+   separate exact hosted acceptance remains required before completing stage 3.
+   `mp4-audio/1` stays units-only;
+   decoder samples do not infer original-packet/chapter/presentation mapping.
 4. **Cited evidence and agent reading** (milestone 9). A versioned evidence
    result over the content services, documented citation export, and agent
    guidance for reading a work from its own structure. Depends on stages 1 and

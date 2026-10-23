@@ -19,6 +19,16 @@ func TestMain(m *testing.M) {
 		os.Exit(m.Run())
 	}
 	args := os.Args[1:]
+	if log := os.Getenv("NEMALO_FAKE_PCM_CALLS"); log != "" {
+		f, err := os.OpenFile(log, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0600)
+		if err != nil {
+			os.Exit(8)
+		}
+		_, err = f.WriteString(strings.Join(args, " ") + "\n")
+		if err != nil || f.Close() != nil {
+			os.Exit(8)
+		}
+	}
 	if slices.Contains(args, "-version") {
 		os.Stdout.WriteString("ffmpeg version 9.9-test Copyright\n")
 		os.Exit(0)
@@ -35,6 +45,24 @@ func TestMain(m *testing.M) {
 		os.Stderr.WriteString("unsafe arguments\n")
 		os.Exit(9)
 	}
+	if os.Getenv("NEMALO_FAKE_PCM") == "1" {
+		for _, name := range []string{"-enable_drefs", "-use_absolute_path"} {
+			i := slices.Index(args, name)
+			if i < 0 || args[i+1] != "0" {
+				os.Stderr.WriteString("external reference option missing\n")
+				os.Exit(9)
+			}
+		}
+		if !slices.Contains(args, "-show_entries") {
+			for _, name := range []string{"-threads", "-filter_threads", "-filter_complex_threads"} {
+				i := slices.Index(args, name)
+				if i < 0 || args[i+1] != "1" {
+					os.Stderr.WriteString("thread allowance missing\n")
+					os.Exit(9)
+				}
+			}
+		}
+	}
 	if slices.Contains(args, "-show_entries") {
 		if mode != "nostream" {
 			os.Stdout.WriteString("sample_rate=1000\nchannels=2\n")
@@ -42,6 +70,14 @@ func TestMain(m *testing.M) {
 		os.Exit(0)
 	}
 	switch mode {
+	case "pcm", "pcm_late_error":
+		b := pcmTestBytes()
+		os.Stdout.Write(b[:3])
+		os.Stdout.Write(b[3:1001])
+		os.Stdout.Write(b[1001:])
+		if mode == "pcm_late_error" {
+			os.Stderr.WriteString("[aac] late decoder error\n")
+		}
 	case "clean":
 		os.Stdout.Write(make([]byte, 2*1500)) // 1500 samples at 1000 Hz
 	case "errors":

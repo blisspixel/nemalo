@@ -21,6 +21,21 @@ const packetSnapshotReadBytes = 80 << 20
 // hashed while copied from the already-open source. Its working file is private,
 // never published, never reopened and never written after verification.
 func withPacketSnapshot(ctx context.Context, source io.ReaderAt, size int64, hash string, use func(io.ReaderAt) error) (err error) {
+	return withMP4Snapshot(ctx, source, size, hash, func(snapshot *mp4Snapshot) error { return use(snapshot.reader) })
+}
+
+type mp4Snapshot struct {
+	reader   io.ReaderAt
+	file     *os.File
+	path     string
+	size     int64
+	hash     string
+	identity os.FileInfo
+}
+
+// withMP4Snapshot retains the verified handle. Only explicit decoder access
+// uses its owned private filename, with a separate full revalidation afterwards.
+func withMP4Snapshot(ctx context.Context, source io.ReaderAt, size int64, hash string, use func(*mp4Snapshot) error) (err error) {
 	if size <= 0 || size > assessment.MaxMP4Bytes {
 		return errBudget
 	}
@@ -41,7 +56,8 @@ func withPacketSnapshot(ctx context.Context, source io.ReaderAt, size int64, has
 	if err := safeio.EnsureSpace(dir, size); err != nil {
 		return err
 	}
-	file, err = os.OpenFile(filepath.Join(dir, "asset"), os.O_RDWR|os.O_CREATE|os.O_EXCL, 0600)
+	path := filepath.Join(dir, "asset")
+	file, err = os.OpenFile(path, os.O_RDWR|os.O_CREATE|os.O_EXCL, 0600)
 	if err != nil {
 		return err
 	}
@@ -56,7 +72,33 @@ func withPacketSnapshot(ctx context.Context, source io.ReaderAt, size int64, has
 	if err := ctx.Err(); err != nil {
 		return err
 	}
-	return use(&packetSnapshotReader{ctx: ctx, reader: file, remaining: packetSnapshotReadBytes})
+	identity, err := file.Stat()
+	if err != nil {
+		return err
+	}
+	return use(&mp4Snapshot{reader: &packetSnapshotReader{ctx: ctx, reader: file, remaining: packetSnapshotReadBytes}, file: file, path: path, size: size, hash: hash, identity: identity})
+}
+
+// revalidate reads through the retained handle, never reopening the filename.
+// The separate allowance is at most the expected source size plus one EOF probe.
+func (s *mp4Snapshot) revalidate(ctx context.Context) error {
+	h := sha256.New()
+	n, err := io.Copy(h, contextReader{ctx, io.NewSectionReader(s.file, 0, s.size+1)})
+	if err != nil {
+		return err
+	}
+	opened, err := s.file.Stat()
+	if err != nil {
+		return err
+	}
+	named, err := os.Lstat(s.path)
+	if err != nil {
+		return err
+	}
+	if n != s.size || hex.EncodeToString(h.Sum(nil)) != s.hash || !opened.Mode().IsRegular() || !named.Mode().IsRegular() || !os.SameFile(s.identity, opened) || !os.SameFile(opened, named) || opened.Size() != s.size || !opened.ModTime().Equal(s.identity.ModTime()) {
+		return errPacketSnapshotChanged
+	}
+	return ctx.Err()
 }
 
 type packetSnapshotReader struct {

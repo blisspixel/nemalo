@@ -1,13 +1,15 @@
 # 0086: explicit decoded MP4 content access
 
-Status: user-approved design, 2026-10-23. Not implemented or released.
+Status: user-approved design, 2026-10-23; implemented and locally verified,
+including native CLI/reference/player checks. Separate exact hosted verification
+is still required. Not released.
 The user explicitly approved the bounded decoded-access proposal and revision
 of the earlier check-only constraint. The preceding packet increment and CI
 repair passed all six hosted jobs and Go/Actions CodeQL at `9e248a8`; its
 [acceptance receipt](https://github.com/blisspixel/nemalo/issues/60#issuecomment-6372689487)
 was read back exactly while issue 60 remained open. This accepted prerequisite
-permits the separate Go implementation. Approval does not establish its
-implementation or verification.
+permits the separate Go implementation; it does not establish the new
+increment's verification.
 
 ## Boundary and prerequisites
 

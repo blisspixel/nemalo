@@ -62,6 +62,13 @@ func Deadline(bytes int64) time.Duration {
 // snapshot path. Only the file protocol is allowed, so FFmpeg reads nothing
 // but that file and makes no network request.
 func Audio(ctx context.Context, file, format string, size int64) Result {
+	return measureAudio(ctx, file, format, size, nil)
+}
+
+// measureAudio keeps the installed-tool selection, probing, output transform
+// and error accounting shared by checks and explicitly requested PCM access.
+// A capture opts into the latter's stricter work and process allowances.
+func measureAudio(ctx context.Context, file, format string, size int64, capture *pcmCapture) Result {
 	r := Result{Tool: "ffmpeg", Status: "incomplete", Messages: []string{}}
 	demuxer := demuxers[format]
 	if demuxer == "" {
@@ -81,18 +88,35 @@ func Audio(ctx context.Context, file, format string, size int64) Result {
 	r.Executable = ffmpeg
 	ctx, cancel := context.WithTimeout(ctx, Deadline(size))
 	defer cancel()
+	runCommand := run
+	if capture != nil {
+		runCommand = capture.run
+	}
 	input := "file:" + file
-	if out, _, err := run(ctx, ffmpeg, io.Discard, "-hide_banner", "-version"); err == nil {
+	if out, _, err := runCommand(ctx, ffmpeg, io.Discard, "-hide_banner", "-version"); err == nil {
 		if fields := strings.Fields(firstLine(out)); len(fields) >= 3 && fields[1] == "version" {
 			r.Version = textField(fields[2], 100)
 		}
 	}
+	if capture != nil && r.Version == "" {
+		r.Detail = "ffmpeg version could not be established"
+		return r
+	}
+	inputOptions := []string{"-protocol_whitelist", "file", "-f", demuxer}
+	if capture != nil {
+		inputOptions = append(inputOptions, "-enable_drefs", "0", "-use_absolute_path", "0")
+	}
 	// The decoder's output rate and channels, which a decoder may change from
 	// the container's, for example with spectral band replication.
-	out, _, err := run(ctx, ffprobe, io.Discard, "-v", "error", "-protocol_whitelist", "file", "-f", demuxer, "-select_streams", "a:0",
-		"-show_entries", "stream=sample_rate,channels", "-of", "default=noprint_wrappers=1", input)
+	probeArgs := append([]string{"-v", "error"}, inputOptions...)
+	probeArgs = append(probeArgs, "-select_streams", "a:0", "-show_entries", "stream=sample_rate,channels", "-of", "default=noprint_wrappers=1", input)
+	out, _, err := runCommand(ctx, ffprobe, io.Discard, probeArgs...)
 	if ctx.Err() != nil {
 		r.Detail = "ffprobe did not finish within the deadline"
+		return r
+	}
+	if capture != nil && !validPCMProbe(out) {
+		r.Detail = "ffprobe output has missing, duplicate or unsupported stream fields"
 		return r
 	}
 	for _, line := range strings.Split(out, "\n") {
@@ -112,8 +136,18 @@ func Audio(ctx context.Context, file, format string, size int64) Result {
 	}
 	// One 16-bit channel at the decoder's own rate: two bytes a sample.
 	counter := &counting{}
-	stderr, code, err := run(ctx, ffmpeg, counter, "-nostdin", "-hide_banner", "-v", "error", "-protocol_whitelist", "file", "-f", demuxer, "-i", input,
-		"-map", "0:a:0", "-ac", "1", "-ar", strconv.Itoa(r.SampleRate), "-c:a", "pcm_s16le", "-f", "s16le", "pipe:1")
+	var output io.Writer = counter
+	decodeArgs := []string{"-nostdin", "-hide_banner", "-v", "error"}
+	if capture != nil {
+		output = capture
+		decodeArgs = append(decodeArgs, "-threads", "1", "-filter_threads", "1", "-filter_complex_threads", "1")
+	}
+	decodeArgs = append(decodeArgs, inputOptions...)
+	decodeArgs = append(decodeArgs, "-i", input, "-map", "0:a:0", "-ac", "1", "-ar", strconv.Itoa(r.SampleRate), "-c:a", "pcm_s16le", "-f", "s16le", "pipe:1")
+	stderr, code, err := runCommand(ctx, ffmpeg, output, decodeArgs...)
+	if capture != nil {
+		counter.n = capture.n
+	}
 	if ctx.Err() != nil {
 		r.Detail = "ffmpeg did not finish within the deadline"
 		return r

@@ -39,6 +39,9 @@ type Options struct {
 	// Write registers the library import tools. They store copies inside a
 	// scoped library and never change or remove a source.
 	Write bool
+	// Decode registers separate explicit decoded-content tools. Existing
+	// content tools never gain process authority from this option.
+	Decode bool
 	// Jobs, with Write, registers the job tools: long operations that run
 	// as durable jobs, outliving the call and the connection. The caller
 	// owns the store and waits for its jobs before exiting.
@@ -60,6 +63,7 @@ type Capabilities struct {
 	Version  string               `json:"version"`
 	ReadOnly bool                 `json:"read_only"`
 	Network  bool                 `json:"network"`
+	Decode   bool                 `json:"decode,omitempty"`
 	Scopes   []string             `json:"scopes"`
 	Tools    []string             `json:"tools"`
 	Content  content.Capabilities `json:"content"`
@@ -88,9 +92,12 @@ func New(service app.Service, opts Options) (*mcp.Server, error) {
 	if opts.Write {
 		text = writeInstructions
 	}
+	if opts.Decode {
+		text += " Explicit content_decode_units/content_decode_read tools may run installed FFmpeg on a verified private copy. Existing content tools never decode. Small results can require full-file work; decoder-output samples are not inferred playback or original packet times."
+	}
 	s := mcp.NewServer(&mcp.Implementation{Name: "nemalo", Version: opts.Version}, &mcp.ServerOptions{Instructions: text})
 	r := registrar{server: s, gate: make(chan struct{}, maxConcurrent)}
-	caps := Capabilities{Version: opts.Version, ReadOnly: !opts.Write, Network: opts.Network, Scopes: append([]string{}, scopes.roots...), Content: service.ContentCapabilities(), Limits: []string{
+	caps := Capabilities{Version: opts.Version, ReadOnly: !opts.Write, Network: opts.Network, Decode: opts.Decode, Scopes: append([]string{}, scopes.roots...), Content: service.ContentCapabilities(), Limits: []string{
 		fmt.Sprintf("At most %d tool calls run at once; each has a %s deadline plus the service's own bounds.", maxConcurrent, toolDeadline),
 		"Paths are checked against the scopes when a tool is called. This is a policy boundary over the same services as the CLI, not an operating-system sandbox.",
 	}}
@@ -219,7 +226,20 @@ func New(service app.Service, opts Options) (*mcp.Server, error) {
 			}
 			return service.Content(ctx, req)
 		})
+	if opts.Decode {
+		for _, operation := range []string{"decode_units", "decode_read"} {
+			add(&r, "content_"+operation, "Explicitly decode a scoped MP4 source sequentially with installed FFmpeg. Units still require a full decode; a read returns a small playable mono WAV. Up to 2 GiB private disk, 8 GiB streamed PCM and five minutes per call; no playback history, source/library mutation, player launch or network. Decoder-output samples are distinct from source packets and presentation times.", false,
+				func(ctx context.Context, in contentInput) (content.Result, error) {
+					req, err := contentRequest(scopes, in, operation)
+					if err != nil {
+						return content.Result{}, err
+					}
+					return service.Content(ctx, req)
+				})
+		}
+	}
 	if opts.Write {
+		// Write tools remain independent of optional decoding.
 		addWrite(&r, "library_import_preview", "Assess one EPUB, PDF, MP3, M4B, or M4A file, or a completed intake packet, for import into an initialized library, without writing. Returns the status it would get and a plan digest. With scan, the installed antivirus scans the file; its cloud and sample-submission settings apply.", true,
 			func(ctx context.Context, in importInput) (library.ImportResult, error) {
 				req, err := importRequest(scopes, in, false)
@@ -520,6 +540,7 @@ type contentInput struct {
 	Part           string `json:"part,omitempty" jsonschema:"exact structured part ID such as id:note-1; structured and source reads only"`
 	Sample         int64  `json:"sample,omitempty" jsonschema:"encoded sample where an mpeg-audio/1 read starts"`
 	Packet         *int   `json:"packet,omitempty" jsonschema:"zero-based original packet for an mp4-audio/2 read; not combinable with units, a cursor or another representation"`
+	PCMSample      *int64 `json:"pcm_sample,omitempty" jsonschema:"zero-based decoder-output sample; only explicit content_decode_read, not units or a cursor"`
 }
 
 type searchInput struct {
@@ -559,8 +580,13 @@ func contentRequest(s scope, in contentInput, operation string) (content.Request
 	if err != nil {
 		return content.Request{}, err
 	}
-	req := content.Request{SchemaVersion: 1, Catalog: catalog, Root: root, AssetID: in.Asset, Unit: in.Unit, Offset: in.TextOffset, MaxBytes: defaultInt(in.MaxBytes, 4096), Cursor: in.Cursor, Representation: in.Representation, Part: in.Part, Sample: in.Sample, Packet: in.Packet, Navigation: in.Navigation, Label: in.Label}
+	req := content.Request{SchemaVersion: 1, Catalog: catalog, Root: root, AssetID: in.Asset, Unit: in.Unit, Offset: in.TextOffset, MaxBytes: defaultInt(in.MaxBytes, 4096), Cursor: in.Cursor, Representation: in.Representation, Part: in.Part, Sample: in.Sample, Packet: in.Packet, PCMSample: in.PCMSample, Navigation: in.Navigation, Label: in.Label}
 	switch operation {
+	case "decode_units", "decode_read":
+		if req.Representation != "" && req.Representation != content.PCMRepresentation {
+			return content.Request{}, errors.New("explicit decoder tools use mp4-pcm/1 only")
+		}
+		req.Representation, req.Decode, req.UnitsOnly = content.PCMRepresentation, true, operation == "decode_units"
 	case "units":
 		req.UnitsOnly = true
 	case "navigation":

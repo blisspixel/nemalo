@@ -93,6 +93,9 @@ func (s Service) AcquireRecording(ctx context.Context, request acquisition.Recor
 type Service struct {
 	Providers map[string]Searcher
 	Scanner   assessment.Scanner
+	// PCMDecoder is the optional installed adapter for explicitly authorized
+	// decoded content requests. Nil uses the default; tests inject it.
+	PCMDecoder content.PCMDecoder
 	// Quarantine is the Nemalo-owned directory for detected downloads, under
 	// the platform state directory. It is created only when a file is detected.
 	Quarantine string
@@ -551,7 +554,7 @@ func (s Service) AuditManaged(ctx context.Context, directory string) (library.Ma
 }
 
 func (s Service) Content(ctx context.Context, req content.Request) (content.Result, error) {
-	return content.Get(ctx, req)
+	return content.GetWithDecoder(ctx, req, s.PCMDecoder)
 }
 
 // TextUnits lists an asset's units in the first text representation that

@@ -48,6 +48,47 @@ byte stops, large tick precision, forged continuations and CLI/MCP selector and
 scope boundaries ([decision 0085](decisions/0085-verified-mp4-packet-access.md)).
 Native fixture evidence is separate from the required exact hosted CI gate.
 
+## Explicit decoded MP4 access
+
+On 2026-10-23, the actual `mp4-pcm/1 --decode` CLI measured units and 48 sample
+selections across eight generated AAC/ALAC/MP3/Opus profiles, including AAC noise
+substitution enabled/disabled and a tone. Eight additional cursors resumed at
+the exact next sample. Whole-output hashes/counts and selected PCM matched a
+separate full sequential FFmpeg 9.0.2 reference. Forty nonempty public WAV
+responses played through mpv 0.41.0 to identical raw PCM; past-end requests
+returned no usable data. All sources and every synthetic library file stayed
+unchanged.
+
+The already cached LibriVox `archive:art_of_war_librivox` file
+`ArtOfWar-64kb_librivox.m4b` was exercised through the actual CLI/player, without
+another download or scanner. Its 18,084,624 source bytes had SHA-256
+`8797750c9f8d86f8f013c251bbc9da5570ce5c82a2d3a5abe3da47a2c45c9b01`.
+Complete output measured 95,659,008 samples at 22,050 Hz, with PCM hash
+`e8a4c381e8174d214a219068177b043a856386ade0ceb4efb0ddcdbace8cd672`.
+Four bounded WAV ranges, including exact continuation, a nonaligned middle
+selection and the tail, matched a separately streamed full reference and actual
+mpv output byte-for-byte. The reference retained only those bounded intervals
+while hashing the full stream, without a whole-waveform allocation. Source and
+library files stayed unchanged. Existing provenance and unresolved file-level
+rights/safety caveats remain; this is not a new rights determination.
+
+These tests establish native Linux output for the installed tools and exercised
+profiles. They do not establish universal codec/player conformance, another tool
+version's output, exact original-packet/chapter/edit mapping, semantic/audible
+completeness, a release or final stage acceptance. Actual complete output binds
+the representation so changed measurements refuse stale cursors.
+
+Normal tests use synthetic bytes and injected adapters or test-binary children,
+never installed decoders, players, scanners or a network. Tests cover whole-stream
+and range hashes, WAV/sample boundaries, raw 64-bit declarations, late failures,
+odd/partial output, quotas/cancellation, missing tools, stale references, copied
+source binding and explicit CLI/MCP permission/scope boundaries. The canonical
+verifier passed with 86.8% aggregate coverage and no reported Go vulnerabilities;
+the complete native-cgo race suite and Windows cross-vet passed. Link/anchor and
+whitespace checks passed. Native public CLI/reference/player checks were repeated
+on the final implementation. Exact hosted acceptance remains required for this
+separate increment in [issue 60](https://github.com/blisspixel/nemalo/issues/60).
+
 ## Acquisition harness
 
 `cmd/collection` is Go validation tooling over `internal/collection`, not the

@@ -122,7 +122,13 @@ M4A's sample tables and chapters, units only. Explicit `mp4-audio/2` returns
 bounded original packets and their original sample entry, with exact source
 spans and media tick strings. Each call prepares a verified private copy, with
 up to 2 GiB temporary disk and 4 GiB source reads. It is not a playable range
-container, decoded timing or verified decoder initialization; nothing is decoded.
+container, decoded timing or verified decoder initialization. These representations
+never decode. Explicit `mp4-pcm/1` units/read require `--decode` on every call;
+they measure a full sequential installed FFmpeg output and return a small derived
+mono PCM WAV with exact output-sample references. MCP requires independently
+enabled `content_decode_units`/`content_decode_read` tools. Earlier content tools
+and the TUI do not decode. Full stage acceptance remains separate from source
+implementation ([decision 0086](decisions/0086-explicit-decoded-mp4-access.md)).
 Capability negotiation, structured EPUB parts,
 note references, original markup, and bounded local image bytes are available in
 CLI/JSON, and through the read-only MCP server.
@@ -1113,11 +1119,14 @@ per track when the project links back
 adapter over the same services; `--allow-write` adds previewed imports
 ([decision 0034](decisions/0034-mcp-import-tools.md)) and durable acquisition
 and rescan jobs ([decision 0045](decisions/0045-durable-mcp-jobs.md)). Website search, other
-Gutenberg formats, recording relationships across different encodings beyond
-LibriVox, decoded timing in content
-access, files above 2 GiB, OCR, and column reconstruction stay later. The remaining 1.0 work is
+Gutenberg formats, files above 2 GiB, OCR and column reconstruction stay later.
+Explicit narration declarations beyond LibriVox are implemented in stage 1.
+Explicit decoded MP4 access is now
+implemented, with full stage acceptance tracked in issue 60. The remaining 1.0 work is
 ordered by dependency in the [roadmap](../ROADMAP.md#order-of-work-to-10), starting
-with identity and collections. Cited evidence for agent-led reading is milestone 9
+with the remaining audio acceptance before cited evidence and interfaces.
+Cited evidence for agent-led reading is milestone 9
 ([decision 0048](decisions/0048-cited-evidence-before-1-0.md)); generated analysis
-inside Nemalo and model/harness integrations remain post-1.0. Issues 1 and 2 are closed;
-their remaining OCR, column, and decoded audio work is milestone 7 and 8.
+inside Nemalo and model/harness integrations remain post-1.0. Issues 1 and 2 are
+closed; remaining OCR and column reconstruction are milestone 7 work, while the
+separate stage 3 receipt governs acceptance of explicit decoded audio.

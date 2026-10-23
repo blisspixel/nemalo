@@ -297,15 +297,87 @@ of original-source reads, even for a small response. Space refusal is
 caller cancellation wins. Small packet responses do not imply cheap preparation.
 
 For ordinary playback, `library open` or `library export` gives a player a verified
-whole-file copy. Decoded timing and complete playable range handoff remain
-[issue 60](https://github.com/blisspixel/nemalo/issues/60) work; original packet
-access does not establish them or complete roadmap stage 3.
+whole-file copy. Original packet access does not establish decoded timing or
+playable packet ranges. Separately authorized decoded access follows below;
+full stage acceptance remains [issue 60](https://github.com/blisspixel/nemalo/issues/60).
+
+## Explicit decoded MP4 access: `mp4-pcm/1`
+
+```sh
+nemalo content units LIBRARY --root LIBRARY --asset sha256:HASH --representation mp4-pcm/1 --decode --json
+nemalo content read LIBRARY --root LIBRARY --asset sha256:HASH --representation mp4-pcm/1 --decode --pcm-sample 0 --max-bytes 65536 --json
+```
+
+This optional representation uses `nemalo.ffmpeg.pcm/1` and installed
+FFmpeg/FFprobe, never downloaded or required. Every invocation, including units
+and continuation, supplies `--decode`. Default representations, TUI, import and
+acquisition never decode. MCP registers separate `content_decode_units` and
+`content_decode_read` only with `--allow-decode`; ordinary content tools reject
+decoder access even when these tools are enabled. Write or network permission
+grants no decoder permission
+([decision 0086](decisions/0086-explicit-decoded-mp4-access.md)).
+
+The checked MP4 index requires one clear audio track, one complete bounded sample
+description and no format findings. The source is copied and hashed before use.
+Metadata and tools use that owned private copy; after decoding, Go rehashes its
+retained handle and checks its filename identity. The original is also revalidated
+before success. No selected source, holding, bookmark or job state changes.
+Owned scratch is removed on every return.
+
+Each call decodes the complete source sequentially from its beginning to mono
+signed 16-bit little-endian output at the selected probed stream rate. This
+preserves the full decoder state required by the measured AAC noise-substitution
+case. It counts/hashes all output while retaining only the selected interval;
+no full waveform file/allocation is created. Downmix, quantization, selected rate
+and FFmpeg trimming/resampling are part of this derived representation. Its
+sample timeline is not an independently established original-packet, chapter,
+edit-list or audible player-position mapping.
+
+`mp4_pcm` reports tool version, format/rate/channels, separately reported source
+rate/channels and exact declared/encoded tick strings, full decoded sample count
+and `full_pcm_sha256`. Header ticks remain declarations, including possible
+unknown-duration sentinels. Output rate/count describe actual output, never a
+duration ratio inferred from the container.
+
+A read selects `--pcm-sample N`, a zero-based output sample distinct from MP3
+encoded samples and MP4 packets. Even an explicit zero is rejected on another
+representation, units or cursor request. `mp4_pcm.range` binds source, extractor
+and representation to half-open `start_sample`/`end_sample` decimal strings in
+`decoder_output_samples`. Legacy locators are not reinterpreted. `resource` is a
+complete small mono PCM WAV, with a whole-WAV hash separate from
+`range_pcm_sha256` and the complete output hash. A client can explicitly save
+and play it outside the library. Nemalo launches no player.
+
+Continue using the exact `mp4pcm1:` cursor, retaining `--decode` and omitting the
+sample selector. The cursor keeps its representation when that option is omitted.
+It binds source, extractor, tool version, transform/rate/count, whole PCM hash and
+next sample. A changed whole-output hash, including outside the selected slice,
+refuses a stale continuation. A late decoder error/failed exit, partial sample,
+timeout, cancellation, work cap or changed identity discards every collected byte
+and reference. Missing tools are `unavailable`; no alternate representation is
+silently substituted. Selecting the actual end or beyond fails without an empty
+playable file.
+
+Preparation may need 2 GiB private disk, 4 GiB original-source reads, 2 GiB private
+revalidation and 8 GiB streamed PCM even for a small result. Metadata retains its
+shared 80 MiB allowance. At most three children use argument arrays, fixed
+mov/file-only input, explicitly disabled external data references/absolute paths
+and one decoder/filter thread. Version/probe/decode share 64 KiB of diagnostics;
+failing observed chunks are charged and cancel work. PCM has a separate streamed
+allowance. Responses are at most 64 KiB including the 44-byte WAV header, with
+whole 16-bit samples; reads need at least 46 bytes. The service ceiling is five
+minutes, with the shared decoder's size bound and shorter caller cancellation
+still applying. Pipe/in-flight overshoot is bounded work, not an OS sandbox.
+Available input is bounded; aggregate child memory and cumulative internal file
+reads are not directly measured. Rights, safety, semantic completeness and
+consumption remain unknown. See the
+[validation audit](VALIDATION.md#explicit-decoded-mp4-access).
 
 ## Bounds and failures
 
 - Catalog: existing strict 16 MiB snapshot loader; explicit paths at most 4096 bytes.
 - Source: nonempty regular asset, at most 32 MiB for a snapshot and 256 MiB for
-  a managed holding, or 2 GiB for `mp4-audio/1` and `mp4-audio/2`; exact
+  a managed holding, or 2 GiB for `mp4-audio/1`, `mp4-audio/2` and `mp4-pcm/1`; exact
   size/hash required, and checked after an offset read.
 - Container: shared assessment parser, 2 MiB ZIP metadata-read budget, 10,000
   members, 32 MiB/member, 128 MiB declared expansion, CRC/length checks.
@@ -314,7 +386,7 @@ access does not establish them or complete roadmap stage 3.
 - Response: 4-65,536 text bytes per request (default 4096), at most 1 MiB result
   JSON, cursors at most 2048 bytes, and bounded escaped diagnostics.
 - Work: cooperative cancellation and a 15-second service deadline, or five
-  minutes for explicit `mp4-audio/2` preparation. Bounded parser
+  minutes for explicit `mp4-audio/2` preparation or `mp4-pcm/1`. Bounded parser
   steps and filesystem reads may finish after cancellation; stalled devices are
   not a hard real-time or process sandbox guarantee.
 
@@ -371,8 +443,9 @@ Remaining work, without moving post-1.0 analysis ahead of library delivery:
   LibriVox narrators ([decision 0035](decisions/0035-librivox-readers.md)).
   M4B and M4A list sample tables and chapters as `mp4-audio/1`
   ([decision 0039](decisions/0039-mp4-audio-samples.md)); explicit `mp4-audio/2`
-  adds bounded original packets and sample-entry evidence. Decoded timing and
-  playable range handoff remain later work.
+  adds bounded original packets and sample-entry evidence. Explicit `mp4-pcm/1`
+  adds full-output-hash-bound decoded samples and small playable WAV ranges;
+  final stage-wide acceptance remains issue 60.
 - External caller: Claude Code on Windows, through `nemalo mcp serve`, read,
   switched works, and resumed from a continuation at the exact stopping byte
   ([decision 0014](decisions/0014-read-only-mcp-server.md)). Other hosts and

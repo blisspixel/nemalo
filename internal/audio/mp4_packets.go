@@ -43,6 +43,25 @@ type MP4PacketIndex struct {
 	source  io.ReaderAt
 	track   *mp4Track
 	size    int64
+	clock   MP4Clock
+}
+
+// MP4Clock preserves exact raw declarations and summed encoded ticks. Header
+// sentinel values remain declarations, never measured durations or PCM mapping.
+type MP4Clock struct {
+	MediaTimescale     uint32
+	DeclaredMediaTicks uint64
+	EncodedMediaTicks  uint64
+	MovieTimescale     uint32
+	DeclaredMovieTicks uint64
+	EditList           bool
+}
+
+func (index MP4PacketIndex) Clock() (MP4Clock, error) {
+	if index.track == nil {
+		return MP4Clock{}, ErrMP4PacketUnsupported
+	}
+	return index.clock, nil
 }
 
 // MP4Packet describes one original encoded packet. Decode ticks are in the

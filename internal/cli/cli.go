@@ -100,6 +100,7 @@ func Execute(ctx context.Context, args []string, out, errOut io.Writer, service 
 	flags.Var(&scopes, "scope", "directory MCP tools may read (repeatable)")
 	allowNetwork := flags.Bool("allow-network", false, "register MCP catalog tools that contact providers")
 	allowWrite := flags.Bool("allow-write", false, "register MCP library import tools")
+	allowDecode := flags.Bool("allow-decode", false, "register explicit MCP decoded-content tools using installed FFmpeg")
 	transport := flags.String("transport", "stdio", "MCP transport")
 	application := flags.String("app", "", "application to open a library copy with")
 	onDetection := flags.String("on-detection", "quarantine", "quarantine or delete a detected download")
@@ -129,6 +130,7 @@ func Execute(ctx context.Context, args []string, out, errOut io.Writer, service 
 	replaceBookmarks := flags.Bool("replace", false, "replace differing bookmark locations on import")
 	flags.Int64Var(&contentRequest.Sample, "sample", 0, "encoded sample where an mpeg-audio/1 read starts")
 	packet := flags.Int("packet", 0, "zero-based original packet for an mp4-audio/2 read")
+	pcmSample := flags.Int64("pcm-sample", 0, "zero-based decoder-output sample for an explicit mp4-pcm/1 read")
 	flags.BoolVar(&checkOptions.Scan, "scan", false, "invoke installed antivirus")
 	flags.BoolVar(&checkOptions.EPUBCheck, "epubcheck", false, "run the installed EPUBCheck on an EPUB")
 	flags.BoolVar(&checkOptions.Decode, "decode", false, "decode an MP3, M4B, or M4A with the installed FFmpeg")
@@ -179,6 +181,9 @@ func Execute(ctx context.Context, args []string, out, errOut io.Writer, service 
 	}
 	if visited(flags, "packet") {
 		contentRequest.Packet = packet
+	}
+	if visited(flags, "pcm-sample") {
+		contentRequest.PCMSample = pcmSample
 	}
 	var invalidFlag string
 	flags.Visit(func(f *flag.Flag) {
@@ -301,6 +306,7 @@ func Execute(ctx context.Context, args []string, out, errOut io.Writer, service 
 			contentRequest.Find = *findText
 		}
 		contentRequest.Catalog, contentRequest.Root, contentRequest.UnitsOnly = flags.Arg(0), *auditRoot, action == "units" || action == "navigation" || action == "pages"
+		contentRequest.Decode = checkOptions.Decode
 		if action == "pages" {
 			if contentRequest.Representation != "" && contentRequest.Representation != "epub-page-list/1" {
 				return write(nil, errors.New("content pages lists representation epub-page-list/1"), 2)
@@ -900,7 +906,7 @@ func Execute(ctx context.Context, args []string, out, errOut io.Writer, service 
 				return fail(err, 1)
 			}
 		}
-		server, err := mcpserver.New(service, mcpserver.Options{Scopes: scopes, Network: *allowNetwork, Write: *allowWrite, Jobs: store, Version: Version})
+		server, err := mcpserver.New(service, mcpserver.Options{Scopes: scopes, Network: *allowNetwork, Write: *allowWrite, Decode: *allowDecode, Jobs: store, Version: Version})
 		if err != nil {
 			return fail(err, 2)
 		}
@@ -960,7 +966,7 @@ func flagApplies(command, action, name string) bool {
 		return name == "root" || name == "asset" || name == "unit" || name == "text-offset" || name == "speed" || name == "rate"
 	}
 	if command == "mcp" {
-		return name == "scope" || name == "allow-network" || name == "allow-write" || name == "transport" || name == "config" || name == "library" || name == "review"
+		return name == "scope" || name == "allow-network" || name == "allow-write" || name == "allow-decode" || name == "transport" || name == "config" || name == "library" || name == "review"
 	}
 	if command == "version" {
 		return false
@@ -1005,6 +1011,9 @@ func flagApplies(command, action, name string) bool {
 		if name == "representation" {
 			return action == "read" || action == "units" || action == "locate"
 		}
+		if name == "decode" {
+			return action == "read" || action == "units"
+		}
 		if name == "text" {
 			return action == "locate"
 		}
@@ -1014,7 +1023,7 @@ func flagApplies(command, action, name string) bool {
 		if name == "max-bytes" || name == "cursor" {
 			return action != "units"
 		}
-		return (action == "read" || action == "source") && (name == "part" || name == "unit" || name == "text-offset") || (action == "read" && (name == "sample" || name == "packet"))
+		return (action == "read" || action == "source") && (name == "part" || name == "unit" || name == "text-offset") || (action == "read" && (name == "sample" || name == "packet" || name == "pcm-sample"))
 	}
 	if command == "library" {
 		switch action {

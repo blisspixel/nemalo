@@ -23,11 +23,12 @@ No telemetry or required AI service.
 - Browse holdings and collections, open verified copies in external readers, and
   read EPUBs and PDFs in the terminal with explicit bookmarks.
 - Retrieve bounded, source-bound text, MP3 ranges and original MP4 packets through
-  shared CLI, JSON and MCP services, with coverage gaps reported.
+  shared CLI, JSON and MCP services, with coverage gaps reported. Explicitly
+  selected installed FFmpeg access returns decoded MP4 ranges as small WAV files.
 
 Published prereleases may lag the source tree. Checks provide limited evidence,
-never a safety or completeness guarantee. Decoded M4B/M4A timing, playable range
-handoff, cited evidence and some interface work remain planned.
+never a safety or completeness guarantee. Final audio acceptance, cited evidence
+and some interface work remain unfinished.
 See [capabilities and limits](docs/DEVELOPMENT.md), the [roadmap](ROADMAP.md), and
 [published releases](https://github.com/blisspixel/nemalo/releases).
 

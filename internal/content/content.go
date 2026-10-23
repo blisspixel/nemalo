@@ -55,6 +55,9 @@ type Request struct {
 	// Packet selects an original mp4-audio/2 packet. Nil distinguishes an
 	// omitted selector from an explicitly supplied zero.
 	Packet *int
+	// Decode authorizes only explicit mp4-pcm/1 access for this invocation.
+	Decode    bool
+	PCMSample *int64
 	// Find locates every exact occurrence of this text in a text
 	// representation instead of reading a range.
 	Find string
@@ -82,6 +85,9 @@ func (r Request) Validate() error {
 	}
 	if r.Packet != nil && (r.Representation != MP4PacketRepresentation || *r.Packet < 0 || *r.Packet >= 8_000_000 || r.UnitsOnly || r.Cursor != "") {
 		return errors.New("packet applies only to an mp4-audio/2 read, must be 0-7999999, and cannot be combined with units or a cursor")
+	}
+	if err := validatePCMRequest(r); err != nil {
+		return err
 	}
 	if len(r.Find) > 1000 || !utf8.ValidString(r.Find) || (r.Find != "" && (r.Cursor != "" || r.UnitsOnly || r.Part != "" || r.Resource || (r.Representation != "epub-text/2" && r.Representation != "pdf-text/1" && r.Representation != ""))) {
 		return errors.New("find takes valid UTF-8 text of at most 1000 bytes and applies to epub-text/2 or pdf-text/1 without a cursor, units, or parts")
@@ -166,6 +172,7 @@ type Result struct {
 	// MP4 is the mp4-audio/1 sample table summary and declared chapters.
 	MP4        *audio.MP4       `json:"mp4,omitempty"`
 	MP4Packets *MP4PacketAccess `json:"mp4_packets,omitempty"`
+	MP4PCM     *DecodedMP4      `json:"mp4_pcm,omitempty"`
 	Matches    []Match          `json:"matches,omitempty"`
 	// Navigation is the source-declared table of contents for epub-nav/1.
 	// A read carries the one selected entry. Spine units stay in Units.
@@ -221,6 +228,12 @@ func encodeCursor(c cursor) string {
 // rendering or consumption records. MP4 packet access uses bounded private scratch.
 // Every call revalidates the bytes. An error returns no text or continuation.
 func Get(ctx context.Context, req Request) (result Result, err error) {
+	return GetWithDecoder(ctx, req, nil)
+}
+
+// GetWithDecoder injects the trusted optional adapter, not request authority.
+// Nil uses the installed adapter only after explicit decoded-access validation.
+func GetWithDecoder(ctx context.Context, req Request, decoder PCMDecoder) (result Result, err error) {
 	result = Result{SchemaVersion: 1, Status: "invalid_request", Extractor: Extractor, Limitations: []string{
 		"Plain source text, not rendered layout, a summary, or proof of reading.",
 		"Reading-order documents are not necessarily chapters. No page counts inferred.",
@@ -237,6 +250,7 @@ func Get(ctx context.Context, req Request) (result Result, err error) {
 			result.Parts, result.Coverage, result.Resource, result.Gaps = nil, nil, nil, nil
 			result.Audio, result.AudioRange, result.Matches, result.MP4 = nil, nil, nil, nil
 			result.MP4Packets = nil
+			result.MP4PCM = nil
 			result.Navigation, result.RangeEnd = nil, nil
 			result.PageLists, result.Pagination, result.Page, result.PageEnd = nil, nil, nil, nil
 			result.RangeStatus = ""
@@ -257,19 +271,23 @@ func Get(ctx context.Context, req Request) (result Result, err error) {
 	if req.Representation == "" {
 		req.Representation = DefaultRepresentation
 		if req.Cursor != "" {
-			// A continuation keeps the representation it was issued for, so an
-			// existing epub-text/1 reference never moves to another extractor.
-			c, parseErr := parseCursor(req.Cursor)
-			if parseErr != nil {
-				return result, parseErr
-			}
-			req.Representation = c.Representation
-			if req.Representation == "" {
-				req.Representation = "epub-text/1"
+			if strings.HasPrefix(req.Cursor, pcmCursorPrefix) {
+				req.Representation = PCMRepresentation
+			} else {
+				// A continuation keeps the representation it was issued for, so an
+				// existing epub-text/1 reference never moves to another extractor.
+				c, parseErr := parseCursor(req.Cursor)
+				if parseErr != nil {
+					return result, parseErr
+				}
+				req.Representation = c.Representation
+				if req.Representation == "" {
+					req.Representation = "epub-text/1"
+				}
 			}
 		}
 	}
-	if req.Representation == MP4PacketRepresentation {
+	if req.Representation == MP4PacketRepresentation || req.Representation == PCMRepresentation {
 		packetCtx, packetCancel := context.WithTimeout(callerCtx, 5*time.Minute)
 		defer packetCancel()
 		ctx = packetCtx
@@ -289,6 +307,8 @@ func Get(ctx context.Context, req Request) (result Result, err error) {
 		return getMP4(ctx, req, result)
 	case MP4PacketRepresentation:
 		return getMP4Packets(ctx, req, result)
+	case PCMRepresentation:
+		return getPCM(ctx, req, result, decoder)
 	case "pdf-text/1":
 		if req.Part != "" || req.Resource {
 			return result, errors.New("part/resource access is unavailable for pdf-text/1")

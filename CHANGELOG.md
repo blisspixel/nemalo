@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+- Add explicit `mp4-pcm/1` content access with `--decode` on every invocation,
+  including continuation. Reuse the installed FFmpeg adapter to measure and hash
+  a complete sequential output while retaining only bounded samples, returned
+  as a small mono PCM WAV. MCP adds separate decoder tools only with independent
+  `--allow-decode`; ordinary content tools never decode. Keep source declarations,
+  encoded ticks, actual output samples and unknown presentation mapping separate.
+  Preparation can need 2 GiB private disk and 8 GiB streamed PCM; this is not a
+  release or completed stage-wide acceptance.
+
 - Add explicit `mp4-audio/2` original packet access and bounded sample-entry
   evidence through shared CLI/JSON/MCP services. Bind reads to a verified private
   source copy, preserve exact packet continuations and decimal tick strings, and
