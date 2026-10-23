@@ -27,8 +27,8 @@ No telemetry or required AI service.
   selected installed FFmpeg access returns decoded MP4 ranges as small WAV files.
 
 Published prereleases may lag the source tree. Checks provide limited evidence,
-never a safety or completeness guarantee. Final audio acceptance, cited evidence
-and some interface work remain unfinished.
+never a safety or completeness guarantee. Cited evidence and some interface work
+remain unfinished.
 See [capabilities and limits](docs/DEVELOPMENT.md), the [roadmap](ROADMAP.md), and
 [published releases](https://github.com/blisspixel/nemalo/releases).
 

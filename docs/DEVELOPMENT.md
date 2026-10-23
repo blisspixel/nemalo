@@ -1121,10 +1121,11 @@ adapter over the same services; `--allow-write` adds previewed imports
 and rescan jobs ([decision 0045](decisions/0045-durable-mcp-jobs.md)). Website search, other
 Gutenberg formats, files above 2 GiB, OCR and column reconstruction stay later.
 Explicit narration declarations beyond LibriVox are implemented in stage 1.
-Explicit decoded MP4 access is now
-implemented, with full stage acceptance tracked in issue 60. The remaining 1.0 work is
+Explicit decoded MP4 access passed stage 3 acceptance at `5091ce7`, with its
+[receipt](https://github.com/blisspixel/nemalo/issues/60#issuecomment-6374231710)
+read back before issue 60 closed. The remaining 1.0 work is
 ordered by dependency in the [roadmap](../ROADMAP.md#order-of-work-to-10), starting
-with the remaining audio acceptance before cited evidence and interfaces.
+with cited evidence before interfaces and release gates.
 Cited evidence for agent-led reading is milestone 9
 ([decision 0048](decisions/0048-cited-evidence-before-1-0.md)); generated analysis
 inside Nemalo and model/harness integrations remain post-1.0. Issues 1 and 2 are

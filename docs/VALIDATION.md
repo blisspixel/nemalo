@@ -75,7 +75,7 @@ rights/safety caveats remain; this is not a new rights determination.
 These tests establish native Linux output for the installed tools and exercised
 profiles. They do not establish universal codec/player conformance, another tool
 version's output, exact original-packet/chapter/edit mapping, semantic/audible
-completeness, a release or final stage acceptance. Actual complete output binds
+completeness or a release. Actual complete output binds
 the representation so changed measurements refuse stale cursors.
 
 Normal tests use synthetic bytes and injected adapters or test-binary children,
@@ -86,8 +86,23 @@ source binding and explicit CLI/MCP permission/scope boundaries. The canonical
 verifier passed with 86.8% aggregate coverage and no reported Go vulnerabilities;
 the complete native-cgo race suite and Windows cross-vet passed. Link/anchor and
 whitespace checks passed. Native public CLI/reference/player checks were repeated
-on the final implementation. Exact hosted acceptance remains required for this
-separate increment in [issue 60](https://github.com/blisspixel/nemalo/issues/60).
+on the final implementation.
+
+The accepted head `5091ce7` passed
+[all six hosted jobs](https://github.com/blisspixel/nemalo/actions/runs/40017090664)
+and [Go/Actions CodeQL](https://github.com/blisspixel/nemalo/actions/runs/40017090072).
+Native canonical verification, race and cgo-free binary smokes passed on Linux,
+macOS and Windows, as did all three installers against the published prerelease.
+The full Windows log passed exact RUN/PASS checks for 32 boundary cases: all
+11 reparse roots and descendants, both private-snapshot roots and seven failure
+cases, without skips. Windows explicitly denied replacing the open private file;
+the adapter's proposed payload was discarded and private bytes remained unchanged.
+A separate same-bytes/different-file fixture exercised named/retained identity
+refusal on every platform. The earlier Windows fixture-assumption failure remains
+recorded in [decision 0086](decisions/0086-explicit-decoded-mp4-access.md#native-verification-correction).
+The [stage receipt](https://github.com/blisspixel/nemalo/issues/60#issuecomment-6374231710)
+was read back exactly while issue 60 was open, before closure. This accepts the
+bounded stage 3 source contracts, separately from release/platform-player gates.
 
 ## Acquisition harness
 

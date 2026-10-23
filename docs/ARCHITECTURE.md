@@ -87,7 +87,7 @@ user feedback, not surveillance, session duration, or the number of files acquir
 ## One application core
 
 ```text
-CLI / TUI / JSON / planned MCP
+CLI / TUI / JSON / MCP
               |
       application services
               |

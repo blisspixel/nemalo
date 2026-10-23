@@ -119,10 +119,13 @@ verified, not when code exists. No stage has a time estimate.
    conformance.
 3. **Audio access** (milestone 8). M4B and M4A byte ranges and decoded timing in
    content access, bounded ranges usable by an external player, and output
-   demonstrated with a real audiobook reader or server. Next active work:
-   [issue 60](https://github.com/blisspixel/nemalo/issues/60). The
+   demonstrated with a real audiobook reader or server. Status: implemented and
+   verified for the bounded contracts at `5091ce7`, with all six hosted jobs and
+   Go/Actions CodeQL passing. [Issue 60](https://github.com/blisspixel/nemalo/issues/60)
+   closed after its [acceptance receipt](https://github.com/blisspixel/nemalo/issues/60#issuecomment-6374231710)
+   was read back exactly while open. The
    [AAC range research](docs/RESEARCH.md#aac-range-boundaries-and-decoder-state)
-   records a decoder-state constraint that the design must resolve.
+   records the decoder-state constraint addressed by full sequential decoding.
    Internal exact packet evidence now reuses the checked MP4 tables under
    [decision 0083](docs/decisions/0083-source-bound-mp4-packet-evidence.md).
    Explicit public `mp4-audio/2` adds bounded original packets and sample-entry
@@ -131,18 +134,22 @@ verified, not when code exists. No stage has a time estimate.
    The original-packet increment and its test-only CI repair passed all six
    hosted jobs and Go/Actions CodeQL at `9e248a8`; its
    [acceptance receipt](https://github.com/blisspixel/nemalo/issues/60#issuecomment-6372689487)
-   was read back while issue 60 remained open. Next is the separately approved
-   [explicit decoded-access design](docs/decisions/0086-explicit-decoded-mp4-access.md).
-   It is implemented as `mp4-pcm/1`, with synthetic CLI/MCP tests and native
+   was read back while issue 60 remained open. The separately approved
+   [explicit decoded-access design](docs/decisions/0086-explicit-decoded-mp4-access.md)
+   is implemented as `mp4-pcm/1`, with synthetic CLI/MCP tests and native
    full-reference/player evidence including AAC noise substitution and a cached
-   LibriVox audiobook. Canonical local verification and native-cgo race passed;
-   separate exact hosted acceptance remains required before completing stage 3.
+   LibriVox audiobook. Native installed-tool/player evidence is Linux-specific;
+   all three OSes passed synthetic verification and race checks. This is source
+   acceptance, not a release or universal codec/player conformance.
    `mp4-audio/1` stays units-only;
    decoder samples do not infer original-packet/chapter/presentation mapping.
 4. **Cited evidence and agent reading** (milestone 9). A versioned evidence
    result over the content services, documented citation export, and agent
    guidance for reading a work from its own structure. Depends on stages 1 and
-   3, since evidence names identities and audio ranges.
+   3, since evidence names identities and audio ranges. Next active work is
+   [issue 39](https://github.com/blisspixel/nemalo/issues/39), beginning with
+   selected declared metadata and citation export, then opt-in evidence/replay
+   over existing reads and actual agent-output review.
 5. **Interfaces and platforms** (milestone 6 and the TUI workstream). TUI views
    for jobs, collections, and evidence; the MCP host and platform matrix; native
    macOS and Windows runs of destructive and recovery paths, and of the installers.

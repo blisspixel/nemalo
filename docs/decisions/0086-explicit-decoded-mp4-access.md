@@ -1,8 +1,10 @@
 # 0086: explicit decoded MP4 content access
 
-Status: user-approved design, 2026-10-23; implemented and locally verified,
-including native CLI/reference/player checks. Separate exact hosted verification
-is still required. Not released.
+Status: accepted source implementation, 2026-10-23, at `5091ce7`. All six hosted
+jobs and Go/Actions CodeQL passed; native CLI/reference/player checks and the
+[stage 3 receipt](https://github.com/blisspixel/nemalo/issues/60#issuecomment-6374231710)
+were verified before issue 60 closed. Native installed-tool/player evidence is
+Linux-specific. Not released.
 The user explicitly approved the bounded decoded-access proposal and revision
 of the earlier check-only constraint. The preceding packet increment and CI
 repair passed all six hosted jobs and Go/Actions CodeQL at `9e248a8`; its
