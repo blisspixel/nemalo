@@ -46,6 +46,9 @@ callback can keep the selected metadata stable while the existing content servic
 retrieves and revalidates bytes. Test nested shared reads and writer exclusion on
 all native platforms. Explicit full decoded evidence can retain the reader lock
 for the existing five-minute ceiling; never upgrade it to write authority.
+The outer evidence operation, including metadata and lock acquisition, also has
+a five-minute ceiling. Existing inner retrieval deadlines and a shorter caller
+deadline still apply; metadata work cannot restart or extend that allowance.
 Metadata refuses a torn control-journal tail without repairing it. Ordinary
 content lookup retains its existing complete-prefix semantics; a recoverable
 partial append must not appear as complete evidence metadata.
@@ -79,13 +82,16 @@ metadata digest additionally binds the complete portable view, including current
 recording relationships and user statements; a different track's change cannot
 silently attach a new recording identity to a replayed passage.
 For retrieval digest version 1, copy the successful `content.Result`, clear
-`Evidence`, `Limitations`, `SourcePath` and `CatalogID`, serialize with Go's
+`Evidence`, `Limitations`, `SourcePath` and `CatalogID`. Put that copy in `result`
+and the caller's original bounded read parameters in `selection`, then serialize
+this two-field object with Go's
 `encoding/json`, decode with `UseNumber`, then reserialize the resulting objects
 with sorted map keys and hash those bytes. Preserve number literals without a
 float conversion; this makes digest version 1 independent of struct field order.
 This is Nemalo's versioned representation, not a general canonical-JSON standard.
 It binds actual text/resource bytes,
-typed ranges, coverage, stop facts and continuation, independently of presentation
+typed ranges, coverage, stop facts, continuation and the requested bounds,
+independently of presentation
 prose and source path display. New evidence rules require a new schema/token
 version; earlier references remain explicitly selectable or visibly unsupported.
 
