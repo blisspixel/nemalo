@@ -67,25 +67,30 @@ func TestJobScopeReadsCanonicalHoldingsWithoutBodiesOrWrites(t *testing.T) {
 
 func TestJobScopeObservesOnlyImmutableIdentityDuringWriter(t *testing.T) {
 	root := scopeLibrary(t)
-	c, _, err := openControl(root, true)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer c.close()
 	// Invalid mutable bytes prove the busy branch does not parse that journal.
 	if err := os.WriteFile(filepath.Join(root, ".nemalo", operationsName), []byte("uncommitted writer work"), 0600); err != nil {
 		t.Fatal(err)
 	}
 	before := importTree(t, root)
-	if _, err := LibraryStatus(context.Background(), root); !errors.Is(err, ErrBusy) {
-		t.Fatal("ordinary status lock was weakened", err)
-	}
-	err = WithJobScope(context.Background(), root, func(scope JobScope) error {
-		if scope.Catalog != "busy" || scope.LibraryID != "library:"+strings.Repeat("a", 32) || scope.Holdings != nil {
-			t.Fatal("writer conferred mutable catalog evidence", scope)
+	// Windows byte-range locks reject reads through a second handle even
+	// for an empty file. Inventory the lock bytes outside the lock interval;
+	// every busy-state assertion still runs under the actual exclusive lock.
+	err := func() (err error) {
+		c, _, err := openControl(root, true)
+		if err != nil {
+			return err
 		}
-		return nil
-	})
+		defer func() { err = errors.Join(err, c.close()) }()
+		if _, err := LibraryStatus(context.Background(), root); !errors.Is(err, ErrBusy) {
+			t.Fatal("ordinary status lock was weakened", err)
+		}
+		return WithJobScope(context.Background(), root, func(scope JobScope) error {
+			if scope.Catalog != "busy" || scope.LibraryID != "library:"+strings.Repeat("a", 32) || scope.Holdings != nil {
+				t.Fatal("writer conferred mutable catalog evidence", scope)
+			}
+			return nil
+		})
+	}()
 	if err != nil || !reflect.DeepEqual(before, importTree(t, root)) {
 		t.Fatal("busy identity observation failed or wrote", err)
 	}

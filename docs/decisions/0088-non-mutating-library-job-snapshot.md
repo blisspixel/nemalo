@@ -144,6 +144,13 @@ active library writer without granting mutable-catalog evidence, plus CLI/servic
 parity and invalid flags before any writer store opens. Existing job writers and
 MCP start/scope/permission tests remain required.
 
+Compare complete inventories before acquiring an exclusive writer lock and after
+releasing it; keep the actual busy-state assertions inside that interval. Windows
+[LockFileEx](https://learn.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-lockfileex)
+denies reads through another handle to its locked region, including a region past
+EOF. The inventory helper must not read even an empty lock file while it is held.
+The observer itself checks lock identity and takes no lock-file body read.
+
 Run full canonical verification, native cgo race and actual all-six hosted checks,
 including exact Windows boundary cases. Publish an issue receipt against the
 implemented prerequisite. Keep issue 59 open until its separate consumer,
