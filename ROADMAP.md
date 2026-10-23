@@ -95,150 +95,28 @@ verified, not when code exists. No stage has a time estimate.
    collection contracts. The acceptance audit below records the evidence and
    remaining release/platform limits; registry confirmation and broader provider
    coverage do not replace unknown evidence with inferred identities.
-2. **Intake completeness** (milestones 2 and 4). Old-style RAR volume names
-   (`.rar`, `.r00`), split ZIPs, nested archives within the existing bounds,
-   PAR2 sets inventoried and retained without repair, cleanup of RAR and 7z
-   sources and volume sets with every member accounted for, and Windows reparse
-   point tests. These close the ingest and cleanup acceptance for messy folders.
-   Progress: cleanup of 7z archives and split 7z sets
-   ([decision 0051](docs/decisions/0051-cleanup-of-7z-and-split-sets.md)).
-   Old-style RAR intake now checks each volume's role/ordinal and cross-volume
-   split continuity before reading an assembled set; inconclusive sets stay
-   preserved and cleanup requires the separate coverage contract below
-   ([decision 0056](docs/decisions/0056-rar-volume-identity.md)).
-   Exact old-name isolated-reader fallback diagnostics now preserve those checks
-   across later starting positions and letter rollover, without adding cleanup
-   authority ([decision 0077](docs/decisions/0077-old-rar-isolated-probe-names.md)).
-   Read-only root old-name RAR4/RAR5 coverage is implemented under a separate
-   internal opt-in and measured old-set field. That read-only increment kept
-   application cleanup disabled. Native
-   stored and compressed reference checks passed, with full hosted acceptance
-   tracked in issue 57 before any old-name writer decision
-   ([decision 0078](docs/decisions/0078-read-only-old-name-rar-set-coverage.md)).
-   Completely covered old-name root sets now use separate `rar4-old-set/1` and
-   `rar5-old-set/1`, with exact held leaves, expected/final source hashes, fresh
-   whole-set purge and immutable partial recovery. Earlier proofs retain their
-   scopes. Native predecessor retention/raw restore and separate current recovery
-   checks passed; full writer acceptance is tracked in issue 57. That root-only
-   increment left nested-volume work unfinished
-   ([decision 0079](docs/decisions/0079-old-name-rar-set-cleanup.md)).
-   Internal opt-in nested-volume intake and read-only coverage now reuse those
-   checked adapters for modern/old RAR4/RAR5, split 7z and both split ZIP layouts.
-   Every part, source chain and shared work limit remains accounted for. That
-   read-only increment kept application callers false and supplied no cleanup authority.
-   Native generated checks passed, with full hosted acceptance tracked in issue 57
-   before any separate writer decision
-   ([decision 0080](docs/decisions/0080-opt-in-nested-volume-set-coverage.md)).
-   That read-only prerequisite and its test-only counter-housekeeping correction
-   passed all six hosted jobs at `1f63374`, with exact acceptance readback while
-   issue 57 stayed open. Complete nested-volume intake and cleanup now reuse the
-   same checked groups under distinct `archive-tree/3`. Root facts, held leaves,
-   original hashes, fresh whole-tree purge and immutable partial recovery remain
-   required. The writer passed all six hosted jobs and Go/Actions CodeQL at
-   `1a9e67b`; its [final receipt](https://github.com/blisspixel/nemalo/issues/57#issuecomment-6368967562)
-   was read back exactly while issue 57 was open, before closure
+2. **Intake completeness** (milestones 2 and 4). Status: implemented and
+   verified for the bounded contracts, with
+   [issue 57](https://github.com/blisspixel/nemalo/issues/57) closed after its
+   [acceptance receipt](https://github.com/blisspixel/nemalo/issues/57#issuecomment-6368967562)
+   was read back while open. The writer passed all six hosted jobs and
+   Go/Actions CodeQL at `1a9e67b`.
+   Supported modern/old-name RAR4/RAR5 volume sets, ZIP byte chunks and disk
+   segments, split 7z and bounded nested trees share canonical intake and
+   complete member accounting. PAR2 metadata remains declaration/checksum
+   evidence without recovery or cleanup authority; recovery material stays.
+   Native Windows reparse-point boundaries have a separate required test gate.
+   Import preserves sources. Cleanup needs complete physical/output coverage,
+   verified held leaves, exact source hashes, versioned proof bindings, fresh
+   whole-source purge and immutable partial recovery. Unknown, incomplete,
+   ambiguous and unsupported material stays preserved. Earlier proof IDs keep
+   their scopes; later nested-volume authority is `archive-tree/3`
    ([decision 0082](docs/decisions/0082-nested-volume-tree-cleanup.md)).
-   Status: implemented and verified for these bounded intake and cleanup contracts. The
-   [acceptance audit](docs/VALIDATION.md#stage-2-archive-intake-and-recoverable-cleanup)
-   records tested behavior and limits. This source acceptance is separate from
-   production release and broader host/reader conformance.
-   Split ZIP intake now handles byte chunks and true disk segments through
-   checked private snapshots
-   ([decision 0057](docs/decisions/0057-split-zip-intake.md)).
-   Nested standalone ZIP/RAR/7z intake shares depth, output, member, reader,
-   diagnostic, process, and deadline limits across each outer archive tree;
-   intake preserves all original sources
-   ([decision 0058](docs/decisions/0058-bounded-nested-intake.md)).
-   Explicit PAR2 metadata inventory groups declared set IDs, preserves conflicting
-   declarations, and distinguishes packet checksums from unverified protected
-   data; ingest and cleanup retain recovery material
-   ([decision 0059](docs/decisions/0059-par2-metadata-inventory.md)).
-   Native Windows reparse-point fixtures now require real junctions and symbolic
-   links for root, inventory and library recovery boundaries, with an explicit
-   hosted execution gate ([decision 0008](docs/decisions/0008-filesystem-and-display-boundaries.md)).
-   Ordinary ZIP cleanup now requires complete directory/local-record accounting;
-   purge rechecks even historical held ZIPs and pending manifests before removal
-   ([decision 0060](docs/decisions/0060-complete-zip-cleanup-accounting.md)).
-   Complete ZIP byte chunks now move as one recoverable set after the shared
-   coverage and held-member checks. Purge binds a current whole-set proof before
-   removing any part and rehashes remaining parts on resume
-   ([decision 0061](docs/decisions/0061-split-zip-stream-cleanup.md)).
-   True ZIP disk segments now qualify after raw disk/count/offset/header checks
-   and the shared framing proof over a byte-preserving view, including directories
-   spanning segments. Their distinct version-bound group includes the terminal
-   `.zip` ([decision 0062](docs/decisions/0062-segmented-zip-cleanup.md)).
-   Nested ZIP/7z cleanup now requires complete coverage of every container,
-   one shared proof-read budget and verified held leaves. Exact chains bind to
-   `archive-tree/1` and a leaf digest in the recoverable purge intent
-   ([decision 0063](docs/decisions/0063-complete-archive-tree-cleanup.md)).
-   Every new 7z move now uses that versioned proof, including flat archives and
-   split sets. Historical unversioned 7z entries retain every part for restore;
-   acceptance is tracked in [issue 58](https://github.com/blisspixel/nemalo/issues/58)
-   ([decision 0065](docs/decisions/0065-versioned-7z-coverage.md)).
-   That increment did not authorize RAR volume cleanup. An unsupported RAR child
-   still preserves its outer source under every later proof.
-   A standalone read-only RAR5 framing accountant now binds physical records to
-   the maintained reader's exact table. Historical RAR entries without a supported
-   proof stay for restore. This framing evidence alone does not authorize cleanup;
-   acceptance evidence is
-   tracked in [issue 57](https://github.com/blisspixel/nemalo/issues/57)
-   ([decision 0064](docs/decisions/0064-bounded-rar-framing-accounting.md)).
-   Standalone root RAR5 cleanup is now implemented under its own `rar5-frames/1`
-   with exact direct leaves, full fresh purge checks and grouped recovery
-   ([decision 0066](docs/decisions/0066-standalone-rar5-cleanup.md)). RAR4, volume
-   and nested layouts remained outside that subset, which does not complete stage 2.
-   A separate read-only RAR4 framing accountant is implemented, with acceptance
-   tracked in issue 57. Its facts alone grant no RAR4 cleanup authority
-   ([decision 0067](docs/decisions/0067-read-only-rar4-framing.md)).
-   Standalone RAR4 reader binding is now implemented behind an internal explicit
-   opt-in, initially leaving the application cleanup gate closed
-   ([decision 0068](docs/decisions/0068-opt-in-rar4-reader-binding.md)).
-   Known zero-high-size and extended-time RAR4 metadata is now accounted for under
-   a separate measured extension; acceptance remains tracked in issue 57
-   ([decision 0069](docs/decisions/0069-bounded-rar4-time-and-size-metadata.md)).
-   Standalone root RAR4 cleanup is now implemented with its distinct
-   `rar4-frames/1`, selected only from the checked outer signature, exact held
-   leaves and the same version-bound purge/recovery protocol. Acceptance is
-   tracked in issue 57 ([decision 0070](docs/decisions/0070-standalone-rar4-cleanup.md)).
-   Unicode and unsupported metadata remain preserved. That standalone increment
-   did not authorize volumes or finish stage 2.
-   Read-only nested RAR4/RAR5 coverage is now implemented behind an explicit
-   internal opt-in, reusing checked child snapshots, strict standalone preflight
-   and the shared framing/table/work limits. Its initial application guard kept
-   all nested sources; acceptance is tracked in issue 57
-   ([decision 0071](docs/decisions/0071-opt-in-nested-rar-coverage.md)).
-   Covered nested trees containing standalone RARs now use the separate
-   `archive-tree/2`, selected by measured covered containers, including empty
-   children. Every leaf must be held, and fresh purge and durable recovery bind
-   the exact source group and leaves. Existing proof IDs retain their meanings
-   ([decision 0072](docs/decisions/0072-nested-rar-cleanup.md)); acceptance is
-   tracked in issue 57. That tree increment did not authorize RAR outer sets.
-   Read-only modern root RAR5 set coverage is implemented behind an internal
-   explicit opt-in, binding each physical volume to its isolated table and the
-   complete set to the exact assembled extraction table. Source-copy and proof
-   work share budgets; that read-only increment kept the application flag false
-   and every RAR set. Acceptance remains tracked in issue 57
-   ([decision 0073](docs/decisions/0073-read-only-rar5-set-coverage.md)).
-   Completely covered modern root RAR5 sets now have distinct `rar5-set/1`
-   cleanup authority, one recoverable set entry, exact held leaves and whole-set
-   fresh purge with immutable partial recovery. Existing proof IDs retain their
-   scopes. That modern proof excludes old-name and nested sets; their later
-   separate authorities and acceptance are recorded above.
-   Separate full acceptance remains tracked in issue 57
-   ([decision 0074](docs/decisions/0074-modern-rar5-set-cleanup.md)).
-   Modern root RAR4 sets now have separate internal read-only framing/table
-   coverage with explicit opt-in. Physical ordinals, split roles, known metadata,
-   shared work and complete logical selections are checked through the common
-   matcher. That read-only increment left application cleanup disabled and gave
-   no existing proof RAR4 set authority. Full acceptance is recorded in issue 57
-   ([decision 0075](docs/decisions/0075-read-only-rar4-set-coverage.md)).
-   Completely covered modern root RAR4 sets now select distinct `rar4-set/1`
-   cleanup authority from measured format, with the same verified held-leaf,
-   whole-set fresh purge and immutable partial recovery protocol. RAR5 and older
-   proof meanings stay unchanged. Implementation is separate from full acceptance,
-   tracked in issue 57 ([decision 0076](docs/decisions/0076-modern-rar4-set-cleanup.md)).
-   Those root proofs exclude nested volume sets; their separate /3 writer and
-   acceptance audit are described above.
+   The [acceptance audit](docs/VALIDATION.md#stage-2-archive-intake-and-recoverable-cleanup),
+   [archive operations](docs/DEVELOPMENT.md) and linked decisions record the
+   supported layouts, earlier read-only prerequisites, tests and limitations.
+   This source acceptance is separate from a release and broader host/reader
+   conformance.
 3. **Audio access** (milestone 8). M4B and M4A byte ranges and decoded timing in
    content access, bounded ranges usable by an external player, and output
    demonstrated with a real audiobook reader or server. Next active work:
@@ -250,9 +128,13 @@ verified, not when code exists. No stage has a time estimate.
    Explicit public `mp4-audio/2` adds bounded original packets and sample-entry
    evidence through shared CLI/JSON/MCP services, backed by a verified private
    copy ([decision 0085](docs/decisions/0085-verified-mp4-packet-access.md)).
-   Its full verification is a separate gate. Decoded timing, playable range
-   handoff and complete real-player acceptance remain unfinished;
-   `mp4-audio/1` is still units-only.
+   The original-packet increment and its test-only CI repair passed all six
+   hosted jobs and Go/Actions CodeQL at `9e248a8`; its
+   [acceptance receipt](https://github.com/blisspixel/nemalo/issues/60#issuecomment-6372689487)
+   was read back while issue 60 remained open. Next is the separately approved
+   [explicit decoded-access design](docs/decisions/0086-explicit-decoded-mp4-access.md),
+   not yet implemented. Decoded timing, playable range handoff and complete
+   real-player acceptance remain unfinished; `mp4-audio/1` is still units-only.
 4. **Cited evidence and agent reading** (milestone 9). A versioned evidence
    result over the content services, documented citation export, and agent
    guidance for reading a work from its own structure. Depends on stages 1 and

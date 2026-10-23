@@ -263,6 +263,44 @@ authenticate bytes read earlier and subsequently changed back. Reuse checked
 opens and copy/hash mechanisms with explicit read, temporary-disk and cancellation
 bounds when integrating public packet access.
 
+## Full sequential decoded-range feasibility
+
+Reviewed 2026-10-23 for the user-approved
+[explicit decoded-access design](decisions/0086-explicit-decoded-mp4-access.md).
+The application feature remains unimplemented. The
+[sample-count trimming contract](https://ffmpeg.org/ffmpeg-filters.html#atrim)
+distinguishes counted samples from timestamps. A full sequential decoder-output
+stream permits direct sample-byte selection without relying on packet-count
+inference, timestamp seeking or short preroll. A whole-output digest can bind
+later continuations to the actual observed transformation, rather than a tool
+version string alone. These are design choices, not semantic mapping proofs.
+
+An ignored Go prototype used installed FFmpeg/FFprobe 9.0.2 to count and hash a
+full sequential mono signed 16-bit decode while retaining only a bounded interval.
+Forty-eight selections across eight synthetic AAC/ALAC/MP3/Opus profiles matched
+a separate whole-output reference exactly. The profiles included AAC with
+perceptual noise substitution enabled/disabled and a tone. Start, nonaligned,
+middle, tail, end-crossing and past-end selections were checked, including odd
+stdout chunk boundaries; past-end cases retained no bytes. All originals stayed
+unchanged. Source files and generated outputs stayed outside the checkout.
+
+Forty nonempty selected intervals were written by the client as small mono PCM
+WAV files and played through mpv 0.41.0 to raw PCM byte-for-byte. The
+[RIFF contract](https://learn.microsoft.com/en-us/windows/win32/xaudio2/resource-interchange-file-format--riff-)
+defines checked chunk lengths/alignment, and
+[mpv PCM output](https://mpv.io/manual/stable/#audio-output-drivers) permits a
+separate raw-output comparison. Installed flags were checked; the experiment
+disabled user configuration, scripts, saved position, interactive input, network
+protocols and speaker output. It created no Nemalo feature, decoder permission,
+library publication, playback history or release evidence.
+
+This establishes native Linux feasibility for the tested output transform. It
+does not establish other tool versions, platforms, semantic chapter alignment,
+general edit-list mapping or application failure recovery. The approved design
+requires explicit decoder authority, complete private-snapshot/full-output
+binding, streamed-work and response limits, failure/cancellation discard, native
+public-client verification and the full exact hosted gate before acceptance.
+
 ## Evidence still required
 
 No competitor runtime comparison, complete source audit, Go benchmark, or plugin-host
