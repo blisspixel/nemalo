@@ -59,3 +59,16 @@ checks, then actual all-six hosted success and Go/Actions CodeQL on the exact
 new commit. Report native Windows timing without inferring it from Linux or
 calling differing hosts a controlled benchmark. Keep issue 60 open for the
 remaining public audio contract, initialization, timing and player work.
+
+## Local evidence
+
+Ordinary filtered execution of the four original roots and selector checks
+passed. Canonical verification passed at 86.6% aggregate coverage, including
+pinned Staticcheck and govulncheck with no reported vulnerabilities. The library
+covered suite took 41.633 seconds. Full native-cgo repository race passed; the
+library body took 118.504 seconds and the complete process 126.317 seconds.
+The preceding complete process took 171.692 seconds. Exact case comparison
+retained all 1,612 original library leaf identities, with no missing cases.
+Windows library cross-vet and document links/anchors/whitespace checks passed.
+These observations are local evidence, not hosted acceptance or a controlled
+performance benchmark. Actual exact-final all-six results remain required.

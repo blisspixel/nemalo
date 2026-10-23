@@ -15,6 +15,9 @@ func TestOldRAR4SetRecovery(t *testing.T) {
 }
 
 func TestOldRARSetExactRecoveryBindings(t *testing.T) {
+	if runScheduledFixtures(t, []string{"4", "5"}) {
+		return
+	}
 	for _, version := range []int{4, 5} {
 		t.Run(fmt.Sprint(version), func(t *testing.T) {
 			factory, opposite := newOldRAR4SetFixture, "rar5_old_set"

@@ -92,6 +92,9 @@ func TestNestedVolumeTreeRecovery(t *testing.T) {
 }
 
 func TestNestedVolumeRestoreAndImmutableKnownBindings(t *testing.T) {
+	if runScheduledFixtures(t, []string{"zip_chunks", "rar5_set"}) {
+		return
+	}
 	for _, outer := range []string{"zip_chunks", "rar5_set"} {
 		t.Run(outer, func(t *testing.T) {
 			factory := func(t *testing.T, count int, build func([]byte) []byte) streamFixture {

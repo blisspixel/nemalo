@@ -36,6 +36,10 @@ var fixtureSchedule = []struct {
 	{"TestOldRAR4SetPartCountsAndNestedAuthority", []string{""}},
 	{"TestOldRAR5SetPartCountsAndNestedAuthority", []string{""}},
 	{"TestNestedVolumeTreeRecovery", []string{"zip_chunks", "rar5_set"}},
+	{"TestNestedVolumeRestoreAndImmutableKnownBindings", []string{"zip_chunks", "rar5_set"}},
+	{"TestOldRARSetExactRecoveryBindings", []string{"4", "5"}},
+	{"TestNestedVolumeCleanupBindsAllOuterAndChildSelectionLayouts", []string{""}},
+	{"TestFlatSevenVersionedSetRecovery", []string{""}},
 }
 
 func fixtureGroups(root string) []string {

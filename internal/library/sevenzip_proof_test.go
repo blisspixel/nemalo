@@ -211,6 +211,9 @@ func TestHistoricalSevenPurgePreservesEveryPartAndRestore(t *testing.T) {
 }
 
 func TestFlatSevenVersionedSetRecovery(t *testing.T) {
+	if runScheduledFixtures(t, []string{""}) {
+		return
+	}
 	for _, scenario := range []struct {
 		name string
 		run  func(*testing.T, zipFixtureFactory)

@@ -12,6 +12,9 @@ var nestedVolumeOuterLayouts = []string{"zip", "7z", "rar4", "rar5", "zip_chunks
 var nestedVolumeChildLayouts = []string{"rar4", "rar5", "old4", "old5", "zip_chunks", "zip_segments", "7z_chunks"}
 
 func TestNestedVolumeCleanupBindsAllOuterAndChildSelectionLayouts(t *testing.T) {
+	if runScheduledFixtures(t, []string{""}) {
+		return
+	}
 	var cases [][2]string
 	for _, outer := range nestedVolumeOuterLayouts {
 		cases = append(cases, [2]string{outer, "old5"})
