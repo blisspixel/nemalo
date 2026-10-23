@@ -500,6 +500,12 @@ func TestEvidenceDigestExcludesPresentationButBindsSelectionAndPayload(t *testin
 	if err != nil {
 		t.Fatal(err)
 	}
+	// This value hashes the frozen version 1 two-field JSON object, including
+	// the original Result's mandatory empty/null fields. Adding a new result
+	// field must not silently reinterpret already issued evidence references.
+	if first != "6fb2cba3305179c18bd6e48fad04c908e8a5b282c967e14b377505564cb5d63d" {
+		t.Fatal("version 1 retrieval encoding changed", first)
+	}
 	result.SourcePath, result.CatalogID, result.Limitations, result.Evidence = "moved/path", "library:display-only", []string{"revised prose"}, &content.Evidence{Reference: "not part of its own digest"}
 	if got, err := retrievalDigest(result, selection); err != nil || got != first {
 		t.Fatal("display prose/recursive evidence affected identity", got, err)

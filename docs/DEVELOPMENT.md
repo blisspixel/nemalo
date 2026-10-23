@@ -20,8 +20,10 @@ exports recorded metadata as CSL-JSON plus an uncertainty/provenance sidecar.
 These are read-only and offline; citation export opens no stored bodies, and
 evidence keeps each representation's existing retrieval and decoder boundaries.
 See [evidence and citation export](CONTENT-ACCESS.md#evidence-and-citation-export).
-Milestone 9's actual semantic-output review and full hosted acceptance remain
-outstanding; implemented interfaces alone do not complete the stage.
+The [five selected semantic cases](CITED-EVIDENCE-REVIEW.md) are reviewed
+separately from the exact hosted acceptance ledger in
+[issue 39](https://github.com/blisspixel/nemalo/issues/39). Implemented interfaces
+alone do not complete the stage or establish a release.
 `collection diff`, `collection status`, and `collection acquire` compare exact
 declarations, resolve holdings, and acquire missing selections.
 Search defaults to Open Library work metadata; `--source archive` selects Internet

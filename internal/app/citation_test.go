@@ -191,6 +191,11 @@ func TestEvidenceJSONDigestPreservesExactNumbersAndOrdersObjects(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	// Independently hashed fixed JSON pins number preservation and recursive
+	// key ordering for the published digest construction.
+	if one != "6d6c7e5d124495d74f1f493879c62cb3165ea77a569bdcdb7e27201cb6f8f296" {
+		t.Fatal("version 1 JSON digest changed", one)
+	}
 	two, err := canonicalDigest(b)
 	if err != nil || one != two {
 		t.Fatal("field order or large integer changed identity", one, two, err)

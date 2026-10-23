@@ -114,7 +114,14 @@ func TestNestedVolumeActiveDeadlineRetainsUnresolvedGroup(t *testing.T) {
 	defer cancel()
 	saved := SevenZip
 	entered := false
-	SevenZip = func() (string, error) { entered = true; <-ctx.Done(); return "", ctx.Err() }
+	SevenZip = func() (string, error) {
+		entered = true
+		<-ctx.Done()
+		// Finish caller cancellation before unblocking the fake lookup. Done
+		// can close before cancellation reaches ExtractTree's derived context.
+		cancel()
+		return "", ctx.Err()
+	}
 	t.Cleanup(func() { SevenZip = saved })
 	x, err := ExtractTree(ctx, src, []string{"outer.zip"}, dst, books, nestedAllSetLimits())
 	if !entered || !errors.Is(err, context.DeadlineExceeded) || x.Complete || x.Whole || x.CoveredVolumeSets != 0 {

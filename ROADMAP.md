@@ -146,10 +146,11 @@ verified, not when code exists. No stage has a time estimate.
 4. **Cited evidence and agent reading** (milestone 9). A versioned evidence
    result over the content services, documented citation export, and agent
    guidance for reading a work from its own structure. Depends on stages 1 and
-   3, since evidence names identities and audio ranges. Next active work is
-   [issue 39](https://github.com/blisspixel/nemalo/issues/39), beginning with
-   selected declared metadata and citation export, then opt-in evidence/replay
-   over existing reads and actual agent-output review.
+   3, since evidence names identities and audio ranges. Selected declared metadata,
+   citation export, opt-in evidence/replay and the
+   [selected reading review](docs/CITED-EVIDENCE-REVIEW.md) are implemented.
+   [Issue 39](https://github.com/blisspixel/nemalo/issues/39) records the exact
+   acceptance head and hosted receipt; its full gate precedes stage 5.
 5. **Interfaces and platforms** (milestone 6 and the TUI workstream). TUI views
    for jobs, collections, and evidence; the MCP host and platform matrix; native
    macOS and Windows runs of destructive and recovery paths, and of the installers.
@@ -799,12 +800,14 @@ Acceptance:
 
 ## Milestone 9: cited evidence and agent reading
 
-Status: implementation in progress, not stage accepted. Selected journal metadata,
-CSL-JSON citation export and opt-in managed evidence/replay are implemented locally
-through shared services, CLI JSON and scoped MCP. Focused synthetic checks cover
-exact ranges, replay, permission separation, conflicts and failure discard.
-Actual semantic-output review and full local/native/exact-hosted verification
-remain outstanding. The pre-1.0 part of
+Status: implemented, with the exact hosted acceptance ledger in
+[issue 39](https://github.com/blisspixel/nemalo/issues/39). Selected journal metadata,
+CSL-JSON citation export and opt-in managed evidence/replay use shared services,
+CLI JSON and scoped MCP. Synthetic checks cover exact ranges, replay, permission
+separation, conflicts and failure discard; full local/native checks and the
+[five selected semantic cases](docs/CITED-EVIDENCE-REVIEW.md) are recorded
+separately from hosted acceptance. This is source work, not a release.
+The pre-1.0 part of
 [issue 37](https://github.com/blisspixel/nemalo/issues/37) and
 [issue 38](https://github.com/blisspixel/nemalo/issues/38)
 ([decision 0048](docs/decisions/0048-cited-evidence-before-1-0.md)). Depends on

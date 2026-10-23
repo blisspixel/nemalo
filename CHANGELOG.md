@@ -8,7 +8,8 @@
   selection and the complete retrieved result; it grants no scope or decoder
   permission. Add read-only CSL-JSON citation export with separate unknowns and
   provenance, and shared agent guidance for structural reading and qualification.
-  Stage-wide semantic and hosted acceptance remain outstanding.
+  Record bounded native and semantic review separately from exact hosted stage
+  acceptance; this source work is not a release.
 
 - Add explicit `mp4-pcm/1` content access with `--decode` on every invocation,
   including continuation. Reuse the installed FFmpeg adapter to measure and hash

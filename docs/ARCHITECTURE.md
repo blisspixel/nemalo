@@ -299,8 +299,10 @@ permissions. Every failure discards the payload. Shared `library citation` and
 `library_citation` export CSL-JSON separately from provenance and unknown fields,
 without opening stored bodies or historical receipt paths. See
 [decision 0087](decisions/0087-source-bound-evidence-and-citations.md) and the
-[public contract](CONTENT-ACCESS.md#evidence-and-citation-export). Semantic-output
-and hosted stage acceptance remain outstanding.
+[public contract](CONTENT-ACCESS.md#evidence-and-citation-export).
+[Selected semantic review](CITED-EVIDENCE-REVIEW.md) and the exact hosted
+acceptance ledger in [issue 39](https://github.com/blisspixel/nemalo/issues/39)
+remain separate from interface implementation and release claims.
 
 Expand bounded text extraction and search per supported format. Derived indexes key
 on asset hash and extractor version; rebuild them without modifying originals.

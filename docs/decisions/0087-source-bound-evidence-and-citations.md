@@ -1,9 +1,10 @@
 # 0087: source-bound evidence and declared citation export
 
 Status: decision recorded before Go implementation, 2026-10-23. Metadata, citation
-and evidence/replay are now implemented locally with focused synthetic checks.
-Full local/native/exact-hosted and semantic stage acceptance remain outstanding;
-not released. Stage 3 passed all six hosted jobs and Go/Actions CodeQL at
+and evidence/replay are implemented with full local/native checks and a
+[bounded semantic review](../CITED-EVIDENCE-REVIEW.md). The exact hosted acceptance
+head and receipt are recorded on issue 39; this is not a release.
+Stage 3 passed all six hosted jobs and Go/Actions CodeQL at
 `5091ce7`; its [receipt](https://github.com/blisspixel/nemalo/issues/60#issuecomment-6374231710)
 was read back while issue 60 was open, before closure. Stage 1 is also accepted.
 This implements the pre-1.0 boundary in [decision 0048](0048-cited-evidence-before-1-0.md)
@@ -160,4 +161,4 @@ The planned CLI shapes are `library citation LIBRARY --asset sha256:HASH --json`
 and `content read LIBRARY --root LIBRARY --asset sha256:HASH --evidence --json`.
 A replay repeats the same selection/max-bytes with `--evidence-reference TOKEN`;
 an audio replay still supplies the existing explicit decode permission. These are
-implemented interfaces with stage acceptance still pending as stated above.
+implemented interfaces; the stage acceptance ledger is linked above.

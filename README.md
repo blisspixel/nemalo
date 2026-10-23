@@ -25,10 +25,12 @@ No telemetry or required AI service.
 - Retrieve bounded, source-bound text, MP3 ranges and original MP4 packets through
   shared CLI, JSON and MCP services, with coverage gaps reported. Explicitly
   selected installed FFmpeg access returns decoded MP4 ranges as small WAV files.
+- Return exact cited evidence and export recorded citation metadata, with source
+  identities, range bounds, gaps and unknown fields retained.
 
 Published prereleases may lag the source tree. Checks provide limited evidence,
-never a safety or completeness guarantee. Cited evidence and some interface work
-remain unfinished.
+never a safety or completeness guarantee. Interface work and release gates
+remain unfinished; stage acceptance is recorded in the linked roadmap and issues.
 See [capabilities and limits](docs/DEVELOPMENT.md), the [roadmap](ROADMAP.md), and
 [published releases](https://github.com/blisspixel/nemalo/releases).
 

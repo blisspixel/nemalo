@@ -74,8 +74,10 @@ read returns local embedded bytes; it never fetches links or renders those bytes
 
 Managed `content read` supports optional `--evidence` through the shared
 application service. Ordinary reads retain their existing JSON; only opted-in
-results add `evidence`, schema `nemalo-evidence/1`. This implementation is local
-work pending full hosted and milestone 9 semantic acceptance, not a release.
+results add `evidence`, schema `nemalo-evidence/1`. See the
+[selected semantic review](CITED-EVIDENCE-REVIEW.md) and the exact hosted
+acceptance ledger in [issue 39](https://github.com/blisspixel/nemalo/issues/39).
+Implementation and stage acceptance are distinct from a release.
 
 ```sh
 nemalo content read /path/library --root /path/library --asset sha256:HASH --unit 1 --max-bytes 4096 --evidence --json

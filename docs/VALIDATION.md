@@ -41,16 +41,32 @@ inventories and hashes of the copied validation libraries remained unchanged.
 This installed-tool/process evidence is Linux-specific; all native hosted
 platform acceptance is still required.
 
-Actual CLI citation item arrays for Pride and Prejudice and arXiv
-`1706.03762v7`/`v1` passed the official CSL draft-07 input schema pinned in
+Actual CLI citation item arrays for Pride and Prejudice, Vindication, Montaigne
+and arXiv `1706.03762v7`/`v1` passed the official CSL draft-07 input schema pinned in
 [decision 0087](decisions/0087-source-bound-evidence-and-citations.md), using the
 existing pinned Go JSON Schema validator. Unknown bibliographic fields remained
 outside the standard item array. Version 1 retained its unknown-license statement
 rather than borrowing version 7's declaration. No provider, scanner or metadata
 network request ran during those native calls. This run used fixture copies
-outside the checkout and kept full local reports alongside them. Semantic reading
-review and the exact hosted gate remain separate
-outstanding stage acceptance work; these mechanical checks do not close issue 39.
+outside the checkout and kept full local reports alongside them. The
+[actual responses and selected semantic review](CITED-EVIDENCE-REVIEW.md) cover
+all five roadmap cases, including two corrected draft presentation mistakes.
+All 17 selected native CLI results replayed exactly. This same-session review
+and these mechanical checks are distinct from the exact hosted acceptance
+receipt on [issue 39](https://github.com/blisspixel/nemalo/issues/39).
+
+The first candidate `66d75fb` failed Linux's hosted race job in
+[run 40031395975](https://github.com/blisspixel/nemalo/actions/runs/40031395975),
+in the existing nested-volume active-deadline test. Its fake lookup resumed when
+the caller's Done channel closed, before the derived tree context necessarily
+observed cancellation. The pinned Go 1.27.3 source closes that channel before
+walking child contexts; a separate race-instrumented reproducer observed pending
+children after Done and none after synchronized cancellation returned. The test
+now completes caller cancellation before unblocking its fake lookup, retaining
+the ten-second deadline, fixture and every original assertion. Three focused
+native race repetitions passed after the change. No production archive policy,
+cleanup authority, worker count, instrumentation or timeout was changed. The
+repaired candidate still requires its own exact full hosted gate.
 
 ## Original MP4 packet access
 
