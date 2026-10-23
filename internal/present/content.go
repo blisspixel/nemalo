@@ -20,7 +20,7 @@ func Content(r content.Result) string {
 	field(&b, "Representation", Line(r.Representation))
 	// An audio track is one unit, described by its index below. A page list
 	// lists its markers instead of the spine units.
-	if r.Status == "units_available" && r.Audio == nil && r.MP4 == nil && r.Representation != "epub-page-list/1" {
+	if r.Status == "units_available" && r.Audio == nil && r.MP4 == nil && r.MP4Packets == nil && r.Representation != "epub-page-list/1" {
 		writeUnits(&b, r)
 	}
 	if len(r.Navigation) > 0 {
@@ -32,6 +32,8 @@ func Content(r content.Result) string {
 	if r.Locator != nil {
 		if r.Representation == "pdf-text/1" {
 			fmt.Fprintf(&b, "Page index %d (zero-based) | printed label %s | bytes %d..%d (%s)\n", r.Locator.Unit, pageLabel(r.Locator.PageLabel), r.Locator.Start, r.Locator.End, words(offsetUnit(r.Locator)))
+		} else if r.Representation == content.MP4PacketRepresentation {
+			fmt.Fprintf(&b, "Unit %d | packets %d..%d (zero-based, half-open)\n", r.Locator.Unit, r.Locator.Start, r.Locator.End)
 		} else {
 			fmt.Fprintf(&b, "Unit %d | bytes %d..%d (%s)\n", r.Locator.Unit, r.Locator.Start, r.Locator.End, words(offsetUnit(r.Locator)))
 		}
@@ -95,6 +97,12 @@ func Content(r content.Result) string {
 	}
 	if a := r.AudioRange; a != nil {
 		fmt.Fprintf(&b, "Frames %d..%d (%d preroll frame(s), complete: %t) | samples %d..%d at %d Hz | file bytes %d..%d\n", a.FirstFrame, a.FirstFrame+a.Frames, a.PrerollFrames, a.PrerollComplete, a.SampleStart, a.SampleEnd, a.SampleRate, a.ByteStart, a.ByteEnd)
+	}
+	if a := r.MP4Packets; a != nil {
+		fmt.Fprintf(&b, "Audio: %s | %d source packets | declared %d Hz, %d channel(s)\n", words(a.Codec), a.PacketCount, a.DeclaredRate, a.DeclaredChannels)
+		fmt.Fprintf(&b, "Original MP4 packets: %d returned | next %d | stop %s | media timescale %d\n", len(a.Packets), a.NextPacket, words(a.Stop), a.Timescale)
+		fmt.Fprintf(&b, "Initialization: original sample entry, stsd version %d, %d bytes | SHA-256 %s\n", a.Initialization.STSDVersion, len(a.Initialization.Data), Line(a.Initialization.SHA256))
+		b.WriteString("Packet bytes are not a playable MP4 container. Preroll, PCM equivalence and edited player timing are not established. Use --json for original bytes and exact source spans.\n")
 	}
 	if r.Resource != nil {
 		fmt.Fprintf(&b, "Resource %s | SHA-256 %s | %d of %d bytes. Bytes are not rendered here; use --json for base64 data.\n", Line(r.Resource.Member), Line(r.Resource.SHA256), len(r.Resource.Data), r.Resource.TotalBytes)

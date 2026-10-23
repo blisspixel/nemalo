@@ -18,6 +18,9 @@ original packet access. A read selects a zero-based `packet`, distinct from MP3
 encoded samples and text byte offsets. An explicitly supplied zero is still a
 selector and must be rejected on other representations, units listings or cursor
 requests. No TUI default changes, new module, decoder, process or network call.
+MCP content output explicitly maps Go byte slices to the JSON encoder's base64
+strings, retaining output validation. This uses the already pinned schema library
+as a direct import; no dependency or version is added or upgraded.
 
 ## Source binding and budgets
 

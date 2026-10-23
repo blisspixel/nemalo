@@ -295,7 +295,7 @@ nemalo content navigation CATALOG --root DIRECTORY --asset sha256:HASH
 nemalo content pages CATALOG --root DIRECTORY --asset sha256:HASH
   List an EPUB's declared page labels (page-list), offline.
 nemalo content read CATALOG --root DIRECTORY --asset sha256:HASH
-  Retrieve bounded source text with exact continuation, offline.
+  Retrieve bounded source text or selected audio bytes, offline.
 nemalo content locate CATALOG --root DIRECTORY --asset sha256:HASH --text TEXT
   Find exact quotations by unit or PDF page, with offsets.
 nemalo content source CATALOG --root DIRECTORY --asset sha256:HASH
@@ -308,9 +308,10 @@ nemalo content capabilities
 Read options:
   --unit 0, --text-offset 0, --max-bytes 4096, --cursor TOKEN
   --representation epub-text/2|epub-text/1|epub-structure/1|epub-nav/1|
-                   epub-page-list/1|pdf-text/1|mpeg-audio/1|mp4-audio/1
+                   epub-page-list/1|pdf-text/1|mpeg-audio/1|
+                   mp4-audio/1|mp4-audio/2
   --navigation nav-doc|ncx, --label LABEL (epub-page-list/1),
-  --part ID, --sample N (mpeg-audio/1)
+  --part ID, --sample N (mpeg-audio/1), --packet N (mp4-audio/2)
 
 The default epub-text/2 omits images, tables, mathematics, and media from the
 text and locates each omission as a gap. A continuation keeps the
@@ -323,6 +324,12 @@ with its reference; a label that several markers carry lists them instead. A
 page label is the EPUB's own marker, not a screen page or a print-edition
 match. mp4-audio/1 lists an M4B's or M4A's located samples, timing, and
 declared chapters, units only; play the file with library open or export.
+Explicit mp4-audio/2 returns whole original packets and their bounded sample
+entry as base64 in --json. --packet is a zero-based ordinal; continuations do
+not skip packets. This is not a playable M4B header or decoded timing. Each
+call prepares a verified private copy, up to 2 GiB temporary disk and 4 GiB
+source reads, with a five-minute bound and caller cancellation. Earlier
+representations keep their existing limits.
 Extraction is not rendered layout or acknowledgement of reading.
 `,
 	"read": `nemalo read CATALOG|LIBRARY --root DIRECTORY --asset sha256:HASH [options]

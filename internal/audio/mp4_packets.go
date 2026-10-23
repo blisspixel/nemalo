@@ -18,6 +18,22 @@ const maxMP4PacketSourceBytes = 2 << 30
 var ErrMP4PacketUnsupported = errors.New("MP4 packet selection is unsupported")
 var ErrMP4PacketRangeTooSmall = errors.New("byte allowance cannot hold the first MP4 packet")
 
+// SampleDescription copies the one complete original sample entry and reports
+// its stsd version. It does not interpret or verify decoder initialization.
+func (index MP4PacketIndex) SampleDescription() ([]byte, byte, error) {
+	if index.track == nil || index.track.entries != 1 || len(index.track.descriptions) < 8 {
+		return nil, 0, ErrMP4PacketUnsupported
+	}
+	b := index.track.descriptions
+	if len(b) > 16<<10 {
+		return nil, 0, ErrBudget
+	}
+	if int64(be32(b)) != int64(len(b)) {
+		return nil, 0, ErrMP4PacketUnsupported
+	}
+	return append([]byte(nil), b...), index.track.stsdVersion, nil
+}
+
 // MP4PacketIndex retains the existing parser's checked tables and open reader.
 // It owns no file. The caller keeps that reader alive, binds it to an exact
 // source identity and rechecks the source before publishing any returned bytes.

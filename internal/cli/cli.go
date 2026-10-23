@@ -118,7 +118,7 @@ func Execute(ctx context.Context, args []string, out, errOut io.Writer, service 
 	flags.StringVar(&contentRequest.AssetID, "asset", "", "exact catalog asset ID")
 	flags.IntVar(&contentRequest.Unit, "unit", 0, "zero-based reading-order document")
 	flags.IntVar(&contentRequest.Offset, "text-offset", 0, "zero-based UTF-8 text byte offset")
-	flags.IntVar(&contentRequest.MaxBytes, "max-bytes", 4096, "maximum returned text bytes")
+	flags.IntVar(&contentRequest.MaxBytes, "max-bytes", 4096, "maximum returned text or selected resource/audio bytes")
 	flags.StringVar(&contentRequest.Cursor, "cursor", "", "source-bound continuation token")
 	flags.StringVar(&contentRequest.Representation, "representation", "", "negotiated content representation; a continuation selects its own")
 	flags.StringVar(&contentRequest.Part, "part", "", "exact source part ID")
@@ -128,6 +128,7 @@ func Execute(ctx context.Context, args []string, out, errOut io.Writer, service 
 	bookmarkInput := flags.String("input", "", "bookmark export to import")
 	replaceBookmarks := flags.Bool("replace", false, "replace differing bookmark locations on import")
 	flags.Int64Var(&contentRequest.Sample, "sample", 0, "encoded sample where an mpeg-audio/1 read starts")
+	packet := flags.Int("packet", 0, "zero-based original packet for an mp4-audio/2 read")
 	flags.BoolVar(&checkOptions.Scan, "scan", false, "invoke installed antivirus")
 	flags.BoolVar(&checkOptions.EPUBCheck, "epubcheck", false, "run the installed EPUBCheck on an EPUB")
 	flags.BoolVar(&checkOptions.Decode, "decode", false, "decode an MP3, M4B, or M4A with the installed FFmpeg")
@@ -175,6 +176,9 @@ func Execute(ctx context.Context, args []string, out, errOut io.Writer, service 
 	}
 	if parseErr != nil {
 		return write(nil, parseErr, 2)
+	}
+	if visited(flags, "packet") {
+		contentRequest.Packet = packet
 	}
 	var invalidFlag string
 	flags.Visit(func(f *flag.Flag) {
@@ -1010,7 +1014,7 @@ func flagApplies(command, action, name string) bool {
 		if name == "max-bytes" || name == "cursor" {
 			return action != "units"
 		}
-		return (action == "read" || action == "source") && (name == "part" || name == "unit" || name == "text-offset") || (action == "read" && name == "sample")
+		return (action == "read" || action == "source") && (name == "part" || name == "unit" || name == "text-offset") || (action == "read" && (name == "sample" || name == "packet"))
 	}
 	if command == "library" {
 		switch action {

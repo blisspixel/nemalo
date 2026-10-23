@@ -7,7 +7,8 @@ the remaining OCR, column, narrator, and M4B work moved to milestones 7 and 8. C
 `internal/content`; the read-only MCP `content_*` tools call the same service
 ([decision 0014](decisions/0014-read-only-mcp-server.md)). MP3 tracks have a
 frame index and decodable ranges (`mpeg-audio/1`, below), M4B and M4A files
-list their sample tables and chapters (`mp4-audio/1`), PDFs have pages,
+list their sample tables and chapters (`mp4-audio/1`) or return explicit original
+packet selections (`mp4-audio/2`), PDFs have pages,
 printed labels, text, and located gaps (`pdf-text/1`,
 [decision 0021](decisions/0021-pdf-pages-and-text.md)), exact quotations can be
 located in EPUB or PDF text (`content locate`), and held recordings
@@ -248,19 +249,63 @@ not applied. MP4 samples cannot be played apart from their container, so
 there is no `read`: `library open` or `library export` gives a player a
 verified copy. See [decision 0039](decisions/0039-mp4-audio-samples.md).
 
-Stage 3 preparation adds an internal packet index through the same checked
-parser ([decision 0083](decisions/0083-source-bound-mp4-packet-evidence.md)). It
-retains exact source spans and media-table ticks with bounded packet reads;
-this is not yet a public representation, playable output or decoded timing.
-The existing representation and decoder opt-in remain unchanged. Public ranges,
-initialization, timing coverage and player acceptance are tracked in
-[issue 60](https://github.com/blisspixel/nemalo/issues/60).
+## Original MP4 packets: `mp4-audio/2`
+
+```sh
+nemalo content units LIBRARY --root LIBRARY --asset sha256:HASH --representation mp4-audio/2 --json
+nemalo content read LIBRARY --root LIBRARY --asset sha256:HASH --representation mp4-audio/2 --packet 0 --max-bytes 65536 --json
+```
+
+This explicit representation reuses the checked packet index and extractor
+`nemalo.mp4.packets/1` ([decision 0083](decisions/0083-source-bound-mp4-packet-evidence.md),
+[decision 0085](decisions/0085-verified-mp4-packet-access.md)). It requires one
+clear audio track, one sample description and no format findings. The earlier
+`mp4-audio/1` and all earlier continuations keep their behavior.
+
+`mp4_packets.initialization` contains at most 16 KiB of the exact original audio
+sample entry, its `stsd` version, separate SHA-256 and base64 data. This untrusted
+declaration is not a playable MP4 header or verified decoder configuration.
+`resource` contains concatenated original whole packets, separately hashed and
+base64 encoded; its `total_bytes` is the delivered payload length. Neither hash
+replaces the whole asset identity. `mp4_packets.packets` gives each packet's
+original file byte span and canonical decimal-string `decode_start`/`decode_end`
+ticks at the declared `timescale`. Decimal strings preserve large values exactly.
+These are media decode ticks, not decoded PCM samples or edited player times.
+Decoder preroll and PCM equivalence remain `not_established`; presentation mapping
+is `not_applied`. No decoder, player, scanner, network call or consumption record
+runs in this operation.
+
+The locator's `offset_unit` is `mp4_packets`, with zero-based, half-open ordinals
+in unit 0. A read defaults to packet 0, or explicitly selects `--packet N`.
+Even an explicit zero is rejected on another representation, units listing or
+cursor request. Continue using the exact returned cursor, without a packet
+selector; the cursor keeps its representation when `--representation` is omitted.
+It binds the asset, extractor, initialization, representation and next ordinal.
+At most 128 whole packets and 64 KiB of packet data are returned. A byte/packet
+stop remains `partial_range`, distinct from `end_of_track`. An empty next packet
+is a reported gap and is never skipped; an initial empty packet or a first packet
+larger than the requested allowance fails without usable data or continuation.
+An explicit later selection establishes no coverage of earlier packets.
+
+Each call copies and hashes the exact opened source into owned private scratch
+before parsing or packet reads. Metadata and payload use that retained verified
+handle, with one shared 80 MiB read allowance. The original is revalidated before
+success. Scratch is removed on success and failure; library state and selected
+sources stay unchanged. Preparation may need 2 GiB temporary disk and up to 4 GiB
+of original-source reads, even for a small response. Space refusal is
+`budget_exceeded`. Only this representation has a five-minute deadline; shorter
+caller cancellation wins. Small packet responses do not imply cheap preparation.
+
+For ordinary playback, `library open` or `library export` gives a player a verified
+whole-file copy. Decoded timing and complete playable range handoff remain
+[issue 60](https://github.com/blisspixel/nemalo/issues/60) work; original packet
+access does not establish them or complete roadmap stage 3.
 
 ## Bounds and failures
 
 - Catalog: existing strict 16 MiB snapshot loader; explicit paths at most 4096 bytes.
 - Source: nonempty regular asset, at most 32 MiB for a snapshot and 256 MiB for
-  a managed holding, or 2 GiB for `mp4-audio/1`, which reads at offsets; exact
+  a managed holding, or 2 GiB for `mp4-audio/1` and `mp4-audio/2`; exact
   size/hash required, and checked after an offset read.
 - Container: shared assessment parser, 2 MiB ZIP metadata-read budget, 10,000
   members, 32 MiB/member, 128 MiB declared expansion, CRC/length checks.
@@ -268,7 +313,8 @@ initialization, timing coverage and player acceptance are tracked in
   structural checks, and bounded tokenizer buffers. No fallback conversion/OCR.
 - Response: 4-65,536 text bytes per request (default 4096), at most 1 MiB result
   JSON, cursors at most 2048 bytes, and bounded escaped diagnostics.
-- Work: cooperative cancellation and a 15-second service deadline. Bounded parser
+- Work: cooperative cancellation and a 15-second service deadline, or five
+  minutes for explicit `mp4-audio/2` preparation. Bounded parser
   steps and filesystem reads may finish after cancellation; stalled devices are
   not a hard real-time or process sandbox guarantee.
 
@@ -324,8 +370,9 @@ Remaining work, without moving post-1.0 analysis ahead of library delivery:
   completeness ([decision 0020](decisions/0020-recording-manifest.md)), with
   LibriVox narrators ([decision 0035](decisions/0035-librivox-readers.md)).
   M4B and M4A list sample tables and chapters as `mp4-audio/1`
-  ([decision 0039](decisions/0039-mp4-audio-samples.md)). Decoded timing
-  remains later work.
+  ([decision 0039](decisions/0039-mp4-audio-samples.md)); explicit `mp4-audio/2`
+  adds bounded original packets and sample-entry evidence. Decoded timing and
+  playable range handoff remain later work.
 - External caller: Claude Code on Windows, through `nemalo mcp serve`, read,
   switched works, and resumed from a continuation at the exact stopping byte
   ([decision 0014](decisions/0014-read-only-mcp-server.md)). Other hosts and

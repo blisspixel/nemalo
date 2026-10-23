@@ -12,11 +12,13 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"reflect"
 	"slices"
 	"strings"
 	"time"
 	"unicode/utf8"
 
+	"github.com/google/jsonschema-go/jsonschema"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
 	"github.com/blisspixel/nemalo/internal/app"
@@ -201,7 +203,7 @@ func New(service app.Service, opts Options) (*mcp.Server, error) {
 		func(context.Context, emptyInput) (content.Capabilities, error) {
 			return service.ContentCapabilities(), nil
 		})
-	add(&r, "content_units", "List an EPUB's reading-order units, their extraction status, and known gaps.", false,
+	add(&r, "content_units", "List reading-order units, PDF pages or one supported audio track, with extraction status and known gaps. Explicit mp4-audio/2 returns bounded original sample-entry evidence using a verified private copy; it does not decode audio.", false,
 		func(ctx context.Context, in contentInput) (content.Result, error) {
 			req, err := contentRequest(scopes, in, "units")
 			if err != nil {
@@ -209,7 +211,7 @@ func New(service app.Service, opts Options) (*mcp.Server, error) {
 			}
 			return service.Content(ctx, req)
 		})
-	add(&r, "content_read", "Read a bounded range of source text with an exact locator and a continuation cursor. The default epub-text/2 locates omitted images, tables, and other elements as gaps.", false,
+	add(&r, "content_read", "Read bounded source text or original audio bytes with an exact locator and continuation cursor. The default epub-text/2 locates omitted elements as gaps. Explicit mp4-audio/2 returns original packets and untrusted sample-entry bytes, not a playable container or decoded timing; private preparation may need 2 GiB temporary disk and 4 GiB source reads.", false,
 		func(ctx context.Context, in contentInput) (content.Result, error) {
 			req, err := contentRequest(scopes, in, "read")
 			if err != nil {
@@ -326,6 +328,21 @@ func add[In, Out any](r *registrar, name, description string, openWorld bool, ru
 func register[In, Out any](r *registrar, name, description string, annotations *mcp.ToolAnnotations, run func(context.Context, In) (Out, error)) {
 	r.names = append(r.names, name)
 	tool := &mcp.Tool{Name: name, Description: description, Annotations: annotations}
+	if reflect.TypeFor[Out]() == reflect.TypeFor[content.Result]() {
+		// encoding/json encodes []byte as base64 strings. The schema library's
+		// default slice inference instead describes integer arrays. Keep the
+		// service's wire data and output validation in agreement for both
+		// original initialization and existing image/audio resource bytes.
+		schema, err := jsonschema.For[Envelope[Out]](&jsonschema.ForOptions{
+			TypeSchemas: map[reflect.Type]*jsonschema.Schema{
+				reflect.TypeFor[[]byte](): {Types: []string{"null", "string"}, ContentEncoding: "base64"},
+			},
+		})
+		if err != nil {
+			panic(fmt.Sprintf("content output schema: %v", err))
+		}
+		tool.OutputSchema = schema
+	}
 	mcp.AddTool(r.server, tool, func(ctx context.Context, _ *mcp.CallToolRequest, in In) (*mcp.CallToolResult, Envelope[Out], error) {
 		env := Envelope[Out]{SchemaVersion: 1, Tool: name}
 		select {
@@ -493,7 +510,7 @@ type contentInput struct {
 	Catalog        string `json:"catalog" jsonschema:"catalog snapshot file, or the library directory for a managed holding"`
 	Root           string `json:"root" jsonschema:"explicit source root; for a managed holding, the same library directory"`
 	Asset          string `json:"asset" jsonschema:"exact asset ID, sha256: followed by 64 lowercase hex digits"`
-	Representation string `json:"representation,omitempty" jsonschema:"epub-text/2 (default), epub-text/1, epub-structure/1, epub-nav/1 for one declared contents entry, epub-page-list/1 from one declared page label, pdf-text/1 for PDF, mpeg-audio/1 for MP3, or mp4-audio/1 for M4B and M4A (units only); a cursor keeps its own"`
+	Representation string `json:"representation,omitempty" jsonschema:"epub-text/2 (default), epub-text/1, epub-structure/1, epub-nav/1 for one declared contents entry, epub-page-list/1 from one declared page label, pdf-text/1 for PDF, mpeg-audio/1 for MP3, mp4-audio/1 for M4B and M4A (units only), or explicit mp4-audio/2 for original packets and untrusted initialization (verified private copy may need 2 GiB temporary disk and 4 GiB source reads); a cursor keeps its own"`
 	Unit           int    `json:"unit,omitempty" jsonschema:"zero-based reading-order unit, zero-based physical page index for pdf-text/1, or the declared entry order for epub-nav/1, 0-9999"`
 	TextOffset     int    `json:"text_offset,omitempty" jsonschema:"zero-based UTF-8 byte offset inside the unit, or relative to a declared entry for epub-nav/1"`
 	Navigation     string `json:"navigation,omitempty" jsonschema:"nav-doc or ncx; required when reading epub-nav/1 and the book declares both"`
@@ -502,6 +519,7 @@ type contentInput struct {
 	Cursor         string `json:"cursor,omitempty" jsonschema:"continuation or reference cursor exactly as returned; not combinable with unit or text_offset"`
 	Part           string `json:"part,omitempty" jsonschema:"exact structured part ID such as id:note-1; structured and source reads only"`
 	Sample         int64  `json:"sample,omitempty" jsonschema:"encoded sample where an mpeg-audio/1 read starts"`
+	Packet         *int   `json:"packet,omitempty" jsonschema:"zero-based original packet for an mp4-audio/2 read; not combinable with units, a cursor or another representation"`
 }
 
 type searchInput struct {
@@ -541,7 +559,7 @@ func contentRequest(s scope, in contentInput, operation string) (content.Request
 	if err != nil {
 		return content.Request{}, err
 	}
-	req := content.Request{SchemaVersion: 1, Catalog: catalog, Root: root, AssetID: in.Asset, Unit: in.Unit, Offset: in.TextOffset, MaxBytes: defaultInt(in.MaxBytes, 4096), Cursor: in.Cursor, Representation: in.Representation, Part: in.Part, Sample: in.Sample, Navigation: in.Navigation, Label: in.Label}
+	req := content.Request{SchemaVersion: 1, Catalog: catalog, Root: root, AssetID: in.Asset, Unit: in.Unit, Offset: in.TextOffset, MaxBytes: defaultInt(in.MaxBytes, 4096), Cursor: in.Cursor, Representation: in.Representation, Part: in.Part, Sample: in.Sample, Packet: in.Packet, Navigation: in.Navigation, Label: in.Label}
 	switch operation {
 	case "units":
 		req.UnitsOnly = true

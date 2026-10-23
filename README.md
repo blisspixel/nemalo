@@ -22,12 +22,12 @@ No telemetry or required AI service.
   stored bytes, and recover interrupted operations. Sources stay intact on import.
 - Browse holdings and collections, open verified copies in external readers, and
   read EPUBs and PDFs in the terminal with explicit bookmarks.
-- Retrieve bounded, source-bound text and MP3 ranges through shared CLI, JSON
-  and MCP services, with coverage gaps reported.
+- Retrieve bounded, source-bound text, MP3 ranges and original MP4 packets through
+  shared CLI, JSON and MCP services, with coverage gaps reported.
 
 Published prereleases may lag the source tree. Checks provide limited evidence,
-never a safety or completeness guarantee. M4B/M4A content ranges, cited evidence
-and some interface work remain planned.
+never a safety or completeness guarantee. Decoded M4B/M4A timing, playable range
+handoff, cited evidence and some interface work remain planned.
 See [capabilities and limits](docs/DEVELOPMENT.md), the [roadmap](ROADMAP.md), and
 [published releases](https://github.com/blisspixel/nemalo/releases).
 

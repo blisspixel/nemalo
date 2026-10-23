@@ -431,3 +431,39 @@ func TestMP4PacketIndexRefusesOverlappingAndMixedDescriptions(t *testing.T) {
 		})
 	}
 }
+
+func TestMP4PacketSampleDescriptionIsBoundedOriginalCopy(t *testing.T) {
+	entry := audioEntry(defaultSpec())
+	index := MP4PacketIndex{track: &mp4Track{entries: 1, descriptions: bytes.Clone(entry), stsdVersion: 1}}
+	first, version, err := index.SampleDescription()
+	if err != nil || version != 1 || !bytes.Equal(first, entry) {
+		t.Fatal(first, version, err)
+	}
+	first[0] ^= 255
+	again, _, err := index.SampleDescription()
+	if err != nil || !bytes.Equal(again, entry) {
+		t.Fatal("caller modified index initialization", err)
+	}
+	index.Summary.Codec = "changed"
+	if b, _, err := index.SampleDescription(); err != nil || !bytes.Equal(b, entry) {
+		t.Fatal("summary changed original bytes", err)
+	}
+	for _, tc := range []struct {
+		name  string
+		index MP4PacketIndex
+		want  error
+	}{
+		{"zero", MP4PacketIndex{}, ErrMP4PacketUnsupported},
+		{"multiple", MP4PacketIndex{track: &mp4Track{entries: 2, descriptions: entry}}, ErrMP4PacketUnsupported},
+		{"short", MP4PacketIndex{track: &mp4Track{entries: 1, descriptions: []byte{1}}}, ErrMP4PacketUnsupported},
+		{"tail", MP4PacketIndex{track: &mp4Track{entries: 1, descriptions: append(bytes.Clone(entry), 1)}}, ErrMP4PacketUnsupported},
+		{"oversize", MP4PacketIndex{track: &mp4Track{entries: 1, descriptions: make([]byte, 16<<10+1)}}, ErrBudget},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			b, v, err := tc.index.SampleDescription()
+			if !errors.Is(err, tc.want) || b != nil || v != 0 {
+				t.Fatal(b, v, err)
+			}
+		})
+	}
+}

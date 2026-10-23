@@ -77,3 +77,22 @@ func TestContentPresentsAudioIndexAndRangeWithoutBytes(t *testing.T) {
 		t.Fatal("audio units described as EPUB reading order", units)
 	}
 }
+
+func TestContentPresentsMP4PacketEvidenceWithoutRenderingPayload(t *testing.T) {
+	r := content.Result{Status: "partial_range", Representation: "mp4-audio/2", Units: []content.Unit{{Index: 0, Kind: "mp4_audio_track"}}, MP4Packets: &content.MP4PacketAccess{Codec: "aac", PacketCount: 20, DeclaredRate: 44100, DeclaredChannels: 1, Timescale: 44100, Packets: []content.MP4PacketLocation{{Index: 0}}, NextPacket: 1, Stop: "byte_limit", Initialization: content.MP4Initialization{Data: []byte("SECRET_INITIALIZATION"), SHA256: "entry_hash"}}, Resource: &content.ResourceData{Data: []byte("SECRET_PACKET"), SHA256: "payload_hash", TotalBytes: 13}, Continuation: "TOKEN"}
+	s := ContentCommand(r)
+	for _, want := range []string{"20 source packets", "next 1", "entry_hash", "payload_hash", "not a playable MP4 container", "--json", "Continue with: --cursor TOKEN"} {
+		if !strings.Contains(s, want) {
+			t.Fatal("missing packet evidence", want, s)
+		}
+	}
+	for _, hidden := range []string{"SECRET_PACKET", "SECRET_INITIALIZATION", "Reading-order units"} {
+		if strings.Contains(s, hidden) {
+			t.Fatal("raw bytes or wrong units shown", s)
+		}
+	}
+	r.Locator = &content.Locator{Unit: 0, Start: 3, End: 4, OffsetUnit: "mp4_packets"}
+	if s := Content(r); !strings.Contains(s, "packets 3..4 (zero-based, half-open)") || strings.Contains(s, "bytes 3..4") {
+		t.Fatal("packet ordinals described as bytes", s)
+	}
+}

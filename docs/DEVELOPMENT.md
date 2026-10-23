@@ -118,7 +118,12 @@ Content retrieval uses CLI/JSON and the TUI Read operation over shared services.
 The default `epub-text/2` returns readable text with each omitted image, table,
 or other element located as a gap. `mpeg-audio/1` indexes MP3 frames and returns
 decodable frame ranges with decoder preroll; `mp4-audio/1` lists an M4B's or
-M4A's sample tables and chapters, units only; nothing is decoded. Capability negotiation, structured EPUB parts,
+M4A's sample tables and chapters, units only. Explicit `mp4-audio/2` returns
+bounded original packets and their original sample entry, with exact source
+spans and media tick strings. Each call prepares a verified private copy, with
+up to 2 GiB temporary disk and 4 GiB source reads. It is not a playable range
+container, decoded timing or verified decoder initialization; nothing is decoded.
+Capability negotiation, structured EPUB parts,
 note references, original markup, and bounded local image bytes are available in
 CLI/JSON, and through the read-only MCP server.
 See [source-bound access](CONTENT-ACCESS.md) and [structured EPUB](STRUCTURED-EPUB.md)

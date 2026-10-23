@@ -18,6 +18,36 @@ Its line endings and dash typography are normalized. An offline test requires al
 an EPUB wrapper, so file extension and container validity are insufficient evidence
 that the selected resource is a full text edition.
 
+## Original MP4 packet access
+
+On 2026-10-23, the actual CLI JSON `mp4-audio/2` path returned 829 original
+packets across 22 bounded responses from five independently generated profiles:
+AAC 44.1 kHz stereo with fast-start metadata, AAC 22.05 kHz mono, ALAC 48 kHz
+stereo, MP3 in MP4 at 44.1 kHz stereo, and Opus in MP4 at 48 kHz mono. Source
+spans, original sample-entry bytes, separate initialization/payload hashes,
+decimal tick bounds and exact continuations matched the source and FFprobe
+9.0.2. Edit lists were disabled for that independent raw-table comparison.
+One terminal MP3 packet's codec duration differed from the table interval;
+the packet contract preserves table evidence rather than equating those clocks.
+
+For each profile, mpv 0.41.0 consumed the separate canonical read-only
+`library export` copy into an owned PCM output, with scripts, saved position,
+interactive input and network protocols disabled. Source, exported copy and
+every library file remained byte-identical. This demonstrates whole-file player
+handoff separately from packet retrieval. It does not establish a playable
+packet-range container, edited timing, decoder preroll, audible quality or
+whole-file PCM equivalence. Full stage 3 acceptance remains in
+[issue 60](https://github.com/blisspixel/nemalo/issues/60); the
+[AAC state research](RESEARCH.md#aac-range-boundaries-and-decoder-state) records
+why short preroll cannot promise that equivalence.
+
+Normal Go tests use synthetic bytes and no installed decoder, player, scanner or
+network. Tests cover changed/reverted original bytes, failed and canceled private
+copies, disk refusal, scratch/handle lifetime, initialization bounds, packet and
+byte stops, large tick precision, forged continuations and CLI/MCP selector and
+scope boundaries ([decision 0085](decisions/0085-verified-mp4-packet-access.md)).
+Native fixture evidence is separate from the required exact hosted CI gate.
+
 ## Acquisition harness
 
 `cmd/collection` is Go validation tooling over `internal/collection`, not the

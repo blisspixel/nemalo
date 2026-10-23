@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+- Add explicit `mp4-audio/2` original packet access and bounded sample-entry
+  evidence through shared CLI/JSON/MCP services. Bind reads to a verified private
+  source copy, preserve exact packet continuations and decimal tick strings, and
+  keep separate asset, initialization and payload hashes. Preparation can need
+  2 GiB temporary disk and 4 GiB source reads. Decoded timing and playable range
+  handoff remain unfinished; `mp4-audio/1` stays units-only. MCP content output
+  schemas now describe base64 byte strings consistently with the JSON encoder.
+
 - Prepare internal exact MP4 packet selections through the existing parser,
   preserving source byte positions and media-table timing with bounded reads.
   This is groundwork for audio ranges; public `mp4-audio/1` remains units-only

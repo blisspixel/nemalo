@@ -55,6 +55,15 @@ assert a fresh integrity check or equivalence of different encodings
 ([decision 0052](decisions/0052-recording-byte-identities.md)).
 `content_pages` lists the EPUB's declared page labels; a read from one uses
 `content_read` with representation `epub-page-list/1` and its cursor or exact `label`.
+Explicit `content_units`/`content_read` with `mp4-audio/2` returns original MP4
+packets and bounded, untrusted sample-entry initialization. `packet` is a
+zero-based ordinal, including an explicit zero, and cannot accompany a cursor or
+units listing. Continuations keep their representation. Both initialization and
+resource bytes are base64 strings in the validated output schema. Preparation
+uses private scratch up to 2 GiB and may read 4 GiB from the source, with the
+service's five-minute deadline; it changes no library or selected source state
+and needs neither write nor network permission. No decoder or player runs.
+See the [packet contract](CONTENT-ACCESS.md#original-mp4-packets-mp4-audio2).
 `catalog_search` and `catalog_evaluate` exist only with
 `--allow-network`. They search Open Library and Internet Archive.
 Gutenberg search, `evaluate --files`, and `acquire gutenberg:NUMBER` are CLI

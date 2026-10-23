@@ -247,8 +247,12 @@ verified, not when code exists. No stage has a time estimate.
    records a decoder-state constraint that the design must resolve.
    Internal exact packet evidence now reuses the checked MP4 tables under
    [decision 0083](docs/decisions/0083-source-bound-mp4-packet-evidence.md).
-   Public ranges, initialization, timing coverage and real-player acceptance
-   remain unfinished; `mp4-audio/1` is still units-only.
+   Explicit public `mp4-audio/2` adds bounded original packets and sample-entry
+   evidence through shared CLI/JSON/MCP services, backed by a verified private
+   copy ([decision 0085](docs/decisions/0085-verified-mp4-packet-access.md)).
+   Its full verification is a separate gate. Decoded timing, playable range
+   handoff and complete real-player acceptance remain unfinished;
+   `mp4-audio/1` is still units-only.
 4. **Cited evidence and agent reading** (milestone 9). A versioned evidence
    result over the content services, documented citation export, and agent
    guidance for reading a work from its own structure. Depends on stages 1 and

@@ -216,6 +216,12 @@ Repackaging MP3s into M4B, transcoding, loudness normalization, and speech-to-te
 are optional later operations that create new derived assets.
 
 Container metadata and successful probing do not prove full audio decodability.
+Explicit `mp4-audio/2` content requests prepare a verified private copy from the
+opened selected asset before reading original packet bytes and bounded original
+sample-entry evidence. This ephemeral preparation changes no library state and
+creates no playable range or decoder authority; the shared content service owns
+its budgets, source binding and cleanup
+([decision 0085](decisions/0085-verified-mp4-packet-access.md)).
 Any decoder/probe must run with resource limits, no network access where containment
 permits, and no interactive opening. Report probe coverage and failures. Exporting
 to Audiobookshelf can follow later without making that server a dependency.

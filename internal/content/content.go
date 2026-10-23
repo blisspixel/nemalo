@@ -52,6 +52,9 @@ type Request struct {
 	Resource       bool
 	// Sample is the encoded sample at which an mpeg-audio/1 read starts.
 	Sample int64
+	// Packet selects an original mp4-audio/2 packet. Nil distinguishes an
+	// omitted selector from an explicitly supplied zero.
+	Packet *int
 	// Find locates every exact occurrence of this text in a text
 	// representation instead of reading a range.
 	Find string
@@ -76,6 +79,9 @@ func (r Request) Validate() error {
 	}
 	if r.Sample < 0 || r.Sample > 1<<40 || (r.Sample != 0 && r.Representation != "mpeg-audio/1") {
 		return errors.New("sample applies only to mpeg-audio/1 and must be 0 through 2^40")
+	}
+	if r.Packet != nil && (r.Representation != MP4PacketRepresentation || *r.Packet < 0 || *r.Packet >= 8_000_000 || r.UnitsOnly || r.Cursor != "") {
+		return errors.New("packet applies only to an mp4-audio/2 read, must be 0-7999999, and cannot be combined with units or a cursor")
 	}
 	if len(r.Find) > 1000 || !utf8.ValidString(r.Find) || (r.Find != "" && (r.Cursor != "" || r.UnitsOnly || r.Part != "" || r.Resource || (r.Representation != "epub-text/2" && r.Representation != "pdf-text/1" && r.Representation != ""))) {
 		return errors.New("find takes valid UTF-8 text of at most 1000 bytes and applies to epub-text/2 or pdf-text/1 without a cursor, units, or parts")
@@ -158,8 +164,9 @@ type Result struct {
 	Audio      *audio.Track `json:"audio,omitempty"`
 	AudioRange *audio.Range `json:"audio_range,omitempty"`
 	// MP4 is the mp4-audio/1 sample table summary and declared chapters.
-	MP4     *audio.MP4 `json:"mp4,omitempty"`
-	Matches []Match    `json:"matches,omitempty"`
+	MP4        *audio.MP4       `json:"mp4,omitempty"`
+	MP4Packets *MP4PacketAccess `json:"mp4_packets,omitempty"`
+	Matches    []Match          `json:"matches,omitempty"`
 	// Navigation is the source-declared table of contents for epub-nav/1.
 	// A read carries the one selected entry. Spine units stay in Units.
 	Navigation []NavDocument `json:"navigation,omitempty"`
@@ -210,7 +217,8 @@ func encodeCursor(c cursor) string {
 	return base64.RawURLEncoding.EncodeToString(b)
 }
 
-// Get performs no writes, network calls, rendering, or consumption bookkeeping.
+// Get changes no selected source or persistent state, and makes no network calls,
+// rendering or consumption records. MP4 packet access uses bounded private scratch.
 // Every call revalidates the bytes. An error returns no text or continuation.
 func Get(ctx context.Context, req Request) (result Result, err error) {
 	result = Result{SchemaVersion: 1, Status: "invalid_request", Extractor: Extractor, Limitations: []string{
@@ -228,6 +236,7 @@ func Get(ctx context.Context, req Request) (result Result, err error) {
 			result.Units = nil
 			result.Parts, result.Coverage, result.Resource, result.Gaps = nil, nil, nil, nil
 			result.Audio, result.AudioRange, result.Matches, result.MP4 = nil, nil, nil, nil
+			result.MP4Packets = nil
 			result.Navigation, result.RangeEnd = nil, nil
 			result.PageLists, result.Pagination, result.Page, result.PageEnd = nil, nil, nil, nil
 			result.RangeStatus = ""
@@ -238,6 +247,7 @@ func Get(ctx context.Context, req Request) (result Result, err error) {
 		return result, err
 	}
 	result.AssetID = req.AssetID
+	callerCtx := ctx
 	ctx, cancel := context.WithTimeout(ctx, 15*time.Second)
 	defer cancel()
 	if err = ctx.Err(); err != nil {
@@ -259,6 +269,11 @@ func Get(ctx context.Context, req Request) (result Result, err error) {
 			}
 		}
 	}
+	if req.Representation == MP4PacketRepresentation {
+		packetCtx, packetCancel := context.WithTimeout(callerCtx, 5*time.Minute)
+		defer packetCancel()
+		ctx = packetCtx
+	}
 	switch req.Representation {
 	case "epub-text/1":
 	case "epub-text/2":
@@ -272,6 +287,8 @@ func Get(ctx context.Context, req Request) (result Result, err error) {
 		return getAudio(ctx, req, result)
 	case "mp4-audio/1":
 		return getMP4(ctx, req, result)
+	case MP4PacketRepresentation:
+		return getMP4Packets(ctx, req, result)
 	case "pdf-text/1":
 		if req.Part != "" || req.Resource {
 			return result, errors.New("part/resource access is unavailable for pdf-text/1")
