@@ -142,6 +142,21 @@ paths in JSON-based preview intent; lossless path-byte binding fixed it with an
 application regression. Exact clean committed native and hosted acceptance remain
 separate from these candidate checks.
 
+The first clean committed collection candidate later exposed a native rendering
+failure during rapid narrow/wide mode changes, so it was not accepted for
+publication. A passive probe reproduced it immediately without acquisition or
+scanning. Terminal-stream analysis identified an old 24-row scrolling region
+before a 36-row repaint; clearing alone did not repair it. Resetting the physical
+region before repaint passed 20 rapid cycles. Model geometry tests preserve frame
+bounds for several message orders. The [research record](RESEARCH.md#native-terminal-resize-and-scrolling-regions)
+separates this native finding from general terminal support. This repair needs its
+own complete final local, clean committed native and hosted checks.
+
+The corrected source passed canonical verification again at 87.4% aggregate
+coverage, with no reported dependency vulnerabilities, full native-cgo repository
+race, Windows cross-vet and documentation checks. Exact committed native and
+hosted acceptance remain the next gates.
+
 ## Cited evidence and citation export
 
 On 2026-10-23, local verification of the

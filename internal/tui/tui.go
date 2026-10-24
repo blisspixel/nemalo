@@ -24,6 +24,7 @@ import (
 	"github.com/blisspixel/nemalo/internal/present"
 	"github.com/blisspixel/nemalo/internal/reader"
 	"github.com/blisspixel/nemalo/internal/textsafe"
+	"github.com/charmbracelet/x/ansi"
 )
 
 type result struct {
@@ -198,8 +199,9 @@ func (m *model) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 				m.pager.finder.input.SetWidth(max(1, m.pagerWidth()-4))
 			}
 			m.pagerLayout()
-			return m, tea.Batch(m.pagerMore(), tea.ClearScreen)
+			return m, tea.Batch(m.pagerMore(), resetResizedScreen())
 		}
+		return m, resetResizedScreen()
 	case result:
 		if msg.id != m.id {
 			return m, nil
@@ -698,6 +700,14 @@ func (m *model) form() bool {
 		return m.source == "gutenberg"
 	}
 	return m.mode == "snapshot" || m.mode == "holdings" || m.mode == "audit" || m.mode == "read" || m.mode == "evaluate" || m.mode == "state" || m.mode == "collections" || m.mode == "revisions"
+}
+
+// The pinned renderer's scrolling optimization can leave the previous screen
+// height as a terminal scroll margin. Clearing alone preserves that margin:
+// a taller frame then scrolls its own header away. Reset the physical region
+// before asking the renderer to repaint the current frame.
+func resetResizedScreen() tea.Cmd {
+	return tea.Sequence(tea.Raw(ansi.SetTopBottomMargins(0, 0)), tea.ClearScreen)
 }
 
 func interactiveTerminal(in io.Reader, out io.Writer) bool {

@@ -4,6 +4,32 @@ Reviewed 2026-10-08. Observations come from primary project documentation, not
 installed-app tests, security audits, or benchmarks. Nemalo choices are engineering
 judgments. No competitor code or implementation is copied.
 
+Later dated sections distinguish additional source review from native diagnostic
+evidence for Nemalo.
+
+## Native terminal resize and scrolling regions
+
+Reviewed 2026-10-24 against the pinned Bubble Tea 2.0.10 and Ultraviolet sources,
+the [renderer](https://github.com/charmbracelet/bubbletea/blob/v2.0.10/cursed_renderer.go)
+and [DECSTBM documentation](https://vt100.net/docs/vt510-rm/DECSTBM.html).
+The protocol's omitted margins select the current page bounds.
+
+A native Linux tmux 3.8 validation reproduced a corrupted restored collection
+view after growing a 40-by-24 terminal to 116-by-36 and switching modes rapidly.
+Model checks found no frame overflow for the tested message orders. The captured
+terminal stream instead showed a scrolling optimization leaving a 24-row region
+active before a new 36-row full repaint. Its lower rows scrolled its header away.
+An ordinary clear does not change that region.
+
+On size events, Nemalo now resets the physical scrolling region to the current
+page, then requests the maintained renderer's full repaint in that order. Reader
+fetch/layout and operation drafts keep their existing behavior. This adds no
+dependency or terminal configuration file. The same passive synthetic native
+probe failed on its first cycle before the repair and passed 20 rapid cycles
+after it, without provider or scanner execution. This is evidence for that host
+and sequence, not universal terminal or accessibility conformance. Full local
+checks and exact committed native/hosted acceptance remain separate.
+
 ## Requested comparisons
 
 | Project and primary source | Documented pattern | Nemalo implication |

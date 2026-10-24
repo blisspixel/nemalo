@@ -423,3 +423,38 @@ func TestTerminalCollectionPartialFailureStaysVisibleAndEscaped(t *testing.T) {
 		t.Fatal("partial acquisition changed library")
 	}
 }
+
+func TestTerminalCollectionRestoredFramesStayWithinResizedScreen(t *testing.T) {
+	m, _, _, manifest, intake := terminalCollection(t)
+	packet := filepath.Join(intake, library.CollectionItem{Source: "archive:one", File: "one.pdf"}.Packet())
+	if err := os.MkdirAll(packet, 0700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(packet, "receipt.json"), []byte(`{"complete":true,"status":"untrusted_intake","intent":{"request":{"source_id":"archive:one","source_file":"one.pdf"}}}`), 0600); err != nil {
+		t.Fatal(err)
+	}
+	collectionKeys(m, "f8")
+	if m.collectionReview != nil || !strings.Contains(m.report, "awaiting import") {
+		t.Fatal("wrong passive fixture", m.report)
+	}
+	collectionKeys(m, "alt+b")
+	m.input.SetValue(manifest)
+	m.secondary.SetValue(manifest)
+	collectionKeys(m, "enter")
+	for _, order := range [][]string{{"read", "wide", "collections"}, {"read", "collections", "wide"}, {"wide", "read", "collections"}} {
+		m.switchMode("revisions")
+		m.Update(tea.WindowSizeMsg{Width: 40, Height: 24})
+		for _, action := range order {
+			switch action {
+			case "read", "collections":
+				m.switchMode(action)
+			case "wide":
+				m.Update(tea.WindowSizeMsg{Width: 116, Height: 36})
+			}
+			frame := m.View().Content
+			if lipgloss.Height(frame) > m.height || lipgloss.Width(frame) > m.width {
+				t.Fatalf("%v after %s: frame %dx%d exceeds terminal %dx%d\n%s", order, action, lipgloss.Width(frame), lipgloss.Height(frame), m.width, m.height, frame)
+			}
+		}
+	}
+}
