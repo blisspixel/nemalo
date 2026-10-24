@@ -4,6 +4,8 @@ Status: recorded before implementation, 2026-10-24. Stage 5 acceptance tooling,
 separate from graphical terminals, assistive technology, host/plugin calls and a
 release. Decision [0091](0091-native-executable-lifecycle-acceptance.md) passed its
 [exact native gate](https://github.com/blisspixel/nemalo/commit/d6ab8d86cc53f5e86a72bd3db3dfc8c0ae8757b0#commitcomment-206444963).
+This extension passed its exact native gate at `6f17380`; see
+[validation](../VALIDATION.md#native-terminal-acceptance).
 
 ## Requirement and adapters
 

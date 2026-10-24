@@ -170,9 +170,10 @@ verified, not when code exists. No stage has a time estimate.
    under [decision 0091](docs/decisions/0091-native-executable-lifecycle-acceptance.md),
    with [exact native acceptance](https://github.com/blisspixel/nemalo/commit/d6ab8d86cc53f5e86a72bd3db3dfc8c0ae8757b0#commitcomment-206444963)
    at `d6ab8d8`. Its optional PTY/ConPTY terminal extension is implemented under
-   [decision 0092](docs/decisions/0092-native-terminal-acceptance.md), with exact
-   native acceptance still required. Broader real host/plugin and accessibility
-   acceptance remains.
+   [decision 0092](docs/decisions/0092-native-terminal-acceptance.md), with
+   [exact native acceptance](docs/VALIDATION.md#native-terminal-acceptance) on all
+   three hosted OSes at `6f17380`. Broader real host/plugin and accessibility
+   acceptance remains; see [next steps](#current-position-and-next-steps).
 6. **1.0 release candidate.** Freeze and document the on-disk formats (journals,
    holdings, bookmarks, packets), JSON envelopes, extractor IDs, and the evidence
    contract; upgrade alpha libraries in place or refuse them with a clear path;
@@ -185,6 +186,36 @@ OCR and column reconstruction, and the
 [additional planned capabilities](#additional-planned-capabilities). The
 [post-1.0 phase](#post-10-topic-watches-and-optional-knowledge-processing) follows
 all of these.
+
+## Current position and next steps
+
+As of 2026-10-24, stages 1 to 4 are accepted and stage 5 is in progress. `main`
+is the only branch and passes hosted CI on Linux, macOS and Windows. No wave is in
+flight. Open issues are [59](https://github.com/blisspixel/nemalo/issues/59)
+(optional desktop panel) and the post-1.0 proposals
+[37](https://github.com/blisspixel/nemalo/issues/37) and
+[38](https://github.com/blisspixel/nemalo/issues/38).
+
+Remaining stage 5 work, in order:
+
+1. Real host and plugin acceptance. Install the packages in `plugins/nemalo/`
+   into actual hosts, starting with Claude Code, and record scoped stdio MCP tool
+   calls, refusals without `--allow-write`/`--allow-network`, and version parity
+   with `internal/cli.Version`. Existing MCP evidence drives real stdio servers
+   from a client, not an installed host.
+2. Installed-tool evidence beyond Linux. Current ClamAV, 7-Zip and FFmpeg
+   observations are Linux-only; record selected macOS and Windows runs with
+   missing-tool refusals.
+3. Accessibility review of the TUI and reader: keyboard-only operation, no-color
+   and light/dark output, and at least one screen reader per OS, with limitations
+   recorded rather than inferred from the fixed terminal profile.
+4. Issue 59 panel. Its shared snapshot is accepted. The panel needs a recorded
+   decision on a thin QML adapter before any implementation; it is optional and
+   does not gate 1.0.
+
+Then stage 6: freeze and document the on-disk formats, envelopes, extractor IDs
+and evidence contract, decide alpha library upgrade or refusal, and run every
+release gate. Start each session with the workspace check in `AGENTS.md`.
 
 ## Implementation status
 

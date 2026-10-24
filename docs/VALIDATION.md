@@ -305,7 +305,7 @@ bytes/disabled bookmarks passed under tmux 3.8. These local observations do not
 substitute for the failed Windows gate, installed tools on other platforms,
 graphical readers, audible playback, assistive technologies or real host calls.
 
-### Native terminal acceptance candidate
+### Native terminal acceptance
 
 The optional `--terminal` extension to the executable harness is implemented
 under [decision 0092](decisions/0092-native-terminal-acceptance.md). It retains
@@ -323,6 +323,22 @@ pacing status, leaving exact source coordinates and notices visible. Focused
 native-cgo race tests passed after that correction. Exact committed terminal
 execution and the complete local and hosted gate remain required; this candidate
 does not establish macOS/Windows terminal acceptance or a release.
+
+The exact clean `97ab04a` Linux executable then exposed a harness defect, not an
+application defect: the TUI reference probe pressed Tab, which changes modes,
+where Ctrl+N changes the field. The corrected harness passed all 39 CLI cases,
+three PDF setup commands and 49 terminal observations against that executable.
+At `6f17380`, full canonical verification (including the enforced coverage floor,
+pinned Staticcheck and govulncheck with no reported vulnerabilities) and full
+native-cgo race passed locally. Hosted
+[CI 40099532896](https://github.com/blisspixel/nemalo/actions/runs/40099532896)
+passed all six jobs. Each native job ran the 39 cases and all 49 terminal frames,
+through `unix-pty` on Linux and macOS and `windows-conpty` on Windows, with no
+failed or skipped test; the Windows job also passed all 32 boundary tests. The
+PTY/ConPTY and emulator modules are absent from the `nemalo` executable's build
+metadata. This accepts the fixed terminal profile on the three hosted OSes. It is
+not graphical terminal, assistive technology, real host/plugin or release
+acceptance.
 
 ## Cited evidence and citation export
 

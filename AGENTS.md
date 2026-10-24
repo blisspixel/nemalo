@@ -16,6 +16,18 @@ commands and boundaries. No Python source, runtime, build, or tests belong here.
 Source and configuration outrank stale prose. Distinguish planned, implemented,
 tested, and shipped behavior. Never infer support from a roadmap or a cross-build.
 
+## Workspace hygiene
+
+Several agent harnesses work on this repository. Start each session by checking
+`git worktree list`, `git branch -a` and `git stash list`. Finish or retire
+existing work before starting new work: land branches on `main` after their gates
+pass, record unfinished intent in an issue or `.agents/` checkpoint, and remove
+branches and worktrees already contained in `main`. Never discard unmerged commits,
+uncommitted changes or another session's active work without the user's approval,
+and never clean another repository from this one. Prefer worktrees of this checkout
+over extra clones. End a session with one passing `main`, no orphaned branches, and
+current next steps in `ROADMAP.md`.
+
 ## Stack and scope
 
 - Nemalo is one resource-management system: discovery, evaluation, acquisition,
