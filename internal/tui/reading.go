@@ -19,6 +19,9 @@ type readerState struct {
 	boundCatalog, boundRoot string
 	last                    content.Request
 	hasLast                 bool
+	// delivered is a completed excerpt's exact request, separate from last,
+	// which also contains listings and requests that have not succeeded.
+	delivered *content.Request
 	// mark* is the last delivered source location in this session. It is not
 	// a bookmark until the reader saves it. A failed or cancelled read leaves
 	// it as it was.
@@ -134,6 +137,7 @@ func (m *model) startRead(units bool, unit int, cursor string, repeat bool) tea.
 	m.id++
 	id, service := m.id, m.service
 	m.reader.last, m.reader.hasLast = req, true
+	m.reader.delivered = nil
 	m.busy = true
 	m.status = "Retrieving source bytes. Escape cancels; no progress is recorded."
 	m.setReport("")
@@ -170,6 +174,7 @@ func (m *model) listPages() tea.Cmd {
 	m.id++
 	id, service := m.id, m.service
 	m.reader.last, m.reader.hasLast = req, true
+	m.reader.delivered = nil
 	m.busy = true
 	m.status = "Reading the declared page labels. Nothing is recorded."
 	m.setReport("")
@@ -206,6 +211,7 @@ func (m *model) listNavigation() tea.Cmd {
 	m.id++
 	id, service := m.id, m.service
 	m.reader.last, m.reader.hasLast = req, true
+	m.reader.delivered = nil
 	m.busy = true
 	m.status = "Reading the declared contents. Nothing is recorded."
 	m.setReport("")

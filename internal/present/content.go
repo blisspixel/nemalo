@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/blisspixel/nemalo/internal/content"
+	"github.com/blisspixel/nemalo/internal/textsafe"
 )
 
 // Content escapes each source line before terminal rendering. Newlines carry
@@ -20,8 +21,10 @@ func Content(r content.Result) string {
 	field(&b, "Representation", Line(r.Representation))
 	if e := r.Evidence; e != nil {
 		field(&b, "Evidence", Line(e.Schema)+" | "+words(e.Kind)+" | single returned range")
-		field(&b, "Evidence reference", Line(e.Reference))
-		notes(&b, "Evidence limit", e.Limitations)
+		field(&b, "Library", Line(e.Metadata.LibraryID))
+		field(&b, "Metadata SHA-256", Line(e.MetadataSHA256))
+		field(&b, "Extractor", Line(e.Extractor))
+		field(&b, "Representation identity", Line(e.RepresentationID))
 	}
 	// An audio track is one unit, described by its index below. A page list
 	// lists its markers instead of the spine units.
@@ -138,6 +141,17 @@ func Content(r content.Result) string {
 		b.WriteString("\nNext range available. Explicit continuation required.\n")
 	}
 	b.WriteString("Delivery is not evidence of reading or understanding.\n")
+	if e := r.Evidence; e != nil {
+		// Keep the actual passage and located gaps ahead of the complete
+		// portable sidecar. A long replay token must not hide the quotation.
+		field(&b, "Evidence reference", Line(e.Reference))
+		notes(&b, "Evidence limit", e.Limitations)
+		if data, err := textsafe.MarshalJSON(e, true); err == nil {
+			b.WriteString("Portable evidence with declared metadata, coverage and limits (JSON):\n")
+			b.Write(data)
+			b.WriteByte('\n')
+		}
+	}
 	return b.String()
 }
 

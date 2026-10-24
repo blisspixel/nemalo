@@ -11,6 +11,7 @@ import (
 func Citation(r app.CitationResult) string {
 	var b strings.Builder
 	field(&b, "Citation", words(r.Status))
+	field(&b, "Metadata SHA-256", Line(r.MetadataSHA256))
 	if r.Metadata != nil {
 		field(&b, "Asset", Line(r.Metadata.AssetID))
 		field(&b, "Library", Line(r.Metadata.LibraryID))
@@ -33,6 +34,13 @@ func Citation(r app.CitationResult) string {
 	}
 	for _, limit := range r.Limitations {
 		fmt.Fprintf(&b, "Limit: %s\n", Line(limit))
+	}
+	if r.Metadata != nil {
+		if data, err := textsafe.MarshalJSON(r, true); err == nil {
+			b.WriteString("Portable citation with provenance and uncertainty (JSON):\n")
+			b.Write(data)
+			b.WriteByte('\n')
+		}
 	}
 	return b.String()
 }

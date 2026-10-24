@@ -93,6 +93,7 @@ type model struct {
 	id          int
 	cancel      context.CancelFunc
 	reader      readerState
+	readAux     *readAux
 	// pager, when open, fills the screen; closed is where it was closed.
 	pager    *pager
 	closed   *Closed
@@ -142,6 +143,9 @@ func (m *model) Init() tea.Cmd {
 
 func (m *model) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := message.(type) {
+	case readAuxReply:
+		m.acceptReadAux(msg)
+		return m, nil
 	case pagerChunk:
 		return m, m.pagerChunk(msg)
 	case contentsResult:
@@ -168,6 +172,9 @@ func (m *model) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 		m.pagerAuxResult(msg)
 		return m, nil
 	case tea.KeyPressMsg:
+		if m.readAux != nil {
+			return m, m.readAuxKey(msg)
+		}
 		if m.pager != nil {
 			if m.pager.finder != nil && m.pager.finder.editing {
 				if msg.Code == 'c' && msg.Mod == tea.ModCtrl {
@@ -194,6 +201,7 @@ func (m *model) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 		m.secondary.SetWidth(max(1, msg.Width-4))
 		m.viewport.SetWidth(max(1, msg.Width-2))
 		m.resize()
+		m.layoutReadAux()
 		if m.pager != nil {
 			if m.pager.finder != nil {
 				m.pager.finder.input.SetWidth(max(1, m.pagerWidth()-4))
@@ -352,6 +360,10 @@ func (m *model) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		case content.Result:
 			if msg.err == nil {
+				if !m.reader.last.UnitsOnly && (value.Status == "partial_range" || value.Status == "complete_range") {
+					req := m.reader.last
+					m.reader.delivered = &req
+				}
 				m.remember(value)
 				m.reader.next = value.Continuation
 				m.reader.boundCatalog, m.reader.boundRoot = m.reader.last.Catalog, m.reader.last.Root
@@ -493,6 +505,14 @@ func (m *model) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		if m.confirmRoot != "" {
 			return m, m.confirmInitialization(msg)
+		}
+		if m.mode == "read" && !m.busy {
+			switch msg.Keystroke() {
+			case "f2":
+				return m, m.openReadAux(true)
+			case "f4":
+				return m, m.openReadAux(false)
+			}
 		}
 		if msg.String() == "f7" && m.mode == "state" && !m.busy {
 			m.requestInitialization()
@@ -673,6 +693,9 @@ func (m *model) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 	// The reader owns the screen. An unhandled message, including the
 	// clear-screen command, must not reach the query field.
 	if m.pager != nil {
+		return m, nil
+	}
+	if m.readAux != nil {
 		return m, nil
 	}
 	if m.busy {

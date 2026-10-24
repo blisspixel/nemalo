@@ -19,6 +19,10 @@ selection with `--evidence-reference TOKEN`. `library citation LIBRARY --asset I
 exports recorded metadata as CSL-JSON plus an uncertainty/provenance sidecar.
 These are read-only and offline; citation export opens no stored bodies, and
 evidence keeps each representation's existing retrieval and decoder boundaries.
+TUI Read exposes citation metadata with F2 and evidence for its last successful
+bounded excerpt with F4. A separate report provides explicit F3 replay and Escape
+return without replacing ordinary navigation or bookmarks
+([decision 0090](decisions/0090-terminal-cited-evidence.md)).
 See [evidence and citation export](CONTENT-ACCESS.md#evidence-and-citation-export).
 The [five selected semantic cases](CITED-EVIDENCE-REVIEW.md) are reviewed
 separately from the exact hosted acceptance ledger in

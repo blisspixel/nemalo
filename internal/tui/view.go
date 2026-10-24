@@ -215,6 +215,9 @@ func (m *model) footer() string {
 		return lipgloss.Wrap(m.paint("Enter "+verb+"  Esc back  PgUp/PgDown review  Ctrl+C quit", warning, false), max(1, m.width-2), " ")
 	}
 	help := "Enter run  F6 browse  Tab modes  Ctrl+C quit"
+	if m.mode == "read" {
+		help += "  F2 citation  F4 excerpt evidence"
+	}
 	if m.resultsFocused {
 		help = "Up/Down select  Enter details  F6 edit  Esc back  Ctrl+C quit"
 		if m.mode == "search" && len(m.entries) > 0 && (strings.HasPrefix(m.entries[m.selected].sourceID, "archive:") || strings.HasPrefix(m.entries[m.selected].sourceID, "gutenberg:") || strings.HasPrefix(m.entries[m.selected].sourceID, "openlibrary:")) {
@@ -236,7 +239,7 @@ func (m *model) footer() string {
 			}
 		}
 		if m.mode == "read" {
-			help = "Enter unit  n next  r repeat  u units  c contents  g page labels  p pages  s speed  m save  ' restore"
+			help = "Enter unit  n next  r repeat  u units  c contents  g page labels  p pages  s speed  m save  ' restore  F2 citation  F4 evidence"
 		}
 	}
 	if m.busy {
@@ -266,6 +269,11 @@ func (m *model) View() tea.View {
 	}
 	if m.pager != nil {
 		v := tea.NewView(m.pagerView())
+		v.AltScreen = true
+		return v
+	}
+	if m.readAux != nil {
+		v := tea.NewView(m.readAuxView())
 		v.AltScreen = true
 		return v
 	}
@@ -426,7 +434,7 @@ func (m *model) emptyHelp() string {
 	case "state":
 		return "Establish a library identity.\n\nEnter an existing folder, then Enter to read its control status.\nF7 reviews initialization before writing control metadata.\nCtrl+N sets one source. F8 reviews import and does not scan or delete it.\nCtrl+R reviews a scan of review holdings that lack scan evidence.\nF9 previews moving the source folder's held files to the library's recoverable holding area; with a cleanup ID as the source, it previews restoring that cleanup.\nCtrl+P previews purging that cleanup's held copies the library holds; Enter removes exactly those, and the library keeps its own copy."
 	case "read":
-		return "Read from exact source bytes.\n\nSelect an asset in Holdings and press r. Enter its explicit root, then Enter lists units.\nF6 browses units; Enter retrieves text. n continues, r repeats, u lists units.\nc lists the book's declared contents. Enter reads one entry and stops at its declared end.\ng lists the EPUB's declared page labels, such as iv or 42; Enter reads from one. They are the book's own markers, not screen pages.\np opens the selection as pages sized to the terminal; s opens it one word at a time.\nm saves a bookmark in an initialized library. ' restores that bookmark.\nDelivery does not record reading progress, and closing does not save a bookmark.\nNotes and image resources are available through content CLI references."
+		return "Read from exact source bytes.\n\nSelect an asset in Holdings and press r. Enter its explicit root, then Enter lists units.\nF6 browses units; Enter retrieves text. n continues, r repeats, u lists units.\nc lists the book's declared contents. Enter reads one entry and stops at its declared end.\ng lists the EPUB's declared page labels, such as iv or 42; Enter reads from one. They are the book's own markers, not screen pages.\nF2 shows recorded citation metadata. F4 shows source-bound evidence for the last successful excerpt; F3 explicitly replays it in that report.\np opens the selection as pages sized to the terminal; s opens it one word at a time.\nm saves a bookmark in an initialized library. ' restores that bookmark.\nDelivery does not record reading progress, and closing does not save a bookmark.\nNotes and image resources are available through content CLI references."
 	case "collections":
 		return "Resolve exact selections against your library.\n\nEnter a collection JSON file and an existing initialized library. Ctrl+N moves through collection, library and intake.\nEnter reads status offline. F6 browses declared items; F5 shows the full report.\nWith an absolute outside-library intake, F8 previews acquisition offline. A second Enter confirms the bound review before requests or writes.\nF3 chooses a 1 GiB or 5 GiB total transfer cap. Downloads remain untrusted intake; ingest is separate.\nAlt+B compares two explicit revisions without changing holdings or files."
 	case "revisions":

@@ -41,7 +41,7 @@ item's other files for a new, deliberate review. See
 | F6 | Focus results / return to editing |
 | Up / Down, Home / End in results | Select an item |
 | Enter in results | Toggle selected-item details |
-| F5 | Toggle complete evidence report |
+| F5 | Toggle complete operation report |
 | PageUp / PageDown | Scroll detail/report |
 | Ctrl+Left / Ctrl+Right | Previous / next search or holdings page |
 | F2 in search | Switch Open Library / Internet Archive / local Gutenberg catalog |
@@ -69,6 +69,7 @@ item's other files for a new, deliberate review. See
 | Enter in Read results | Retrieve the selected source unit |
 | n / r / u in Read results | Next range / repeat last request / list units |
 | c / g in Read results | List the EPUB's declared contents / declared page labels, such as iv or 42. Enter reads from the selection |
+| F2 / F4 in Read | Recorded citation metadata / evidence for the last successful bounded excerpt |
 | p / s in Read results | Open as pages / one word at a time: the selected unit or entry of a listing, else where the last excerpt began, else the first unit |
 | Escape | Back; cancel active work |
 | Ctrl+C | Quit |
@@ -168,8 +169,38 @@ fresh units request before continuation. Switching operations preserves the
 session's report and references. Nothing records reading or acknowledgement.
 `m` saves a bookmark in an initialized library, and `'` restores it. Neither
 runs on its own, and closing does not save. A catalog snapshot writes nothing.
-The CLI exposes note/source/resource references; the TUI does not yet navigate
-EPUB notes, render images, or play audio. Unsupported units fail explicitly.
+The excerpt report exposes note references; the full-screen reader below follows
+supported EPUB links and notes. Neither view renders image pixels or plays audio.
+The CLI also exposes original source and bounded resource bytes. Unsupported
+units fail explicitly.
+
+## Citation and source evidence
+
+In Read, F2 explicitly opens recorded citation metadata for the selected managed
+holding. It includes CSL-JSON, provenance, unknown or ambiguous fields and limits;
+stored content is not opened or freshly checked. F4 explicitly repeats the last
+successful bounded excerpt with source-bound evidence. It shows exact identities,
+the returned range, declared metadata, coverage gaps, limits and the portable
+evidence JSON. A units listing is not an excerpt. A new listing, failed/cancelled
+read, bookmark restore or changed asset/catalog/root requires another successful
+excerpt before F4. Ordinary snapshot reading still works, but these two shared
+services require a managed library.
+For machine-readable export, use the corresponding CLI command with `--json`;
+line wrapping in the terminal report is presentation.
+
+The separate report retains the ordinary passage, continuation, location, drafts,
+list selection and scroll position. PageUp/PageDown or arrows scroll; Home/End
+choose the report's beginning/end. Escape cancels and returns; Ctrl+C quits.
+F3 in a completed evidence report deliberately replays the same captured bounded
+request and returned reference. It does not follow a continuation. Failure discards
+the response payload and old token. Physical control keys own this report; paste
+and committed text cannot edit forms, switch modes or trigger replay.
+
+No request runs automatically. Citation has a 15-second deadline; evidence keeps
+the shared five-minute maximum and existing inner limits. Both are offline and
+read-only. They save no position, history or bookmark, enable no decoder and make
+no interpretation, whole-work coverage, rights or safety guarantee. MP4 remains
+units-only in the TUI. See [decision 0090](decisions/0090-terminal-cited-evidence.md).
 
 ## Reader
 
@@ -315,6 +346,13 @@ declarations, including distinct paper versions; it does not query or confirm an
 upstream version. Their displayed form paths are documentation examples. Holdings
 resolution and declaration changes do not establish current rights or availability.
 
+Citation and evidence use another fresh managed library holding the same public
+Pride and Prejudice bytes. They show recorded declarations and a successful
+bounded source excerpt, including coverage limitations and explicit replay. Import
+for these captures requested no scanner; the holding stays in review. The views
+neither promote it nor infer missing bibliographic fields. The complete portable
+sidecars continue below the displayed screen.
+
 ![EPUB holdings, duplicate locations and selected historical evidence](images/tui-holdings.png)
 
 ![Local Gutenberg discovery and selected catalog evidence](images/tui-discovery.png)
@@ -330,5 +368,9 @@ resolution and declaration changes do not establish current rights or availabili
 ![Collections resolved against exact recorded holdings](images/tui-collections.png)
 
 ![Offline revision comparison keeps additions, removals, notes and order distinct](images/tui-revisions.png)
+
+![Recorded citation metadata retains unknown bibliographic fields](images/tui-citation.png)
+
+![A bounded source excerpt with exact identities and explicit evidence replay](images/tui-evidence.png)
 
 ![Explicit job observation with a torn journal and unobserved owner](images/tui-jobs.png)

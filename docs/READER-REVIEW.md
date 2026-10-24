@@ -15,6 +15,7 @@ No competitor code is copied or added as a dependency.
 | [Thorium](https://www.edrlab.org/software/thorium-reader/) | Keyboard and assistive-reader support, configurable text/spacing/columns, declared page lists, full-text search, accessibility metadata and read aloud | Test keyboard/focus and visible labels, preserve declared structure and expose rendering limitations. Plain terminal output and no-color tests alone do not establish assistive-technology compatibility. |
 | [KOReader guide](https://koreader.rocks/user_guide/) | Book map, skim/page browsers, contents tools, configurable layout and document search | Provide a structural overview and deliberate jumps. A useful structure map need not record which pages a person viewed or how long they spent there. |
 | [Readest reading](https://readest.com/docs/reading) and [parallel views](https://readest.com/docs/parallel-read) | Contents/bookmark/search sidebar, annotations, note exports and independent parallel panes, with optional synchronized movement | Keep reference material accessible without losing the passage. Preserve edition/translation identities; matching relative scroll positions is not evidence that two passages correspond. Parallel rendering is a separate future interface decision. |
+| [Readwise Reader appearance](https://docs.readwise.io/reader/docs/faqs/appearance), [keyboard annotations](https://docs.readwise.io/reader/docs/faqs/highlights-tags-notes) and [read aloud](https://docs.readwise.io/reader/docs/faqs/text-to-speech) | Adjustable line measure/spacing, paged long-form reading, collapsible panels, keyboard selection and annotation, and deliberate speech controls | Keep reading controls reachable, context recoverable and the text measure adjustable. Nemalo has page/word context, contents, exact finding and explicit notes/bookmarks; its terminal font is controlled by the host. Rich styling, range highlights, speech and bidirectional layout remain distinct gaps, with no parity or accessibility claim. |
 | [SwiftRead speed controls](https://swiftread.helpscoutdocs.com/article/67-change-reading-speed-and-chunk-size) and [micro-pauses](https://swiftread.helpscoutdocs.com/article/22-micro-pauses-controlling-how-swiftread-pauses-while-reading) | Small speed adjustments during playback, configurable word groups and pauses for punctuation, word length, numbers and paragraphs | Make pacing controls discoverable and keep pause/rewind immediate. Distinguish the nominal setting from elapsed presentation time. Optional pacing choices require their own verification. |
 | [Spreeder controls](https://www.spreeder.com/app.html) and [advanced settings](https://helpdesk.ereflect.com/portal/en/kb/articles/advanced-settings) | Play/pause/restart controls, adjustable group size and speed variability; documented punctuation pauses apply to single-word groups | Check interactions between settings rather than counting controls. Preserve the source order, gap notices and exact place through pause, restart and mode changes. |
 | [Outread](https://outreadapp.com/) | A guided highlight moving through the page alongside a separate flash mode, with adjustable chunk length and appearance | Keeping page context available is a useful design target. A guided-page presentation is an option to evaluate, not evidence that suppressing rereading improves understanding. |
@@ -44,6 +45,17 @@ Implemented, tested and shipped remain separate states.
 | Help during playback | A deterministic regression reproduced advancement while help hid the words. The repair pauses playback, clears waiting state and invalidates the old timer; leaving help requires an explicit play action. Native validation is recorded separately. |
 | Page context and return | Native terminal validation reproduced a word-to-pages-to-word rewind from byte 11 to byte 0. The repair preserves the exact word through a page-context visit and resizing. Deliberate page navigation chooses a new place. The anchor exists only in session memory. |
 | Other presentation modes | Guided page highlighting and multi-word groups are not implemented. Decision 0025 rejected multi-word mode on mixed evidence; this review does not silently reverse that decision or claim parity. |
+
+Additional primary-source checks on 2026-10-24 covered Readwise, SwiftRead and
+Thorium. SwiftRead's current speed
+guide documents 10-WPM steps and a separate words-at-a-time setting; its pause
+guide describes configurable punctuation, number, length and paragraph holds.
+Nemalo currently uses 25-WPM steps and fixed holds. Those are real differences,
+not evidence that either setting produces better comprehension. Thorium's
+[`/en/docs/` entry point](https://thorium.edrlab.org/en/docs/) is explicitly legacy
+version 2 documentation. Check the current official guide before implementing
+version-specific behavior. This review adopts no competitor version pin or
+dependency.
 
 First address correctness and access to existing capabilities: help must freeze
 the place, navigation must be deliberate and source-bound, and search must state

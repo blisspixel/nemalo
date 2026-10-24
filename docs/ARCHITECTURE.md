@@ -123,6 +123,10 @@ and guarded CLI apply use the same application comparison before provider or
 intake writes; normal fresh acquisition checks still follow. This is no new
 collection store or durable snapshot. See
 [decision 0089](decisions/0089-collection-acquisition-review.md).
+Read's explicit citation and evidence reports adapt the same application services
+under [decision 0090](decisions/0090-terminal-cited-evidence.md). Their separate
+screen owns a captured bounded request and replay reference; it cannot replace
+ordinary navigation, enable decoding or record reading history.
 
 ## Identity and catalog model
 

@@ -178,6 +178,73 @@ preserved missing intake and the active review; a later physical Enter performed
 the same selected acquisition and installed scan. Source acceptance still requires
 its own clean committed native and hosted checks.
 
+### Accepted collections and expanded Linux review
+
+The collection, resize and physical-confirmation increment was subsequently
+accepted at `8d7d356`: [all six CI jobs](https://github.com/blisspixel/nemalo/actions/runs/40061329811)
+and [Go/Actions CodeQL](https://github.com/blisspixel/nemalo/actions/runs/40061329271)
+passed on their first attempts. All 32 Windows boundary identities passed without
+skips or failures, including the actual sharing-violation branch. The
+[read-back verification receipt](https://github.com/blisspixel/nemalo/commit/8d7d3561aaaf1036cbee820b0fc0a43198b5d73c#commitcomment-206433228)
+records exact native terminal checks, selected acquisition and source preservation.
+Windows library covered/race durations were 592.904/572.579 seconds against the
+unchanged 600-second package deadline. The earlier 383.892/400.211-second run
+shows substantial variance; the pass does not establish a comfortable performance
+margin. No case, assertion, instrumentation, worker, deadline or production
+durability was reduced.
+
+A fresh expanded review on the same date used the exact clean `8d7d356` binary
+(SHA-256 `a3a73f1d91023223e636db04dc9818bd7040cef0020b6c6228120617f77269ca`),
+with new synthetic fixture roots outside the checkout and isolated configuration,
+state and cache. It performed 70 CLI invocations, three additional FFmpeg fixture
+and reference commands, two MCP server processes and 12 real MCP calls:
+
+| Feature family | Fresh observation |
+| --- | --- |
+| Library/content/bookmark lifecycle, 40 CLI calls | Import preview/apply, installed rescan, source-bound EPUB/PDF reads, navigation, exact finding, citation, explicit bookmark lifecycle, export, cleanup, raw restore, fresh purge and installed 7z ingest passed. Unsupported neighbors and all original sources stayed preserved. An unscanned PDF remained in review. |
+| Audio, 15 CLI calls plus three FFmpeg commands | MP3 frames, MP4 units/original packets and explicit decoded ranges passed. Full PCM and selected/continued samples matched a separate sequential FFmpeg reference: 88,200 mono samples at 44,100 Hz. Ordinary calls required explicit decode permission and source bytes stayed unchanged. |
+| Two actual stdio MCP sessions, 12 calls | Default and separately enabled decode tool sets, scope denials, absent write/network/bookmark tools and exact CLI/MCP PCM equality passed. Library modes and bytes stayed unchanged. |
+| Missing tools, four CLI calls | Actual missing EPUBCheck and isolated child-PATH scanner, decoder and archive-reader refusals remained explicit, without derived payloads, continuations or changed fixture bytes/modes. No global environment or installation changed. |
+| Verified-copy handoff, two CLI launches | A controlled Go child observed exact read-only bytes outside the managed store; repeat handoff reused the copy. Library modes and bytes stayed unchanged. This establishes process handoff, not graphical rendering or consumption. |
+| Evidence, citations and detections, nine CLI calls | Exact bounded replay matched its original response; changed selection and malformed token returned no payload or continuation. Citation and evidence metadata digests agreed. Installed ClamAV detected a locally generated harmless EICAR marker both directly and embedded in a valid EPUB. Import preserved the EPUB source and held it only in review with `scan_findings`; integrity checking reported zero checked assets. Acquisition quarantine was not exercised by this probe. |
+| Actual Linux terminal reader | Contents and physical PDF page choice, NAV/NCX boundaries, exact whole-book finding, Unicode input, paste refusal, help/pause, word/page context, resizing, disabled bookmarks and actual exit passed. Modes and stored bytes stayed unchanged. |
+| Recovery under native cgo race instrumentation | Actual child-process termination released the writer lock and initialization resumed. Import crash recovery and every selected cleanup/purge interruption passed, with 15 passing root/subtest observations. These are synthetic filesystem/process tests, separate from CLI workflow counts or a power-loss test. |
+
+Installed tools were ClamAV 1.5.4 with local daily signatures 28162, 7-Zip 26.04,
+FFmpeg/FFprobe n9.0.2 and tmux 3.8. The plain EICAR text remained an unsupported
+assessment format while its antivirus result separately reported `findings`.
+Full canonical verification, native-cgo repository race and Windows cross-vet
+passed again. This review made no live provider requests and is not a new security
+audit. Native macOS/Windows installed-tool workflows, graphical readers, audible
+playback, assistive technologies, power-loss recovery, every hostile format and
+all provider/download combinations remain outside this fresh Linux observation.
+
+### Terminal citation and evidence
+
+Stage 5's adapter is implemented under
+[decision 0090](decisions/0090-terminal-cited-evidence.md). Synthetic native-cgo
+race checks cover EPUB, PDF, declared entries and MP3 ranges, exact replay,
+malformed/changed references, torn metadata, snapshot refusal, citation without
+stored content, units/failed-read/scope refusals, cancellation and late replies.
+Complete library modes and bytes, including disabled bookmarks, stay unchanged;
+an injected scanner and decoder fail the test if invoked. MP4 stays units-only.
+Shared presentation retains the complete portable sidecar and inert untrusted
+text, with the actual quotation before the long token and metadata.
+
+Actual Linux tmux 3.8 interaction passed F2 citation and its sidecar, F4 evidence,
+physical F3 replay, inert associated-text controls, rapid 40/80/116-column
+resizing, return to the unchanged excerpt, exact continuation from bytes 4096 to
+8192, cancellation/close and actual Ctrl+C exit. It made no network or scanner
+request and preserved owned source/library bytes and modes. The broader existing
+terminal reader probe also passed on that candidate binary. Two new application
+view captures use a public-domain validation copy, with no private paths.
+
+Canonical verification passed at 87.5% aggregate coverage with no reported
+dependency vulnerabilities, followed by full native-cgo repository race,
+Windows cross-vet and local link/anchor checks. Exact clean committed native
+and hosted acceptance are separate from these candidate observations, native
+macOS/Windows installed-tool workflows and the broader host/accessibility matrix.
+
 ## Cited evidence and citation export
 
 On 2026-10-23, local verification of the

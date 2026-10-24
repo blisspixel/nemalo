@@ -162,8 +162,10 @@ verified, not when code exists. No stage has a time estimate.
    State's explicit F10 Jobs view consumes the same passive service. Collections
    now has offline status, revision comparison and a bound acquisition review in
    source ([decision 0089](docs/decisions/0089-collection-acquisition-review.md));
-   its full local/native/hosted acceptance is separate. Cited-evidence interface
-   work and the broader host/platform acceptance remain.
+   its [exact local/native/hosted acceptance](https://github.com/blisspixel/nemalo/commit/8d7d3561aaaf1036cbee820b0fc0a43198b5d73c#commitcomment-206433228)
+   passed at `8d7d356`. Read's explicit citation/evidence reports and bounded
+   replay are in source under [decision 0090](docs/decisions/0090-terminal-cited-evidence.md);
+   their acceptance and the broader host/platform matrix remain separate gates.
 6. **1.0 release candidate.** Freeze and document the on-disk formats (journals,
    holdings, bookmarks, packets), JSON envelopes, extractor IDs, and the evidence
    contract; upgrade alpha libraries in place or refuse them with a clear path;

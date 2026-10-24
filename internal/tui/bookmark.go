@@ -97,6 +97,7 @@ func (m *model) restoreBookmark() tea.Cmd {
 	m.id++
 	id, service := m.id, m.service
 	m.busy = true
+	m.reader.delivered = nil
 	m.bookmarkStatus("Restoring the saved location. Nothing else is recorded.")
 	return func() tea.Msg {
 		data, err := service.ResumeBookmark(ctx, dir, asset)

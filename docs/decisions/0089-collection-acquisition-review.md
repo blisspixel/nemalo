@@ -2,7 +2,9 @@
 
 Status: implemented in source, 2026-10-24. Stage 5 interface work over decisions
 [0050](0050-collections.md) and [0053](0053-collection-revision-previews.md).
-Complete exact native/hosted acceptance and release remain separate.
+Exact local/native/hosted acceptance passed at `8d7d356`, with the
+[verification receipt](https://github.com/blisspixel/nemalo/commit/8d7d3561aaaf1036cbee820b0fc0a43198b5d73c#commitcomment-206433228)
+read back. A release and broader host/platform acceptance remain separate.
 
 ## Decision
 
