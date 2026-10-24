@@ -6,6 +6,17 @@ Results and form drafts remain with each operation for the current session.
 Write-review controls use physical keystrokes. A committed text string spelling
 `enter`, `esc` or another control name cannot confirm or dismiss a review.
 
+`Ctrl+O` lists every function-key and control-key action the current view
+accepts, with its key, for keyboards or terminals where function keys are
+awkward: a Mac without Fn held, GNOME Terminal's F10 menu, or a compact keyboard.
+Up and Down choose, Enter runs it, and Escape closes. A chosen review still asks
+for its own Enter. In the evidence report, `r` replays as F3 does. Text fields
+use the terminal's real cursor at the edit position, so screen magnifiers and
+screen readers that follow the cursor can track it
+([decision 0094](decisions/0094-terminal-keyboard-and-cursor-access.md)).
+For linear reading with a screen reader, `nemalo content read` without `--json`
+prints a located passage and its next step as plain lines.
+
 ## Browse and inspect
 
 Search and holdings show a selectable list, with an adjacent evidence pane in

@@ -429,6 +429,22 @@ case, because of that junction. Tool versions follow the runner images and are
 recorded, not pinned. This is selected installed-tool behavior, not detection
 coverage, every archive layout or codec, or a release.
 
+### Terminal keyboard and cursor access candidate
+
+The first accessibility increment
+([decision 0094](decisions/0094-terminal-keyboard-and-cursor-access.md)) found
+that actions in several views had only a function key (F2 to F10) and that
+text fields hid the terminal cursor. `Ctrl+O` now lists each view's function-
+and control-key actions and runs one through its normal handler; fields place
+the real cursor. New model tests cover per-mode contents, dispatch, refusal
+while busy or in a review, physical review confirmation and wide characters.
+The first native run also caught the harness's own wrong field label and an
+identical-screen replay step, both corrected in the harness. On 2026-10-24 a clean exact Linux executable passed all 55 native
+terminal cases, including the real cursor visible at column 84 of the focused
+field and `Ctrl+O` reaching the citation report without a function key. Exact
+hosted runs on all three OSes and a person's screen reader, magnifier and
+keyboard-only review remain required.
+
 ## Cited evidence and citation export
 
 On 2026-10-23, local verification of the

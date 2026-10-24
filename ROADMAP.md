@@ -211,9 +211,13 @@ Remaining stage 5 work, in order:
    ([decision 0093](docs/decisions/0093-native-installed-tool-acceptance.md)).
    Re-dispatch `installed-tools.yml` after changes to scanning, archive intake
    or decoding.
-3. Accessibility review of the TUI and reader: keyboard-only operation, no-color
-   and light/dark output, and at least one screen reader per OS, with limitations
-   recorded rather than inferred from the fixed terminal profile.
+3. Accessibility review of the TUI and reader. The first increment
+   ([decision 0094](docs/decisions/0094-terminal-keyboard-and-cursor-access.md))
+   adds `Ctrl+O` for every function-key action and the real terminal cursor in
+   text fields; its exact hosted gate is required. Then a person must run at
+   least one screen reader and magnifier per OS (for example Orca, VoiceOver,
+   NVDA) and a keyboard-only session through search, holdings, reading and
+   the write reviews, recording what works and what does not.
 4. Issue 59 panel. Its shared snapshot is accepted. The panel needs a recorded
    decision on a thin QML adapter before any implementation; it is optional and
    does not gate 1.0.
