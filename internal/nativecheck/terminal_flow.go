@@ -367,7 +367,7 @@ func (d *terminalDriver) reference(lib, asset string) {
 	d.observe("startup", 0, containsScreen("Knowledge is power."))
 	d.send("\x1b6") // xterm Alt+6: Holdings.
 	d.send(lib)
-	d.send("\t")
+	d.send("\x0e") // Ctrl+N changes the field; Tab changes modes.
 	d.send(asset)
 	d.key("holdings", "\r", containsScreen("Native synthetic fixture"))
 	d.send("\x1b[17~") // F6, results focus.
