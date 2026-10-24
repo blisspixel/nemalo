@@ -281,20 +281,24 @@ func prepareBinary(root *os.Root, name, commit string) (out Binary, executable s
 }
 
 func childEnvironment(root string) []string {
+	return isolatedEnvironment(root, os.Environ())
+}
+
+func isolatedEnvironment(root string, inherited []string) []string {
 	var env []string
-	for _, value := range os.Environ() {
+	for _, value := range inherited {
 		key, _, _ := strings.Cut(value, "=")
 		key = strings.ToUpper(key)
 		if strings.HasPrefix(key, "NEMALO_") || strings.HasPrefix(key, "XDG_") {
 			continue
 		}
 		switch key {
-		case "APPDATA", "LOCALAPPDATA", "TMPDIR", "TEMP", "TMP", "PATH", "PROGRAMDATA", "PROGRAMFILES", "PROGRAMFILES(X86)":
+		case "APPDATA", "LOCALAPPDATA", "TMPDIR", "TEMP", "TMP", "PATH", "PROGRAMDATA", "PROGRAMFILES", "PROGRAMFILES(X86)", "PROGRAMW6432", "COMMONPROGRAMFILES", "COMMONPROGRAMFILES(X86)", "COMMONPROGRAMW6432", "ALLUSERSPROFILE":
 			continue
 		}
 		env = append(env, value)
 	}
-	for key, dir := range map[string]string{"XDG_CONFIG_HOME": "config", "XDG_STATE_HOME": "state", "XDG_CACHE_HOME": "cache", "APPDATA": "config", "LOCALAPPDATA": "state", "TMPDIR": "temp", "TEMP": "temp", "TMP": "temp", "PATH": "tools", "ProgramData": "tools", "ProgramFiles": "tools", "ProgramFiles(x86)": "tools"} {
+	for key, dir := range map[string]string{"XDG_CONFIG_HOME": "config", "XDG_STATE_HOME": "state", "XDG_CACHE_HOME": "cache", "APPDATA": "config", "LOCALAPPDATA": "state", "TMPDIR": "temp", "TEMP": "temp", "TMP": "temp", "PATH": "tools", "ProgramData": "tools", "ProgramFiles": "tools", "ProgramFiles(x86)": "tools", "ProgramW6432": "tools", "CommonProgramFiles": "tools", "CommonProgramFiles(x86)": "tools", "CommonProgramW6432": "tools", "ALLUSERSPROFILE": "tools"} {
 		env = append(env, key+"="+filepath.Join(root, dir))
 	}
 	return append(env, "NEMALO_CONFIG="+filepath.Join(root, "config.json"))

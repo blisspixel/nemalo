@@ -41,7 +41,18 @@ type Result struct {
 	Commands      []Command         `json:"commands"`
 	FixtureSHA256 map[string]string `json:"fixture_sha256,omitempty"`
 	Error         string            `json:"error,omitempty"`
+	LastOutput    *CommandOutput    `json:"last_command_output,omitempty"`
 	Limitations   []string          `json:"limitations"`
+}
+
+// CommandOutput keeps a small failure excerpt in hosted logs as well as the
+// complete bounded diagnostic files in the workspace. No environment block is recorded.
+type CommandOutput struct {
+	Name            string `json:"name"`
+	Stdout          string `json:"stdout"`
+	Stderr          string `json:"stderr"`
+	StdoutTruncated bool   `json:"stdout_truncated"`
+	StderrTruncated bool   `json:"stderr_truncated"`
 }
 
 type suite struct {
@@ -55,6 +66,7 @@ type suite struct {
 	err         error
 	outputBytes int
 	readBytes   int64
+	lastOutput  *CommandOutput
 }
 
 func Run(ctx context.Context, request Request) (out Result, err error) {
@@ -77,6 +89,7 @@ func Run(ctx context.Context, request Request) (out Result, err error) {
 			s.result.Status = "passed"
 		} else {
 			s.result.Error = s.err.Error()
+			s.result.LastOutput = s.lastOutput
 		}
 		s.result.Workspace = work.directory
 		data, encodeErr := textsafe.MarshalJSON(s.result, true)
@@ -194,6 +207,7 @@ func (s *suite) call(name string, want int, dst any, args ...string) {
 		return
 	}
 	r := s.run(s.ctx, invocation{binary: s.binary, directory: s.directory, args: args, env: s.env})
+	s.lastOutput = &CommandOutput{Name: name, Stdout: string(r.stdout[:min(len(r.stdout), 16<<10)]), Stderr: string(r.stderr[:min(len(r.stderr), 4<<10)]), StdoutTruncated: len(r.stdout) > 16<<10, StderrTruncated: len(r.stderr) > 4<<10}
 	index := len(s.result.Commands) + 1
 	stdout, stderr := fmt.Sprintf("%02d.stdout.json", index), fmt.Sprintf("%02d.stderr.txt", index)
 	s.result.Commands = append(s.result.Commands, Command{Name: name, Args: args, ExpectedExit: want, Exit: r.exit, Duration: time.Since(started), Stdout: stdout, Stderr: stderr})

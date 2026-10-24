@@ -10,7 +10,10 @@ cgo-free executable for the current native platform over 39 CLI cases. It create
 a new private workspace outside the checkout, retains its receipt and bounded
 diagnostics, and never adopts existing data. Optional `--output` names a new
 absolute outside-checkout directory. External tool discovery is disabled and
-unscanned holdings remain in review. This is acceptance tooling, separate from
+the doctor preflight refuses any external tool still available before library
+initialization or scanning. Unscanned holdings remain in review. Failed receipts
+include a bounded last-command excerpt as well as diagnostic filenames.
+This is acceptance tooling, separate from
 installed scanners, real agent hosts and interactive terminal validation; see
 [decision 0091](decisions/0091-native-executable-lifecycle-acceptance.md).
 

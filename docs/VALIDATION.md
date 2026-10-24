@@ -279,6 +279,32 @@ native hosted OSes and exact committed acceptance remain separate gates. Existin
 tests, actual installed-tool evidence, host/plugin calls, interactive terminals
 and release installation are not replaced by this harness.
 
+The first hosted execution at `74ab937` passed the new 39 cases on Linux and
+macOS, but Windows's missing-scanner case returned success rather than the
+required refusal. Windows canonical verification, race, smoke and all 32 boundary
+cases passed. This is a failed whole-wave gate, not native lifecycle acceptance.
+The [isolation correction](decisions/0091-native-executable-lifecycle-acceptance.md#hosted-isolation-correction)
+keeps every case and assertion and requires separate final verification.
+Its final local canonical verifier passed with 87.3% aggregate coverage and no
+reported dependency vulnerabilities, followed by full native-cgo race, Windows
+cross-vet and link/anchor checks. The candidate harness also passed all 39 actual
+commands against the clean `74ab937` Linux executable. A new committed executable
+and the complete exact hosted gate remain separate from those observations.
+
+The exact clean `74ab937` Linux binary also passed a new machine review in fresh
+synthetic roots: 70 CLI calls, three FFmpeg fixture/reference commands, two stdio
+servers with 12 MCP calls and two actual tmux terminal probes. Networking was
+disabled and only owned output writable. Installed ClamAV 1.5.4, signatures 28162,
+7-Zip 26.04 and FFmpeg/FFprobe n9.0.2 exercised rescan, archive intake, all 88,200
+reference samples, exact returned/continued intervals, evidence replay, missing
+tools and verified-copy handoff. Harmless direct/embedded EICAR detections stayed
+findings; the detected EPUB remained in review with zero checked assets and an
+unchanged source. Reader help and page/word return preserved unit 0, byte 11;
+citation/evidence controls, resize, continuation, actual exit and unchanged stored
+bytes/disabled bookmarks passed under tmux 3.8. These local observations do not
+substitute for the failed Windows gate, installed tools on other platforms,
+graphical readers, audible playback, assistive technologies or real host calls.
+
 ## Cited evidence and citation export
 
 On 2026-10-23, local verification of the

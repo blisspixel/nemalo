@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"reflect"
 	"runtime"
@@ -44,6 +45,12 @@ func testSuite(t *testing.T, run runner) *suite {
 }
 
 func TestLifecycleThroughRealCLIWithOfflineAdapters(t *testing.T) {
+	// Execute's injected configuration reader does not replace os/exec lookups.
+	// Hide tools in this test process too; no installed adapter may be selected.
+	tools := filepath.Join(t.TempDir(), "empty-tools")
+	for _, key := range []string{"PATH", "ProgramData", "ProgramFiles", "ProgramFiles(x86)", "ProgramW6432", "CommonProgramFiles", "CommonProgramFiles(x86)", "CommonProgramW6432", "ALLUSERSPROFILE"} {
+		t.Setenv(key, tools)
+	}
 	var names []string
 	scans := 0
 	s := testSuite(t, func(ctx context.Context, in invocation) reply {
@@ -102,6 +109,82 @@ func TestLifecycleThroughRealCLIWithOfflineAdapters(t *testing.T) {
 	}
 }
 
+func TestChildEnvironmentDoesNotInheritToolRoots(t *testing.T) {
+	root := t.TempDir()
+	env := isolatedEnvironment(root, []string{"HOME=original-home", "Path=host-tools", "PROGRAMDATA=host-data", "ProgramFiles=host-programs", "ProgramFiles(x86)=host-x86", "ProgramW6432=host-native", "CommonProgramFiles=host-common", "CommonProgramFiles(x86)=host-common-x86", "CommonProgramW6432=host-common-native", "ALLUSERSPROFILE=host-profile", "nEmAlO_CONFIG=host-config", "xdg_cache_home=host-cache"})
+	values := map[string]string{}
+	for _, item := range env {
+		key, value, _ := strings.Cut(item, "=")
+		key = strings.ToUpper(key)
+		if _, found := values[key]; found {
+			t.Fatal("duplicate environment key", key)
+		}
+		values[key] = value
+	}
+	for _, key := range []string{"PATH", "PROGRAMDATA", "PROGRAMFILES", "PROGRAMFILES(X86)", "PROGRAMW6432", "COMMONPROGRAMFILES", "COMMONPROGRAMFILES(X86)", "COMMONPROGRAMW6432", "ALLUSERSPROFILE"} {
+		if values[key] != filepath.Join(root, "tools") {
+			t.Errorf("host tool root inherited: %s=%q", key, values[key])
+		}
+	}
+	if values["HOME"] != "original-home" || values["NEMALO_CONFIG"] != filepath.Join(root, "config.json") || values["XDG_CACHE_HOME"] != filepath.Join(root, "cache") {
+		t.Fatal("home or explicit configuration changed", values)
+	}
+}
+
+func TestChildEnvironmentInNativeProcess(t *testing.T) {
+	root := t.TempDir()
+	for _, dir := range []string{"tools", "temp"} {
+		if err := os.Mkdir(filepath.Join(root, dir), 0700); err != nil {
+			t.Fatal(err)
+		}
+	}
+	binary, err := os.Executable()
+	if err != nil {
+		t.Fatal(err)
+	}
+	r := execute(context.Background(), invocation{binary: binary, directory: root, args: []string{"-test.run=^TestNativeProcessHelper$"}, env: append(childEnvironment(root), "NEMALO_NATIVE_HELPER=environment")})
+	if r.err != nil || r.exit != 0 {
+		t.Fatal("native environment helper failed", r.err, r.exit, string(r.stderr))
+	}
+	var got struct {
+		Environment map[string]string
+		Scanner     string
+		Tools       map[string]string
+	}
+	if err := json.NewDecoder(bytes.NewReader(r.stdout)).Decode(&got); err != nil {
+		t.Fatal(err, string(r.stdout))
+	}
+	for _, key := range []string{"PATH", "ProgramData", "ProgramFiles", "ProgramFiles(x86)", "ProgramW6432", "CommonProgramFiles", "CommonProgramFiles(x86)", "CommonProgramW6432", "ALLUSERSPROFILE"} {
+		if got.Environment[key] != filepath.Join(root, "tools") {
+			t.Errorf("native child tool root changed: %s=%q", key, got.Environment[key])
+		}
+	}
+	if got.Scanner != "" || len(got.Tools) != 0 {
+		t.Fatal("native child discovered an installed adapter", got, string(r.stdout))
+	}
+}
+
+func TestToolIsolationRefusalPrecedesLibraryInitialization(t *testing.T) {
+	for _, capabilities := range []string{`[{"name":"clamscan","available":false},{"name":"MpCmdRun.exe","available":true}]`, `[{"name":"clamscan","available":false}]`} {
+		s := testSuite(t, func(_ context.Context, in invocation) reply {
+			if in.args[0] == "version" {
+				return reply{exit: 0, stdout: []byte(`{"schema_version":1,"command":"version","data":"v"}`)}
+			}
+			if in.args[0] != "doctor" {
+				t.Fatal("tool isolation refusal still launched an application operation", in.args)
+			}
+			return reply{exit: 0, stdout: []byte(`{"schema_version":1,"command":"doctor","data":{"security_status":"not_scanned","configuration":{},"capabilities":` + capabilities + `}}`)}
+		})
+		s.lifecycle()
+		if s.err == nil || len(s.result.Commands) != 2 || s.lastOutput.Name != "doctor" || !strings.Contains(s.lastOutput.Stdout, "capabilities") {
+			t.Fatal("missing early refusal or its diagnostic evidence", s.err, s.result.Commands, s.lastOutput)
+		}
+		if _, err := os.Stat(filepath.Join(s.directory, "library", ".nemalo")); !os.IsNotExist(err) {
+			t.Fatal("tool isolation refusal still initialized a library", err)
+		}
+	}
+}
+
 func TestFailureStopsAllLaterCommandsAndFixtureMutation(t *testing.T) {
 	for _, which := range []string{"transport", "exit", "json", "schema", "command", "missing-data", "error", "budget", "cancelled"} {
 		t.Run(which, func(t *testing.T) {
@@ -134,6 +217,9 @@ func TestFailureStopsAllLaterCommandsAndFixtureMutation(t *testing.T) {
 			s.lifecycle()
 			if s.err == nil || calls != 1 || len(s.result.Commands) != 1 {
 				t.Fatal("failed run continued", s.err, calls)
+			}
+			if s.lastOutput == nil || s.lastOutput.Name != "version" || len(s.lastOutput.Stdout) > 16<<10 || len(s.lastOutput.Stderr) > 4<<10 || s.lastOutput.StdoutTruncated != (which == "budget") {
+				t.Fatal("missing or unbounded failure excerpt", s.lastOutput)
 			}
 			if _, err := os.Stat(filepath.Join(s.directory, "library", ".nemalo")); !os.IsNotExist(err) {
 				t.Fatal("failed version still initialized a library", err)
@@ -397,6 +483,21 @@ func TestProcessOutputAndCancellation(t *testing.T) {
 
 func TestNativeProcessHelper(t *testing.T) {
 	switch os.Getenv("NEMALO_NATIVE_HELPER") {
+	case "environment":
+		values := map[string]string{}
+		for _, key := range []string{"PATH", "ProgramData", "ProgramFiles", "ProgramFiles(x86)", "ProgramW6432", "CommonProgramFiles", "CommonProgramFiles(x86)", "CommonProgramW6432", "ALLUSERSPROFILE"} {
+			values[key] = os.Getenv(key)
+		}
+		_, resolvedScanner, _ := scanner.Resolve() // Resolve only; never execute it.
+		tools := map[string]string{}
+		for _, name := range []string{"7z", "7zz", "7za", "ffmpeg", "ffprobe", "epubcheck"} {
+			if path, err := exec.LookPath(name); err == nil {
+				tools[name] = path
+			}
+		}
+		if err := json.NewEncoder(os.Stdout).Encode(map[string]any{"Environment": values, "Scanner": resolvedScanner, "Tools": tools}); err != nil {
+			t.Fatal(err)
+		}
 	case "ok":
 		os.Stdout.WriteString("native helper")
 	case "exit":

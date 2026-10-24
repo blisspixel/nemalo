@@ -49,11 +49,25 @@ func (s *suite) lifecycle() {
 	s.call("version", 0, &version, "version")
 	s.require(version != "", "version was empty")
 	var doctor struct {
-		Security string                           `json:"security_status"`
-		Config   struct{ Library, Review string } `json:"configuration"`
+		Security     string                           `json:"security_status"`
+		Config       struct{ Library, Review string } `json:"configuration"`
+		Capabilities []struct {
+			Name      string `json:"name"`
+			Available bool   `json:"available"`
+		} `json:"capabilities"`
 	}
 	s.call("doctor", 0, &doctor, "doctor")
 	s.require(doctor.Security == "not_scanned" && doctor.Config.Library == "" && doctor.Config.Review == "", "doctor loaded an unrelated library or claimed scanning")
+	scanners := map[string]bool{}
+	for _, capability := range doctor.Capabilities {
+		if capability.Name == "clamscan" || capability.Name == "MpCmdRun.exe" {
+			scanners[capability.Name] = true
+		}
+		if capability.Name != "descriptor_bridge" {
+			s.require(!capability.Available, "external tool remained available in the isolated child: "+capability.Name)
+		}
+	}
+	s.require(len(scanners) == 2, "doctor omitted scanner availability evidence")
 	s.call("initialize", 0, nil, "library", "init", lib)
 	s.call("status", 0, nil, "library", "status", lib)
 	var checked assessment.Report

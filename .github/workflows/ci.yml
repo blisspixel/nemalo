@@ -26,6 +26,8 @@ jobs:
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version-file: go.mod
+      - name: Check native acceptance child environment
+        run: go test -count=1 -v -run '^TestChildEnvironment' ./internal/nativecheck
       - name: Verify formatting, build, vet, static analysis, coverage, vulnerabilities
         run: go run ./cmd/verify
       - name: Race detection

@@ -49,3 +49,31 @@ step on all three OSes. This adds no application option, journal schema, parser,
 runtime dependency or alternative policy engine. Native installed-tool coverage,
 interactive terminals, real host/plugin calls, other architectures and live
 release installation remain distinct evidence.
+
+## Hosted isolation correction
+
+The first [main run at `74ab937`](https://github.com/blisspixel/nemalo/actions/runs/40071079730)
+passed all 39 executable cases on Linux and macOS. Windows passed canonical
+verification, race, all 32 boundary cases and the executable smoke, but its
+missing-scanner case returned success rather than the required unavailable
+refusal. The complete hosted gate failed; this increment was not accepted.
+That log retained the diagnostic filename but not the failing command's JSON,
+so a specific scanner or environment mechanism cannot be established from it.
+
+Environment-construction regression tests reproduced inherited alternate Windows
+program roots, including `ProgramW6432`, the common program directories and
+`ALLUSERSPROFILE`. Redirect the complete group into the owned empty tool root.
+[Microsoft documents custom child environments](https://learn.microsoft.com/en-us/windows/win32/procthread/changing-environment-variables)
+and [program-root changes across process architectures](https://learn.microsoft.com/en-us/windows/win32/winprog64/wow64-implementation-details).
+Those contracts motivate checking the actual child environment; they do not
+prove that architecture translation caused this failure.
+
+Add a native child-process regression that reports only selected tool-root
+variables and resolves adapters without executing them. Run it before the full
+canonical gate on every native runner. The executable lifecycle's existing
+doctor case must report both scanners unavailable and no available external
+tools before library initialization or a scan can run. Keep the same 39 cases,
+expected exits and unavailable-scanner assertion. Failed receipts add a bounded
+last-command excerpt, at most 16 KiB stdout and 4 KiB stderr with explicit
+truncation, alongside the existing complete bounded files. No environment block
+is published. Full final local and exact hosted acceptance remain required.
