@@ -27,7 +27,7 @@ jobs:
         with:
           go-version-file: go.mod
       - name: Check native acceptance child environment
-        run: go test -count=1 -v -run '^TestChildEnvironment' ./internal/nativecheck
+        run: go test -count=1 -v -run '^TestChildEnvironment|^TestTerminalProcess' ./internal/nativecheck
       - name: Verify formatting, build, vet, static analysis, coverage, vulnerabilities
         run: go run ./cmd/verify
       - name: Race detection
@@ -46,7 +46,7 @@ jobs:
           ./bin/nemalo version --json
           ./bin/nemalo doctor --json
       - name: Exercise native executable lifecycle
-        run: go run ./cmd/nativecheck --binary "bin/nemalo${{ runner.os == 'Windows' && '.exe' || '' }}" --commit "${{ github.sha }}"
+        run: go run ./cmd/nativecheck --binary "bin/nemalo${{ runner.os == 'Windows' && '.exe' || '' }}" --commit "${{ github.sha }}" --terminal
 
   # Installers are exercised against the newest published release. They cannot
   # test an unpublished version, so release step 7 repeats this after publishing.

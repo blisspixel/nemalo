@@ -370,7 +370,15 @@ func (m *model) pagerFull() {
 	p.notice = fullNotice
 }
 
-func (m *model) pagerBody() int { return max(1, m.height-4) }
+func (m *model) narrowSpeedFooter() bool { return m.pager != nil && m.pager.speed && m.width < 80 }
+
+func (m *model) pagerBody() int {
+	footer := 4
+	if m.narrowSpeedFooter() {
+		footer++
+	}
+	return max(1, m.height-footer)
+}
 
 func (m *model) pagerWidth() int {
 	return max(minMeasure, min(m.pager.measure, m.width-4))
@@ -699,6 +707,7 @@ func (m *model) pagerView() string {
 	at, ok := m.pagerPosition()
 	header := "Nemalo reader"
 	position := ""
+	rateStatus := ""
 	if ok {
 		// The label is shown once: not in the header when the page opens on
 		// that unit's own heading.
@@ -707,7 +716,10 @@ func (m *model) pagerView() string {
 		}
 		position = fmt.Sprintf("Unit %d, byte %d", at.Unit, at.Offset)
 		if at.Unit < len(p.units) && p.units[at.Unit].TextBytes > 0 {
-			position += fmt.Sprintf(" of %d", p.units[at.Unit].TextBytes)
+			withTotal := position + fmt.Sprintf(" of %d", p.units[at.Unit].TextBytes)
+			if reader.Width(withTotal) <= max(1, m.width-2) {
+				position = withTotal
+			}
 		}
 	}
 	var body []string
@@ -737,7 +749,10 @@ func (m *model) pagerView() string {
 		if p.playing {
 			state = "playing"
 		}
-		position = fmt.Sprintf("%d wpm nominal, %s  %s", p.rate, state, position)
+		rateStatus = fmt.Sprintf("%d wpm nominal, %s", p.rate, state)
+		if !m.narrowSpeedFooter() {
+			position = rateStatus + "  " + position
+		}
 	} else if p.doc != nil {
 		end := min(len(p.layout.Lines), p.top+m.pagerBody())
 		for _, line := range p.layout.Lines[min(p.top, end):end] {
@@ -784,7 +799,15 @@ func (m *model) pagerView() string {
 	}
 	lines := []string{m.paint(clip(header, m.width-2), muted, false)}
 	lines = append(lines, body[:m.pagerBody()]...)
-	lines = append(lines, m.paint(clip(position, m.width-2), muted, false), m.paint(clip(notice, m.width-2), warning, false), m.paint(clip(keys, m.width-2), muted, false))
+	lines = append(lines, m.paint(clip(position, m.width-2), muted, false))
+	if m.narrowSpeedFooter() {
+		// Keep source coordinates and coverage notices independent of pacing.
+		if rateStatus == "" {
+			rateStatus = fmt.Sprintf("%d wpm nominal, paused", p.rate)
+		}
+		lines = append(lines, m.paint(clip(rateStatus, m.width-2), muted, false))
+	}
+	lines = append(lines, m.paint(clip(notice, m.width-2), warning, false), m.paint(clip(keys, m.width-2), muted, false))
 	for i, line := range lines {
 		lines[i] = padCells(line, m.width)
 	}

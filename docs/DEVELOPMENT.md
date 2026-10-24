@@ -13,9 +13,17 @@ absolute outside-checkout directory. External tool discovery is disabled and
 the doctor preflight refuses any external tool still available before library
 initialization or scanning. Unscanned holdings remain in review. Failed receipts
 include a bounded last-command excerpt as well as diagnostic filenames.
-This is acceptance tooling, separate from
-installed scanners, real agent hosts and interactive terminal validation; see
+This is acceptance tooling, separate from installed scanners and real agent
+hosts; see
 [decision 0091](decisions/0091-native-executable-lifecycle-acceptance.md).
+Add `--terminal` for actual native PTY/ConPTY sessions after the same 39 cases:
+EPUB/PDF reading and TUI citation/evidence navigation, exact source positions,
+help dwell, resize, continuation and primary-screen restoration on exit. Three
+PDF setup commands and 49 terminal observations have separate receipt fields.
+The tool records bounded raw output and current-screen frames, with unchanged
+source/library snapshots. This fixed terminal profile does not establish every
+graphical terminal, assistive technology or host integration. See
+[decision 0092](decisions/0092-native-terminal-acceptance.md).
 
 ## Current operations
 

@@ -21,7 +21,10 @@ import (
 	"github.com/blisspixel/nemalo/internal/textsafe"
 )
 
-type Request struct{ Binary, Commit, Output, Checkout string }
+type Request struct {
+	Binary, Commit, Output, Checkout string
+	Terminal                         bool
+}
 
 type Command struct {
 	Name         string        `json:"name"`
@@ -42,6 +45,7 @@ type Result struct {
 	FixtureSHA256 map[string]string `json:"fixture_sha256,omitempty"`
 	Error         string            `json:"error,omitempty"`
 	LastOutput    *CommandOutput    `json:"last_command_output,omitempty"`
+	Terminal      *TerminalReport   `json:"terminal,omitempty"`
 	Limitations   []string          `json:"limitations"`
 }
 
@@ -56,17 +60,18 @@ type CommandOutput struct {
 }
 
 type suite struct {
-	ctx         context.Context
-	root        *os.Root
-	directory   string
-	binary      string
-	run         runner
-	env         []string
-	result      Result
-	err         error
-	outputBytes int
-	readBytes   int64
-	lastOutput  *CommandOutput
+	ctx          context.Context
+	root         *os.Root
+	directory    string
+	binary       string
+	run          runner
+	env          []string
+	result       Result
+	err          error
+	outputBytes  int
+	readBytes    int64
+	lastOutput   *CommandOutput
+	commandCount int
 }
 
 func Run(ctx context.Context, request Request) (out Result, err error) {
@@ -110,6 +115,9 @@ func Run(ctx context.Context, request Request) (out Result, err error) {
 	}
 	s.binary = filepath.Join(work.directory, executable)
 	s.lifecycle()
+	if request.Terminal && s.guard() {
+		s.terminals()
+	}
 	return s.result, s.err
 }
 
@@ -183,6 +191,10 @@ func (s *suite) read(name string) []byte {
 }
 
 func (s *suite) call(name string, want int, dst any, args ...string) {
+	s.callInto(&s.result.Commands, name, want, dst, args...)
+}
+
+func (s *suite) callInto(commands *[]Command, name string, want int, dst any, args ...string) {
 	if s.err != nil {
 		return
 	}
@@ -192,25 +204,17 @@ func (s *suite) call(name string, want int, dst any, args ...string) {
 	}
 	args = append(append([]string{}, args...), "--json")
 	started := time.Now()
-	opened, err := s.root.Stat(".")
+	in, err := s.checkedInvocation(args)
 	if err != nil {
 		s.fail(err)
 		return
 	}
-	named, err := safeio.Stat(s.directory)
-	if err != nil {
-		s.fail(err)
-		return
-	}
-	if !os.SameFile(opened, named) {
-		s.fail(errors.New("workspace pathname changed before child launch"))
-		return
-	}
-	r := s.run(s.ctx, invocation{binary: s.binary, directory: s.directory, args: args, env: s.env})
+	r := s.run(s.ctx, in)
 	s.lastOutput = &CommandOutput{Name: name, Stdout: string(r.stdout[:min(len(r.stdout), 16<<10)]), Stderr: string(r.stderr[:min(len(r.stderr), 4<<10)]), StdoutTruncated: len(r.stdout) > 16<<10, StderrTruncated: len(r.stderr) > 4<<10}
-	index := len(s.result.Commands) + 1
+	s.commandCount++
+	index := s.commandCount
 	stdout, stderr := fmt.Sprintf("%02d.stdout.json", index), fmt.Sprintf("%02d.stderr.txt", index)
-	s.result.Commands = append(s.result.Commands, Command{Name: name, Args: args, ExpectedExit: want, Exit: r.exit, Duration: time.Since(started), Stdout: stdout, Stderr: stderr})
+	*commands = append(*commands, Command{Name: name, Args: args, ExpectedExit: want, Exit: r.exit, Duration: time.Since(started), Stdout: stdout, Stderr: stderr})
 	s.outputBytes += len(r.stdout) + len(r.stderr)
 	if len(r.stdout) > maxStdout || len(r.stderr) > maxStderr || s.outputBytes > 8<<20 {
 		s.fail(errors.New("native acceptance diagnostic budget exceeded"))
@@ -257,6 +261,21 @@ func (s *suite) call(name string, want int, dst any, args ...string) {
 		}
 		value.Elem().Set(fresh.Elem())
 	}
+}
+
+func (s *suite) checkedInvocation(args []string) (invocation, error) {
+	opened, err := s.root.Stat(".")
+	if err != nil {
+		return invocation{}, err
+	}
+	named, err := safeio.Stat(s.directory)
+	if err != nil {
+		return invocation{}, err
+	}
+	if !os.SameFile(opened, named) {
+		return invocation{}, errors.New("workspace pathname changed before child launch")
+	}
+	return invocation{binary: s.binary, directory: s.directory, args: args, env: s.env}, nil
 }
 
 type fileFact struct {

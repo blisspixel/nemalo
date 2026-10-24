@@ -305,6 +305,25 @@ bytes/disabled bookmarks passed under tmux 3.8. These local observations do not
 substitute for the failed Windows gate, installed tools on other platforms,
 graphical readers, audible playback, assistive technologies or real host calls.
 
+### Native terminal acceptance candidate
+
+The optional `--terminal` extension to the executable harness is implemented
+under [decision 0092](decisions/0092-native-terminal-acceptance.md). It retains
+the original 39 CLI cases and adds three separate PDF setup commands and 49
+current-screen observations across EPUB, PDF and TUI sessions. Real native
+transport tests cover terminal handles, query responses, resize, normal and
+unsuccessful exit, cancellation, worker joins and exhausted input/output limits.
+The oracle reads current cells rather than historical terminal output.
+
+The first Linux probe against the accepted `d6ab8d8` executable passed all 39
+CLI cases, PDF setup and the first 13 EPUB terminal cases, then exposed clipped
+source coordinates at 40 columns in speedreader mode. A regression test failed
+before the presentation fix: narrow word mode now reserves a separate row for
+pacing status, leaving exact source coordinates and notices visible. Focused
+native-cgo race tests passed after that correction. Exact committed terminal
+execution and the complete local and hosted gate remain required; this candidate
+does not establish macOS/Windows terminal acceptance or a release.
+
 ## Cited evidence and citation export
 
 On 2026-10-23, local verification of the

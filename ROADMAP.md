@@ -168,8 +168,11 @@ verified, not when code exists. No stage has a time estimate.
    their [exact acceptance](https://github.com/blisspixel/nemalo/commit/3220d7f0bcc8cd9da4e014c2ee6305daeb00ec83#commitcomment-206437123)
    passed at `3220d7f`. A portable native executable lifecycle harness is in source
    under [decision 0091](docs/decisions/0091-native-executable-lifecycle-acceptance.md),
-   with acceptance separate from implementation. Broader real host/plugin and
-   terminal/platform acceptance remains.
+   with [exact native acceptance](https://github.com/blisspixel/nemalo/commit/d6ab8d86cc53f5e86a72bd3db3dfc8c0ae8757b0#commitcomment-206444963)
+   at `d6ab8d8`. Its optional PTY/ConPTY terminal extension is implemented under
+   [decision 0092](docs/decisions/0092-native-terminal-acceptance.md), with exact
+   native acceptance still required. Broader real host/plugin and accessibility
+   acceptance remains.
 6. **1.0 release candidate.** Freeze and document the on-disk formats (journals,
    holdings, bookmarks, packets), JSON envelopes, extractor IDs, and the evidence
    contract; upgrade alpha libraries in place or refuse them with a clear path;

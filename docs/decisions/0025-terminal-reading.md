@@ -87,7 +87,12 @@ session, so nothing is lost or repeated.
   missing, and off-spine targets are listed and never followed. Detours nest
   at most four deep over an untouched passage session; Escape returns, late
   results are ignored, and nothing is recorded.
-- Position is shown as unit and byte. Closing prints one line naming the
+- Position is shown as unit and byte. At widths below 80 columns, word mode
+  puts nominal rate/status on its own
+  footer row so exact coordinates, coverage notices and exit controls remain
+  visible. An optional total-byte suffix is omitted when it would clip the
+  source coordinates. This uses one fewer body row, without moving the source
+  place or recording any reading state. Closing prints one line naming the
   place, the book's declared contents entry or the unit label, and how far
   through its text it is, rounded down, then that nothing was recorded
   (issue 35). It names a saved bookmark only when one exists for the book
