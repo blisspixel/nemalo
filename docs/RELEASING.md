@@ -47,3 +47,13 @@ does not prove execution there. Checksum files detect accidental changes relativ
 to the release assets; they are not an independent signature or publisher identity.
 Downloaded content, validation libraries, personal metadata, and scanner logs must
 never enter release assets or Git.
+
+After its existing executable smoke, each native CI job also runs
+`go run ./cmd/nativecheck` against that exact clean cgo-free executable and commit.
+The harness exercises 39 CLI lifecycle cases in a new outside-checkout workspace:
+previews and changed-plan refusals, import/source preservation, content and
+evidence, explicit bookmarks, export, ZIP ingest, integrity, cleanup, conflicting
+raw restore and fresh purge. It disables external tool discovery and keeps
+unscanned holdings in review. Its report must not be presented as installed
+antivirus coverage, a real host/plugin test or a release. Existing recovery,
+race, coverage, native Windows boundaries and live-release installer checks stay.

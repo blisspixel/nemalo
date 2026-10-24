@@ -5,6 +5,15 @@ The launcher may download that patched toolchain when the local Go installation 
 older; this does not replace the system installation. No Python or Node runtime is
 needed for the application, tests, or first-party tooling.
 
+`go run ./cmd/nativecheck --binary FILE --commit FULL_SHA` exercises a clean,
+cgo-free executable for the current native platform over 39 CLI cases. It creates
+a new private workspace outside the checkout, retains its receipt and bounded
+diagnostics, and never adopts existing data. Optional `--output` names a new
+absolute outside-checkout directory. External tool discovery is disabled and
+unscanned holdings remain in review. This is acceptance tooling, separate from
+installed scanners, real agent hosts and interactive terminal validation; see
+[decision 0091](decisions/0091-native-executable-lifecycle-acceptance.md).
+
 ## Current operations
 
 `help`, `version`, `doctor`, `search`, `evaluate`, `catalog fetch`, `acquire`, `inspect`, `check`, `library snapshot`,

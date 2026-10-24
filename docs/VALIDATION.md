@@ -245,6 +245,40 @@ Windows cross-vet and local link/anchor checks. Exact clean committed native
 and hosted acceptance are separate from these candidate observations, native
 macOS/Windows installed-tool workflows and the broader host/accessibility matrix.
 
+### Native executable lifecycle acceptance
+
+The Go harness in [decision 0091](decisions/0091-native-executable-lifecycle-acceptance.md)
+adds 39 cases against an explicitly selected clean cgo-free executable. It checks
+native target/build identity and a verified private executable copy, creates only
+fresh outside-checkout fixtures, bounds command time and output, and retains a
+versioned receipt, fixture hashes and diagnostics. Existing output and checkout
+aliases are refused. Module-root discovery also protects invocation from a source
+subdirectory. A directory capability is kept separate from the public path used
+by child processes, with a workspace identity check before each launch.
+
+The candidate harness passed all 39 real CLI commands on Linux against a clean
+`3220d7f` baseline binary: import preview and changed-plan refusal, idempotence,
+text/navigation/evidence/replay/citation, explicit and disabled bookmarks,
+verified export, ordinary ZIP ingest, integrity, cleanup preview and changed-plan
+refusal, conflict-preserving raw restore, fresh purge and wrong-plan refusal.
+Restore reported purged copies instead of reconstructing them. Both holdings
+stayed unscanned and in review; integrity verified their bytes without claiming
+checked publication. Original intake, uncertain neighbors and disabled bookmarks
+remained intact. External tool discovery was disabled, and a requested scan
+reported unavailable. No simulated scanner was used by the executable harness.
+
+Offline tests drive the same scenario through real CLI/application services with
+injected external adapters and verify failure stops later commands and mutation.
+Other tests cover build identity, workspace aliases, malformed envelopes, fresh
+result decoding, output limits, cancellation and retained failure reports. The
+focused native-cgo race checks and Windows cross-vet passed. Full canonical
+verification then passed with 87.3% aggregate coverage and no reported dependency
+vulnerabilities, followed by native repository race, Windows cross-vet, local
+links/anchors and whitespace checks. Actual execution of the new step on all three
+native hosted OSes and exact committed acceptance remain separate gates. Existing recovery/boundary
+tests, actual installed-tool evidence, host/plugin calls, interactive terminals
+and release installation are not replaced by this harness.
+
 ## Cited evidence and citation export
 
 On 2026-10-23, local verification of the

@@ -165,7 +165,11 @@ verified, not when code exists. No stage has a time estimate.
    its [exact local/native/hosted acceptance](https://github.com/blisspixel/nemalo/commit/8d7d3561aaaf1036cbee820b0fc0a43198b5d73c#commitcomment-206433228)
    passed at `8d7d356`. Read's explicit citation/evidence reports and bounded
    replay are in source under [decision 0090](docs/decisions/0090-terminal-cited-evidence.md);
-   their acceptance and the broader host/platform matrix remain separate gates.
+   their [exact acceptance](https://github.com/blisspixel/nemalo/commit/3220d7f0bcc8cd9da4e014c2ee6305daeb00ec83#commitcomment-206437123)
+   passed at `3220d7f`. A portable native executable lifecycle harness is in source
+   under [decision 0091](docs/decisions/0091-native-executable-lifecycle-acceptance.md),
+   with acceptance separate from implementation. Broader real host/plugin and
+   terminal/platform acceptance remains.
 6. **1.0 release candidate.** Freeze and document the on-disk formats (journals,
    holdings, bookmarks, packets), JSON envelopes, extractor IDs, and the evidence
    contract; upgrade alpha libraries in place or refuse them with a clear path;

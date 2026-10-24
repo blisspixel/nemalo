@@ -43,6 +43,8 @@ jobs:
           go build -trimpath -o bin/ ./cmd/nemalo
           ./bin/nemalo version --json
           ./bin/nemalo doctor --json
+      - name: Exercise native executable lifecycle
+        run: go run ./cmd/nativecheck --binary "bin/nemalo${{ runner.os == 'Windows' && '.exe' || '' }}" --commit "${{ github.sha }}"
 
   # Installers are exercised against the newest published release. They cannot
   # test an unpublished version, so release step 7 repeats this after publishing.
