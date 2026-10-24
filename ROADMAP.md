@@ -668,8 +668,10 @@ the last excerpt, follows source notes and returns, and closing names the place
 and writes nothing ([decision 0025](docs/decisions/0025-terminal-reading.md)).
 The [reader review](docs/READER-REVIEW.md) compares primary documentation for
 mature readers and pacing tools. Exact place retention and pause correctness
-precede further controls; full-screen contents/search and assistive-technology
-validation remain distinct interface work. The
+precede further controls. Full-screen contents now reuses declared-entry reading
+and physical PDF units; in-reader search and assistive-technology validation
+remain distinct interface work. Source implementation and its full acceptance
+remain separate. The
 [native workflow review](docs/VALIDATION.md#native-workflow-review-on-2026-10-24)
 records selected installed-tool and CLI/MCP evidence with explicit coverage gaps.
 Source-declared EPUB 3 nav and EPUB 2 NCX hierarchies are `epub-nav/1`: a read

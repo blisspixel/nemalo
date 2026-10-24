@@ -7,6 +7,7 @@ import (
 	tea "charm.land/bubbletea/v2"
 	"github.com/blisspixel/nemalo/internal/content"
 	"github.com/blisspixel/nemalo/internal/library"
+	"github.com/blisspixel/nemalo/internal/present"
 	"github.com/blisspixel/nemalo/internal/reader"
 )
 
@@ -58,8 +59,13 @@ func (m *model) pagerAuxResult(msg pagerAux) {
 	}
 	switch v := msg.data.(type) {
 	case content.Result:
-		// One source of contents: the navigation document, else the NCX.
-		for _, evidence := range []string{"nav-doc", "ncx"} {
+		// A declared-entry session keeps its explicitly chosen source. Ordinary
+		// spine reading uses the navigation document, else the NCX.
+		sources := []string{"nav-doc", "ncx"}
+		if p.chapter {
+			sources = []string{p.navEvidence}
+		}
+		for _, evidence := range sources {
 			for _, doc := range v.Navigation {
 				if doc.Evidence == evidence && doc.Problem == "" && len(doc.Entries) > 0 && p.contents == nil {
 					p.contents = doc.Entries
@@ -90,7 +96,7 @@ func (m *model) placeName(at reader.Position) string {
 		}
 	}
 	if name != "" {
-		return name
+		return present.Line(name)
 	}
 	return p.doc.Label(at.Unit)
 }

@@ -133,6 +133,9 @@ func (m *model) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := message.(type) {
 	case pagerChunk:
 		return m, m.pagerChunk(msg)
+	case contentsResult:
+		m.contentsResult(msg)
+		return m, nil
 	case pagerTick:
 		return m, m.pagerTick(msg)
 	case noteChunk:

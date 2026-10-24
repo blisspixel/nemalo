@@ -158,12 +158,24 @@ reported by the reader's own read. Word mode opens paused.
 | g / G | Start / end of the loaded text | |
 | [ / ] | Previous / next unit. Inside a declared entry, these stay in that entry | Previous / next unit. Inside a declared entry, these stay in that entry |
 | s / p | s: paused word mode; return to the same word after page context unless you navigated | p: page context at this word, paused |
+| c | Choose declared contents or a physical PDF page | Pause and open the same chooser |
 | m | Save this location. Closing does not save | Save this location. Closing does not save |
 | ' | Restore the saved location | Restore the saved location |
 | f | Links and notes on this page | Pause, then links and notes near this word |
-| Escape | Close, or in a note go back one level | Close, or in a note go back one level |
+| Escape | Close; in a note or contents, return to the passage | Close; in a note or contents, return to the passage |
 | q | Close. Nothing is saved | Close. Nothing is saved |
 | ? | Show or hide the key list. `q close` stays in the footer at 80 columns | Pause and show the key list; hiding it stays paused until Space |
+
+`c` opens the contents chooser inside the reader. EPUB NAV and NCX entries stay
+separately labeled, including duplicate labels and unresolved declarations.
+Use j/k or arrows, Space/b or PageDown/PageUp, and g/G or Home/End to choose;
+Enter opens that exact source entry, paused, until its declared end. An unresolved
+entry is refused. PDF choices are physical pages with any declared page label.
+The display holds at most 2048 choices and says when it reaches that limit.
+Escape or c returns to the unchanged passage, paused; q closes the reader.
+Opening or closing the chooser records no progress and changes no bookmark.
+Retrieval runs only on explicit open, with a 15-second deadline and cancellation
+and late-result guards. Missing or failed contents stay explicit.
 
 Speed reading starts paused at 250 words per minute and holds sentence ends
 twice as long. Above 350 the footer calls it skimming, since comprehension fell
@@ -220,7 +232,7 @@ proof the file is safe. See
 
 ## Application-view captures
 
-These application-view captures were refreshed on 2026-10-23 from the current Go
+These application-view captures were refreshed on 2026-10-24 from the current Go
 TUI model at 116 columns and 36 rows, in its supported no-color mode. Frames are
 rendered as fixed-width text to PNG; they are not OS window screenshots.
 Holdings come from a fresh offline snapshot of validation copies of Montaigne's
@@ -241,5 +253,7 @@ observations preserve the fixture bytes; the view does not start a scan.
 ![Local Gutenberg discovery and selected catalog evidence](images/tui-discovery.png)
 
 ![Source-bound terminal reading from Pride and Prejudice](images/tui-reading.png)
+
+![Source-declared contents inside the full-screen reader](images/tui-contents.png)
 
 ![Explicit job observation with a torn journal and unobserved owner](images/tui-jobs.png)

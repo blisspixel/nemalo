@@ -84,6 +84,21 @@ CLI: `content navigation CATALOG --root DIRECTORY --asset sha256:HASH`.
 resolved entry pages that entry and stops at its declared end. `]` and `[`
 do not leave the entry.
 
+Full-screen reading also uses `c` to choose declared entries through the same
+application service. NAV and NCX remain separate choices, even when their labels
+or targets agree; unresolved entries remain visible and cannot open. Selecting
+one reuses the same declared-entry reader, including its bounded end. PDF choices
+are physical source units and their declared labels, not inferred contents.
+The transient chooser pauses playback, invalidates its timer, bounds display to
+2048 choices with explicit truncation, and retrieves only on explicit open with
+a 15-second deadline. Escape/c returns to the unchanged paused passage. Requests
+are cancelled on close/replacement and session/request fences reject late results.
+The CLI reader-only exit mode and in-session rate survive a declared selection.
+Closing names the explicitly selected navigation source's entry; another source
+cannot relabel it. Control and format characters in that label stay visible
+escapes in the closing line, without changing source metadata or representation IDs.
+No new extractor, parser, network access, model, bookmark write or reading record.
+
 ## Evidence
 
 - EPUB 3.3 navigation document: <https://www.w3.org/TR/epub-33/#sec-nav>

@@ -49,6 +49,20 @@ A separate positive check of the harmless standard
 scanner findings and an unsuccessful CLI result, preserving its exact 68 bytes.
 The fixture was never executed; no remediation, quarantine or scanner allowlist
 change was requested. This checks detection reporting, not detection of every threat.
+Installed FFplay n9.0.2 also accepted the returned mono 44,100 Hz WAV through
+SDL dummy audio/video backends, using documented
+[headless and exit controls](https://ffmpeg.org/ffplay.html) and the
+[audio-driver selection](https://wiki.libsdl.org/SDL2/SDL_HINT_AUDIODRIVER).
+It exited successfully and left the WAV hash unchanged. This checks a player
+accepting the range; physical audio hardware and audible playback remain untested.
+Four additional CLI checks at `78efce2` exercised missing-tool behavior.
+The actual absent EPUBCheck, and scanner/decoder hidden only from each child
+process's PATH, returned explicit unavailable errors. Missing decoding returned
+no resource or continuation. With 7-Zip hidden the folder inventory completed,
+but its archive was explicitly `not_imported`, with zero imported/checked items
+and a preserved-source explanation. Inventory completion is not archive coverage.
+Fixture modes and hashes stayed unchanged; installed tools and global settings
+were not changed.
 Native Windows/macOS tool installations, actual graphical reader/player interaction,
 assistive-technology compatibility, power-loss recovery and all provider/download
 combinations were not exercised by this review. Existing offline tests retain
@@ -60,6 +74,16 @@ page context. Both fixes passed focused native-cgo race tests. The terminal chec
 held byte 11 through help and returned to the same paused word after pages, with
 disabled bookmarks and stored bytes unchanged. Exact committed hosted acceptance
 remains separate. See the [reader comparison and next gaps](READER-REVIEW.md).
+
+The next contents increment passed focused native-cgo race tests and actual
+Linux tmux 3.8 interaction on synthetic EPUB/PDF holdings. The CLI reader chose
+a physical PDF page, selected NAV and NCX entries independently, refused an
+unresolved anchor, returned to the unchanged passage and exited on q. A selected
+entry did not include the following entry's text. Complete library modes and
+bytes, including disabled bookmarks, stayed unchanged. Full local canonical
+verification then passed at 87.1% aggregate coverage with no reported dependency
+vulnerabilities, followed by full native-cgo race, Windows cross-vet and documentation
+checks. Exact committed native and hosted acceptance remain separate gates.
 
 ## Cited evidence and citation export
 
