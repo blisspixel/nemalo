@@ -379,7 +379,7 @@ This is one host on one OS with a synthetic library. The Agent Plugins package,
 other hosts, macOS and Windows hosts, and interactive install prompts remain
 unverified.
 
-### Installed-tool acceptance candidate
+### Installed-tool acceptance
 
 The `--installed-tools` mode in
 [decision 0093](decisions/0093-native-installed-tool-acceptance.md) adds 13 cases
@@ -399,8 +399,35 @@ The same review found that doctor reported 7-Zip unavailable when only `7zz`
 was installed, as with Homebrew's `sevenzip` formula, although intake used it.
 Doctor now uses intake's discovery; the regression test failed before the fix.
 Offline tests cover selection refusals, shadowed executables, Defender roots,
-case order and failures that stop later work. Exact hosted runs on all three
-OSes remain required.
+case order and failures that stop later work.
+
+Dispatched
+[installed-tools run 40131545308](https://github.com/blisspixel/nemalo/actions/runs/40131545308)
+passed all 39 and all 13 cases on all three hosted OSes against clean `392f21f`
+executables, with ordinary
+[CI 40131539453](https://github.com/blisspixel/nemalo/actions/runs/40131539453)
+(all six jobs) and
+[CodeQL 40131539333](https://github.com/blisspixel/nemalo/actions/runs/40131539333)
+passing at the same head:
+
+| OS | Scanner | 7-Zip | FFmpeg | Decoded samples |
+| --- | --- | --- | --- | --- |
+| Linux amd64 | ClamAV 1.5.4, signatures 28163 | 23.01 | 6.1.1 (Ubuntu) | 89,088 |
+| macOS arm64 | ClamAV 1.5.4, signatures 28163 | 26.04 `7zz` (Homebrew) | 9.0.2 | 88,200 |
+| Windows amd64 | Defender platform 4.18.26090.9-0, signatures 1.461.186.0 | 26.04 | 9.0.2 (Chocolatey) | 88,200 |
+
+The macOS run is the first with only `7zz`: doctor reported 7-Zip available and
+intake used it. On Windows the Defender `Platform` folder held a version folder
+and a `CurrentVersion` junction to it. Nemalo's resolution selected the junction,
+as Microsoft's documented name-descending folder choice also would, so the same
+platform binary ran. Ubuntu's older FFmpeg decoded the same synthetic tone to a
+different sample count than 9.0.2; each run matched its own reference decode
+exactly. Decoded sample counts therefore describe one installed decoder, not a
+portable fact about the file. An earlier dispatch at `b49bdaa` passed Linux and
+macOS; its Windows job failed in the workflow's own folder sort, before any
+case, because of that junction. Tool versions follow the runner images and are
+recorded, not pinned. This is selected installed-tool behavior, not detection
+coverage, every archive layout or codec, or a release.
 
 ## Cited evidence and citation export
 

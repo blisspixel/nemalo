@@ -1,7 +1,9 @@
 # 0093: native installed-tool acceptance
 
-Status: recorded before implementation, 2026-10-24. Stage 5 acceptance tooling,
-separate from a release, scanner quality, codec conformance and real host calls.
+Status: recorded before implementation, 2026-10-24, and accepted on all three
+hosted OSes at `392f21f`; see [validation](../VALIDATION.md#installed-tool-acceptance).
+Stage 5 acceptance tooling, separate from a release, scanner quality, codec
+conformance and real host calls.
 Decisions [0091](0091-native-executable-lifecycle-acceptance.md) and
 [0092](0092-native-terminal-acceptance.md) passed their exact native gates.
 

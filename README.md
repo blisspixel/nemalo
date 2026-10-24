@@ -55,11 +55,13 @@ For version pinning, uninstalling and source builds, see
 
 ## Quick start
 
-Acquire one public-domain book and read it. Each command prints the next step.
+Acquire one public-domain book and read it. This worked example uses *Pride and
+Prejudice*; use any title instead. Each command prints the next step: `search`
+shows the book's ID and `evaluate` its file names.
 
 ```sh
 nemalo catalog fetch gutenberg --output ~/pg_catalog.csv
-nemalo search pride and prejudice --source gutenberg --catalog ~/pg_catalog.csv
+nemalo search "pride and prejudice" --source gutenberg --catalog ~/pg_catalog.csv
 nemalo evaluate gutenberg:1342 --files
 nemalo acquire gutenberg:1342 --file 1342.epub.noimages --output ~/intake/pride
 mkdir ~/books && nemalo library init ~/books

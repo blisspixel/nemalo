@@ -205,10 +205,12 @@ Remaining stage 5 work, in order:
    it ([named launch clients](https://vercel.com/changelog/introducing-agent-plugins-1-0-0)
    include Codex, Cursor, GitHub Copilot, Kiro and VS Code; Codex is installed
    locally), and Claude Code on macOS and Windows.
-2. Installed-tool evidence beyond Linux. The repeatable `nativecheck
-   --installed-tools` mode and its dispatched workflow are implemented under
-   [decision 0093](docs/decisions/0093-native-installed-tool-acceptance.md);
-   exact hosted acceptance on all three OSes is required.
+2. Installed-tool evidence beyond Linux is
+   [accepted](docs/VALIDATION.md#installed-tool-acceptance) on all three hosted
+   OSes at `392f21f` through `nativecheck --installed-tools`
+   ([decision 0093](docs/decisions/0093-native-installed-tool-acceptance.md)).
+   Re-dispatch `installed-tools.yml` after changes to scanning, archive intake
+   or decoding.
 3. Accessibility review of the TUI and reader: keyboard-only operation, no-color
    and light/dark output, and at least one screen reader per OS, with limitations
    recorded rather than inferred from the fixed terminal profile.
