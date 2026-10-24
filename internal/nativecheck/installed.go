@@ -271,12 +271,7 @@ func (s *suite) installed(t *installedSelection) {
 	s.result.Installed = r
 	s.result.Limitations = append(s.result.Limitations, "Installed-tool cases run only the named executables on owned synthetic fixtures. They show selected scanning, archive and decoding behavior, not detection coverage, malware resistance, every archive layout or codec, or decoder correctness.")
 	scannerPath := t.tools[0].path
-	hashed := int64(0)
-	for _, tool := range t.tools {
-		fact := ToolFact{Role: tool.role, Path: tool.path}
-		fact.Bytes, fact.SHA256, hashed = s.hashTool(tool.path, hashed)
-		r.Tools = append(r.Tools, fact)
-	}
+	r.Tools = s.toolFacts(t)
 	toolPath := func(role string) string {
 		for _, x := range t.tools {
 			if x.role == role {
@@ -507,6 +502,22 @@ func (s *suite) toolRun(r *InstalledReport, t *installedSelection, name, role, e
 		return nil
 	}
 	return res.stdout
+}
+
+func (s *suite) toolFacts(t *installedSelection) []ToolFact {
+	facts := []ToolFact{}
+	hashed := int64(0)
+	for _, tool := range t.tools {
+		fact := ToolFact{Role: tool.role, Path: tool.path}
+		fact.Bytes, fact.SHA256, hashed = s.hashTool(tool.path, hashed)
+		// Defender runs only through Nemalo's scans; its platform folder names
+		// the version without another invocation.
+		if dir := filepath.Dir(tool.path); tool.role == "defender" && strings.EqualFold(filepath.Base(filepath.Dir(dir)), "Platform") {
+			fact.Version = "Microsoft Defender platform " + filepath.Base(dir)
+		}
+		facts = append(facts, fact)
+	}
+	return facts
 }
 
 func (s *suite) hashTool(path string, used int64) (int64, string, int64) {

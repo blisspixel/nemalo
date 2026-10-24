@@ -116,6 +116,18 @@ func TestDefenderRootsMatchNemaloResolution(t *testing.T) {
 	if key, root, err := defenderRoot(data); err != nil || key != "ProgramData" || root != string(filepath.Separator)+"pd" {
 		t.Fatal(key, root, err)
 	}
+	s := testSuite(t, nil)
+	if err := os.MkdirAll(filepath.Join(s.directory, "pd", "Microsoft", "Windows Defender", "Platform", "4.18.1-0"), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	platform := filepath.Join(s.directory, "pd", "Microsoft", "Windows Defender", "Platform", "4.18.1-0", "MpCmdRun.exe")
+	if err := os.WriteFile(platform, []byte("not executed"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	facts := s.toolFacts(&installedSelection{tools: []selectedTool{{role: "defender", path: platform}}, goos: "windows"})
+	if s.err != nil || len(facts) != 1 || facts[0].Version != "Microsoft Defender platform 4.18.1-0" || facts[0].Bytes != int64(len("not executed")) {
+		t.Fatal(facts, s.err)
+	}
 	files := filepath.Join(string(filepath.Separator)+"pf", "Windows Defender", "MpCmdRun.exe")
 	if key, root, err := defenderRoot(files); err != nil || key != "ProgramFiles" || root != string(filepath.Separator)+"pf" {
 		t.Fatal(key, root, err)
@@ -293,7 +305,13 @@ func TestInstalledCasesUseSelectedToolsAndReferenceSamples(t *testing.T) {
 			t.Fatal("wrong exit", c)
 		}
 	}
-	if r.Status != "passed" || !slices.Equal(names, installedCases) || len(r.Tools) != 4 || f.toolRuns != 7 || len(r.ToolRuns) != 7 {
+	// Version runs for every tool except Defender, plus archive, encode and
+	// reference runs.
+	runs := 7
+	if runtime.GOOS == "windows" {
+		runs = 6
+	}
+	if r.Status != "passed" || !slices.Equal(names, installedCases) || len(r.Tools) != 4 || f.toolRuns != runs || len(r.ToolRuns) != runs {
 		t.Fatal(r.Status, names, len(r.Tools), f.toolRuns)
 	}
 	for _, tool := range r.Tools {
