@@ -109,6 +109,31 @@ func (orderedCatalog) SearchOrdered(_ context.Context, q, order string, limit, o
 	return discovery.Page{Query: q, Order: order, Offset: offset, Total: limit}, nil
 }
 
+// Homebrew's sevenzip formula installs only 7zz. Doctor must report the same
+// 7-Zip that archive intake uses, not only an executable literally named 7z.
+func TestLookupReportsEvery7ZipNameIntakeUses(t *testing.T) {
+	for _, name := range []string{"7zz", "7za"} {
+		dir := t.TempDir()
+		file := filepath.Join(dir, name)
+		if runtime.GOOS == "windows" {
+			file += ".exe"
+		}
+		// Never executed: LookPath only checks presence and permission.
+		if err := os.WriteFile(file, nil, 0o755); err != nil {
+			t.Fatal(err)
+		}
+		t.Setenv("PATH", dir)
+		got, err := Lookup("7z")
+		if err != nil || !strings.EqualFold(got, file) {
+			t.Fatalf("%s: got %q, %v; want %q", name, got, err, file)
+		}
+	}
+	t.Setenv("PATH", t.TempDir())
+	if got, err := Lookup("7z"); err == nil {
+		t.Fatalf("an empty PATH reported 7-Zip at %q", got)
+	}
+}
+
 func TestSearchOrderRouting(t *testing.T) {
 	s := Service{Providers: map[string]Searcher{"archive": orderedCatalog{}, "openlibrary": catalog{}}}
 	for _, order := range []string{"", discovery.OrderRelevance} {

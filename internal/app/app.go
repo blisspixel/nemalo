@@ -22,6 +22,7 @@ import (
 	"github.com/blisspixel/nemalo/internal/library"
 	"github.com/blisspixel/nemalo/internal/safeio"
 	"github.com/blisspixel/nemalo/internal/scanner"
+	"github.com/blisspixel/nemalo/internal/staging"
 )
 
 type Searcher interface {
@@ -668,6 +669,10 @@ func Lookup(name string) (string, error) {
 			return path, nil
 		}
 		return "", errors.New("installed Defender unavailable")
+	}
+	if name == "7z" {
+		// The same 7zz, 7z or 7za that archive intake would run.
+		return staging.SevenZip()
 	}
 	return exec.LookPath(name)
 }
