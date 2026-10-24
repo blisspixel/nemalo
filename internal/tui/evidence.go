@@ -141,7 +141,7 @@ func (m *model) readAuxKey(msg tea.KeyPressMsg) tea.Cmd {
 	case "esc":
 		m.closeReadAux()
 		return nil
-	case "f3":
+	case "f3", "r": // r needs no function key (decision 0094).
 		return m.requestReadAux(true)
 	case "home":
 		m.readAux.viewport.GotoTop()
@@ -172,7 +172,7 @@ func (m *model) readAuxView() string {
 	}
 	footer := "PgUp/Dn scroll  Esc back  ^C quit"
 	if !s.citation && s.reference != "" && !m.busy {
-		footer = "F3 replay  PgUp/Dn  Esc back  ^C quit"
+		footer = "F3/r replay  PgUp/Dn  Esc back  ^C quit"
 	}
 	lines := []string{m.paint(clip("Nemalo | "+title, m.width-2), accent, true), clip(s.status, m.width-2), strings.Repeat("-", m.width-2), s.viewport.View(), clip(footer, m.width-2)}
 	// The viewport occupies height-5 rows; one final empty row keeps full-frame

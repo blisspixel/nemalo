@@ -148,7 +148,10 @@ func (f roundTrip) RoundTrip(r *http.Request) (*http.Response, error) { return f
 
 func TestTerminalWorkflow(t *testing.T) {
 	m := newModel(context.Background(), app.Service{Providers: map[string]app.Searcher{"openlibrary": catalog{}}})
-	if m.Init() == nil || !strings.Contains(m.View().Content, "Nemalo") {
+	// Focus no longer returns a blink command: the real terminal cursor
+	// replaces the drawn one (decision 0094).
+	m.Init()
+	if v := m.View(); !m.input.Focused() || v.Cursor == nil || !strings.Contains(v.Content, "Nemalo") {
 		t.Fatal("missing initial view/focus")
 	}
 	m.Update(tea.WindowSizeMsg{Width: 40, Height: 12})

@@ -50,13 +50,21 @@ type TerminalCase struct {
 	Width    int               `json:"width"`
 	Height   int               `json:"height"`
 	Position *TerminalPosition `json:"position,omitempty"`
+	Cursor   *TerminalCursor   `json:"cursor,omitempty"`
 	Error    string            `json:"error,omitempty"`
+}
+
+// TerminalCursor is the real terminal cursor in the observed frame.
+type TerminalCursor struct {
+	X      int  `json:"x"`
+	Y      int  `json:"y"`
+	Hidden bool `json:"hidden"`
 }
 
 var terminalCoordinate = regexp.MustCompile(`Unit ([0-9]+), byte ([0-9]+)`)
 
 var readerTerminalCases = []string{"pages", "find-open", "find-results", "find-selected", "contents", "contents-selected", "speed-paused", "playing", "help", "help-dwell", "help-return", "page-context", "word-return", "narrow", "wide", "exit"}
-var referenceTerminalCases = []string{"startup", "holdings", "read-staged", "no-excerpt-refusal", "units", "excerpt", "citation", "citation-sidecar", "citation-return", "evidence", "evidence-sidecar", "replay", "narrow", "wide", "evidence-return", "continuation", "exit"}
+var referenceTerminalCases = []string{"startup", "field-cursor", "holdings", "read-staged", "no-excerpt-refusal", "units", "excerpt", "citation", "citation-sidecar", "citation-return", "evidence", "evidence-sidecar", "replay", "evidence-end", "replay-key", "narrow", "wide", "evidence-return", "continuation", "actions", "actions-citation", "actions-return", "exit"}
 
 func terminalPlace(text string) *TerminalPosition {
 	m := terminalCoordinate.FindStringSubmatch(text)
@@ -234,7 +242,7 @@ func (d *terminalDriver) save(id string, f terminalScreen, err error) terminalSc
 	d.suite.outputBytes += len(data)
 	file := d.directory + "/" + id + ".txt"
 	digest := sha256.Sum256(data)
-	c := TerminalCase{ID: id, Status: "passed", Frame: file, SHA256: hex.EncodeToString(digest[:]), Width: f.width, Height: f.height, Position: terminalPlace(f.text)}
+	c := TerminalCase{ID: id, Status: "passed", Frame: file, SHA256: hex.EncodeToString(digest[:]), Width: f.width, Height: f.height, Position: terminalPlace(f.text), Cursor: &TerminalCursor{X: f.cursorX, Y: f.cursorY, Hidden: f.cursorHidden}}
 	if err != nil {
 		c.Status = "failed"
 		c.Error = err.Error()
@@ -369,6 +377,16 @@ func (d *terminalDriver) reference(lib, asset string) {
 	d.send(lib)
 	d.send("\x0e") // Ctrl+N changes the field; Tab changes modes.
 	d.send(asset)
+	// The real terminal cursor follows the typed text on the focused field.
+	d.observe("field-cursor", 0, func(f terminalScreen) bool {
+		lines := strings.Split(f.text, "\n")
+		if f.cursorHidden || f.cursorY < 0 || f.cursorY >= len(lines) {
+			return false
+		}
+		line := lines[f.cursorY]
+		at := strings.Index(line, asset)
+		return strings.HasPrefix(line, "> Filter") && at >= 0 && f.cursorX == at+len(asset)
+	})
 	d.key("holdings", "\r", containsScreen("Native synthetic fixture"))
 	d.send("\x1b[17~") // F6, results focus.
 	d.key("read-staged", "r", containsScreen("[0 Read]", asset))
@@ -379,9 +397,12 @@ func (d *terminalDriver) reference(lib, asset string) {
 	d.key("citation", "\x1bOQ", containsScreen("Nemalo | Recorded citation metadata", "Unknown fields"))
 	d.key("citation-sidecar", "\x1b[F", containsScreen(`"author"`, "Esc back"))
 	d.key("citation-return", "\x1b", func(f terminalScreen) bool { return f.text == ordinary.text })
-	d.key("evidence", "\x1bOS", containsScreen("Nemalo | Source-bound evidence", "Metadata SHA-256", "F3 replay"))
-	d.key("evidence-sidecar", "\x1b[F", containsScreen(`"has_continuation"`, "F3 replay"))
-	d.key("replay", "\x1bOR", containsScreen("Nemalo | Source-bound evidence", "Metadata SHA-256", "F3 replay"))
+	d.key("evidence", "\x1bOS", containsScreen("Nemalo | Source-bound evidence", "Metadata SHA-256", "F3/r replay"))
+	d.key("evidence-sidecar", "\x1b[F", containsScreen(`"has_continuation"`, "F3/r replay"))
+	d.key("replay", "\x1bOR", containsScreen("Nemalo | Source-bound evidence", "Metadata SHA-256", "F3/r replay"))
+	// An identical screen sends nothing, so scroll first; r then returns to the top.
+	d.key("evidence-end", "\x1b[F", containsScreen(`"has_continuation"`, "F3/r replay"))
+	d.key("replay-key", "r", containsScreen("Nemalo | Source-bound evidence", "Metadata SHA-256", "F3/r replay"))
 	for _, size := range []struct {
 		id   string
 		w, h int
@@ -400,5 +421,10 @@ func (d *terminalDriver) reference(lib, asset string) {
 	}
 	d.key("evidence-return", "\x1b", containsScreen("Bounded range delivered", "Knowledge is power."))
 	d.key("continuation", "n", containsScreen("Bounded range delivered", "bytes 4096..8192"))
+	// Ctrl+O reaches a function-key action without a function key.
+	d.key("actions", "\x0f", containsScreen("Actions (Read)", "F2", "Citation report"))
+	d.send("\x1b[B\x1b[B") // Down twice: F6, F5, then F2 in this view.
+	d.key("actions-citation", "\r", containsScreen("Nemalo | Recorded citation metadata", "Unknown fields"))
+	d.key("actions-return", "\x1b", containsScreen("Bounded range delivered", "bytes 4096..8192"))
 	d.send("\x03")
 }

@@ -19,7 +19,9 @@ hosts; see
 Add `--terminal` for actual native PTY/ConPTY sessions after the same 39 cases:
 EPUB/PDF reading and TUI citation/evidence navigation, exact source positions,
 help dwell, resize, continuation and primary-screen restoration on exit. Three
-PDF setup commands and 49 terminal observations have separate receipt fields.
+PDF setup commands and 55 terminal observations have separate receipt fields,
+including the real cursor position and `Ctrl+O` actions
+([decision 0094](decisions/0094-terminal-keyboard-and-cursor-access.md)).
 The tool records bounded raw output and current-screen frames, with unchanged
 source/library snapshots. This fixed terminal profile does not establish every
 graphical terminal, assistive technology or host integration. See

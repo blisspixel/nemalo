@@ -58,14 +58,14 @@ func TestTerminalDownloadRequiresReviewAndRetainsExactSelection(t *testing.T) {
 	if m.downloadReview == nil || calls != 0 || !strings.Contains(m.View().Content, "Review acquisition") {
 		t.Fatal("missing frozen review")
 	}
-	_, cmd := m.Update(tea.KeyPressMsg{Code: tea.KeyEscape})
-	if m.downloadReview != nil || calls != 0 || cmd == nil {
-		t.Fatal("cancelled review wrote")
+	m.Update(tea.KeyPressMsg{Code: tea.KeyEscape})
+	if m.downloadReview != nil || calls != 0 || m.resultsFocused || !(m.input.Focused() || m.secondary.Focused()) {
+		t.Fatal("cancelled review wrote or did not return to the form")
 	}
 	m.resultsFocused = true
 	m.browserKey("d")
 	output := m.downloadReview.Output
-	_, cmd = m.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
+	_, cmd := m.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
 	if cmd == nil || !m.busy {
 		t.Fatal("confirmed request missing")
 	}

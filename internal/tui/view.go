@@ -5,6 +5,7 @@ import (
 	"strings"
 	"unicode/utf8"
 
+	"charm.land/bubbles/v2/textinput"
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 	"github.com/blisspixel/nemalo/internal/discovery"
@@ -125,20 +126,28 @@ func (m *model) fields() string {
 	if !m.resultsFocused && !m.secondaryFocused && !m.intakeFocused {
 		marker = ">"
 	}
-	s := fmt.Sprintf("%s %-11s%s", marker, label, m.input.View())
+	// Record where each value starts, for the real terminal cursor.
+	m.fieldAt, m.fieldX = [3]int{0, -1, -1}, [3]int{}
+	prefix := fmt.Sprintf("%s %-11s", marker, label)
+	m.fieldX[0] = lipgloss.Width(prefix)
+	s := prefix + m.input.View()
 	if second != "" {
 		marker = " "
 		if !m.resultsFocused && m.secondaryFocused {
 			marker = ">"
 		}
-		s += fmt.Sprintf("\n%s %-11s%s", marker, second, m.secondary.View())
+		prefix = fmt.Sprintf("%s %-11s", marker, second)
+		m.fieldAt[1], m.fieldX[1] = 1, lipgloss.Width(prefix)
+		s += "\n" + prefix + m.secondary.View()
 	}
 	if m.mode == "collections" {
 		marker = " "
 		if !m.resultsFocused && m.intakeFocused {
 			marker = ">"
 		}
-		s += fmt.Sprintf("\n%s %-11s%s", marker, "Intake", m.intake.View())
+		prefix = fmt.Sprintf("%s %-11s", marker, "Intake")
+		m.fieldAt[2], m.fieldX[2] = strings.Count(s, "\n")+1, lipgloss.Width(prefix)
+		s += "\n" + prefix + m.intake.View()
 	}
 	return s
 }
@@ -200,7 +209,9 @@ func (m *model) top() string {
 	if m.width >= 70 {
 		brand += "   Knowledge is power."
 	}
-	return brand + "\n" + m.navigation() + "\n\n" + m.paint(clipWords(m.contextLine(), max(1, m.width-2)), muted, false) + "\n" + m.fields()
+	head := brand + "\n" + m.navigation() + "\n\n" + m.paint(clipWords(m.contextLine(), max(1, m.width-2)), muted, false) + "\n"
+	m.fieldRow = strings.Count(head, "\n")
+	return head + m.fields()
 }
 
 func (m *model) footer() string {
@@ -214,12 +225,12 @@ func (m *model) footer() string {
 		verb := map[string]string{"init": "initialize", "import": "import", "rescan": "rescan", "cleanup": "move to holding", "restore": "restore", "purge": "purge"}[m.confirmKind]
 		return lipgloss.Wrap(m.paint("Enter "+verb+"  Esc back  PgUp/PgDown review  Ctrl+C quit", warning, false), max(1, m.width-2), " ")
 	}
-	help := "Enter run  F6 browse  Tab modes  Ctrl+C quit"
+	help := "Enter run  F6 browse  Ctrl+O actions  Tab modes  Ctrl+C quit"
 	if m.mode == "read" {
 		help += "  F2 citation  F4 excerpt evidence"
 	}
 	if m.resultsFocused {
-		help = "Up/Down select  Enter details  F6 edit  Esc back  Ctrl+C quit"
+		help = "Up/Down select  Enter details  F6 edit  Ctrl+O actions  Esc back  Ctrl+C quit"
 		if m.mode == "search" && len(m.entries) > 0 && (strings.HasPrefix(m.entries[m.selected].sourceID, "archive:") || strings.HasPrefix(m.entries[m.selected].sourceID, "gutenberg:") || strings.HasPrefix(m.entries[m.selected].sourceID, "openlibrary:")) {
 			help += "  e evaluate"
 		}
@@ -249,7 +260,11 @@ func (m *model) footer() string {
 	if m.form() {
 		help += "  Ctrl+N field"
 	}
-	more := "F5 full report  PgUp/PgDn scroll  Alt+1..9/0/a/b jump"
+	// F5 only does something once a report exists.
+	more := "PgUp/PgDn scroll  Alt+1..9/0/a/b jump"
+	if m.report != "" {
+		more = "F5 full report  " + more
+	}
 	if m.mode == "search" || m.mode == "holdings" {
 		more += "  Ctrl+Left/Right results page"
 	}
@@ -269,6 +284,7 @@ func (m *model) View() tea.View {
 	}
 	if m.pager != nil {
 		v := tea.NewView(m.pagerView())
+		v.Cursor = m.findCursor()
 		v.AltScreen = true
 		return v
 	}
@@ -290,6 +306,10 @@ func (m *model) View() tea.View {
 	case m.outcome == outcomeOK:
 		color = success
 	}
+	if m.actions != nil {
+		state = "Actions for this view. Each runs its named key; reviews still ask for Enter."
+		color = accent
+	}
 	state = lipgloss.Wrap(m.paint(state, color, false), m.width-2, " ")
 	position := m.position()
 	content := m.browseView()
@@ -297,10 +317,36 @@ func (m *model) View() tea.View {
 		lines := strings.Split(lipgloss.Wrap(m.emptyHelp(), m.width-2, " "), "\n")
 		content = lipgloss.NewStyle().Height(m.viewport.Height()).Render(strings.Join(lines[:min(len(lines), m.viewport.Height())], "\n"))
 	}
-	text := m.top() + "\n" + state + "\n\n" + m.paint(position, muted, false) + "\n" + m.paint(strings.Repeat("-", m.width-2), muted, false) + "\n" + content + "\n" + m.footer()
-	v := tea.NewView(text)
+	if m.actions != nil {
+		content = lipgloss.NewStyle().Height(m.viewport.Height()).Render(m.actionsView(m.viewport.Height()))
+	}
+	head := m.top() + "\n" + state + "\n\n" + m.paint(position, muted, false) + "\n" + m.paint(strings.Repeat("-", m.width-2), muted, false) + "\n"
+	v := tea.NewView(head + content + "\n" + m.footer())
 	v.AltScreen = true
+	v.Cursor = m.screenCursor(strings.Count(head, "\n"))
 	return v
+}
+
+// screenCursor places the real terminal cursor at the chosen action or at the
+// focused field's edit position (decision 0094). contentRow is the first row
+// of the content area.
+func (m *model) screenCursor(contentRow int) *tea.Cursor {
+	if m.actions != nil {
+		row := contentRow + 1 + m.actions.selected
+		if m.actions.selected+1 >= m.viewport.Height() {
+			return nil
+		}
+		return tea.NewCursor(0, row)
+	}
+	if m.resultsFocused || m.collectionReview != nil || m.reviewingDownload() || m.confirmRoot != "" {
+		return nil
+	}
+	for i, in := range []textinput.Model{m.input, m.secondary, m.intake} {
+		if in.Focused() && m.fieldAt[i] >= 0 {
+			return inputCursor(in, m.fieldX[i], m.fieldRow+m.fieldAt[i], m.width)
+		}
+	}
+	return nil
 }
 
 func (m *model) resize() {

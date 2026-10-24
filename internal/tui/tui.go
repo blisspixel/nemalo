@@ -43,10 +43,15 @@ type model struct {
 	intakeFocused     bool
 	collectionPending *app.CollectionAcquireRequest
 	collectionReview  *collectionReview
-	assess            bool
-	height            int
-	width             int
-	color             bool
+	actions           *actionMenu
+	// fieldRow is the screen row of the first form field; fieldAt holds each
+	// input's row offset (-1 when hidden) and fieldX its value column.
+	fieldRow        int
+	fieldAt, fieldX [3]int
+	assess          bool
+	height          int
+	width           int
+	color           bool
 	// outcome colours the status line. A key press clears it; a result,
 	// or a refusal before any request, sets it from the operation itself.
 	outcome               outcome
@@ -112,18 +117,18 @@ func newModel(ctx context.Context, service app.Service) *model {
 	input.CharLimit = 1000
 	input.Placeholder = "Search books (sent to Open Library on Enter)"
 	input.SetWidth(70)
-	input.SetVirtualCursor(true)
+	input.SetVirtualCursor(false)
 	input.SetStyles(textinput.Styles{Cursor: textinput.CursorStyle{Blink: true}})
 	secondary := textinput.New()
 	secondary.Prompt = ""
 	secondary.CharLimit = 1000
 	secondary.SetWidth(70)
-	secondary.SetVirtualCursor(true)
+	secondary.SetVirtualCursor(false)
 	secondary.SetStyles(textinput.Styles{Cursor: textinput.CursorStyle{Blink: true}})
 	intake := textinput.New()
 	intake.Prompt = ""
 	intake.CharLimit = 1000
-	intake.SetVirtualCursor(true)
+	intake.SetVirtualCursor(false)
 	intake.SetStyles(textinput.Styles{Cursor: textinput.CursorStyle{Blink: true}})
 	view := viewport.New(viewport.WithWidth(80), viewport.WithHeight(16))
 	view.SoftWrap = true
@@ -505,6 +510,13 @@ func (m *model) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		if m.confirmRoot != "" {
 			return m, m.confirmInitialization(msg)
+		}
+		if m.actions != nil {
+			return m, m.actionKey(msg)
+		}
+		if msg.Keystroke() == "ctrl+o" && !m.busy {
+			m.openActions()
+			return m, nil
 		}
 		if m.mode == "read" && !m.busy {
 			switch msg.Keystroke() {

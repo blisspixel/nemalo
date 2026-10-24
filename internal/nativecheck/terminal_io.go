@@ -28,10 +28,12 @@ type terminalInput struct {
 	ack  chan error
 }
 type terminalScreen struct {
-	text          string
-	width, height int
-	sequence      uint64
-	alt           bool
+	text             string
+	width, height    int
+	sequence         uint64
+	alt              bool
+	cursorX, cursorY int // the real terminal cursor (decision 0094)
+	cursorHidden     bool
 }
 
 // Only the output worker and callers holding mu may touch the emulator. Its
@@ -242,7 +244,8 @@ func (s *terminalSession) writeInput() {
 func (s *terminalSession) screen() terminalScreen {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	return terminalScreen{s.emulator.String(), s.emulator.Width(), s.emulator.Height(), s.sequence, s.emulator.IsAltScreen()}
+	cursor := s.emulator.CursorPosition()
+	return terminalScreen{text: s.emulator.String(), width: s.emulator.Width(), height: s.emulator.Height(), sequence: s.sequence, alt: s.emulator.IsAltScreen(), cursorX: cursor.X, cursorY: cursor.Y, cursorHidden: s.emulator.CursorHidden()}
 }
 func (s *terminalSession) alive() error {
 	if err := s.failure(); err != nil {

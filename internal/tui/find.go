@@ -70,7 +70,7 @@ func (m *model) openFind() tea.Cmd {
 	input := textinput.New()
 	input.Prompt = ""
 	input.Placeholder = "Exact source text"
-	input.SetVirtualCursor(true)
+	input.SetVirtualCursor(false)
 	input.SetStyles(textinput.Styles{Cursor: textinput.CursorStyle{Blink: false}})
 	input.SetWidth(max(1, m.pagerWidth()-4))
 	representation := "epub-text/2"
@@ -258,18 +258,33 @@ func (m *model) findKey(key string) tea.Cmd {
 	return nil
 }
 
+// shown is the drawn copy of the query: visible escapes must not become a
+// different search query, and the real cursor follows this copy.
+func (f *readerFind) shown() textinput.Model {
+	shown := f.input
+	raw := []rune(f.input.Value())
+	pos := min(len(raw), max(0, f.input.Position()))
+	shown.CharLimit = 0
+	shown.SetValue(textsafe.Visible(string(raw)))
+	shown.SetCursor(len([]rune(textsafe.Visible(string(raw[:pos])))))
+	return shown
+}
+
+// findCursor is the real cursor in the find field: below the reader header
+// and the find title, after the centered margin and "> " (decision 0094).
+func (m *model) findCursor() *tea.Cursor {
+	p := m.pager
+	if p == nil || p.finder == nil || !p.finder.editing || p.help {
+		return nil
+	}
+	return inputCursor(p.finder.shown(), max(0, (m.width-m.pagerWidth())/2)+2, 2, m.width)
+}
+
 func (m *model) findBody(margin string) []string {
 	f := m.pager.finder
 	lines := []string{margin + "Find exact text in the whole book"}
 	if f.editing {
-		// Render a copy: visible escapes must not become a different search query.
-		shown := f.input
-		raw := []rune(f.input.Value())
-		pos := min(len(raw), max(0, f.input.Position()))
-		shown.CharLimit = 0
-		shown.SetValue(textsafe.Visible(string(raw)))
-		shown.SetCursor(len([]rune(textsafe.Visible(string(raw[:pos])))))
-		lines = append(lines, margin+"> "+shown.View())
+		lines = append(lines, margin+"> "+f.shown().View())
 		return lines
 	}
 	lines = append(lines, margin+"Query: "+strconv.Quote(f.query))

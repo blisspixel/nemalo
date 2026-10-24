@@ -6,6 +6,8 @@ release. Decision [0091](0091-native-executable-lifecycle-acceptance.md) passed 
 [exact native gate](https://github.com/blisspixel/nemalo/commit/d6ab8d86cc53f5e86a72bd3db3dfc8c0ae8757b0#commitcomment-206444963).
 This extension passed its exact native gate at `6f17380`; see
 [validation](../VALIDATION.md#native-terminal-acceptance).
+[Decision 0094](0094-terminal-keyboard-and-cursor-access.md) adds six terminal
+cases (real cursor, `r` replay and `Ctrl+O` actions), so the required list is 55.
 
 ## Requirement and adapters
 
