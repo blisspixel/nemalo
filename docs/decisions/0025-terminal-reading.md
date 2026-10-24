@@ -42,6 +42,8 @@ session, so nothing is lost or repeated.
   exact word, including across resizing and measure changes, and stays paused.
   Explicit page or line navigation instead selects the new page location.
   This temporary anchor is session memory, never a progress record.
+  Replacing the session, including a unit jump or explicit continuation, clears
+  that anchor before any further mode change.
   Opening help pauses playback, clears a pending playback wait and invalidates
   its timer generation. Hiding help preserves the place and stays paused until
   an explicit play action; words cannot advance behind the key list.

@@ -36,6 +36,7 @@ not every format, platform, accessibility configuration or release.
 | Audio, 18 commands including fixture generation and reference decoding | Installed FFmpeg/FFprobe checked synthetic MP3/M4B files; MP3 frame ranges, MP4 units and original packets returned. Opt-in PCM matched an independent full sequential FFmpeg reference over all 88,200 mono samples at 44,100 Hz. Returned and continued samples matched their exact intervals. A WAV was saved explicitly; audible playback was not exercised. |
 | MCP, two actual stdio processes and 12 calls | Scope violations and unavailable write tools were refused. Decoder tools appeared only with the independent opt-in; ordinary content tools still refused decoding. The native decoded resource matched CLI data. Library modes and bytes stayed unchanged. |
 | Verified-copy handoff | Two actual `library open --app` launches passed an owned Go probe a read-only copy with the exact holding hash, reused that verified copy and preserved library modes and bytes. This validates launch arguments and copy behavior, not graphical reader operation or consumption. |
+| Inventory, catalogs and collections, 11 CLI calls | Default/hash/PAR2-requested inventories, an outside-root snapshot, snapshot audit/list and managed relationships passed on owned fixtures. A one-item collection resolved the exact acquired selection as held; diff, acquisition preview and apply skipped a new transfer. Preview left missing intake missing, and source/library modes and hashes stayed unchanged. No protected-file verification or repair was inferred from the PAR2 request. |
 | Bounded discovery checks | One-result Open Library and Archive searches passed. Gutenberg search and row evaluation used the local catalog subset. Explicit `arxiv:1706.03762v7` evaluation passed. These metadata checks did not acquire bodies or establish rights, completeness or checked publication. |
 | Selected live acquisition, seven CLI calls | Explicit `gutenberg:1342`, file `1342.epub.noimages`, was evaluated and acquired from `gutenberg.pglaf.org` only. The transfer and installed scan completed as untrusted intake. Preview/apply imported its bound scan as checked; a source-bound evidence read and whole-library check passed. The original intake hash stayed unchanged. This selected result does not establish every provider, interruption/resume path or semantic completeness. |
 
@@ -43,6 +44,11 @@ Doctor found installed ClamAV with signatures updated on 2026-10-23, 7-Zip,
 FFmpeg and FFprobe. EpubCheck was unavailable; no EpubCheck validation is claimed.
 Defender was unavailable on Linux. The scanner reported no detections for the
 selected synthetic EPUB, which is coverage evidence rather than a safety guarantee.
+A separate positive check of the harmless standard
+[EICAR fixture](https://www.eicar.org/download-anti-malware-testfile/) returned
+scanner findings and an unsuccessful CLI result, preserving its exact 68 bytes.
+The fixture was never executed; no remediation, quarantine or scanner allowlist
+change was requested. This checks detection reporting, not detection of every threat.
 Native Windows/macOS tool installations, actual graphical reader/player interaction,
 assistive-technology compatibility, power-loss recovery and all provider/download
 combinations were not exercised by this review. Existing offline tests retain

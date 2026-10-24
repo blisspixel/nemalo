@@ -398,7 +398,7 @@ func TestSpeedReadingStartsPausedAndPacesBySentence(t *testing.T) {
 }
 
 func TestSpeedReaderPageContextReturnsToExactWord(t *testing.T) {
-	catalog, root, asset, _ := readerBook(t, true)
+	catalog, root, asset, _ := readerBook(t, false)
 	before := files(t, root, filepath.Dir(catalog))
 	scheduled(t)
 	m := newModel(context.Background(), app.New())
@@ -430,6 +430,19 @@ func TestSpeedReaderPageContextReturnsToExactWord(t *testing.T) {
 		press(m, "s")
 		if got, _ := m.pagerPosition(); got != want || p.playing {
 			t.Fatal("navigation reused the earlier word", key, got, want)
+		}
+	}
+	// A unit jump replaces the session and must drop its old context anchor.
+	p.word = 8
+	for _, key := range []string{"]", "["} {
+		press(m, "p", key)
+		pageAt, ok := m.pagerPosition()
+		if !ok {
+			t.Fatal("unit jump has no position", key)
+		}
+		press(m, "s")
+		if got, _ := m.pagerPosition(); got != pageAt {
+			t.Fatal("unit jump restored the previous session's word", key, got, pageAt)
 		}
 	}
 	m.closePager()

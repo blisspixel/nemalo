@@ -203,6 +203,7 @@ func (m *model) pagerJump(unit int) tea.Cmd {
 // pagerOpen starts a new session at at, discarding the current one.
 func (m *model) pagerOpen(at reader.Position, note string) tea.Cmd {
 	p := m.pager
+	p.pageWord = nil
 	p.doc, p.layout, p.start, p.resume = reader.New(p.representation, p.units), reader.Layout{}, at, nil
 	p.doc.StartAt(at)
 	p.top, p.word, p.blocked, p.failed, p.failure, p.waiting, p.playing = 0, 0, false, -1, "", false, false
@@ -760,7 +761,7 @@ func readerHelp(speed, chapter bool) []string {
 			"Reader keys",
 			"Space       play or pause",
 			"Left/Right  previous or next sentence",
-			"Up/Down     slower or faster",
+			"Up/Down     faster or slower",
 			"[ ]         previous or next unit",
 			"p           pages at this word",
 			"f           links and notes near this word (pauses)",
