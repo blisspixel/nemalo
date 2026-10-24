@@ -117,6 +117,13 @@ Filesystem capability binding and display encoding use shared adapters described
 in [decision 0008](decisions/0008-filesystem-and-display-boundaries.md).
 Neither intake receipts nor portable snapshots are managed publication journals.
 
+Collection acquisition previews expose an optional intent digest over the exact
+declaration, initialized library, packet actions and transfer choices. TUI review
+and guarded CLI apply use the same application comparison before provider or
+intake writes; normal fresh acquisition checks still follow. This is no new
+collection store or durable snapshot. See
+[decision 0089](decisions/0089-collection-acquisition-review.md).
+
 ## Identity and catalog model
 
 | Entity | Purpose and identity |

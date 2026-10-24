@@ -53,7 +53,7 @@ func (m *model) navigation() string {
 	width := max(1, m.width-2)
 	full, compact := make([]string, len(modes)), make([]string, len(modes))
 	for i, name := range modes {
-		number := fmt.Sprint((i + 1) % 10)
+		number := modeShortcut(i)
 		label := number + " " + strings.ToUpper(name[:1]) + name[1:]
 		full[i], compact[i] = label, number
 		if name == m.mode {
@@ -112,27 +112,48 @@ func (m *model) fields() string {
 		label, hint, second = "Folder", "Existing library folder; Enter reads status", "Source"
 	case "read":
 		label, hint, second = "Catalog", "Catalog selected from Holdings", "Root"
+	case "collections":
+		label, hint, second = "Collection", "Existing exact-selection JSON file", "Library"
+	case "revisions":
+		label, hint, second = "Before", "Earlier collection JSON file", "After"
 	}
 	if m.mode == "search" && m.source == "gutenberg" {
 		label, hint, second = "Query", "Title, author, subject, or text number", "Catalog"
 	}
 	m.input.Placeholder = clipWords(hint, max(1, m.width-16))
 	marker := " "
-	if !m.resultsFocused && !m.secondaryFocused {
+	if !m.resultsFocused && !m.secondaryFocused && !m.intakeFocused {
 		marker = ">"
 	}
-	s := fmt.Sprintf("%s %-10s%s", marker, label, m.input.View())
+	s := fmt.Sprintf("%s %-11s%s", marker, label, m.input.View())
 	if second != "" {
 		marker = " "
 		if !m.resultsFocused && m.secondaryFocused {
 			marker = ">"
 		}
-		s += fmt.Sprintf("\n%s %-10s%s", marker, second, m.secondary.View())
+		s += fmt.Sprintf("\n%s %-11s%s", marker, second, m.secondary.View())
+	}
+	if m.mode == "collections" {
+		marker = " "
+		if !m.resultsFocused && m.intakeFocused {
+			marker = ">"
+		}
+		s += fmt.Sprintf("\n%s %-11s%s", marker, "Intake", m.intake.View())
 	}
 	return s
 }
 
 func (m *model) contextLine() string {
+	if m.mode == "collections" {
+		budget := "1 GiB"
+		if m.collectionLargeBudget {
+			budget = "5 GiB"
+		}
+		return "Offline status | F8 acquisition preview | F3 total transfer cap: " + budget
+	}
+	if m.mode == "revisions" {
+		return "Offline declaration comparison | No holdings removed | No acquisition"
+	}
 	if m.mode == "read" {
 		if m.reader.asset == "" {
 			return "Local source access | Select an asset in Holdings, then r"
@@ -183,6 +204,9 @@ func (m *model) top() string {
 }
 
 func (m *model) footer() string {
+	if m.collectionReview != nil {
+		return lipgloss.Wrap(m.paint("Enter acquire  Esc preview  PgUp/PgDown review  Ctrl+C quit", warning, false), max(1, m.width-2), " ")
+	}
 	if m.reviewingDownload() {
 		return lipgloss.Wrap(m.paint("Enter acquire  Esc back  PgUp/PgDown review  Ctrl+C quit", warning, false), max(1, m.width-2), " ")
 	}
@@ -222,7 +246,7 @@ func (m *model) footer() string {
 	if m.form() {
 		help += "  Ctrl+N field"
 	}
-	more := "F5 full report  PgUp/PgDn scroll  Alt+1..9/0 jump"
+	more := "F5 full report  PgUp/PgDn scroll  Alt+1..9/0/a/b jump"
 	if m.mode == "search" || m.mode == "holdings" {
 		more += "  Ctrl+Left/Right results page"
 	}
@@ -249,7 +273,7 @@ func (m *model) View() tea.View {
 	// The status colour is the state and outcome of the work, not its wording.
 	color := accent
 	switch {
-	case m.busy || m.confirmRoot != "" || m.reviewingDownload():
+	case m.busy || m.confirmRoot != "" || m.reviewingDownload() || m.collectionReview != nil:
 		color = warning
 	case m.outcome == outcomeFailed:
 		color = danger
@@ -276,6 +300,9 @@ func (m *model) resize() {
 	m.input.SetCursor(m.input.Position())
 	m.secondary.SetWidth(max(1, m.width-16))
 	m.secondary.SetCursor(m.secondary.Position())
+	m.intake.SetWidth(max(1, m.width-16))
+	m.intake.SetCursor(m.intake.Position())
+	m.intake.Placeholder = clipWords("Absolute outside-library intake; F8 previews without writing", max(1, m.width-16))
 	m.secondary.Placeholder = clipWords(map[string]string{"snapshot": "New catalog path outside the source folder", "holdings": "Optional title, language, filename, or hash", "audit": "Source directory for a catalog; leave empty to check a library", "read": "Explicit source directory (required)", "evaluate": "New untrusted intake directory, for d acquire", "state": "EPUB, PDF, MP3, M4B, M4A, or completed intake packet"}[m.mode], max(1, m.width-16))
 	if m.mode == "search" && m.source == "gutenberg" {
 		if m.catalog != "" {
@@ -283,6 +310,12 @@ func (m *model) resize() {
 		} else {
 			m.secondary.Placeholder = "Absolute path of pg_catalog.csv"
 		}
+	}
+	if m.mode == "collections" {
+		m.secondary.Placeholder = clipWords("Existing initialized library folder", max(1, m.width-16))
+	}
+	if m.mode == "revisions" {
+		m.secondary.Placeholder = clipWords("Later collection JSON file", max(1, m.width-16))
 	}
 	// Layout height follows the actual wrapped navigation, context, and help.
 	reserved := lipgloss.Height(m.top()) + lipgloss.Height(m.footer()) + lipgloss.Height(m.statusText()) + lipgloss.Height(m.position()) + 2
@@ -344,6 +377,9 @@ func (m *model) statusText() string {
 }
 
 func (m *model) position() string {
+	if m.collectionReview != nil {
+		return fmt.Sprintf("Review collection acquisition | Scroll %.0f%%", m.viewport.ScrollPercent()*100)
+	}
 	if m.reviewingDownload() {
 		return fmt.Sprintf("Review acquisition | Scroll %.0f%%", m.viewport.ScrollPercent()*100)
 	}
@@ -391,6 +427,10 @@ func (m *model) emptyHelp() string {
 		return "Establish a library identity.\n\nEnter an existing folder, then Enter to read its control status.\nF7 reviews initialization before writing control metadata.\nCtrl+N sets one source. F8 reviews import and does not scan or delete it.\nCtrl+R reviews a scan of review holdings that lack scan evidence.\nF9 previews moving the source folder's held files to the library's recoverable holding area; with a cleanup ID as the source, it previews restoring that cleanup.\nCtrl+P previews purging that cleanup's held copies the library holds; Enter removes exactly those, and the library keeps its own copy."
 	case "read":
 		return "Read from exact source bytes.\n\nSelect an asset in Holdings and press r. Enter its explicit root, then Enter lists units.\nF6 browses units; Enter retrieves text. n continues, r repeats, u lists units.\nc lists the book's declared contents. Enter reads one entry and stops at its declared end.\ng lists the EPUB's declared page labels, such as iv or 42; Enter reads from one. They are the book's own markers, not screen pages.\np opens the selection as pages sized to the terminal; s opens it one word at a time.\nm saves a bookmark in an initialized library. ' restores that bookmark.\nDelivery does not record reading progress, and closing does not save a bookmark.\nNotes and image resources are available through content CLI references."
+	case "collections":
+		return "Resolve exact selections against your library.\n\nEnter a collection JSON file and an existing initialized library. Ctrl+N moves through collection, library and intake.\nEnter reads status offline. F6 browses declared items; F5 shows the full report.\nWith an absolute outside-library intake, F8 previews acquisition offline. A second Enter confirms the bound review before requests or writes.\nF3 chooses a 1 GiB or 5 GiB total transfer cap. Downloads remain untrusted intake; ingest is separate.\nAlt+B compares two explicit revisions without changing holdings or files."
+	case "revisions":
+		return "Compare two collection declarations offline.\n\nEnter the before and after JSON files, using Ctrl+N to switch fields. Enter compares exact selections, notes, name and retained order.\nF6 browses changes; F5 shows both file hashes and all limitations.\nA removed selection never removes holdings or notes. This comparison grants no acquisition authority."
 	default:
 		return "Enter the fields above, then press Enter.\n\nResults stay with their operation when you switch modes.\nSources are preserved. Escape cancels active work."
 	}

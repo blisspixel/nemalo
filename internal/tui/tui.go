@@ -33,40 +33,45 @@ type result struct {
 }
 
 type model struct {
-	ctx              context.Context
-	service          app.Service
-	input            textinput.Model
-	secondary        textinput.Model
-	secondaryFocused bool
-	assess           bool
-	height           int
-	width            int
-	color            bool
+	ctx               context.Context
+	service           app.Service
+	input             textinput.Model
+	secondary         textinput.Model
+	secondaryFocused  bool
+	intake            textinput.Model
+	intakeFocused     bool
+	collectionPending *app.CollectionAcquireRequest
+	collectionReview  *collectionReview
+	assess            bool
+	height            int
+	width             int
+	color             bool
 	// outcome colours the status line. A key press clears it; a result,
 	// or a refusal before any request, sets it from the operation itself.
-	outcome          outcome
-	largeBudget      bool
-	drafts           map[string]draft
-	offset           int
-	total            int
-	submittedInput   string
-	submittedSecond  string
-	viewport         viewport.Model
-	report           string
-	preview          viewport.Model
-	entries          []entry
-	selected         int
-	resultsFocused   bool
-	details          bool
-	evidence         bool
-	confirmKind      string
-	confirmRoot      string
-	confirmSource    string
-	confirmReport    string
-	confirmStatus    string
-	initializeAction bool
-	importAction     bool
-	rescanAction     bool
+	outcome               outcome
+	largeBudget           bool
+	collectionLargeBudget bool
+	drafts                map[string]draft
+	offset                int
+	total                 int
+	submittedInput        string
+	submittedSecond       string
+	viewport              viewport.Model
+	report                string
+	preview               viewport.Model
+	entries               []entry
+	selected              int
+	resultsFocused        bool
+	details               bool
+	evidence              bool
+	confirmKind           string
+	confirmRoot           string
+	confirmSource         string
+	confirmReport         string
+	confirmStatus         string
+	initializeAction      bool
+	importAction          bool
+	rescanAction          bool
 	// cleanupPlan runs a cleanup preview; cleanupDigest, once reviewed, applies it.
 	cleanupPlan   bool
 	cleanupDigest string
@@ -113,9 +118,14 @@ func newModel(ctx context.Context, service app.Service) *model {
 	secondary.SetWidth(70)
 	secondary.SetVirtualCursor(true)
 	secondary.SetStyles(textinput.Styles{Cursor: textinput.CursorStyle{Blink: true}})
+	intake := textinput.New()
+	intake.Prompt = ""
+	intake.CharLimit = 1000
+	intake.SetVirtualCursor(true)
+	intake.SetStyles(textinput.Styles{Cursor: textinput.CursorStyle{Blink: true}})
 	view := viewport.New(viewport.WithWidth(80), viewport.WithHeight(16))
 	view.SoftWrap = true
-	m := &model{ctx: ctx, service: service, input: input, secondary: secondary, width: 80, height: 25, viewport: view, mode: "search", source: "openlibrary", format: "epub", drafts: map[string]draft{}, status: "Ready. Network activity only on explicit search/evaluation."}
+	m := &model{ctx: ctx, service: service, input: input, secondary: secondary, intake: intake, width: 80, height: 25, viewport: view, mode: "search", source: "openlibrary", format: "epub", drafts: map[string]draft{}, status: "Ready. Network activity only on explicit search/evaluation."}
 	if g, ok := service.Providers["gutenberg"].(*discovery.Gutenberg); ok {
 		m.catalog = g.Catalog
 	}
@@ -201,6 +211,14 @@ func (m *model) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		m.status = "Complete."
 		m.outcome = resultOutcome(msg.data, msg.err)
+		if value, ok := msg.data.(app.CollectionAcquireResult); ok {
+			pending := m.collectionPending
+			m.collectionPending = nil
+			if msg.err == nil && pending != nil {
+				m.showCollectionPreview(value, *pending)
+				return m, nil
+			}
+		}
 		// A cleanup preview with something to move becomes a review; Enter
 		// applies exactly that plan digest.
 		if value, ok := msg.data.(library.CleanupResult); ok && msg.err == nil && !value.Applied && value.Move > 0 {
@@ -395,6 +413,18 @@ func (m *model) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 					m.status = "Incomplete recorded job observation at " + present.Line(value.Finished) + ". F10 refreshes."
 				}
 			}
+		case library.CollectionStatusResult:
+			data = []byte(present.CollectionStatus(value))
+		case library.CollectionDiffResult:
+			data = []byte(present.CollectionDiff(value))
+		case app.CollectionAcquireResult:
+			data = []byte(present.CollectionAcquire(value))
+			if msg.err == nil && value.Applied {
+				m.status = "Collection acquisition finished in untrusted intake. Ingest remains separate."
+				if !value.Complete {
+					m.status = "Collection acquisition incomplete. Started packets are retained; review the full report."
+				}
+			}
 		case discovery.Evaluation:
 			data = []byte(present.Evaluation(value))
 		case library.Snapshot:
@@ -448,11 +478,14 @@ func (m *model) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 			m.viewport.GotoTop()
 		}
 		m.resize()
-		if !m.resultsFocused && !m.input.Focused() && !m.secondary.Focused() {
+		if !m.resultsFocused && !m.input.Focused() && !m.secondary.Focused() && !m.intake.Focused() {
 			return m, m.focusForm()
 		}
 	case tea.KeyPressMsg:
 		m.outcome = outcomeNone
+		if m.collectionReview != nil {
+			return m, m.confirmCollection(msg)
+		}
 		if m.reviewingDownload() {
 			return m, m.confirmDownload(msg)
 		}
@@ -466,6 +499,9 @@ func (m *model) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 		if msg.String() == "f8" && m.mode == "state" && !m.busy {
 			m.requestImport()
 			return m, nil
+		}
+		if msg.String() == "f8" && m.mode == "collections" {
+			return m, m.requestCollectionPreview()
 		}
 		if msg.String() == "ctrl+r" && m.mode == "state" && !m.busy {
 			m.requestRescan()
@@ -485,7 +521,7 @@ func (m *model) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		if strings.HasPrefix(msg.String(), "alt+") {
 			for i, name := range modes {
-				if msg.String() == fmt.Sprintf("alt+%d", (i+1)%10) && !m.busy {
+				if msg.String() == "alt+"+modeShortcut(i) && !m.busy {
 					return m, m.switchMode(name)
 				}
 			}
@@ -508,6 +544,9 @@ func (m *model) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			return m, nil
 		case "f3":
+			if !m.busy && m.mode == "collections" {
+				m.collectionLargeBudget = !m.collectionLargeBudget
+			}
 			if !m.busy && (m.mode == "inspect" || m.mode == "snapshot" || m.mode == "audit") {
 				m.largeBudget = !m.largeBudget
 			}
@@ -572,6 +611,9 @@ func (m *model) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 			if !m.form() || m.busy {
 				return m, nil
 			}
+			if m.mode == "collections" {
+				return m, m.nextCollectionField()
+			}
 			m.secondaryFocused = !m.secondaryFocused
 			m.resultsFocused = false
 			m.resize()
@@ -597,6 +639,7 @@ func (m *model) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 				m.cancel = nil
 			}
 			m.id++
+			m.collectionPending = nil
 			m.busy = false
 			m.status = "Cancelled. Any started download remains in its intake folder."
 			m.resize()
@@ -636,8 +679,13 @@ func (m *model) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 	if m.resultsFocused {
 		return m, nil
 	}
+	if m.collectionReview != nil {
+		return m, nil
+	}
 	var cmd tea.Cmd
-	if m.secondaryFocused {
+	if m.intakeFocused {
+		m.intake, cmd = m.intake.Update(message)
+	} else if m.secondaryFocused {
 		m.secondary, cmd = m.secondary.Update(message)
 	} else {
 		m.input, cmd = m.input.Update(message)
@@ -649,7 +697,7 @@ func (m *model) form() bool {
 	if m.mode == "search" {
 		return m.source == "gutenberg"
 	}
-	return m.mode == "snapshot" || m.mode == "holdings" || m.mode == "audit" || m.mode == "read" || m.mode == "evaluate" || m.mode == "state"
+	return m.mode == "snapshot" || m.mode == "holdings" || m.mode == "audit" || m.mode == "read" || m.mode == "evaluate" || m.mode == "state" || m.mode == "collections" || m.mode == "revisions"
 }
 
 func interactiveTerminal(in io.Reader, out io.Writer) bool {

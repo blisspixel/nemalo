@@ -105,6 +105,43 @@ aggregate coverage with no reported dependency vulnerabilities, followed by full
 native-cgo race tests, Windows cross-vet and documentation checks. Exact committed
 native and hosted acceptance of that search increment remain separate gates.
 
+Exact search subsequently passed clean committed native terminal checks and
+first-attempt [all-six CI](https://github.com/blisspixel/nemalo/actions/runs/40054015318)
+and [Go/Actions CodeQL](https://github.com/blisspixel/nemalo/actions/runs/40054014812)
+at `ec0f64b`. The Windows log matched all 32 boundary identities, with no skips or
+failures and the actual sharing-violation branch observed. Its library covered/race
+suites took 489.448/523.698 seconds; the deadline stayed 600 seconds. Ten existing
+fuzz targets also passed 20-second, two-worker runs totaling 5,772,663 executions,
+covering cursor decoding, EPUB navigation/plain/structured extraction, PDF parsing,
+MP3/MP4 indexes, ZIP cleanup accounting and standalone RAR4/RAR5 accounting.
+The [exact receipt](https://github.com/blisspixel/nemalo/commit/ec0f64b8363c561b8b503435ea05c406e6cea0f2#commitcomment-206425547)
+separates this bounded evidence from universal conformance or release.
+
+A later collection-interface candidate passed actual Linux tmux interaction over
+an owned library with disabled bookmarks. It browsed offline status and selected
+details, showed the full revision hash, scrolled acquisition review, cancelled
+without creating intake, and refused apply after the collection bytes changed.
+A fresh deliberate confirmation acquired only `gutenberg:1342`,
+`1342.epub.noimages`, through the established `gutenberg.pglaf.org` service.
+The 561,102-byte result had SHA-256
+`e59e587472723023b21bf380b8327858e7540b25e57affa3a68935b291e370dc`, with the
+installed scanner reporting no detections. It remained untrusted intake and was
+not implicitly imported. A later preview showed awaiting ingest, preserving all
+packet modes and bytes. Revision comparison, a 40-column frame, restored drafts,
+Alt+0 and actual Ctrl+C exit passed. Library modes and bytes, disabled bookmarks
+and missing isolated configuration/state/cache folders stayed unchanged.
+This candidate evidence is separate from full canonical checks and exact clean
+committed native/hosted acceptance. No new provider contract, rights conclusion,
+semantic completeness or release is inferred.
+
+The collection source then passed full canonical verification at 87.4% aggregate
+coverage, pinned static analysis and govulncheck with no reported vulnerabilities,
+full native-cgo repository race tests, Windows cross-vet and documentation checks.
+Self-review first reproduced a collision between distinct raw non-UTF-8 intake
+paths in JSON-based preview intent; lossless path-byte binding fixed it with an
+application regression. Exact clean committed native and hosted acceptance remain
+separate from these candidate checks.
+
 ## Cited evidence and citation export
 
 On 2026-10-23, local verification of the

@@ -303,6 +303,14 @@ func TestTerminalWorkflow(t *testing.T) {
 		t.Fatal("source access mode unavailable")
 	}
 	m.Update(key(tea.KeyTab))
+	if m.mode != "collections" {
+		t.Fatal("collection mode unavailable")
+	}
+	m.Update(key(tea.KeyTab))
+	if m.mode != "revisions" {
+		t.Fatal("collection revision mode unavailable")
+	}
+	m.Update(key(tea.KeyTab))
 	if m.mode != "search" {
 		t.Fatal("mode not restored")
 	}

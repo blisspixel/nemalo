@@ -21,7 +21,7 @@ func TestLayoutKeepsLabelsAndWordsWhole(t *testing.T) {
 			m.switchMode(name)
 			nav := m.navigation()
 			title := strings.ToUpper(name[:1]) + name[1:]
-			number := string(rune('0' + (i+1)%10))
+			number := []string{"1", "2", "3", "4", "5", "6", "7", "8", "9", "0", "a", "b"}[i]
 			if strings.Contains(nav, "\n") || !strings.Contains(nav, "["+number+" "+title+"]") || len([]rune(nav)) > width-2 {
 				t.Fatalf("width %d mode %s: %q", width, name, nav)
 			}

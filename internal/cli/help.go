@@ -232,13 +232,15 @@ scan. A library audit compares managed holdings only.
 nemalo collection status COLLECTION LIBRARY
   Resolve each item of a collection file against the library, offline:
   held, held in review, recording incomplete, or not held.
-nemalo collection acquire COLLECTION LIBRARY --output INTAKE [--apply]
+nemalo collection acquire COLLECTION LIBRARY --output INTAKE [--apply [--plan DIGEST]]
   Preview, then with --apply acquire each item the library does not hold
   into INTAKE, one at a time, as acquire does. Run library ingest on INTAKE
   afterwards. A packet with a receipt waits for ingest, an interrupted one
   is resumed, and any other existing packet is left as it is.
 
 Options:
+  --plan DIGEST            with --apply, require the exact local preview facts;
+                           changed review facts require a fresh preview
   --max-total-bytes N      bytes the run may transfer in all; each new item's
                            budget is cut to what remains, so a larger item
                            fails, and a resume starts only if it fits

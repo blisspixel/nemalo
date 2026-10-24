@@ -159,8 +159,11 @@ verified, not when code exists. No stage has a time estimate.
    source under [decision 0088](docs/decisions/0088-non-mutating-library-job-snapshot.md).
    The issue records verification; its optional panel, explicit reader handoff
    and native lifecycle acceptance remain open. This does not complete stage 5.
-   State's explicit F10 Jobs view consumes the same passive service; collection
-   and evidence interface work and the broader host/platform acceptance remain.
+   State's explicit F10 Jobs view consumes the same passive service. Collections
+   now has offline status, revision comparison and a bound acquisition review in
+   source ([decision 0089](docs/decisions/0089-collection-acquisition-review.md));
+   its full local/native/hosted acceptance is separate. Cited-evidence interface
+   work and the broader host/platform acceptance remain.
 6. **1.0 release candidate.** Freeze and document the on-disk formats (journals,
    holdings, bookmarks, packets), JSON envelopes, extractor IDs, and the evidence
    contract; upgrade alpha libraries in place or refuse them with a clear path;
@@ -670,7 +673,9 @@ The [reader review](docs/READER-REVIEW.md) compares primary documentation for
 mature readers and pacing tools. Exact place retention and pause correctness
 precede further controls. Full-screen contents now reuses declared-entry reading
 and physical PDF units, with exact hosted acceptance at `b40b0d1`. In-reader exact
-search adapts the existing source-bound lookup; its full acceptance is separate.
+search adapts the existing source-bound lookup, with exact hosted acceptance and
+[native verification](https://github.com/blisspixel/nemalo/commit/ec0f64b8363c561b8b503435ea05c406e6cea0f2#commitcomment-206425547)
+at `ec0f64b`.
 Broader normalized search and assistive-technology validation remain distinct
 work. Source implementation and release remain separate. The
 [native workflow review](docs/VALIDATION.md#native-workflow-review-on-2026-10-24)

@@ -308,6 +308,16 @@ refuses final file links; MCP may resolve an explicitly selected file link only
 inside scope. No upstream rights, changed bytes, or transfer estimate is inferred.
 See [decision 0053](decisions/0053-collection-revision-previews.md).
 
+Acquisition previews also return `plan_digest`. Optional
+`collection acquire ... --apply --plan DIGEST` requires the same local preview
+facts before creating intake or requesting a provider. It binds collection bytes,
+library identity, exact missing selections, packet actions and transfer/scan choices.
+A changed preview refuses the apply and requires a new review. Existing explicit
+CLI apply without a plan remains available. The digest is not a durable snapshot
+or authorization: normal fresh source and packet checks still apply. The TUI's
+Collections review always uses this guard, with a deliberate 1 GiB or 5 GiB total
+transfer cap. See [decision 0089](decisions/0089-collection-acquisition-review.md).
+
 ## File health and scanning
 
 Filesystem capabilities and output encoding follow

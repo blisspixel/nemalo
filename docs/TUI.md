@@ -34,6 +34,7 @@ item's other files for a new, deliberate review. See
 | --- | --- |
 | Tab / Shift+Tab | Next / previous operation |
 | Alt+1..9, Alt+0 | Jump to the numbered operation; 0 selects Read |
+| Alt+A / Alt+B | Collections / collection Revisions, preserving numeric shortcuts |
 | Enter in form | Run the explicit operation |
 | F6 | Focus results / return to editing |
 | Up / Down, Home / End in results | Select an item |
@@ -45,12 +46,15 @@ item's other files for a new, deliberate review. See
 | F3 in Archive search | Cycle relevance / downloads / identifier order |
 | F3 in Gutenberg search | Cycle relevance / identifier. The website is not queried |
 | F3 in inspect, snapshot, audit | Select bounded 1 GiB / 5 GiB read budget |
+| F3 in Collections | Select a 1 GiB / 5 GiB total acquisition transfer cap; this does not fetch |
 | F4 in holdings | Cycle EPUB / PDF / MP3 / M4B / M4A / all filename filters |
 | F7 in State | Review initialization of an explicit existing folder |
 | F8 in State | Review import of the folder and one source; no antivirus scan |
+| F8 in Collections | Preview acquisition offline, then review the bound request before a separate confirming Enter permits network and intake writes |
 | Ctrl+R in State | Review a rescan of review holdings that lack scan evidence |
 | F10 in State | Observe bounded recorded jobs for the selected existing library, without reconciliation, polling or job cancellation |
 | Ctrl+N in two-field forms | Switch between fields, including the Gutenberg catalog and the State source |
+| Ctrl+N in Collections | Cycle collection file, initialized library and absolute outside intake |
 | Ctrl+A in snapshot | Toggle historical health metadata |
 | e in Archive, Gutenberg, or Open Library results | Prepare selected-item evaluation, without requesting it. A Gutenberg catalog row lists no files. An Open Library work lists editions on Enter. e on an edition row selects that edition |
 | d in Evaluate results | Review selected-file acquisition into a new intake directory. An empty Intake field asks for a folder (Ctrl+N) and does not fetch. On a Gutenberg catalog row, d then requests that one bibliographic record and lists EPUB offers. After an Open Library edition names an Archive item, d reviews that Archive file |
@@ -102,6 +106,42 @@ unchanged. The action neither starts nor cancels jobs, probes owners, imports
 content or opens a stored asset. Enter in the form still reads library status.
 The [snapshot contract](decisions/0088-non-mutating-library-job-snapshot.md)
 defines its relationships, bounds and legacy omissions.
+
+## Collections and revisions
+
+Alt+A opens Collections. Enter an exact-selection collection JSON file and an
+existing initialized library, using Ctrl+N to move fields. Enter resolves holdings
+offline. F6 browses declarations, resolved status, recording coverage and held asset
+identities; F5 shows the collection hash and all limitations. Status does not verify
+stored bytes, initialize the library, fetch a provider or save reading activity.
+
+The third field is an absolute intake outside the library. F8 previews its existing
+packets and missing selections offline, preserving missing intake. When a transfer
+can start, the review shows exact selections, collection hash, library identity,
+packet actions, byte caps and scanner policy. Enter confirms that frozen request;
+Escape returns to the preview without acquisition. Review blocks other keys and
+input. A changed collection, library, missing selection, packet action or budget
+requires a fresh review through the shared application guard. Per-source checks
+still run freshly; the preview does not freeze concurrent filesystem changes.
+
+The total transfer cap starts at 1 GiB; F3 deliberately selects 5 GiB. A recording
+uses the same cap, and the whole run has a 30-minute deadline. Missing or failed
+scanning stays explicit, and detections use quarantine. Downloads remain untrusted
+intake; ingest is separate. Escape cancels active work and preserves started
+packets. Receipted packets await ingest; retained attempts stay untouched and do
+not offer another transfer. Passive requests have a 15-second deadline, generation
+fences and no polling. No new MCP acquisition tool or collection store is added.
+
+Alt+B opens Revisions. Enter the before and after collection files; no library is
+required. The offline comparison separates exact additions/removals, name and note
+changes, and relative-order changes. F6 browses changes, and F5 shows both file
+hashes and the complete report. Removed selections never remove holdings, sources
+or bookmark notes. The comparison does not authorize acquisition. Form drafts and
+reports remain in session when changing operations.
+
+See [collections](decisions/0050-collections.md),
+[revision semantics](decisions/0053-collection-revision-previews.md) and
+[bound acquisition review](decisions/0089-collection-acquisition-review.md).
 
 ## Source access
 
@@ -267,6 +307,12 @@ abandoned recorded running job with a torn tail. Its observation timestamp and
 uncertain owner stay distinct from the older recorded progress. Repeated
 observations preserve the fixture bytes; the view does not start a scan.
 
+The Collections view resolves a copied, previously acquired public-domain EPUB
+against a synthetic selection file. The Revisions view compares two synthetic
+declarations, including distinct paper versions; it does not query or confirm an
+upstream version. Their displayed form paths are documentation examples. Holdings
+resolution and declaration changes do not establish current rights or availability.
+
 ![EPUB holdings, duplicate locations and selected historical evidence](images/tui-holdings.png)
 
 ![Local Gutenberg discovery and selected catalog evidence](images/tui-discovery.png)
@@ -278,5 +324,9 @@ observations preserve the fixture bytes; the view does not start a scan.
 ![Exact whole-book query entry without changing the passage](images/tui-find-input.png)
 
 ![Source-bound exact matches with extraction coverage disclosed](images/tui-find.png)
+
+![Collections resolved against exact recorded holdings](images/tui-collections.png)
+
+![Offline revision comparison keeps additions, removals, notes and order distinct](images/tui-revisions.png)
 
 ![Explicit job observation with a torn journal and unobserved owner](images/tui-jobs.png)

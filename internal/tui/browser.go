@@ -46,6 +46,8 @@ func (m *model) populate(data any) {
 	m.entries, m.selected, m.details, m.evidence = nil, 0, false, false
 	line, words, list := present.Line, present.Words, present.List
 	switch p := data.(type) {
+	case library.CollectionStatusResult, library.CollectionDiffResult, app.CollectionAcquireResult:
+		m.entries = collectionEntries(p)
 	case app.JobSnapshotResult:
 		for _, j := range p.Jobs {
 			detail := rows("Job", line(j.ID), "Kind", words(j.Kind), "Recorded status", words(j.RecordedStatus), "Created", line(j.Created), "Updated", line(j.Updated), "Owner observation", words(j.Owner), "Relationship", words(j.Relationship), "Journal integrity", words(j.Integrity))
@@ -348,6 +350,9 @@ func (m *model) refreshPreview() {
 func (m *model) focusForm() tea.Cmd {
 	m.resultsFocused = false
 	m.resize()
+	if m.intakeFocused {
+		return m.intake.Focus()
+	}
 	if m.secondaryFocused {
 		return m.secondary.Focus()
 	}
@@ -380,6 +385,7 @@ func (m *model) browserKey(key string) (bool, tea.Cmd) {
 		m.resultsFocused = true
 		m.input.Blur()
 		m.secondary.Blur()
+		m.intake.Blur()
 		m.resize()
 		return true, nil
 	}

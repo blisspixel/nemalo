@@ -4,7 +4,9 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
+	"time"
 
 	tea "charm.land/bubbletea/v2"
 	"github.com/blisspixel/nemalo/internal/assessment"
@@ -13,10 +15,18 @@ import (
 	"github.com/blisspixel/nemalo/internal/library"
 )
 
-var modes = []string{"search", "inspect", "check", "scan", "snapshot", "holdings", "audit", "evaluate", "state", "read"}
+var modes = []string{"search", "inspect", "check", "scan", "snapshot", "holdings", "audit", "evaluate", "state", "read", "collections", "revisions"}
+
+func modeShortcut(index int) string {
+	if index < 10 {
+		return strconv.Itoa((index + 1) % 10)
+	}
+	return string(rune('a' + index - 10))
+}
 
 type draft struct {
 	input, second, content, status  string
+	intake                          string
 	submittedInput, submittedSecond string
 	offset, total                   int
 	entries                         []entry
@@ -37,11 +47,14 @@ func (m *model) switchMode(name string) tea.Cmd {
 	if name == m.mode {
 		return nil
 	}
-	m.drafts[m.mode] = draft{input: m.input.Value(), second: m.secondary.Value(), content: m.report, status: m.status, submittedInput: m.submittedInput, submittedSecond: m.submittedSecond, offset: m.offset, total: m.total, entries: m.entries, selected: m.selected, details: m.details, evidence: m.evidence}
+	m.drafts[m.mode] = draft{input: m.input.Value(), second: m.secondary.Value(), intake: m.intake.Value(), content: m.report, status: m.status, submittedInput: m.submittedInput, submittedSecond: m.submittedSecond, offset: m.offset, total: m.total, entries: m.entries, selected: m.selected, details: m.details, evidence: m.evidence}
 	m.mode = name
 	d := m.drafts[name]
 	m.input.SetValue(d.input)
 	m.secondary.SetValue(d.second)
+	m.intake.SetValue(d.intake)
+	m.intake.Blur()
+	m.intakeFocused = false
 	m.secondary.Blur()
 	m.secondaryFocused = false
 	m.offset, m.total = d.offset, d.total
@@ -112,11 +125,20 @@ func (m *model) start(reset bool) tea.Cmd {
 		m.status = "Enter the required second field with Ctrl+N."
 		return nil
 	}
+	if (m.mode == "collections" || m.mode == "revisions") && m.secondary.Value() == "" {
+		m.status = "Enter the required second field with Ctrl+N."
+		m.resize()
+		return nil
+	}
 	if reset {
 		m.offset, m.total = 0, 0
 	}
 	m.submittedInput, m.submittedSecond = m.input.Value(), m.secondary.Value()
 	ctx, cancel := context.WithCancel(m.ctx)
+	if m.mode == "collections" || m.mode == "revisions" {
+		cancel()
+		ctx, cancel = context.WithTimeout(m.ctx, 15*time.Second)
+	}
 	m.cancel = cancel
 	m.id++
 	id, mode, value, source, order := m.id, m.mode, m.input.Value(), m.source, m.searchOrder()
@@ -189,6 +211,12 @@ func (m *model) start(reset bool) tea.Cmd {
 			return result{id, data, err}
 		case "state":
 			data, err := m.service.LibraryStatus(ctx, value)
+			return result{id, data, err}
+		case "collections":
+			data, err := m.service.CollectionStatus(ctx, second, value)
+			return result{id, data, err}
+		case "revisions":
+			data, err := m.service.CollectionDiff(ctx, value, second)
 			return result{id, data, err}
 		case "evaluate":
 			if discovery.ValidOpenLibraryWork(value) {

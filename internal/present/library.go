@@ -669,6 +669,8 @@ func CollectionDiff(r library.CollectionDiffResult) string {
 func CollectionStatus(r library.CollectionStatusResult) string {
 	var b strings.Builder
 	field(&b, "Collection", Line(r.Name))
+	field(&b, "Collection file", Line(r.Collection))
+	field(&b, "Collection SHA-256", Line(r.SHA256))
 	field(&b, "Library", Line(r.LibraryID))
 	fmt.Fprintf(&b, "Items: %d | held %d | in review %d | recording incomplete %d | not held %d\n", len(r.Items), r.Held, r.InReview, r.Incomplete, r.NotHeld)
 	for _, it := range r.Items {
@@ -692,8 +694,13 @@ func CollectionStatus(r library.CollectionStatusResult) string {
 func CollectionAcquire(r app.CollectionAcquireResult) string {
 	var b strings.Builder
 	field(&b, "Collection", Line(r.Status.Name))
+	field(&b, "Collection file", Line(r.Status.Collection))
+	field(&b, "Collection SHA-256", Line(r.Status.SHA256))
+	field(&b, "Library", Line(r.Status.Library))
+	field(&b, "Library ID", Line(r.Status.LibraryID))
 	field(&b, "Intake", Line(r.Intake))
-	fmt.Fprintf(&b, "Items: %d | held %d | to acquire %d\n", len(r.Status.Items), r.Status.Held+r.Status.InReview, len(r.Steps))
+	field(&b, "Plan digest", Line(r.PlanDigest))
+	fmt.Fprintf(&b, "Items: %d | held %d | pending steps %d\n", len(r.Status.Items), r.Status.Held+r.Status.InReview, len(r.Steps))
 	for _, s := range r.Steps {
 		fmt.Fprintf(&b, "\n%s %s\n", words(s.Action), collectionItem(s.Item))
 		fmt.Fprintf(&b, "  Packet: %s\n", Line(s.Packet))
@@ -713,6 +720,8 @@ func CollectionAcquire(r app.CollectionAcquireResult) string {
 	}
 	notes(&b, "Limitation", r.Limitations)
 	switch {
+	case !r.Applied && r.PlanDigest == "":
+		b.WriteString("Preview did not complete. No acquisition started.\n")
 	case !r.Applied && len(r.Steps) > 0:
 		b.WriteString("Preview only. Nothing was fetched. Add --apply to acquire these items.\n")
 	case !r.Applied:

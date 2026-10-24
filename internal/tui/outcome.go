@@ -29,6 +29,13 @@ func resultOutcome(data any, err error) outcome {
 		return outcomeFailed
 	}
 	switch v := data.(type) {
+	case app.CollectionAcquireResult:
+		if v.Applied {
+			if !v.Complete {
+				return outcomeFailed
+			}
+			return outcomeOK
+		}
 	case app.JobSnapshotResult:
 		if v.Status != "observed" {
 			return outcomeAttention

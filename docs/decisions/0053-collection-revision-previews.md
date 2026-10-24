@@ -48,8 +48,9 @@ selections. Removed selections never remove earlier holdings, notes, or sources.
 
 No additional on-disk state, collection catalog, journal, dependency, network
 request, scanner invocation, or write is introduced. Collections remain user
-files; holdings remain their resolved record. A TUI collection view stays in
-the interfaces stage.
+files; holdings remain their resolved record. The interfaces-stage TUI collection
+and revision views are implemented in source under
+[decision 0089](0089-collection-acquisition-review.md), with separate acceptance.
 
 ## Validation
 

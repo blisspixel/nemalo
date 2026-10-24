@@ -106,7 +106,7 @@ func Execute(ctx context.Context, args []string, out, errOut io.Writer, service 
 	onDetection := flags.String("on-detection", "quarantine", "quarantine or delete a detected download")
 	recordingFormat := flags.String("recording", "", "declared recording format to acquire as a whole")
 	findText := flags.String("text", "", "exact text to locate")
-	planDigest := flags.String("plan", "", "plan digest from an import or cleanup preview")
+	planDigest := flags.String("plan", "", "plan digest from the reviewed operation preview")
 	narrationFile := flags.String("declaration", "", "explicit narration declaration JSON file")
 	retractNarration := flags.String("retract", "", "narration declaration ID to withdraw")
 	cleanupID := flags.String("cleanup", "", "cleanup ID to restore")
@@ -777,6 +777,9 @@ func Execute(ctx context.Context, args []string, out, errOut io.Writer, service 
 			}
 			return write(data, nil, 0)
 		case action == "acquire" && flags.NArg() == 2 && *output != "":
+			if visited(flags, "plan") && (!*apply || *planDigest == "") {
+				return write(nil, errors.New("--plan requires --apply and a nonempty digest; omit both for a fresh preview"), 2)
+			}
 			detection := c.OnDetection
 			if visited(flags, "on-detection") {
 				detection = *onDetection
@@ -787,7 +790,7 @@ func Execute(ctx context.Context, args []string, out, errOut io.Writer, service 
 					return write(nil, errors.New("--max-total-bytes must be at least 1"), 2)
 				}
 			}
-			data, err := service.CollectionAcquire(ctx, app.CollectionAcquireRequest{Library: flags.Arg(1), Collection: flags.Arg(0), Intake: *output, Apply: *apply, MaxTotalBytes: total, MaxRecordingBytes: *maxRecording, NoScan: *noScan, OnDetection: detection})
+			data, err := service.CollectionAcquire(ctx, app.CollectionAcquireRequest{Library: flags.Arg(1), Collection: flags.Arg(0), Intake: *output, Apply: *apply, MaxTotalBytes: total, MaxRecordingBytes: *maxRecording, NoScan: *noScan, OnDetection: detection, Plan: *planDigest})
 			if err != nil {
 				return write(data, err, 1)
 			}
@@ -1105,7 +1108,7 @@ func flagApplies(command, action, name string) bool {
 	case "jobs":
 		return action == "snapshot" && name == "limit"
 	case "collection":
-		return action == "acquire" && (name == "output" || name == "apply" || name == "max-total-bytes" || name == "max-recording-bytes" || name == "no-scan" || name == "on-detection")
+		return action == "acquire" && (name == "output" || name == "apply" || name == "plan" || name == "max-total-bytes" || name == "max-recording-bytes" || name == "no-scan" || name == "on-detection")
 	case "acquire":
 		return name == "file" || name == "output" || name == "max-file-bytes" || name == "no-scan" || name == "on-detection" || name == "recording" || name == "resume" || name == "max-recording-bytes"
 	case "search":

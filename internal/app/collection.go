@@ -2,6 +2,9 @@ package app
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"os"
 	"path/filepath"
@@ -23,6 +26,9 @@ type CollectionAcquireRequest struct {
 	MaxRecordingBytes int64
 	NoScan            bool
 	OnDetection       string
+	// Plan optionally binds apply to an earlier offline preview. It grants no
+	// authority without Apply and never substitutes for fresh transfer checks.
+	Plan string
 }
 
 // Step actions, decided from the library and the intake directory alone.
@@ -57,6 +63,7 @@ type CollectionAcquireResult struct {
 	Steps         []CollectionStep               `json:"steps"`
 	Transferred   int64                          `json:"transferred_bytes"`
 	Limitations   []string                       `json:"limitations"`
+	PlanDigest    string                         `json:"plan_digest,omitempty"`
 }
 
 const defaultRecordingBytes = 4 << 30
@@ -125,8 +132,21 @@ func (s Service) CollectionAcquire(ctx context.Context, request CollectionAcquir
 		}
 		r.Steps = append(r.Steps, step)
 	}
+	if err := ctx.Err(); err != nil {
+		return r, err
+	}
+	r.PlanDigest, err = collectionPlanDigest(request, r, recordingBudget)
+	if err != nil {
+		return r, err
+	}
+	if request.Plan != "" && request.Plan != r.PlanDigest {
+		return r, errors.New("the collection acquisition preview changed; review a fresh preview before applying")
+	}
 	if !request.Apply {
 		return r, nil
+	}
+	if err := ctx.Err(); err != nil {
+		return r, err
 	}
 	r.Applied = true
 	if err := os.MkdirAll(intake, 0o700); err != nil {
@@ -193,4 +213,36 @@ func (s Service) CollectionAcquire(ctx context.Context, request CollectionAcquir
 		r.Complete = r.Complete && err == nil && res.Complete
 	}
 	return r, nil
+}
+
+func collectionPlanDigest(request CollectionAcquireRequest, result CollectionAcquireResult, recordingBudget int64) (string, error) {
+	// Raw filesystem and diagnostic bytes must not pass through JSON string
+	// replacement: different non-UTF-8 paths still describe different intent.
+	type planStep struct {
+		Item      library.CollectionItem
+		Packet    []byte
+		Action    string
+		Remaining int64
+		Detail    []byte
+	}
+	steps := make([]planStep, 0, len(result.Steps))
+	for _, step := range result.Steps {
+		steps = append(steps, planStep{step.Item, []byte(step.Packet), step.Action, step.Remaining, []byte(step.Detail)})
+	}
+	plan := struct {
+		Schema                           string
+		Library, Collection, Intake      []byte
+		LibraryID, CollectionSHA256      string
+		MaxTotalBytes, MaxRecordingBytes int64
+		NoScan                           bool
+		OnDetection                      []byte
+		Steps                            []planStep
+	}{"collection-acquire/1", []byte(result.Status.Library), []byte(result.Status.Collection), []byte(result.Intake),
+		result.Status.LibraryID, result.Status.SHA256, request.MaxTotalBytes, recordingBudget, request.NoScan, []byte(request.OnDetection), steps}
+	data, err := json.Marshal(plan)
+	if err != nil {
+		return "", err
+	}
+	sum := sha256.Sum256(data)
+	return hex.EncodeToString(sum[:]), nil
 }

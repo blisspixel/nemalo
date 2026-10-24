@@ -56,8 +56,10 @@ status after ingest shows the set resolved. An Open Library edition is not an
 item; its Archive item is. Explicit revision comparison is
 [decision 0053](0053-collection-revision-previews.md): compare before/after user
 files offline without changing the collection or removing holdings.
-Collection acquisition over MCP, a TUI view, and
-reacquiring an item whose source bytes changed remain later work.
+The TUI view and its separately bound acquisition review are implemented in
+source under [decision 0089](0089-collection-acquisition-review.md), with their own
+acceptance gate. Collection acquisition over MCP and reacquiring an item whose
+source bytes changed remain later work.
 
 ## Validation
 
