@@ -60,6 +60,11 @@ after 150 bytes and complete after two continuations; a whole-file reply,
 a weak validator, a non-transport error, a source that keeps dropping (three
 continuations, then the packet is kept), and cancellation during the pause
 each stop with the partial bytes kept and no receipt.
+The cancellation fixture cancels at the first backoff boundary after the initial
+response drops, rather than after a fixed wall-clock sleep that might expire
+during durable packet setup. It retains the one-hour configured pause and
+ten-second assertion, verifies the exact partial bytes and absence of a receipt,
+and permits no continuation request. Production pacing and durability are unchanged.
 
 A request that fails before any body (a transient transport error, or a
 429, 500, 502, 503, or 504 answer) is sent again at most three times in all,

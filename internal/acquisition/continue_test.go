@@ -121,20 +121,38 @@ func TestContinuationStopsWhenItCannotBeSafe(t *testing.T) {
 }
 
 func TestCancellationStopsContinuation(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 	saved := continuationPause
-	continuationPause = func(int) time.Duration { return time.Hour }
+	pauses := 0
+	continuationPause = func(attempt int) time.Duration {
+		// Cancel at the first backoff boundary, after the initial response
+		// dropped and its partial bytes were retained. A wall-clock sleep
+		// could cancel during durable packet setup on a slower filesystem.
+		pauses++
+		if attempt != 1 {
+			t.Fatal("unexpected continuation attempt", attempt)
+		}
+		cancel()
+		return time.Hour
+	}
 	t.Cleanup(func() { continuationPause = saved })
 	body := "ID3 " + strings.Repeat("resumable audio bytes ", 20)
 	p := &flakyProvider{rangeProvider: newRangeProvider(body), chunk: 150}
-	ctx, cancel := context.WithCancel(context.Background())
-	go func() { time.Sleep(100 * time.Millisecond); cancel() }()
 	start := time.Now()
 	r := Request{SourceID: "archive:demo", File: "track.mp3", Output: filepath.Join(t.TempDir(), "packet"), MaxBytes: 1 << 20}
-	if _, err := Acquire(ctx, p, r); err == nil || time.Since(start) > 10*time.Second {
+	result, err := Acquire(ctx, p, r)
+	if err == nil || time.Since(start) > 10*time.Second || !errors.Is(ctx.Err(), context.Canceled) || pauses != 1 || result.Complete || result.Continuations != 0 || result.Transfer.Bytes != 150 {
 		t.Fatal("cancellation did not stop the wait", err)
 	}
 	if fmt.Sprint(p.requests) != "[full]" {
 		t.Fatal(p.requests)
+	}
+	if got := mustReadFile(t, filepath.Join(r.Output, "content.mp3")); got != body[:150] {
+		t.Fatal("cancellation changed the retained partial transfer")
+	}
+	if _, err := os.Stat(filepath.Join(r.Output, "receipt.json")); !os.IsNotExist(err) {
+		t.Fatal("cancelled continuation wrote a receipt", err)
 	}
 }
 
