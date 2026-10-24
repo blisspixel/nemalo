@@ -379,6 +379,29 @@ This is one host on one OS with a synthetic library. The Agent Plugins package,
 other hosts, macOS and Windows hosts, and interactive install prompts remain
 unverified.
 
+### Installed-tool acceptance candidate
+
+The `--installed-tools` mode in
+[decision 0093](decisions/0093-native-installed-tool-acceptance.md) adds 13 cases
+after the original 39, using only explicitly named executables. On 2026-10-24 the
+candidate harness passed all 39 and all 13 on Linux against the clean `1ee0051`
+executable with ClamAV 1.5.4 (signatures 28163), 7-Zip 26.04 and FFmpeg/FFprobe
+n9.0.2. The child PATH was `/usr/bin` alone; there, `7z` is a 37-byte wrapper, so
+its recorded hash is the wrapper's. The clean EPUB scan reported no detections
+and the 68-byte EICAR file returned findings with unchanged bytes. Without the
+tools, the 7z archive was listed as not imported and the decode check reported
+FFmpeg unavailable; with them, the member imported as checked and decoding
+passed. `mp4-pcm/1` reported 88,200 samples whose full hash equaled the harness's
+own reference decode, and both 500-sample ranges matched it exactly. Archive,
+source and library bytes stayed unchanged across reads and refusals.
+
+The same review found that doctor reported 7-Zip unavailable when only `7zz`
+was installed, as with Homebrew's `sevenzip` formula, although intake used it.
+Doctor now uses intake's discovery; the regression test failed before the fix.
+Offline tests cover selection refusals, shadowed executables, Defender roots,
+case order and failures that stop later work. Exact hosted runs on all three
+OSes remain required.
+
 ## Cited evidence and citation export
 
 On 2026-10-23, local verification of the

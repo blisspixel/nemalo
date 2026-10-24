@@ -24,6 +24,23 @@ The tool records bounded raw output and current-screen frames, with unchanged
 source/library snapshots. This fixed terminal profile does not establish every
 graphical terminal, assistive technology or host integration. See
 [decision 0092](decisions/0092-native-terminal-acceptance.md).
+Add `--installed-tools` with explicit executables to exercise installed tools
+after those cases:
+
+```sh
+go run ./cmd/nativecheck --binary bin/nemalo --commit "$(git rev-parse HEAD)" \
+  --installed-tools --clamscan /usr/bin/clamscan --sevenzip /usr/bin/7z \
+  --ffmpeg /usr/bin/ffmpeg --ffprobe /usr/bin/ffprobe
+```
+
+On Windows, pass `--defender` with the system `MpCmdRun.exe` instead of
+`--clamscan`. Thirteen cases cover scanning (including the harmless EICAR test
+file), 7z intake, decode checks and `mp4-pcm/1` samples against the harness's own
+reference decode, with missing-tool refusals. The child PATH holds only the
+named tools' directories, and the harness refuses a selection that Nemalo would
+not actually run. The dispatched `installed-tools.yml` workflow runs it on all
+three hosted OSes. See
+[decision 0093](decisions/0093-native-installed-tool-acceptance.md).
 
 ## Current operations
 

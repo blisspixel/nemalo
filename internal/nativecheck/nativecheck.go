@@ -15,6 +15,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"runtime"
 	"time"
 
 	"github.com/blisspixel/nemalo/internal/safeio"
@@ -24,6 +25,7 @@ import (
 type Request struct {
 	Binary, Commit, Output, Checkout string
 	Terminal                         bool
+	Installed                        *InstalledTools
 }
 
 type Command struct {
@@ -46,6 +48,7 @@ type Result struct {
 	Error         string            `json:"error,omitempty"`
 	LastOutput    *CommandOutput    `json:"last_command_output,omitempty"`
 	Terminal      *TerminalReport   `json:"terminal,omitempty"`
+	Installed     *InstalledReport  `json:"installed_tools,omitempty"`
 	Limitations   []string          `json:"limitations"`
 }
 
@@ -75,7 +78,11 @@ type suite struct {
 }
 
 func Run(ctx context.Context, request Request) (out Result, err error) {
-	ctx, cancel := context.WithTimeout(ctx, 5*time.Minute)
+	deadline := 5 * time.Minute
+	if request.Installed != nil {
+		deadline += installedDeadline
+	}
+	ctx, cancel := context.WithTimeout(ctx, deadline)
 	defer cancel()
 	if err = ctx.Err(); err != nil {
 		return out, err
@@ -114,9 +121,20 @@ func Run(ctx context.Context, request Request) (out Result, err error) {
 		return out, err
 	}
 	s.binary = filepath.Join(work.directory, executable)
+	// Validate selected tools before any fixture work, so a wrong selection
+	// cannot leave a half-run receipt that looks like a tool failure.
+	var tools *installedSelection
+	if request.Installed != nil {
+		if tools, err = selectInstalled(*request.Installed, request.Checkout, work.directory, s.env, runtime.GOOS); err != nil {
+			return out, err
+		}
+	}
 	s.lifecycle()
 	if request.Terminal && s.guard() {
 		s.terminals()
+	}
+	if tools != nil && s.guard() {
+		s.installed(tools)
 	}
 	return s.result, s.err
 }
@@ -124,7 +142,7 @@ func Run(ctx context.Context, request Request) (out Result, err error) {
 func newSuite(ctx context.Context, root *os.Root, directory string, run runner) *suite {
 	return &suite{ctx: ctx, root: root, directory: directory, run: run, env: childEnvironment(directory), result: Result{Schema: "nemalo-native-check/1", Status: "failed", Commands: []Command{}, Limitations: []string{
 		"Synthetic fixture acceptance on this native OS and architecture, not a release or whole-format conformance.",
-		"External tool discovery is disabled. No installed antivirus, decoder, provider, external reader or model is exercised. Holdings must remain in review.",
+		"The 39 cases and terminal sessions disable external tool discovery. They exercise no installed antivirus, decoder, provider, external reader or model, and their holdings remain in review.",
 		"macOS default state paths are computed but unused by these selected commands; explicit configuration and scratch stay in the owned workspace. HOME is unchanged.",
 		"Existing crash/recovery, Windows boundary, installer, real host and interactive terminal gates remain separate and are not replaced.",
 	}}}
@@ -195,6 +213,12 @@ func (s *suite) call(name string, want int, dst any, args ...string) {
 }
 
 func (s *suite) callInto(commands *[]Command, name string, want int, dst any, args ...string) {
+	s.callWith(commands, s.env, 0, name, want, dst, args...)
+}
+
+// callWith runs Nemalo with an explicit child environment and per-command
+// deadline; zero keeps the default deadline.
+func (s *suite) callWith(commands *[]Command, childEnv []string, deadline time.Duration, name string, want int, dst any, args ...string) {
 	if s.err != nil {
 		return
 	}
@@ -209,6 +233,7 @@ func (s *suite) callInto(commands *[]Command, name string, want int, dst any, ar
 		s.fail(err)
 		return
 	}
+	in.env, in.deadline = childEnv, deadline
 	r := s.run(s.ctx, in)
 	s.lastOutput = &CommandOutput{Name: name, Stdout: string(r.stdout[:min(len(r.stdout), 16<<10)]), Stderr: string(r.stderr[:min(len(r.stderr), 4<<10)]), StdoutTruncated: len(r.stdout) > 16<<10, StderrTruncated: len(r.stderr) > 4<<10}
 	s.commandCount++

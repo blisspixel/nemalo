@@ -1,0 +1,78 @@
+name: Installed tools
+
+# Decision 0093: selected installed ClamAV or Defender, 7-Zip and FFmpeg on each
+# hosted OS. Dispatched manually, so package mirror or signature outages cannot
+# make ordinary CI red. Tool versions float with the runner images; each
+# receipt records the versions and executable hashes it actually ran.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: installed-tools-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  installed:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+      - name: Build clean cgo-free executable
+        env:
+          CGO_ENABLED: '0'
+        run: go build -trimpath -o bin/ ./cmd/nemalo
+      - name: Install ClamAV, 7-Zip and FFmpeg (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends clamav clamav-freshclam 7zip ffmpeg
+          sudo systemctl stop clamav-freshclam || true
+          sudo freshclam || { sleep 60; sudo freshclam; }
+      - name: Install ClamAV, 7-Zip and FFmpeg (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          brew install clamav sevenzip ffmpeg
+          prefix="$(brew --prefix)"
+          config="$prefix/etc/clamav/freshclam.conf"
+          [ -f "$config" ] || sed -e 's/^Example/#Example/' "$config.sample" > "$config"
+          mkdir -p "$prefix/var/lib/clamav"
+          freshclam || { sleep 60; freshclam; }
+      - name: Install FFmpeg (Windows; 7-Zip and Defender are preinstalled)
+        if: runner.os == 'Windows'
+        run: choco install ffmpeg -y --no-progress
+      - name: Exercise installed tools (Linux and macOS)
+        if: runner.os != 'Windows'
+        run: |
+          sevenzip=""
+          for name in 7zz 7z 7za; do sevenzip="$(command -v "$name")" && break; done
+          go run ./cmd/nativecheck --binary bin/nemalo --commit "${{ github.sha }}" --installed-tools \
+            --clamscan "$(command -v clamscan)" --sevenzip "$sevenzip" \
+            --ffmpeg "$(command -v ffmpeg)" --ffprobe "$(command -v ffprobe)"
+      - name: Exercise installed tools (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $platform = Get-ChildItem "$env:ProgramData\Microsoft\Windows Defender\Platform\*\MpCmdRun.exe" -ErrorAction SilentlyContinue |
+            Sort-Object { [version](($_.Directory.Name -split '-')[0]) } -Descending | Select-Object -First 1
+          $defender = if ($platform) { $platform.FullName } else { "$env:ProgramFiles\Windows Defender\MpCmdRun.exe" }
+          $sevenzip = $null
+          foreach ($name in '7zz.exe', '7z.exe', '7za.exe') {
+            $found = Get-Command $name -CommandType Application -ErrorAction SilentlyContinue | Select-Object -First 1
+            if ($found) { $sevenzip = $found.Source; break }
+          }
+          go run ./cmd/nativecheck --binary bin/nemalo.exe --commit "${{ github.sha }}" --installed-tools `
+            --defender "$defender" --sevenzip "$sevenzip" `
+            --ffmpeg (Get-Command ffmpeg.exe).Source --ffprobe (Get-Command ffprobe.exe).Source
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }

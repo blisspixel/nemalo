@@ -202,10 +202,13 @@ Remaining stage 5 work, in order:
    [accepted](docs/VALIDATION.md#claude-code-host-acceptance): marketplace
    install, scoped read-only calls, out-of-scope refusals, absent gated tools and
    version parity. Remaining: the Agent Plugins package in a host that consumes
-   it (identify one first), and Claude Code on macOS and Windows.
-2. Installed-tool evidence beyond Linux. Current ClamAV, 7-Zip and FFmpeg
-   observations are Linux-only; record selected macOS and Windows runs with
-   missing-tool refusals.
+   it ([named launch clients](https://vercel.com/changelog/introducing-agent-plugins-1-0-0)
+   include Codex, Cursor, GitHub Copilot, Kiro and VS Code; Codex is installed
+   locally), and Claude Code on macOS and Windows.
+2. Installed-tool evidence beyond Linux. The repeatable `nativecheck
+   --installed-tools` mode and its dispatched workflow are implemented under
+   [decision 0093](docs/decisions/0093-native-installed-tool-acceptance.md);
+   exact hosted acceptance on all three OSes is required.
 3. Accessibility review of the TUI and reader: keyboard-only operation, no-color
    and light/dark output, and at least one screen reader per OS, with limitations
    recorded rather than inferred from the fixed terminal profile.

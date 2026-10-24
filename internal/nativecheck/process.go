@@ -17,6 +17,7 @@ const (
 type invocation struct {
 	binary, directory string
 	args, env         []string
+	deadline          time.Duration // zero selects commandDeadline
 }
 
 type reply struct {
@@ -50,7 +51,11 @@ func (b *boundedOutput) Write(p []byte) (int, error) {
 }
 
 func execute(ctx context.Context, in invocation) reply {
-	ctx, cancel := context.WithTimeout(ctx, commandDeadline)
+	deadline := commandDeadline
+	if in.deadline > 0 {
+		deadline = in.deadline
+	}
+	ctx, cancel := context.WithTimeout(ctx, deadline)
 	defer cancel()
 	out := boundedOutput{limit: maxStdout, cancel: cancel}
 	diagnostic := boundedOutput{limit: maxStderr, cancel: cancel}
