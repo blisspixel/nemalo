@@ -64,8 +64,27 @@ jobs:
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
-          $platform = Get-ChildItem "$env:ProgramData\Microsoft\Windows Defender\Platform\*\MpCmdRun.exe" -ErrorAction SilentlyContinue |
-            Sort-Object { [version](($_.Directory.Name -split '-')[0]) } -Descending | Select-Object -First 1
+          # Record what the Platform folder holds, including link entries.
+          Get-ChildItem "$env:ProgramData\Microsoft\Windows Defender\Platform" -ErrorAction SilentlyContinue |
+            Format-Table Name, LinkType, Target -AutoSize | Out-String -Width 200 | Write-Output
+          # The same ordering as Nemalo's scanner resolution: numeric fields
+          # compared as numbers, otherwise ordinal path order. The harness still
+          # refuses any selection Nemalo would not run.
+          function Test-Newer($a, $b) {
+            $x = $a.Directory.Name -split '[.-]'; $y = $b.Directory.Name -split '[.-]'
+            for ($i = 0; $i -lt [Math]::Min($x.Count, $y.Count); $i++) {
+              $u = 0; $v = 0
+              if (-not [int]::TryParse($x[$i], [ref]$u) -or -not [int]::TryParse($y[$i], [ref]$v)) {
+                return [string]::CompareOrdinal($a.FullName, $b.FullName) -gt 0
+              }
+              if ($u -ne $v) { return $u -gt $v }
+            }
+            return $x.Count -gt $y.Count
+          }
+          $platform = $null
+          foreach ($candidate in Get-ChildItem "$env:ProgramData\Microsoft\Windows Defender\Platform\*\MpCmdRun.exe" -ErrorAction SilentlyContinue) {
+            if (-not $platform -or (Test-Newer $candidate $platform)) { $platform = $candidate }
+          }
           $defender = if ($platform) { $platform.FullName } else { "$env:ProgramFiles\Windows Defender\MpCmdRun.exe" }
           $sevenzip = $null
           foreach ($name in '7zz.exe', '7z.exe', '7za.exe') {
