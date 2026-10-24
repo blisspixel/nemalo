@@ -198,11 +198,11 @@ flight. Open issues are [59](https://github.com/blisspixel/nemalo/issues/59)
 
 Remaining stage 5 work, in order:
 
-1. Real host and plugin acceptance. Install the packages in `plugins/nemalo/`
-   into actual hosts, starting with Claude Code, and record scoped stdio MCP tool
-   calls, refusals without `--allow-write`/`--allow-network`, and version parity
-   with `internal/cli.Version`. Existing MCP evidence drives real stdio servers
-   from a client, not an installed host.
+1. Real host and plugin acceptance. Claude Code on Linux is
+   [accepted](docs/VALIDATION.md#claude-code-host-acceptance): marketplace
+   install, scoped read-only calls, out-of-scope refusals, absent gated tools and
+   version parity. Remaining: the Agent Plugins package in a host that consumes
+   it (identify one first), and Claude Code on macOS and Windows.
 2. Installed-tool evidence beyond Linux. Current ClamAV, 7-Zip and FFmpeg
    observations are Linux-only; record selected macOS and Windows runs with
    missing-tool refusals.

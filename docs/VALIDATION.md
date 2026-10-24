@@ -340,6 +340,45 @@ metadata. This accepts the fixed terminal profile on the three hosted OSes. It i
 not graphical terminal, assistive technology, real host/plugin or release
 acceptance.
 
+### Claude Code host acceptance
+
+On 2026-10-24, Claude Code 2.1.310 on Linux ran the `plugins/nemalo/` package
+against a clean `1ee0051` executable (SHA-256
+`01dd1806579f42358a259ced5830ce446ef1c32d4bffb3e6186bc28b0a708bcd`) and a fresh
+synthetic library from the native harness, whose 39 cases passed. The child PATH
+put that executable first and excluded an older installed release. Each session
+had every built-in host tool disabled and allowed only the plugin's MCP tools.
+
+- The host's `claude plugin validate` passed for the plugin and marketplace, with
+  advisory notes only (no icon, no README install line).
+- With `--plugin-dir` alone in print mode, the plugin loaded at version
+  `0.1.0-alpha.17` but its server did not start, and the debug log gave no reason:
+  the required `scope` option was unset. Supplying `pluginConfigs` for
+  `nemalo@inline` through `--settings` started `plugin:nemalo:nemalo` and loaded
+  the shared skill. That route works but is not documented by the host.
+- The host exposed exactly the 19 default read-only tools. Import, rescan and job
+  tools (`--allow-write`), catalog and acquisition tools (`--allow-network`) and
+  decode tools (`--allow-decode`) were absent.
+- Two identical sessions made six actual calls each: capabilities reported
+  `0.1.0-alpha.17`; status, list and `content_read` returned the fixture holding
+  and a bounded `epub-text/2` range with a continuation; `file_check` on an
+  unscoped fixture folder and on `/etc/hostname` returned tool errors stating the
+  path is not inside the configured scopes. Results were read from the recorded
+  tool payloads, not the model's summary.
+- A complete before/after listing of fixture modes, sizes and hashes was
+  unchanged. A first session showed host MCP logs inside the fixture because
+  `XDG_CACHE_HOME` pointed there; the repeated session kept host cache outside.
+- In an isolated `CLAUDE_CONFIG_DIR`, the documented
+  `claude plugin marketplace add blisspixel/nemalo` cloned `1ee0051`, and
+  `claude plugin install nemalo@nemalo --config scope=...` installed version
+  `0.1.0-alpha.17`, stored the folder under `pluginConfigs` and produced files
+  identical to the repository package apart from a host marker. The user's own
+  host configuration was not changed.
+
+This is one host on one OS with a synthetic library. The Agent Plugins package,
+other hosts, macOS and Windows hosts, and interactive install prompts remain
+unverified.
+
 ## Cited evidence and citation export
 
 On 2026-10-23, local verification of the

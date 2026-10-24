@@ -223,7 +223,11 @@ The repository root holds `.claude-plugin/marketplace.json`. In Claude Code:
 ```
 
 Claude Code asks for one library folder at install and passes it as `--scope`;
-the configured library and review folders are added. Agent Plugins has no user
+the configured library and review folders are added. Without an interactive
+prompt, supply it with `claude plugin install nemalo@nemalo --config
+scope=FOLDER`. A plugin loaded only with `--plugin-dir` has no stored folder, and
+Claude Code then omits the Nemalo server without reporting why; see the
+[host acceptance](VALIDATION.md#claude-code-host-acceptance). Agent Plugins has no user
 configuration, so that package runs `nemalo mcp serve` with Nemalo's configured
 folders, and the server refuses to start without one. Both run the installed
 `nemalo` executable from PATH. They bundle no binaries, run no installer, fetch
