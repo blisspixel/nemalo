@@ -59,6 +59,22 @@ session, so nothing is lost or repeated.
 - Source text shown on one row (page labels, alternative text, omission
   details) has control characters escaped and line breaks and tabs folded to
   spaces.
+- `/` opens exact whole-book finding through the existing content service,
+  using `epub-text/2` or `pdf-text/1`, including outside a selected declared entry.
+  It pauses first and stores no query or reading record. Input accepts one line
+  up to 1000 UTF-8 bytes; unsupported control/replacement characters and oversized
+  pastes are refused before the editor can sanitize or truncate them. Format
+  characters remain literal, with a separately escaped display and mapped cursor.
+  Text commits spelling key names remain text; only actual control keys act.
+  Enter submits one 15-second request, with scope captured before asynchronous
+  work. Re-edit, close and replacement cancel work; session/request fences reject
+  late service and editor replies. Existing source/read/extraction limits apply.
+  Results keep the service's exact case, Unicode and extracted-whitespace rules,
+  100-match cap and explicit omitted/unsupported coverage. Selecting a result opens
+  a new paused text session through its returned cursor, checked again after units
+  retrieval. Empty, changed or invalid references cannot fall back to offsets.
+  Escape before selection preserves the original paused passage; rate and CLI-only
+  exit behavior survive selection. No normalized search, parser, index or MCP tool.
 - From TUI Read results, the reader opens at the selected listing entry, else
   where the last successful excerpt of that asset and scope began (issue 20).
   A declared-entry excerpt reopens its entry at that place with the entry's

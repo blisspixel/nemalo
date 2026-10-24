@@ -136,6 +136,19 @@ func (m *model) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 	case contentsResult:
 		m.contentsResult(msg)
 		return m, nil
+	case findResult:
+		m.findResult(msg)
+		return m, nil
+	case findInputResult:
+		p := m.pager
+		if p != nil && p.session == msg.session && p.finder != nil && p.finder.editing && p.finder.request == msg.request {
+			return m, m.findInput(msg.message)
+		}
+		return m, nil
+	case tea.PasteMsg:
+		if m.pager != nil && m.pager.finder != nil && m.pager.finder.editing {
+			return m, m.findInput(msg)
+		}
 	case pagerTick:
 		return m, m.pagerTick(msg)
 	case noteChunk:
@@ -145,6 +158,13 @@ func (m *model) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 	case tea.KeyPressMsg:
 		if m.pager != nil {
+			if m.pager.finder != nil && m.pager.finder.editing {
+				if msg.Code == 'c' && msg.Mod == tea.ModCtrl {
+					m.closePager()
+					return m, tea.Quit
+				}
+				return m, m.findInput(msg)
+			}
 			if msg.String() == "ctrl+c" {
 				m.closePager()
 				return m, tea.Quit
@@ -164,6 +184,9 @@ func (m *model) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 		m.viewport.SetWidth(max(1, msg.Width-2))
 		m.resize()
 		if m.pager != nil {
+			if m.pager.finder != nil {
+				m.pager.finder.input.SetWidth(max(1, m.pagerWidth()-4))
+			}
 			m.pagerLayout()
 			return m, tea.Batch(m.pagerMore(), tea.ClearScreen)
 		}

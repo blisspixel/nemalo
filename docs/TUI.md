@@ -159,6 +159,7 @@ reported by the reader's own read. Word mode opens paused.
 | [ / ] | Previous / next unit. Inside a declared entry, these stay in that entry | Previous / next unit. Inside a declared entry, these stay in that entry |
 | s / p | s: paused word mode; return to the same word after page context unless you navigated | p: page context at this word, paused |
 | c | Choose declared contents or a physical PDF page | Pause and open the same chooser |
+| / | Find exact text in the whole book | Pause and open the same search dialog |
 | m | Save this location. Closing does not save | Save this location. Closing does not save |
 | ' | Restore the saved location | Restore the saved location |
 | f | Links and notes on this page | Pause, then links and notes near this word |
@@ -176,6 +177,24 @@ Escape or c returns to the unchanged passage, paused; q closes the reader.
 Opening or closing the chooser records no progress and changes no bookmark.
 Retrieval runs only on explicit open, with a 15-second deadline and cancellation
 and late-result guards. Missing or failed contents stay explicit.
+
+`/` finds exact, case-sensitive text across the book's supported extracted text,
+including text outside the current declared entry. Enter searches; Escape keeps
+the original passage paused. Query letters such as q and m remain text while
+editing; Ctrl+U clears, and Ctrl+C closes the reader. Input is one line, at most
+1000 UTF-8 bytes. Oversized, multiline, control or replacement-character input is
+refused without truncation. Format characters remain literal in the query and
+are displayed as visible escapes. Case, Unicode and extracted whitespace are not
+normalized; multiline quotations remain available through `content locate`.
+
+Results show at most 100 source text spans, with truncation and unsupported-content
+coverage explicit. Omitted material is not searched. Use j/k, arrows, paging or
+g/G to select; Enter revalidates the returned source reference and opens that exact
+match in a new paused text session. The former chapter boundary does not constrain
+this whole-book selection. `/` edits the query again. Escape returns to the original
+passage before choosing a match. Missing, changed or stale references fail without
+falling back to offsets. Queries and reading positions are not saved. Work runs
+only on explicit submission with a 15-second deadline and cancellation/session guards.
 
 Speed reading starts paused at 250 words per minute and holds sentence ends
 twice as long. Above 350 the footer calls it skimming, since comprehension fell
@@ -255,5 +274,9 @@ observations preserve the fixture bytes; the view does not start a scan.
 ![Source-bound terminal reading from Pride and Prejudice](images/tui-reading.png)
 
 ![Source-declared contents inside the full-screen reader](images/tui-contents.png)
+
+![Exact whole-book query entry without changing the passage](images/tui-find-input.png)
+
+![Source-bound exact matches with extraction coverage disclosed](images/tui-find.png)
 
 ![Explicit job observation with a torn journal and unobserved owner](images/tui-jobs.png)

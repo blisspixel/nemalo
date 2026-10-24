@@ -669,9 +669,10 @@ and writes nothing ([decision 0025](docs/decisions/0025-terminal-reading.md)).
 The [reader review](docs/READER-REVIEW.md) compares primary documentation for
 mature readers and pacing tools. Exact place retention and pause correctness
 precede further controls. Full-screen contents now reuses declared-entry reading
-and physical PDF units; in-reader search and assistive-technology validation
-remain distinct interface work. Source implementation and its full acceptance
-remain separate. The
+and physical PDF units, with exact hosted acceptance at `b40b0d1`. In-reader exact
+search adapts the existing source-bound lookup; its full acceptance is separate.
+Broader normalized search and assistive-technology validation remain distinct
+work. Source implementation and release remain separate. The
 [native workflow review](docs/VALIDATION.md#native-workflow-review-on-2026-10-24)
 records selected installed-tool and CLI/MCP evidence with explicit coverage gaps.
 Source-declared EPUB 3 nav and EPUB 2 NCX hierarchies are `epub-nav/1`: a read

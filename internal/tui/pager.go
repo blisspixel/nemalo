@@ -80,6 +80,10 @@ type pager struct {
 	// notes is a detour into source notes; the passage above stays as it is.
 	notes   *notesState
 	chooser *readerContents
+	finder  *readerFind
+	// initialCursor keeps a selected exact-text match bound to its returned
+	// extractor reference. Coordinates alone never substitute for this token.
+	initialCursor string
 	// session numbers this reader for its read-only side facts: the book's
 	// declared contents, which name where it closed, and a saved bookmark.
 	session  int
@@ -120,6 +124,7 @@ func (m *model) openPager(catalog, root, asset, representation string, start rea
 			p.notes.cancel()
 		}
 		m.closeContents()
+		m.closeFind()
 	}
 	measure := defaultMeasure
 	if representation == "pdf-text/1" {
@@ -169,6 +174,7 @@ func Read(ctx context.Context, service app.Service, in io.Reader, out io.Writer,
 		}
 		if m.pager != nil {
 			m.closeContents()
+			m.closeFind()
 		}
 	}()
 	if _, err := tea.NewProgram(m, tea.WithContext(ctx), tea.WithInput(in), tea.WithOutput(out)).Run(); err != nil {
@@ -217,6 +223,7 @@ func (m *model) pagerJump(unit int) tea.Cmd {
 func (m *model) pagerOpen(at reader.Position, note string) tea.Cmd {
 	p := m.pager
 	m.closeContents()
+	m.closeFind()
 	p.pageWord = nil
 	p.doc, p.layout, p.start, p.resume = reader.New(p.representation, p.units), reader.Layout{}, at, nil
 	p.doc.StartAt(at)
@@ -253,6 +260,11 @@ func (m *model) pagerChunk(msg pagerChunk) tea.Cmd {
 		p.doc = reader.New(p.representation, p.units)
 		p.doc.StartAt(p.start)
 		facts := m.pagerFacts()
+		if p.initialCursor != "" {
+			cursor := p.initialCursor
+			p.initialCursor = ""
+			return tea.Batch(m.pagerFetch(content.Request{Cursor: cursor}, false), facts)
+		}
 		if p.chapter {
 			if p.chapterCursor != "" {
 				cursor := p.chapterCursor
@@ -459,6 +471,7 @@ func (m *model) pagerPosition() (reader.Position, bool) {
 func (m *model) closePager() tea.Cmd {
 	p := m.pager
 	m.closeContents()
+	m.closeFind()
 	if p.cancel != nil {
 		p.cancel()
 	}
@@ -491,6 +504,10 @@ func (m *model) pagerKey(key string) tea.Cmd {
 	case "q":
 		return m.closePager()
 	case "esc":
+		if p.finder != nil && !p.help {
+			m.closeFind()
+			return tea.ClearScreen
+		}
 		if p.chooser != nil && !p.help {
 			m.closeContents()
 			return tea.ClearScreen
@@ -519,7 +536,12 @@ func (m *model) pagerKey(key string) tea.Cmd {
 	if p.chooser != nil {
 		return m.contentsKey(key)
 	}
+	if p.finder != nil {
+		return m.findKey(key)
+	}
 	switch key {
+	case "/":
+		return m.openFind()
 	case "c":
 		return m.openContents()
 	case "f":
@@ -695,6 +717,9 @@ func (m *model) pagerView() string {
 		if p.chooser != nil {
 			help = contentsHelp()
 		}
+		if p.finder != nil {
+			help = findHelp()
+		}
 		for _, line := range help {
 			body = append(body, margin+line)
 		}
@@ -704,6 +729,8 @@ func (m *model) pagerView() string {
 		header += "  " + title
 	} else if p.chooser != nil {
 		body = m.contentsBody(margin)
+	} else if p.finder != nil {
+		body = m.findBody(margin)
 	} else if p.speed {
 		body = m.speedBody(width, margin)
 		state := "paused"
@@ -726,6 +753,9 @@ func (m *model) pagerView() string {
 		if p.chooser != nil {
 			notice = "Press ? to return to the choices. q or Escape closes the reader."
 		}
+		if p.finder != nil {
+			notice = "Press ? to return to matches. q or Escape closes the reader."
+		}
 	}
 	if p.failure != "" && m.pagerAtEnd() && !p.help {
 		notice = p.failure
@@ -734,12 +764,19 @@ func (m *model) pagerView() string {
 		notice = "Above 350 words per minute, studies found comprehension falls; treat this as skimming."
 	}
 	keys := readerKeys(p.speed, p.chapter, max(1, m.width-2))
-	if p.chooser != nil && p.help {
+	if (p.chooser != nil || p.finder != nil) && p.help {
 		keys = fitKeys("", max(1, m.width-2))
 	}
 	if p.chooser != nil && !p.help {
 		notice = p.chooser.notice
 		keys = fitKeys("j/k choose  Enter open  Esc passage", max(1, m.width-2))
+	}
+	if p.finder != nil && !p.help {
+		notice = p.finder.notice
+		keys = fitKeys("j/k choose  Enter open  / edit  Esc passage", max(1, m.width-2))
+		if p.finder.editing {
+			keys = clip("Enter find  Esc passage  Ctrl+U clear  Ctrl+C close", max(1, m.width-2))
+		}
 	}
 	if inNotes {
 		notice = noteNotice
@@ -759,12 +796,12 @@ func (m *model) pagerView() string {
 
 // readerKeys keeps ? and q close on screen when the terminal is narrow.
 func readerKeys(speed, chapter bool, width int) string {
-	body := "Space/b page  j/k line  [ ] unit  +/- width  s word  c contents  f notes  m save"
+	body := "Space/b page  j/k line  [ ] unit  +/- width  s word  c contents  / find  f notes  m save"
 	if chapter && !speed {
-		body = "Space/b page  j/k line  +/- width  s word  c contents  f notes  m save"
+		body = "Space/b page  j/k line  +/- width  s word  c contents  / find  f notes  m save"
 	}
 	if speed {
-		body = "Space play/pause  Left/Right sentence  Up/Down rate  p pages  c contents  f notes"
+		body = "Space play/pause  Left/Right sentence  Up/Down rate  p pages  c contents  / find  f notes"
 	}
 	return fitKeys(body, width)
 }
@@ -805,6 +842,7 @@ func readerHelp(speed, chapter bool) []string {
 			"[ ]         previous or next unit",
 			"p           pages at this word",
 			"c           declared contents or physical PDF pages (pauses)",
+			"/           exact whole-book search (pauses)",
 			"f           links and notes near this word (pauses)",
 			"m           save this location",
 			"'           restore the saved location",
@@ -828,6 +866,7 @@ func readerHelp(speed, chapter bool) []string {
 		"+, -                wider or narrower",
 		"s                    one word at a time",
 		"c                    declared contents or physical PDF pages",
+		"/                    exact whole-book search",
 		"f                    links and notes on this page",
 		"Escape               in a note, back to the passage",
 		"m                    save this location",

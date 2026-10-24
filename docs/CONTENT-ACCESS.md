@@ -55,6 +55,13 @@ non-link directory:
 nemalo content read /path/library --root /path/library --asset sha256:HASH --json
 ```
 
+The terminal reader's `/` dialog adapts the same exact `content locate` operation.
+It searches the whole book's supported extracted text, not rendered layout or an
+inferred semantic passage, and opens a chosen result only through its returned
+source-bound cursor. Terminal input is one line; the CLI retains the full existing
+literal UTF-8 contract. Finding does not normalize case, Unicode or whitespace to
+manufacture a match. See the [terminal controls](TUI.md).
+
 The asset ID comes from `library import`. This reads that one managed holding
 and rechecks its size and SHA-256. It does not search the library, and review
 status does not become checked because the text was read. A managed holding may

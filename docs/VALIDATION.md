@@ -85,6 +85,26 @@ verification then passed at 87.1% aggregate coverage with no reported dependency
 vulnerabilities, followed by full native-cgo race, Windows cross-vet and documentation
 checks. Exact committed native and hosted acceptance remain separate gates.
 
+The contents increment subsequently passed exact committed native checks and
+hosted acceptance at `b40b0d1`: [all six CI jobs](https://github.com/blisspixel/nemalo/actions/runs/40050021868)
+and [Go/Actions CodeQL](https://github.com/blisspixel/nemalo/actions/runs/40050021573).
+The successful Windows log matched all 32 required native boundary case identities,
+with no skips or failures and the actual sharing-violation branch observed.
+Its library covered/race suites took 591.023/587.120 seconds, close to the unchanged
+600-second package deadline. This pass establishes that run, not a broad performance
+margin or a release. No case, assertion, instrumentation, worker or deadline was reduced.
+
+A later exact-search candidate passed focused native-cgo race tests and actual
+Linux terminal interaction over the same owned synthetic holdings. It found text
+outside the active declared-entry boundary, opened the exact returned match,
+kept a cancelled query at its original passage, treated q as query text, and
+preserved a pasted Unicode format character while displaying its escape.
+Multiline paste was explicitly refused. Library modes and bytes, including disabled
+bookmarks, stayed unchanged. Full canonical verification then passed at 87.1%
+aggregate coverage with no reported dependency vulnerabilities, followed by full
+native-cgo race tests, Windows cross-vet and documentation checks. Exact committed
+native and hosted acceptance of that search increment remain separate gates.
+
 ## Cited evidence and citation export
 
 On 2026-10-23, local verification of the

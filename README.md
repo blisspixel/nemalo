@@ -21,7 +21,8 @@ No telemetry or required AI service.
 - Inspect downloads and supported archives, import into a managed library, audit
   stored bytes, and recover interrupted operations. Sources stay intact on import.
 - Browse holdings and collections, observe scoped recorded jobs, open verified
-  copies in external readers, and read EPUBs and PDFs with explicit bookmarks.
+  copies in external readers, and read EPUBs and PDFs with contents, exact-text
+  finding and explicit bookmarks.
 - Retrieve bounded, source-bound text, MP3 ranges and original MP4 packets through
   shared CLI, JSON and MCP services, with coverage gaps reported. Explicitly
   selected installed FFmpeg access returns decoded MP4 ranges as small WAV files.
