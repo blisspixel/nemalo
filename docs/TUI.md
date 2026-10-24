@@ -157,13 +157,13 @@ reported by the reader's own read. Word mode opens paused.
 | - / + | Narrower / wider | Slower / faster by 25 |
 | g / G | Start / end of the loaded text | |
 | [ / ] | Previous / next unit. Inside a declared entry, these stay in that entry | Previous / next unit. Inside a declared entry, these stay in that entry |
-| s / p | s: speed reading from this page | p: pages at this word |
+| s / p | s: paused word mode; return to the same word after page context unless you navigated | p: page context at this word, paused |
 | m | Save this location. Closing does not save | Save this location. Closing does not save |
 | ' | Restore the saved location | Restore the saved location |
 | f | Links and notes on this page | Pause, then links and notes near this word |
 | Escape | Close, or in a note go back one level | Close, or in a note go back one level |
 | q | Close. Nothing is saved | Close. Nothing is saved |
-| ? | Show or hide the key list. `q close` stays in the footer at 80 columns | Show or hide the key list. `q close` stays in the footer at 80 columns |
+| ? | Show or hide the key list. `q close` stays in the footer at 80 columns | Pause and show the key list; hiding it stays paused until Space |
 
 Speed reading starts paused at 250 words per minute and holds sentence ends
 twice as long. Above 350 the footer calls it skimming, since comprehension fell

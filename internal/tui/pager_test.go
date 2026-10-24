@@ -397,6 +397,93 @@ func TestSpeedReadingStartsPausedAndPacesBySentence(t *testing.T) {
 	}
 }
 
+func TestSpeedReaderPageContextReturnsToExactWord(t *testing.T) {
+	catalog, root, asset, _ := readerBook(t, true)
+	before := files(t, root, filepath.Dir(catalog))
+	scheduled(t)
+	m := newModel(context.Background(), app.New())
+	m.Update(tea.WindowSizeMsg{Width: 100, Height: 30})
+	run(m, m.openPager(catalog, root, asset, "epub-text/2", reader.Position{}, true, reader.DefaultRate))
+	p := m.pager
+	// Choose a word inside a wrapped line, rather than its first word.
+	p.word = 8
+	at, _ := m.pagerPosition()
+	for _, width := range []int{100, 40, 160} {
+		press(m, "p")
+		_, cmd := m.Update(tea.WindowSizeMsg{Width: width, Height: 24})
+		run(m, cmd)
+		press(m, "-", "+", "?", "?", "s")
+		got, ok := m.pagerPosition()
+		if !ok || got != at || !p.speed || p.playing || p.waiting {
+			t.Fatalf("page context lost exact word at width %d: %v -> %v", width, at, got)
+		}
+	}
+	// Deliberate page navigation selects the page's current source location.
+	for _, key := range []string{"space", "pgdown", "right", "l", "n", "b", "pgup", "left", "h", "down", "j", "up", "k", "home", "g", "end", "G"} {
+		p.word = 8
+		press(m, "p", key)
+		pageAt, ok := m.pagerPosition()
+		if !ok {
+			t.Fatal("no page place", key)
+		}
+		want := p.doc.Items[p.doc.ItemFor(pageAt)].Pos
+		press(m, "s")
+		if got, _ := m.pagerPosition(); got != want || p.playing {
+			t.Fatal("navigation reused the earlier word", key, got, want)
+		}
+	}
+	m.closePager()
+	if got := files(t, root, filepath.Dir(catalog)); !slices.Equal(before, got) {
+		t.Fatal("mode changes wrote source or reading state")
+	}
+}
+
+func TestSpeedReaderHelpPausesWithoutHiddenAdvancement(t *testing.T) {
+	catalog, root, asset, _ := readerBook(t, false)
+	before := files(t, root, filepath.Dir(catalog))
+	scheduled(t)
+	m := newModel(context.Background(), app.New())
+	run(m, m.openPager(catalog, root, asset, "epub-text/2", reader.Position{}, true, reader.DefaultRate))
+	run(m, m.pagerKey("space"))
+	p := m.pager
+	if !p.playing || len(p.doc.Items) < 2 {
+		t.Fatal("playback did not begin")
+	}
+	run(m, m.pagerTick(pagerTick{gen: p.gen}))
+	if p.doc.Items[p.word].Kind != reader.Word {
+		t.Fatal("fixture did not reach a source word")
+	}
+	word, oldGeneration := p.word, p.gen
+	m.pagerKey("?")
+	m.pagerTick(pagerTick{gen: oldGeneration})
+	if !p.help || p.playing || p.waiting || p.word != word {
+		t.Fatalf("help advanced hidden text: word %d -> %d, playing=%t waiting=%t", word, p.word, p.playing, p.waiting)
+	}
+	m.pagerKey("?")
+	m.pagerTick(pagerTick{gen: oldGeneration})
+	if p.help || p.playing || p.word != word {
+		t.Fatal("leaving help resumed without an explicit play")
+	}
+	run(m, m.pagerKey("space"))
+	if !p.playing || p.gen == oldGeneration {
+		t.Fatal("explicit play did not start a fresh timer")
+	}
+	m.pagerTick(pagerTick{gen: p.gen})
+	if p.word <= word {
+		t.Fatal("explicit play did not advance")
+	}
+	// A waiting range cannot restart playback behind help either.
+	p.waiting = true
+	m.pagerKey("?")
+	if p.playing || p.waiting {
+		t.Fatal("help kept the waiting playback active")
+	}
+	m.closePager()
+	if got := files(t, root, filepath.Dir(catalog)); !slices.Equal(before, got) {
+		t.Fatal("help changed source or state files")
+	}
+}
+
 func TestSpeedReadingWaitsForTheNextRangeAndResumes(t *testing.T) {
 	scheduled(t)
 	catalog, root, asset, _ := readerBook(t, true)

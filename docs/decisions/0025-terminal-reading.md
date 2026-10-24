@@ -38,6 +38,13 @@ session, so nothing is lost or repeated.
   says the rate is skimming. Paused, the rows around the word are shown with the
   word marked. Left and Right move by sentence. Unspaced text, such as CJK,
   is shown in chunks of at most 12 cells.
+  `p` shows the current word's page context. Returning with `s` preserves that
+  exact word, including across resizing and measure changes, and stays paused.
+  Explicit page or line navigation instead selects the new page location.
+  This temporary anchor is session memory, never a progress record.
+  Opening help pauses playback, clears a pending playback wait and invalidates
+  its timer generation. Hiding help preserves the place and stays paused until
+  an explicit play action; words cannot advance behind the key list.
 - An unreadable unit stops continuation. Everything already delivered is still
   shown, including a word the last range cut off and any omission it located.
   The reader says so when it reaches that point, not when read-ahead meets it,

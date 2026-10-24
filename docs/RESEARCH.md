@@ -174,6 +174,10 @@ unsupported metadata. This does not establish volume or nested RAR coverage.
 
 ## Terminal interaction reviewed on 2026-10-08
 
+The later [reader and paced-reading review](READER-REVIEW.md), checked against
+primary documentation on 2026-10-24 UTC, compares seven reading/pacing products
+with the actual Go reader and records concrete gaps and local validation work.
+
 The [Charm v2 release](https://charm.land/blog/v2/) and the installed, pinned
 Bubble Tea/Bubbles/Lip Gloss APIs informed the terminal increment. Use existing
 keyboard/input/viewport primitives, terminal background/color capability messages,

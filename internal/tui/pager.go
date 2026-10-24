@@ -44,9 +44,12 @@ type pager struct {
 	layout                               reader.Layout
 	top                                  int
 	word                                 int
-	measure                              int
-	rate                                 int
-	speed, playing, waiting              bool
+	// pageWord preserves an exact word while showing its page context. Explicit
+	// page navigation discards it; this anchor never leaves the current session.
+	pageWord                *reader.Position
+	measure                 int
+	rate                    int
+	speed, playing, waiting bool
 	// blocked stops continuing after a range failed; failed is its unit and
 	// failure the explanation, shown once the reader reaches the end of the
 	// delivered text rather than when read-ahead meets it.
@@ -356,6 +359,9 @@ func (m *model) pagerLayout() {
 	width := m.pagerWidth()
 	if p.layout.Width != width && len(p.layout.Lines) > 0 {
 		at := p.layout.Lines[min(p.top, len(p.layout.Lines)-1)].Pos
+		if p.pageWord != nil {
+			at = *p.pageWord
+		}
 		p.layout.Update(p.doc, width)
 		p.top = p.layout.LineFor(at)
 		m.noteLayout()
@@ -476,6 +482,12 @@ func (m *model) pagerKey(key string) tea.Cmd {
 		return m.closePager()
 	case "?":
 		p.help = !p.help
+		if p.help {
+			// Hidden text must not advance behind help or resume from a
+			// late range. Returning to the passage stays paused.
+			p.playing, p.waiting = false, false
+			p.gen = m.nextSeq()
+		}
 		return tea.ClearScreen
 	}
 	if p.help {
@@ -541,6 +553,10 @@ func (m *model) pageKey(key string) tea.Cmd {
 	p := m.pager
 	body, lines := m.pagerBody(), len(p.layout.Lines)
 	switch key {
+	case "space", "pgdown", "right", "l", "n", "b", "pgup", "left", "h", "down", "j", "up", "k", "home", "g", "end", "G":
+		p.pageWord = nil
+	}
+	switch key {
 	case "space", "pgdown", "right", "l", "n":
 		if p.top+body < lines {
 			p.top += body
@@ -568,6 +584,10 @@ func (m *model) pageKey(key string) tea.Cmd {
 		p.top = max(0, lines-body)
 	case "s":
 		at, _ := m.pagerPosition()
+		if p.pageWord != nil {
+			at = *p.pageWord
+		}
+		p.pageWord = nil
 		p.speed, p.playing, p.word = true, false, p.doc.ItemFor(at)
 		p.gen = m.nextSeq()
 		p.notice = "Paused. Space starts at " + strconv.Itoa(p.rate) + " words per minute."
@@ -604,6 +624,7 @@ func (m *model) speedKey(key string) tea.Cmd {
 		p.rate = max(reader.MinRate, p.rate-reader.RateStep)
 	case "p":
 		at, _ := m.pagerPosition()
+		p.pageWord = &at
 		p.speed, p.playing, p.waiting = false, false, false
 		p.gen = m.nextSeq()
 		p.top = p.layout.LineFor(at)

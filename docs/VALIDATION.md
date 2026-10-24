@@ -18,6 +18,43 @@ Its line endings and dash typography are normalized. An offline test requires al
 an EPUB wrapper, so file extension and container validity are insufficient evidence
 that the selected resource is a full text edition.
 
+## Native workflow review on 2026-10-24
+
+The Linux review used a clean binary of commit `3a6c793` (SHA-256
+`f95b9abb8310794dac6f2076fe7cd0d8bd67d1d7b4c8ab5a4865643bae61af09`),
+owned synthetic fixtures outside the checkout, explicit roots and bounded CLI
+commands. Full local JSON responses, argument arrays and receipts stay beside
+the fixtures. These observations establish the selected workflows on this host,
+not every format, platform, accessibility configuration or release.
+
+| Workflow | Observed outcome |
+| --- | --- |
+| Library lifecycle, 40 actual CLI calls | Initialization/status, import preview/apply, installed ClamAV rescan preview/apply, list, audit, whole-library check, export, cleanup preview/apply, raw restore and fresh purge passed. An unscanned PDF stayed in review and made audit return nonzero. Integrity health and checked status remained separate. |
+| Source preservation and refusals | Read-only calls preserved library modes and bytes. Original EPUB/PDF sources stayed unchanged. Restore reproduced the owned source tree. An unsupported neighbor stayed through cleanup and purge. Disabled bookmark save failed without changing state. |
+| Content and explicit bookmarks | EPUB text, declared contents/page lists, exact quotation lookup and its cursor, original markup, structured text, PDF text, evidence and citation export returned results. Bookmark enable/save/note/resume/export/delete/import/disable passed. These explicit actions were separate from ordinary reading. |
+| Installed archive reader | 7-Zip 26.04 created and ingested an owned single-book 7z archive. Extraction and ClamAV assessment returned a checked EPUB while preserving the original archive hash. This does not replace the separate nested-volume and recovery matrix. |
+| Audio, 18 commands including fixture generation and reference decoding | Installed FFmpeg/FFprobe checked synthetic MP3/M4B files; MP3 frame ranges, MP4 units and original packets returned. Opt-in PCM matched an independent full sequential FFmpeg reference over all 88,200 mono samples at 44,100 Hz. Returned and continued samples matched their exact intervals. A WAV was saved explicitly; audible playback was not exercised. |
+| MCP, two actual stdio processes and 12 calls | Scope violations and unavailable write tools were refused. Decoder tools appeared only with the independent opt-in; ordinary content tools still refused decoding. The native decoded resource matched CLI data. Library modes and bytes stayed unchanged. |
+| Verified-copy handoff | Two actual `library open --app` launches passed an owned Go probe a read-only copy with the exact holding hash, reused that verified copy and preserved library modes and bytes. This validates launch arguments and copy behavior, not graphical reader operation or consumption. |
+| Bounded discovery checks | One-result Open Library and Archive searches passed. Gutenberg search and row evaluation used the local catalog subset. Explicit `arxiv:1706.03762v7` evaluation passed. These metadata checks did not acquire bodies or establish rights, completeness or checked publication. |
+| Selected live acquisition, seven CLI calls | Explicit `gutenberg:1342`, file `1342.epub.noimages`, was evaluated and acquired from `gutenberg.pglaf.org` only. The transfer and installed scan completed as untrusted intake. Preview/apply imported its bound scan as checked; a source-bound evidence read and whole-library check passed. The original intake hash stayed unchanged. This selected result does not establish every provider, interruption/resume path or semantic completeness. |
+
+Doctor found installed ClamAV with signatures updated on 2026-10-23, 7-Zip,
+FFmpeg and FFprobe. EpubCheck was unavailable; no EpubCheck validation is claimed.
+Defender was unavailable on Linux. The scanner reported no detections for the
+selected synthetic EPUB, which is coverage evidence rather than a safety guarantee.
+Native Windows/macOS tool installations, actual graphical reader/player interaction,
+assistive-technology compatibility, power-loss recovery and all provider/download
+combinations were not exercised by this review. Existing offline tests retain
+their injected scanners/providers and adversarial recovery fixtures.
+
+Candidate reader checks in an actual Linux tmux 3.8 terminal reproduced and
+repaired hidden advancement behind help and loss of the exact word after viewing
+page context. Both fixes passed focused native-cgo race tests. The terminal check
+held byte 11 through help and returned to the same paused word after pages, with
+disabled bookmarks and stored bytes unchanged. Exact committed hosted acceptance
+remains separate. See the [reader comparison and next gaps](READER-REVIEW.md).
+
 ## Cited evidence and citation export
 
 On 2026-10-23, local verification of the
