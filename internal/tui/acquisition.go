@@ -94,7 +94,7 @@ func (m *model) requestDownload() tea.Cmd {
 }
 
 func (m *model) confirmDownload(msg tea.KeyPressMsg) tea.Cmd {
-	switch msg.String() {
+	switch msg.Keystroke() {
 	case "ctrl+c":
 		return tea.Quit
 	case "esc":

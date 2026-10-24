@@ -3,6 +3,8 @@
 Nemalo uses the same application services as the CLI. No provider request runs at
 startup. Select an operation, fill its fields, and press Enter to run it.
 Results and form drafts remain with each operation for the current session.
+Write-review controls use physical keystrokes. A committed text string spelling
+`enter`, `esc` or another control name cannot confirm or dismiss a review.
 
 ## Browse and inspect
 

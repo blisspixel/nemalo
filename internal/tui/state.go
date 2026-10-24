@@ -85,7 +85,7 @@ func (m *model) requestRescan() {
 }
 
 func (m *model) confirmInitialization(msg tea.KeyPressMsg) tea.Cmd {
-	switch msg.String() {
+	switch msg.Keystroke() {
 	case "ctrl+c":
 		return tea.Quit
 	case "esc", "f7", "f8", "f9", "ctrl+r", "ctrl+p":

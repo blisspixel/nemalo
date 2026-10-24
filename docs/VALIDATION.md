@@ -157,6 +157,27 @@ coverage, with no reported dependency vulnerabilities, full native-cgo repositor
 race, Windows cross-vet and documentation checks. Exact committed native and
 hosted acceptance remain the next gates.
 
+Commit `6c05115` then passed [all six hosted CI jobs](https://github.com/blisspixel/nemalo/actions/runs/40059525502)
+and [Go/Actions CodeQL](https://github.com/blisspixel/nemalo/actions/runs/40059525422).
+All 32 Windows boundary cases passed without skips or failures, with the actual
+sharing-violation branch observed. Windows library covered/race suites took
+383.892/400.211 seconds; bounds and production durability were unchanged.
+An additional adversarial input check subsequently found that a text commit
+spelling `enter` could be mistaken for confirmation. Synthetic cases reproduced
+it across collection, file/recording acquisition and library write reviews. An
+enhanced keyboard-protocol event also reproduced unintended intake creation in
+an owned native fixture before physical Enter. Review handlers now match physical
+keystrokes through the pinned library API, preserving ordinary key controls.
+This correction has its own final-source verification gate; the earlier hosted
+pass does not establish it.
+
+The confirmation correction then passed the complete verifier again at 87.4%
+aggregate coverage, no reported dependency vulnerabilities, full native-cgo race,
+Windows cross-vet and documentation checks. The native associated-text event now
+preserved missing intake and the active review; a later physical Enter performed
+the same selected acquisition and installed scan. Source acceptance still requires
+its own clean committed native and hosted checks.
+
 ## Cited evidence and citation export
 
 On 2026-10-23, local verification of the

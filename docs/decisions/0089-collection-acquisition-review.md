@@ -42,6 +42,9 @@ permits fresh provider evaluation, bounded transfer and ordinary scanner policy.
 The TUI uses an explicit total byte cap, initially 1 GiB with a deliberate 5 GiB
 choice; it does not select unbounded acquisition. Downloads remain untrusted
 intake. Cancellation retains started packets; ingest remains a separate action.
+Confirmation matches the key event, not an IME's committed text that happens to
+spell a control name. This same distinction applies to existing download and
+library write-review dialogs.
 
 Preserve original operation shortcuts, per-operation drafts, full reports,
 keyboard navigation, visible non-colour outcomes and late-result fences. Add no

@@ -88,7 +88,7 @@ func (m *model) showCollectionPreview(data app.CollectionAcquireResult, request 
 }
 
 func (m *model) confirmCollection(msg tea.KeyPressMsg) tea.Cmd {
-	switch msg.String() {
+	switch msg.Keystroke() {
 	case "ctrl+c":
 		return tea.Quit
 	case "esc":
