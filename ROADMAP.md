@@ -950,9 +950,10 @@ supported-platform race tests, vulnerability checks, and at least 80% measured
 coverage. Coverage supports meaningful recovery and failure tests; it cannot
 replace them.
 
-Run native CI on Linux, macOS, and Windows. Initially target Linux amd64/arm64,
-macOS arm64/amd64, and Windows amd64. Cross-building alone does not establish
-runtime support. Race instrumentation may require a native C toolchain in CI even
+Run native CI on Linux, macOS, and Windows for every shipped architecture: Linux
+amd64/arm64, macOS arm64/amd64 and Windows amd64/arm64
+([decision 0099](docs/decisions/0099-native-ci-for-every-shipped-architecture.md)).
+Cross-building alone does not establish runtime support. Race instrumentation may require a native C toolchain in CI even
 when release builds do not use cgo.
 
 Release gates include packaged-binary smoke tests, hostile archive fixtures,

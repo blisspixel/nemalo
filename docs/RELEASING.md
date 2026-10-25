@@ -45,8 +45,10 @@ Packaging uses fixed timestamps and is reproducible for identical binary inputs;
 this is not a claim of independently reproduced compiler output. Build failures
 leave output for diagnosis and never publish automatically.
 
-Native CI runs only its runner architectures. Cross-building another architecture
-does not prove execution there. Checksum files detect accidental changes relative
+Native CI runs every shipped architecture: Linux, macOS and Windows on amd64
+and arm64 ([decision 0099](decisions/0099-native-ci-for-every-shipped-architecture.md));
+Windows arm64 has no race detector. Cross-building alone does not prove
+execution on a target. Checksum files detect accidental changes relative
 to the release assets; they are not an independent signature or publisher identity.
 Downloaded content, validation libraries, personal metadata, and scanner logs must
 never enter release assets or Git.

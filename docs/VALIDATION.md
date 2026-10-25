@@ -449,6 +449,15 @@ passed all six jobs at `dbd0470`, so all 55 terminal cases passed under a real
 macOS PTY and Windows ConPTY too. A person's screen reader, magnifier and
 keyboard-only review remains required.
 
+### Native runs on every shipped architecture
+
+[Decision 0099](decisions/0099-native-ci-for-every-shipped-architecture.md) added
+Linux arm64, macOS Intel and Windows arm64 to native CI and the installer jobs.
+The first run at `2c0b459` passed all twelve jobs; the new runners' harness
+executables reported `linux/arm64`, `darwin/amd64` and `windows/arm64`, each
+passed all 55 terminal cases, and race passed except on Windows arm64, which Go
+does not support. The installers there installed the published `0.1.0-alpha.18`.
+
 ### Parser fuzzing
 
 The 24 fuzz targets cover EPUB inspection and extraction, cursors, navigation
