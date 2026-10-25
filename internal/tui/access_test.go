@@ -64,11 +64,11 @@ func TestActionsListOnlyTheKeysEachViewAccepts(t *testing.T) {
 	}{
 		{"search", "openlibrary", []string{"f6", "f2", "ctrl+right", "ctrl+left"}},
 		{"search", "archive", []string{"f6", "f2", "f3", "ctrl+right", "ctrl+left"}},
-		{"holdings", "", []string{"f6", "f4", "ctrl+right", "ctrl+left"}},
-		{"snapshot", "", []string{"f6", "f3", "ctrl+a"}},
-		{"state", "", []string{"f6", "f10", "f7", "f8", "f9", "ctrl+r", "ctrl+p"}},
-		{"read", "", []string{"f6", "f2", "f4"}},
-		{"collections", "", []string{"f6", "f8", "f3"}},
+		{"holdings", "", []string{"f6", "ctrl+n", "f4", "ctrl+right", "ctrl+left"}},
+		{"snapshot", "", []string{"f6", "ctrl+n", "f3", "ctrl+a"}},
+		{"state", "", []string{"f6", "ctrl+n", "f10", "f7", "f8", "f9", "ctrl+r", "ctrl+p"}},
+		{"read", "", []string{"f6", "ctrl+n", "f2", "f4"}},
+		{"collections", "", []string{"f6", "ctrl+n", "f8", "f3"}},
 		{"scan", "", []string{"f6"}},
 	} {
 		m.switchMode(tc.mode)

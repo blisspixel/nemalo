@@ -423,7 +423,7 @@ func (d *terminalDriver) reference(lib, asset string) {
 	d.key("continuation", "n", containsScreen("Bounded range delivered", "bytes 4096..8192"))
 	// Ctrl+O reaches a function-key action without a function key.
 	d.key("actions", "\x0f", containsScreen("Actions (Read)", "F2", "Citation report"))
-	d.send("\x1b[B\x1b[B") // Down twice: F6, F5, then F2 in this view.
+	d.send("\x1b[B\x1b[B\x1b[B") // Down three times: F6, F5, Ctrl+N, then F2 in Read.
 	d.key("actions-citation", "\r", containsScreen("Nemalo | Recorded citation metadata", "Unknown fields"))
 	d.key("actions-return", "\x1b", containsScreen("Bounded range delivered", "bytes 4096..8192"))
 	d.send("\x03")

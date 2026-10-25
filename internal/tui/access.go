@@ -23,7 +23,7 @@ type actionMenu struct {
 var actionKeys = map[string]tea.Key{
 	"f2": {Code: tea.KeyF2}, "f3": {Code: tea.KeyF3}, "f4": {Code: tea.KeyF4}, "f5": {Code: tea.KeyF5},
 	"f6": {Code: tea.KeyF6}, "f7": {Code: tea.KeyF7}, "f8": {Code: tea.KeyF8}, "f9": {Code: tea.KeyF9}, "f10": {Code: tea.KeyF10},
-	"ctrl+a": {Code: 'a', Mod: tea.ModCtrl}, "ctrl+p": {Code: 'p', Mod: tea.ModCtrl}, "ctrl+r": {Code: 'r', Mod: tea.ModCtrl},
+	"ctrl+a": {Code: 'a', Mod: tea.ModCtrl}, "ctrl+n": {Code: 'n', Mod: tea.ModCtrl}, "ctrl+p": {Code: 'p', Mod: tea.ModCtrl}, "ctrl+r": {Code: 'r', Mod: tea.ModCtrl},
 	"ctrl+left": {Code: tea.KeyLeft, Mod: tea.ModCtrl}, "ctrl+right": {Code: tea.KeyRight, Mod: tea.ModCtrl},
 }
 
@@ -42,6 +42,9 @@ func (m *model) availableActions() []action {
 	}
 	if m.report != "" {
 		add("f5", "Show or hide the full report")
+	}
+	if m.form() {
+		add("ctrl+n", "Move to the next field")
 	}
 	switch m.mode {
 	case "search":

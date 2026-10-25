@@ -21,8 +21,8 @@ Acquire   acquire ID --file NAME --output NEW_DIRECTORY,
           collection diff, collection status, collection acquire
 Check     inspect DIRECTORY, check FILE [--scan]
 Keep      library init, import, ingest, list, audit, check, cleanup,
-          restore, rescan, open, export, recordings, related, snapshot,
-          status
+          restore, purge, rescan, open, export, recordings, related,
+          narration, citation, snapshot, status
 Read      read LIBRARY --root LIBRARY --asset sha256:HASH,
           content units, navigation, pages, read, locate, bookmark
 Tools     tui, doctor, mcp serve, jobs, version
@@ -159,8 +159,9 @@ published bytes. It does not prove those bytes are safe.
   Initialize local control state in an existing explicit folder.
 nemalo library status DIRECTORY
   Read control identity and journal state without creating files.
-nemalo library import LIBRARY SOURCE [--apply] [--scan]
-  Assess one EPUB, PDF, MP3, M4B, M4A, or intake packet; --apply stores it.
+nemalo library import LIBRARY SOURCE [--apply [--plan DIGEST]] [--scan]
+  Assess one EPUB, PDF, MP3, M4B, M4A, or intake packet; --apply stores it,
+  and --plan binds that to the exact preview.
 nemalo library ingest LIBRARY FOLDER [--apply] [--scan]
   Import every EPUB, PDF, MP3, M4B, M4A, intake packet, and ZIP member in a folder;
   the folder and its archives are preserved.
@@ -371,11 +372,14 @@ closing does not save a bookmark.
 Options:
   --scope DIRECTORY  repeatable; the configured library and review folders
                      are added
-  --allow-network    catalog search and evaluation
+  --allow-network    catalog search and evaluation; with --allow-write also
+                     acquisition_start, a durable download job
   --allow-decode     separate content_decode_units/read tools; installed
                      FFmpeg, full sequential work, bounded derived WAV output
   --allow-write      library import preview and apply; apply stores only
-                     the plan a preview returned and never changes a source
+                     the plan a preview returned and never changes a source;
+                     durable library_rescan_start, job_get, job_list and
+                     job_cancel tools
   --transport stdio
 
 Without --allow-write, tools are read-only; stdout carries protocol only.

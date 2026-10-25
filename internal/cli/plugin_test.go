@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/blisspixel/nemalo/internal/app"
+	"github.com/blisspixel/nemalo/internal/jobs"
 	"github.com/blisspixel/nemalo/internal/mcpserver"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
@@ -135,8 +136,14 @@ func TestPluginSkillUsesPortableFrontmatter(t *testing.T) {
 		t.Fatal("compatibility length", len(c))
 	}
 	// Every tool the skill names exists on a server with its independent
-	// network, write and decoder tools enabled.
-	server, err := mcpserver.New(app.Service{}, mcpserver.Options{Scopes: []string{t.TempDir()}, Network: true, Write: true, Decode: true, Version: Version})
+	// network, write and decoder tools enabled, and the jobs store that
+	// mcp serve --allow-write opens.
+	store, err := jobs.Open(filepath.Join(t.TempDir(), "jobs"), 2, 8)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { store.Close(); _ = store.Wait(context.Background()) })
+	server, err := mcpserver.New(app.Service{}, mcpserver.Options{Scopes: []string{t.TempDir()}, Network: true, Write: true, Decode: true, Jobs: store, Version: Version})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -157,7 +164,7 @@ func TestPluginSkillUsesPortableFrontmatter(t *testing.T) {
 	for _, tool := range list.Tools {
 		tools[tool.Name] = true
 	}
-	named := regexp.MustCompile("`((?:nemalo|library|content|catalog|file)_[a-z_]+)`").FindAllStringSubmatch(text, -1)
+	named := regexp.MustCompile("`((?:nemalo|library|content|catalog|file|job|acquisition)_[a-z_]+)`").FindAllStringSubmatch(text, -1)
 	if len(named) < 8 {
 		t.Fatal("skill names too few tools", named)
 	}

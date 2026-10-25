@@ -712,11 +712,13 @@ func parseNavList(ctx context.Context, data []byte, kind string) (entries []NavE
 		return nil, errors.New("navigation document must be UTF-8")
 	}
 	type frame struct {
-		local     string
-		inTOC     bool
-		li        bool
-		label     bool
-		labelText strings.Builder
+		local string
+		inTOC bool
+		li    bool
+		label bool
+		// Bytes, not a strings.Builder: frames are copied when the stack grows,
+		// and a written Builder must never be copied.
+		labelText []byte
 	}
 	stack := []frame{}
 	liEntries := []int{}
@@ -791,7 +793,7 @@ func parseNavList(ctx context.Context, data []byte, kind string) (entries []NavE
 			}
 			f := stack[len(stack)-1]
 			if f.label {
-				label := collapseLabel(stack[len(stack)-1].labelText.String())
+				label := collapseLabel(string(stack[len(stack)-1].labelText))
 				if len(label) > maxNavLabel {
 					return nil, false, 0, fmt.Errorf("%w: navigation label exceeds %d bytes", errBudget, maxNavLabel)
 				}
@@ -806,7 +808,7 @@ func parseNavList(ctx context.Context, data []byte, kind string) (entries []NavE
 		case xml.CharData:
 			for i := len(stack) - 1; i >= 0; i-- {
 				if stack[i].label {
-					stack[i].labelText.WriteString(string(t))
+					stack[i].labelText = append(stack[i].labelText, t...)
 					break
 				}
 			}
@@ -855,7 +857,7 @@ func parseNCX(ctx context.Context, data []byte) ([]NavEntry, error) {
 		entry   int
 		inLabel bool
 		inText  bool
-		text    strings.Builder
+		text    []byte // copied with its frame; see parseNavList
 	}
 	stack := []frame{}
 	points := []int{}
@@ -926,7 +928,7 @@ func parseNCX(ctx context.Context, data []byte) ([]NavEntry, error) {
 			}
 			f := stack[len(stack)-1]
 			if f.local == "text" && f.inText && f.entry >= 0 {
-				label := collapseLabel(stack[len(stack)-1].text.String())
+				label := collapseLabel(string(stack[len(stack)-1].text))
 				if len(label) > maxNavLabel {
 					return nil, fmt.Errorf("%w: navigation label exceeds %d bytes", errBudget, maxNavLabel)
 				}
@@ -943,7 +945,7 @@ func parseNCX(ctx context.Context, data []byte) ([]NavEntry, error) {
 		case xml.CharData:
 			for i := len(stack) - 1; i >= 0; i-- {
 				if stack[i].local == "text" && stack[i].inText {
-					stack[i].text.WriteString(string(t))
+					stack[i].text = append(stack[i].text, t...)
 					break
 				}
 			}

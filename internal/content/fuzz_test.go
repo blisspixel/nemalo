@@ -24,6 +24,15 @@ func FuzzNavigationLists(f *testing.F) {
 		if len(doc) > 1<<16 {
 			t.Skip()
 		}
+		// The NCX parser shares the frame-stack design; it must not panic or
+		// exceed the same limits.
+		if ncx, err := parseNCX(context.Background(), []byte(doc)); err == nil {
+			for _, e := range ncx {
+				if len(e.Label) > maxNavLabel || !utf8.ValidString(e.Label) || e.Level < 1 || e.Level > maxNavDepth {
+					t.Fatal("NCX limits not kept", e)
+				}
+			}
+		}
 		for _, kind := range []string{"toc", "page-list"} {
 			entries, hidden, navs, err := parseNavList(context.Background(), []byte(doc), kind)
 			again, hidden2, navs2, err2 := parseNavList(context.Background(), []byte(doc), kind)
@@ -73,4 +82,21 @@ func FuzzCursorDecoding(f *testing.F) {
 			t.Fatal("accepted an out-of-range cursor", c)
 		}
 	})
+}
+
+// Label text written before deeper elements grow the frame stack used to
+// panic with a copied strings.Builder (found by hosted fuzzing). Both parsers
+// must keep the label and finish without panicking.
+func TestNavigationLabelsSurviveFrameStackGrowth(t *testing.T) {
+	deep := strings.Repeat("<i>", 64) + "more" + strings.Repeat("</i>", 64)
+	nav := `<nav xmlns:epub="http://www.idpf.org/2007/ops" epub:type="toc"><ol><li><a href="a.xhtml">Label ` + deep + `</a></li></ol></nav>`
+	entries, _, _, err := parseNavList(context.Background(), []byte(nav), "toc")
+	if err != nil || len(entries) != 1 || entries[0].Label != "Label more" {
+		t.Fatalf("navigation: %+v %v", entries, err)
+	}
+	ncx := `<ncx><navMap><navPoint><navLabel><text>Label ` + deep + `</text></navLabel><content src="a.xhtml"/></navPoint></navMap></ncx>`
+	points, err := parseNCX(context.Background(), []byte(ncx))
+	if err != nil || len(points) != 1 || points[0].Label != "Label more" {
+		t.Fatalf("NCX: %+v %v", points, err)
+	}
 }
