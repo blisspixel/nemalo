@@ -1,6 +1,7 @@
 package jobs
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -280,5 +281,44 @@ func TestALateCancelDoesNotHideSuccess(t *testing.T) {
 	close(finish)
 	if got := waitFinal(t, s, j.ID); got.Status != Succeeded {
 		t.Fatalf("%+v", got)
+	}
+}
+
+// A journal line with a field this build does not know is refused, not read
+// with the field dropped; only a torn final line is tolerated (decision 0098).
+func TestJournalLinesWithUnknownFieldsAreRefused(t *testing.T) {
+	at := time.Now().UTC().Format(time.RFC3339Nano)
+	queued, _ := json.Marshal(record{SchemaVersion: 1, Event: Queued, At: at, Kind: "acquire", Request: json.RawMessage(`{}`)})
+	future := []byte(`{"schema_version":1,"event":"running","at":"` + at + `","future":true}`)
+	running, _ := json.Marshal(record{SchemaVersion: 1, Event: Running, At: at})
+	for name, tc := range map[string]struct {
+		lines [][]byte
+		torn  bool // no newline after the last line, as after a crash mid-write
+		ok    bool
+	}{
+		"unknown field mid-journal":        {[][]byte{queued, future, running}, false, false},
+		"trailing data mid-journal":        {[][]byte{queued, append(append([]byte{}, running...), []byte(` {}`)...), running}, false, false},
+		"complete line with unknown field": {[][]byte{queued, future}, false, false},
+		"torn final line":                  {[][]byte{queued, future[:20]}, true, true},
+		"current fields only":              {[][]byte{queued, running}, false, true},
+	} {
+		dir := t.TempDir()
+		id := "job:" + strings.Repeat("cd", 16)
+		data := bytes.Join(tc.lines, []byte("\n"))
+		if !tc.torn {
+			data = append(data, '\n')
+		}
+		if err := os.WriteFile(filepath.Join(dir, fileID(id)+".jsonl"), data, 0o600); err != nil {
+			t.Fatal(err)
+		}
+		s, err := Open(dir, 1, 0)
+		if err != nil {
+			t.Fatal(err)
+		}
+		_, err = s.Get(id)
+		if (err == nil) != tc.ok {
+			t.Errorf("%s: %v", name, err)
+		}
+		s.Close()
 	}
 }

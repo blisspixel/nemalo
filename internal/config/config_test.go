@@ -126,3 +126,18 @@ func TestRejectInvalidConfiguration(t *testing.T) {
 		}
 	}
 }
+
+// An optional schema_version: absent or 1 loads; a higher one is refused as
+// possibly newer, and nothing else about the file changes (decision 0098).
+func TestConfigurationSchemaVersion(t *testing.T) {
+	file := filepath.Join(t.TempDir(), "config.json")
+	for body, newer := range map[string]bool{`{}`: false, `{"schema_version":1}`: false, `{"schema_version":2}`: true, `{"schema_version":-1}`: true} {
+		if err := os.WriteFile(file, []byte(body), 0600); err != nil {
+			t.Fatal(err)
+		}
+		_, err := Load(file, true, environment(nil), Config{})
+		if (err != nil) != newer || newer && !strings.Contains(err.Error(), "not supported") {
+			t.Errorf("%s: %v", body, err)
+		}
+	}
+}

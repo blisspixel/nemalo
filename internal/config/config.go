@@ -14,8 +14,11 @@ import (
 const maxConfigBytes = 64 << 10
 
 type Config struct {
-	Library string `json:"library,omitempty"`
-	Review  string `json:"review,omitempty"`
+	// SchemaVersion is optional; absent means 1. A higher one is refused
+	// (decision 0098).
+	SchemaVersion int    `json:"schema_version,omitempty"`
+	Library       string `json:"library,omitempty"`
+	Review        string `json:"review,omitempty"`
 	// GutenbergCatalog is an absolute path of a local pg_catalog.csv.
 	// Search and evaluation read this file and do not contact gutenberg.org.
 	GutenbergCatalog string `json:"gutenberg_catalog,omitempty"`
@@ -91,6 +94,9 @@ func Load(path string, explicit bool, env func(string) string, overrides Config)
 		c = *object
 		if err := dec.Decode(new(any)); err != io.EOF {
 			return c, errors.New("configuration must contain exactly one JSON object")
+		}
+		if c.SchemaVersion < 0 || c.SchemaVersion > 1 {
+			return c, fmt.Errorf("configuration schema_version %d is not supported; it may come from a newer Nemalo", c.SchemaVersion)
 		}
 	} else if explicit || !errors.Is(err, os.ErrNotExist) {
 		return c, fmt.Errorf("open configuration: %w", err)

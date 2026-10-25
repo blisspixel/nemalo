@@ -584,6 +584,7 @@ internal/app.Doctor configuration.gutenberg_catalog string ,omitempty
 internal/app.Doctor configuration.library string ,omitempty
 internal/app.Doctor configuration.on_detection string ,omitempty
 internal/app.Doctor configuration.review string ,omitempty
+internal/app.Doctor configuration.schema_version int ,omitempty
 internal/app.Doctor go string
 internal/app.Doctor paths config.Paths
 internal/app.Doctor paths.cache string
@@ -855,6 +856,7 @@ internal/config.Config gutenberg_catalog string ,omitempty
 internal/config.Config library string ,omitempty
 internal/config.Config on_detection string ,omitempty
 internal/config.Config review string ,omitempty
+internal/config.Config schema_version int ,omitempty
 internal/content.Capabilities consumption_state string
 internal/content.Capabilities default_representation string
 internal/content.Capabilities max_result_bytes int

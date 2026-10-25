@@ -1061,7 +1061,8 @@ Applied changes are journaled as `rescan_intent`, holding line, and
 
 ## Configuration
 
-Configuration is an optional strict JSON object with `library` and `review` paths,
+Configuration is an optional strict JSON object with an optional `schema_version`
+(absent means 1; a higher one is refused), `library` and `review` paths,
 `gutenberg_catalog` (the local `pg_catalog.csv`), and `on_detection`
 (`quarantine`, the default, or `delete`) for downloads the scanner flags. Both
 library paths must be absolute and must not overlap. Unknown fields, multiple JSON

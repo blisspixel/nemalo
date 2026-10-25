@@ -594,7 +594,7 @@ func (s *Store) read(id string) (Job, error) {
 			continue
 		}
 		var r record
-		if err := json.Unmarshal(line, &r); err != nil || r.SchemaVersion != 1 {
+		if err := strictRecord(line, &r); err != nil || r.SchemaVersion != 1 {
 			if i == len(lines)-1 {
 				break
 			}
@@ -633,4 +633,19 @@ func bound(s string, n int) string {
 		s = s[:end]
 	}
 	return s
+}
+
+// strictRecord refuses unknown fields and trailing data, as the passive
+// snapshot does, so a field from a newer Nemalo is never silently dropped
+// (decision 0098). Every earlier release wrote only fields this struct has.
+func strictRecord(line []byte, r *record) error {
+	dec := json.NewDecoder(bytes.NewReader(line))
+	dec.DisallowUnknownFields()
+	if err := dec.Decode(r); err != nil {
+		return err
+	}
+	if err := dec.Decode(new(any)); err != io.EOF {
+		return errors.New("job journal line has trailing data")
+	}
+	return nil
 }

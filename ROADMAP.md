@@ -243,12 +243,15 @@ run found and fixed a navigation parser panic.
 
 Next, in order:
 
-1. Publish `0.1.0-alpha.18` through [releasing](docs/RELEASING.md), including
-   the dispatched fuzz and installed-tools runs at the release commit and the
-   installers against the new release.
-2. Finish stage 6: settle the items FORMATS.md lists as not yet settled, open a
-   1.0 release-candidate issue with one checked item per gate and its evidence,
-   and declare FORMATS.md frozen for 1.0.
+1. Done: [`0.1.0-alpha.18`](https://github.com/blisspixel/nemalo/releases/tag/v0.1.0-alpha.18)
+   was published on 2026-10-25 from `ac7cc41` after CI, CodeQL, the dispatched
+   fuzz run (24 targets) and installed-tools run all passed there, with
+   published checksums verified and the Linux installer checked unpinned,
+   pinned, replaced and uninstalled.
+2. Finish stage 6. The remaining format items are settled
+   ([decision 0098](docs/decisions/0098-settle-remaining-format-items.md)).
+   Track the 1.0 release candidate in one issue with each gate and its
+   evidence, and declare FORMATS.md frozen when it is cut.
 3. Profile the Windows library suite to restore margin under decision 0095.
 4. The person-run items in issue 62, which do not change formats.
 

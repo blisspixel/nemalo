@@ -51,12 +51,12 @@ other entry in `.nemalo` is refused. Temporary names beginning `.nemalo-` or
 | Packet `content.<format>` | The downloaded bytes | none | hashed against the receipt |
 | `recording-intent.json`, `recording.json` | Whole-recording intent and result | 1 | other versions are retained, not imported |
 | Quarantine `<UTC>-<hash>/<name>.quarantined` | A detected download, never executed | none | not read by Nemalo |
-| `config.json` | `library`, `review`, `gutenberg_catalog`, `on_detection` | none | unknown fields refused; written only by the user |
+| `config.json` | `schema_version` (optional), `library`, `review`, `gutenberg_catalog`, `on_detection` | 1 (absent means 1) | higher refused as possibly newer; unknown fields refused; written only by the user |
 | Catalog snapshot (user-named) | Byte identities of an explicit root | 1 | strict ([0004](decisions/0004-portable-library-snapshots.md)) |
 | Collection file (user-written) | Exact selections | 1 | strict ([0050](decisions/0050-collections.md)) |
 | Bookmark export | `kind` `nemalo-bookmarks/1` | 1 | unknown fields refused |
 | Narration declaration input | `schema` `narration-declaration/1` | 1 | strict |
-| Job journals `<state>/jobs/<id>.jsonl` with `.lock`, `.cancel` | Durable MCP jobs | 1 | passive snapshot strict; writer tolerates a torn last line ([0045](decisions/0045-durable-mcp-jobs.md)) |
+| Job journals `<state>/jobs/<id>.jsonl` with `.lock`, `.cancel` | Durable MCP jobs | 1 | strict for writer and passive snapshot; a torn final line is tolerated ([0045](decisions/0045-durable-mcp-jobs.md), [0098](decisions/0098-settle-remaining-format-items.md)) |
 | Job library context | `nemalo-job-library/1` | 1 | jobs without it are omitted from snapshots ([0088](decisions/0088-non-mutating-library-job-snapshot.md)) |
 
 Intake reads take only the fields they need, so the version, not unknown-field
@@ -80,13 +80,13 @@ refusal, gates compatibility there.
 | Representations and extractors | `epub-text/1` (`nemalo.epub.text/1`), `epub-text/2` default (`nemalo.epub.text/2`), `epub-structure/1` and `epub-source/1` (`nemalo.epub.structure/1`), `epub-nav/1`, `epub-page-list/1`, `pdf-text/1`, `mpeg-audio/1` (`nemalo.mpeg.frames/1`), `mp4-audio/1` (`nemalo.mp4.samples/2`), `mp4-audio/2` (`nemalo.mp4.packets/1`), `mp4-pcm/1` (`nemalo.ffmpeg.pcm/1`). See [content access](CONTENT-ACCESS.md). |
 | Continuations | Content cursor (base64url JSON, version 1; no `representation` means `epub-text/1`), `mp4pcm1:` decoded-audio cursor, `nemaloevidence1:` evidence reference |
 | Result schemas | `nemalo-evidence/1`, `nemalo-citation/1`, `holding-metadata/1`, `recording-manifest/1`, `recording-bytes/1`, `nemalo-job-snapshot/1`, `user_declaration/1` |
-| Plan digests | `nemalo-import-plan/2`, `nemalo-purge-plan/1` and `/2`, `nemalo-archive-leaves/1`, `narration-plan/1`, `collection-acquire/1`; the cleanup plan digest has no version tag |
+| Plan digests | `nemalo-import-plan/2`, `nemalo-purge-plan/1` and `/2`, `nemalo-archive-leaves/1`, `narration-plan/1`, `collection-acquire/1`; the cleanup plan digest has no tag and its construction is frozen, because manifests record it |
 | Cleanup proofs | `archive-tree/1`, `/2`, `/3`, `rar5-frames/1`, `rar4-frames/1`, `rar5-set/1`, `rar4-set/1`, `rar5-old-set/1`, `rar4-old-set/1`, `zip-stream/1`, `zip-segments/1`. Unknown proofs retain bytes. See [architecture](ARCHITECTURE.md). |
 | Acceptance reports | `nemalo-native-check/1`, `nemalo-terminal-check/1`, `nemalo-installed-tools-check/1` (tooling only) |
 | State IDs | `library:`, `operation:`, `cleanup:`, `bookmark:`, `job:` followed by 32 hex digits |
 
-## Not yet settled for 1.0
+## Freeze status
 
-- `config.json` and the cleanup plan digest have no version tag.
-- The job writer's own journal read tolerates unknown fields; the passive
-  snapshot does not.
+No item is left unsettled ([decision 0098](decisions/0098-settle-remaining-format-items.md)).
+The 1.0 release candidate declares this document frozen; until then it may
+change only by addition under the policy above.
