@@ -41,8 +41,10 @@ empty/partial control namespace requiring review.
 
 The directory must contain the two required regular files. Optional regular
 files are `operations.jsonl` and `holdings.jsonl` (decision 0009),
-`cleanup.jsonl` (decision 0022), and `bookmarks.jsonl` (decision 0027). Any other entry,
-directory, duplicate, or empty managed journal is rejected. Control
+`cleanup.jsonl` (decision 0022), `bookmarks.jsonl` (decision 0027) and
+`narrations.jsonl` (decision 0055). Any other entry, directory, duplicate, or
+empty managed journal is rejected; an unknown regular file or a record with a
+higher schema version is reported as possibly newer (decision 0096). Control
 symlinks/reparse points, hard-linked control files, and changed file identities
 are rejected. Files open relative to `os.Root`; source content is
 never opened. New control directories/files request Unix modes 0700/0600; Windows

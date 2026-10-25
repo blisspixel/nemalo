@@ -88,6 +88,7 @@ capture method, with a discovery view and keyboard controls.
 | [Operation and development](docs/DEVELOPMENT.md) | Implemented commands, configuration, capability boundaries and verification |
 | [Terminal guide](docs/TUI.md) | Browsing, reading, shortcuts and application-view captures |
 | [Content access](docs/CONTENT-ACCESS.md) | Source-bound text, audio, locators, continuations and gaps |
+| [Formats](docs/FORMATS.md) | On-disk files, versions, identifiers and compatibility |
 | [Acquisition](docs/ACQUISITION.md) | Selected downloads, intake receipts and recovery |
 | [Agent integration](docs/AGENT-INTEGRATION.md) | MCP permissions and plugin installation |
 | [Sources](docs/SOURCES.md) | Providers, rights and integration constraints |

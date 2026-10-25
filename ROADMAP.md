@@ -225,9 +225,19 @@ Hosted Windows runs the test packages with a measured 25-minute budget
 ([decision 0095](docs/decisions/0095-windows-test-package-budget.md)); profiling
 the Windows library suite to reduce its time remains worthwhile.
 
-Then stage 6: freeze and document the on-disk formats, envelopes, extractor IDs
-and evidence contract, decide alpha library upgrade or refusal, and run every
-release gate. Start each session with the workspace check in `AGENTS.md`.
+These need a person or outside access and are tracked in
+[issue 62](https://github.com/blisspixel/nemalo/issues/62).
+
+Stage 6 has started, since the remaining stage 5 work cannot change a format.
+[FORMATS.md](docs/FORMATS.md) lists every persisted file, envelope and
+identifier, and [decision 0096](docs/decisions/0096-on-disk-compatibility-policy.md)
+records the compatibility policy: alpha libraries open in place (a committed
+`0.1.0-alpha.2` library is a regression fixture), older executables refuse
+newer state and now say so, and intake receipt, recording and cleanup manifest
+versions are checked. Next in stage 6: define field-level stability for CLI and
+MCP results, settle the items FORMATS.md lists as not yet settled, review the
+documentation against behavior, then run every release gate. Start each
+session with the workspace check in `AGENTS.md`.
 
 ## Implementation status
 
