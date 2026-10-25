@@ -36,6 +36,12 @@ production durability calls and decision 0081's scratch handling. The recovery
 schedule already derives its overall limit from `-test.timeout`. Ordinary local
 `go test` runs keep Go's default. The verifier's own test requires the flag.
 
+The first hosted run with this budget,
+[CI 40167463572](https://github.com/blisspixel/nemalo/actions/runs/40167463572)
+at `7074251`, passed all six jobs. Its Windows covered library suite took 862.4
+seconds and its race suite 771.9 seconds, both beyond the former ten-minute
+limit, so the variance is larger than the earlier receipts showed.
+
 This trades a later failure signal for a hung package for a stable signal on a
 slow runner: a real hang still ends at its five-minute child deadline or the
 25-minute package limit. Reducing Windows test time remains worthwhile, through
