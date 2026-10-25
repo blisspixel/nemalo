@@ -46,3 +46,14 @@ This trades a later failure signal for a hung package for a stable signal on a
 slow runner: a real hang still ends at its five-minute child deadline or the
 25-minute package limit. Reducing Windows test time remains worthwhile, through
 profiling rather than by removing cases.
+
+## Cause
+
+A later local measurement counted 24,821 synthetic 7-Zip reader processes in
+one library suite run. Intake runs 7-Zip once per listing and once per
+exact-named member, and the recovery matrix repeats that at each injected crash
+point through real process boundaries; Windows process creation makes that the
+dominant cost there. Reducing it would mean changing production's per-member
+extraction or replacing real processes with in-process fakes, so this budget
+stays until a separate decision weighs that trade-off
+([issue 62](https://github.com/blisspixel/nemalo/issues/62#issuecomment-6402468429)).

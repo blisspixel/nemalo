@@ -255,7 +255,10 @@ Next, in order:
    The release candidate is tracked in
    [issue 63](https://github.com/blisspixel/nemalo/issues/63), one item per
    gate with its evidence; declare FORMATS.md frozen when it is cut.
-3. Profile the Windows library suite to restore margin under decision 0095.
+3. Done: the Windows library suite time comes from 24,821 real 7-Zip reader
+   processes per run, deliberate per-member and per-crash-point boundaries that
+   Windows starts slowly. Decision 0095's budget stays unless a separate
+   decision trades those boundaries for speed.
 4. The person-run items in issue 62, which do not change formats.
 
 Milestone 7's remaining paper providers and DOI resolution may proceed
