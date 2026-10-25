@@ -190,7 +190,8 @@ all of these.
 
 ## Current position and next steps
 
-As of 2026-10-24, stages 1 to 4 are accepted and stage 5 is in progress. `main`
+As of 2026-10-25, stages 1 to 4 are accepted, stage 5 is complete except for
+person-run checks, and stage 6 is in progress. `main`
 is the only branch and passes hosted CI on Linux, macOS and Windows. No wave is in
 flight. Open issues are all post-1.0:
 [59](https://github.com/blisspixel/nemalo/issues/59) (optional desktop panel,
@@ -236,9 +237,24 @@ records the compatibility policy: alpha libraries open in place (a committed
 newer state and now say so, and intake receipt, recording and cleanup manifest
 versions are checked. Every versioned record and CLI/MCP result now has an
 enforced field contract ([decision 0097](docs/decisions/0097-versioned-field-contract.md)).
-Next in stage 6: settle the items FORMATS.md lists as not yet settled, review
-the documentation against behavior, then run every release gate. Start each
-session with the workspace check in `AGENTS.md`.
+The documentation was reviewed against behavior on 2026-10-25 and corrected.
+Every release gate is mapped to its enforcement below; the first hosted fuzz
+run found and fixed a navigation parser panic.
+
+Next, in order:
+
+1. Publish `0.1.0-alpha.18` through [releasing](docs/RELEASING.md), including
+   the dispatched fuzz and installed-tools runs at the release commit and the
+   installers against the new release.
+2. Finish stage 6: settle the items FORMATS.md lists as not yet settled, open a
+   1.0 release-candidate issue with one checked item per gate and its evidence,
+   and declare FORMATS.md frozen for 1.0.
+3. Profile the Windows library suite to restore margin under decision 0095.
+4. The person-run items in issue 62, which do not change formats.
+
+Milestone 7's remaining paper providers and DOI resolution may proceed
+alongside; they are not 1.0 gates. Start each session with the workspace check
+in `AGENTS.md`.
 
 ## Implementation status
 
