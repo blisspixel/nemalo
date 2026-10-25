@@ -1,0 +1,2757 @@
+internal/acquisition.Intent request Request
+internal/acquisition.Intent request.max_bytes int64
+internal/acquisition.Intent request.no_scan bool ,omitempty
+internal/acquisition.Intent request.on_detection string ,omitempty
+internal/acquisition.Intent request.output string
+internal/acquisition.Intent request.quarantine string ,omitempty
+internal/acquisition.Intent request.recording *RecordingPosition ,omitempty
+internal/acquisition.Intent request.recording.declared_seconds float64 ,omitempty
+internal/acquisition.Intent request.recording.position int
+internal/acquisition.Intent request.recording.readers []discovery.Reader ,omitempty
+internal/acquisition.Intent request.recording.readers[].librivox_reader_id string
+internal/acquisition.Intent request.recording.readers[].name string
+internal/acquisition.Intent request.recording.source_format string
+internal/acquisition.Intent request.recording.title string ,omitempty
+internal/acquisition.Intent request.recording.tracks int
+internal/acquisition.Intent request.source_file string
+internal/acquisition.Intent request.source_id string
+internal/acquisition.Intent requested_at time.Time
+internal/acquisition.Intent schema_version int
+internal/acquisition.Intent selection discovery.Evaluation
+internal/acquisition.Intent selection.access_status string
+internal/acquisition.Intent selection.bookshelves []string ,omitempty
+internal/acquisition.Intent selection.checked_at time.Time
+internal/acquisition.Intent selection.complete bool
+internal/acquisition.Intent selection.creators []string
+internal/acquisition.Intent selection.dates []string
+internal/acquisition.Intent selection.declared_identifiers []DeclaredIdentifier ,omitempty
+internal/acquisition.Intent selection.declared_identifiers[].field string
+internal/acquisition.Intent selection.declared_identifiers[].value string
+internal/acquisition.Intent selection.declared_license_urls []string
+internal/acquisition.Intent selection.edition_count int ,omitempty
+internal/acquisition.Intent selection.edition_offset int ,omitempty
+internal/acquisition.Intent selection.editions []Edition ,omitempty
+internal/acquisition.Intent selection.editions[].archive_id string ,omitempty
+internal/acquisition.Intent selection.editions[].dates []string
+internal/acquisition.Intent selection.editions[].findings []string ,omitempty
+internal/acquisition.Intent selection.editions[].id string
+internal/acquisition.Intent selection.editions[].isbns []string ,omitempty
+internal/acquisition.Intent selection.editions[].landing_page string
+internal/acquisition.Intent selection.editions[].languages []string
+internal/acquisition.Intent selection.editions[].publishers []string
+internal/acquisition.Intent selection.editions[].title string
+internal/acquisition.Intent selection.files []OfferedFile
+internal/acquisition.Intent selection.files[].access_status string
+internal/acquisition.Intent selection.files[].candidate_kind string
+internal/acquisition.Intent selection.files[].declared_bytes *int64 ,omitempty
+internal/acquisition.Intent selection.files[].download_url string ,omitempty
+internal/acquisition.Intent selection.files[].drm_status string
+internal/acquisition.Intent selection.files[].findings []string
+internal/acquisition.Intent selection.files[].name string
+internal/acquisition.Intent selection.files[].private_state string
+internal/acquisition.Intent selection.files[].restriction_state string
+internal/acquisition.Intent selection.files[].rights_status string
+internal/acquisition.Intent selection.files[].source_format string
+internal/acquisition.Intent selection.files[].source_md5 string ,omitempty
+internal/acquisition.Intent selection.files[].source_sha1 string ,omitempty
+internal/acquisition.Intent selection.id string
+internal/acquisition.Intent selection.landing_page string
+internal/acquisition.Intent selection.languages []string
+internal/acquisition.Intent selection.librivox *LibriVoxLink ,omitempty
+internal/acquisition.Intent selection.librivox.detail string ,omitempty
+internal/acquisition.Intent selection.librivox.project *LibriVoxProject ,omitempty
+internal/acquisition.Intent selection.librivox.project.archive_item string ,omitempty
+internal/acquisition.Intent selection.librivox.project.id string
+internal/acquisition.Intent selection.librivox.project.language string ,omitempty
+internal/acquisition.Intent selection.librivox.project.metadata_sha256 string
+internal/acquisition.Intent selection.librivox.project.sections []LibriVoxSection
+internal/acquisition.Intent selection.librivox.project.sections[].declared_seconds int ,omitempty
+internal/acquisition.Intent selection.librivox.project.sections[].number int
+internal/acquisition.Intent selection.librivox.project.sections[].readers []Reader
+internal/acquisition.Intent selection.librivox.project.sections[].readers[].librivox_reader_id string
+internal/acquisition.Intent selection.librivox.project.sections[].readers[].name string
+internal/acquisition.Intent selection.librivox.project.sections[].title string ,omitempty
+internal/acquisition.Intent selection.librivox.project.title string
+internal/acquisition.Intent selection.librivox.project.url string ,omitempty
+internal/acquisition.Intent selection.librivox.project_id string
+internal/acquisition.Intent selection.librivox.status string
+internal/acquisition.Intent selection.limitations []string
+internal/acquisition.Intent selection.loc_classes []string ,omitempty
+internal/acquisition.Intent selection.media_types []string
+internal/acquisition.Intent selection.metadata_sha256 string
+internal/acquisition.Intent selection.metadata_url string
+internal/acquisition.Intent selection.openlibrary_edition string ,omitempty
+internal/acquisition.Intent selection.publishers []string
+internal/acquisition.Intent selection.recordings []Recording ,omitempty
+internal/acquisition.Intent selection.recordings[].acquirable bool
+internal/acquisition.Intent selection.recordings[].declared_bytes int64
+internal/acquisition.Intent selection.recordings[].findings []string
+internal/acquisition.Intent selection.recordings[].order_source string
+internal/acquisition.Intent selection.recordings[].reader_evidence string ,omitempty
+internal/acquisition.Intent selection.recordings[].source_format string
+internal/acquisition.Intent selection.recordings[].tracks []RecordingTrack
+internal/acquisition.Intent selection.recordings[].tracks[].declared_bytes int64
+internal/acquisition.Intent selection.recordings[].tracks[].declared_seconds float64 ,omitempty
+internal/acquisition.Intent selection.recordings[].tracks[].declared_track int ,omitempty
+internal/acquisition.Intent selection.recordings[].tracks[].file string
+internal/acquisition.Intent selection.recordings[].tracks[].position int
+internal/acquisition.Intent selection.recordings[].tracks[].readers []Reader ,omitempty
+internal/acquisition.Intent selection.recordings[].tracks[].readers[].librivox_reader_id string
+internal/acquisition.Intent selection.recordings[].tracks[].readers[].name string
+internal/acquisition.Intent selection.recordings[].tracks[].title string ,omitempty
+internal/acquisition.Intent selection.restriction_evidence map[string]string
+internal/acquisition.Intent selection.rights_statements []string
+internal/acquisition.Intent selection.source string
+internal/acquisition.Intent selection.subjects []string ,omitempty
+internal/acquisition.Intent selection.titles []string
+internal/acquisition.RecordingResult complete bool
+internal/acquisition.RecordingResult completed_at *time.Time ,omitempty
+internal/acquisition.RecordingResult declared_bytes int64
+internal/acquisition.RecordingResult durability string
+internal/acquisition.RecordingResult limitations []string
+internal/acquisition.RecordingResult order_source string ,omitempty
+internal/acquisition.RecordingResult output string ,omitempty
+internal/acquisition.RecordingResult schema_version int
+internal/acquisition.RecordingResult source_format string
+internal/acquisition.RecordingResult source_id string
+internal/acquisition.RecordingResult status string
+internal/acquisition.RecordingResult tracks []RecordingTrack
+internal/acquisition.RecordingResult tracks[].antivirus string ,omitempty
+internal/acquisition.RecordingResult tracks[].bytes int64 ,omitempty
+internal/acquisition.RecordingResult tracks[].detail string ,omitempty
+internal/acquisition.RecordingResult tracks[].packet string ,omitempty
+internal/acquisition.RecordingResult tracks[].position int
+internal/acquisition.RecordingResult tracks[].reused bool ,omitempty
+internal/acquisition.RecordingResult tracks[].sha256 string ,omitempty
+internal/acquisition.RecordingResult tracks[].source_file string
+internal/acquisition.RecordingResult tracks[].status string
+internal/acquisition.Result alternatives []Alternative ,omitempty
+internal/acquisition.Result alternatives[].declared_bytes int64
+internal/acquisition.Result alternatives[].file string
+internal/acquisition.Result alternatives[].format string
+internal/acquisition.Result antivirus string
+internal/acquisition.Result checks *assessment.Checks ,omitempty
+internal/acquisition.Result checks.access_restrictions []string ,omitempty
+internal/acquisition.Result checks.conformance string
+internal/acquisition.Result checks.content_review string
+internal/acquisition.Result checks.epub *EPUBFacts ,omitempty
+internal/acquisition.Result checks.epub.expanded_bytes uint64
+internal/acquisition.Result checks.epub.identifiers []EPUBIdentifier
+internal/acquisition.Result checks.epub.identifiers[].package_unique bool ,omitempty
+internal/acquisition.Result checks.epub.identifiers[].scheme string ,omitempty
+internal/acquisition.Result checks.epub.identifiers[].value string
+internal/acquisition.Result checks.epub.identifiers_omitted int ,omitempty
+internal/acquisition.Result checks.epub.images int
+internal/acquisition.Result checks.epub.languages []string
+internal/acquisition.Result checks.epub.non_whitespace_body_text_characters int
+internal/acquisition.Result checks.epub.obfuscated_fonts []string ,omitempty
+internal/acquisition.Result checks.epub.page_count_status string
+internal/acquisition.Result checks.epub.reading_order_documents int
+internal/acquisition.Result checks.epub.titles []string
+internal/acquisition.Result checks.epub_package string
+internal/acquisition.Result checks.members int ,omitempty
+internal/acquisition.Result checks.mp3 *MP3Facts ,omitempty
+internal/acquisition.Result checks.mp3.channels int
+internal/acquisition.Result checks.mp3.encoded_duration_ms int64
+internal/acquisition.Result checks.mp3.format string
+internal/acquisition.Result checks.mp3.frames int
+internal/acquisition.Result checks.mp3.notes []string
+internal/acquisition.Result checks.mp3.sample_rate int
+internal/acquisition.Result checks.mp4 *MP4Facts ,omitempty
+internal/acquisition.Result checks.mp4.brand string
+internal/acquisition.Result checks.mp4.channels int
+internal/acquisition.Result checks.mp4.chapter_source string ,omitempty
+internal/acquisition.Result checks.mp4.chapters int
+internal/acquisition.Result checks.mp4.codec string
+internal/acquisition.Result checks.mp4.encoded_duration_ms int64
+internal/acquisition.Result checks.mp4.notes []string
+internal/acquisition.Result checks.mp4.sample_rate int
+internal/acquisition.Result checks.mp4.samples int
+internal/acquisition.Result checks.pdf *pdftext.Facts ,omitempty
+internal/acquisition.Result checks.pdf.active_content []string
+internal/acquisition.Result checks.pdf.active_content_examined bool
+internal/acquisition.Result checks.pdf.findings []string
+internal/acquisition.Result checks.pdf.first_label string ,omitempty
+internal/acquisition.Result checks.pdf.labels_declared bool
+internal/acquisition.Result checks.pdf.last_label string ,omitempty
+internal/acquisition.Result checks.pdf.pages int
+internal/acquisition.Result checks.pdf.partial bool
+internal/acquisition.Result checks.pdf.version string
+internal/acquisition.Result checks.pdf.web_links int
+internal/acquisition.Result checks.signature string
+internal/acquisition.Result checks.warnings []string ,omitempty
+internal/acquisition.Result checks.zip_crc string
+internal/acquisition.Result complete bool
+internal/acquisition.Result completed_at *time.Time ,omitempty
+internal/acquisition.Result content_path string ,omitempty
+internal/acquisition.Result continuations int ,omitempty
+internal/acquisition.Result durability string
+internal/acquisition.Result final_url string ,omitempty
+internal/acquisition.Result intent *Intent ,omitempty
+internal/acquisition.Result intent.request Request
+internal/acquisition.Result intent.request.max_bytes int64
+internal/acquisition.Result intent.request.no_scan bool ,omitempty
+internal/acquisition.Result intent.request.on_detection string ,omitempty
+internal/acquisition.Result intent.request.output string
+internal/acquisition.Result intent.request.quarantine string ,omitempty
+internal/acquisition.Result intent.request.recording *RecordingPosition ,omitempty
+internal/acquisition.Result intent.request.recording.declared_seconds float64 ,omitempty
+internal/acquisition.Result intent.request.recording.position int
+internal/acquisition.Result intent.request.recording.readers []discovery.Reader ,omitempty
+internal/acquisition.Result intent.request.recording.readers[].librivox_reader_id string
+internal/acquisition.Result intent.request.recording.readers[].name string
+internal/acquisition.Result intent.request.recording.source_format string
+internal/acquisition.Result intent.request.recording.title string ,omitempty
+internal/acquisition.Result intent.request.recording.tracks int
+internal/acquisition.Result intent.request.source_file string
+internal/acquisition.Result intent.request.source_id string
+internal/acquisition.Result intent.requested_at time.Time
+internal/acquisition.Result intent.schema_version int
+internal/acquisition.Result intent.selection discovery.Evaluation
+internal/acquisition.Result intent.selection.access_status string
+internal/acquisition.Result intent.selection.bookshelves []string ,omitempty
+internal/acquisition.Result intent.selection.checked_at time.Time
+internal/acquisition.Result intent.selection.complete bool
+internal/acquisition.Result intent.selection.creators []string
+internal/acquisition.Result intent.selection.dates []string
+internal/acquisition.Result intent.selection.declared_identifiers []DeclaredIdentifier ,omitempty
+internal/acquisition.Result intent.selection.declared_identifiers[].field string
+internal/acquisition.Result intent.selection.declared_identifiers[].value string
+internal/acquisition.Result intent.selection.declared_license_urls []string
+internal/acquisition.Result intent.selection.edition_count int ,omitempty
+internal/acquisition.Result intent.selection.edition_offset int ,omitempty
+internal/acquisition.Result intent.selection.editions []Edition ,omitempty
+internal/acquisition.Result intent.selection.editions[].archive_id string ,omitempty
+internal/acquisition.Result intent.selection.editions[].dates []string
+internal/acquisition.Result intent.selection.editions[].findings []string ,omitempty
+internal/acquisition.Result intent.selection.editions[].id string
+internal/acquisition.Result intent.selection.editions[].isbns []string ,omitempty
+internal/acquisition.Result intent.selection.editions[].landing_page string
+internal/acquisition.Result intent.selection.editions[].languages []string
+internal/acquisition.Result intent.selection.editions[].publishers []string
+internal/acquisition.Result intent.selection.editions[].title string
+internal/acquisition.Result intent.selection.files []OfferedFile
+internal/acquisition.Result intent.selection.files[].access_status string
+internal/acquisition.Result intent.selection.files[].candidate_kind string
+internal/acquisition.Result intent.selection.files[].declared_bytes *int64 ,omitempty
+internal/acquisition.Result intent.selection.files[].download_url string ,omitempty
+internal/acquisition.Result intent.selection.files[].drm_status string
+internal/acquisition.Result intent.selection.files[].findings []string
+internal/acquisition.Result intent.selection.files[].name string
+internal/acquisition.Result intent.selection.files[].private_state string
+internal/acquisition.Result intent.selection.files[].restriction_state string
+internal/acquisition.Result intent.selection.files[].rights_status string
+internal/acquisition.Result intent.selection.files[].source_format string
+internal/acquisition.Result intent.selection.files[].source_md5 string ,omitempty
+internal/acquisition.Result intent.selection.files[].source_sha1 string ,omitempty
+internal/acquisition.Result intent.selection.id string
+internal/acquisition.Result intent.selection.landing_page string
+internal/acquisition.Result intent.selection.languages []string
+internal/acquisition.Result intent.selection.librivox *LibriVoxLink ,omitempty
+internal/acquisition.Result intent.selection.librivox.detail string ,omitempty
+internal/acquisition.Result intent.selection.librivox.project *LibriVoxProject ,omitempty
+internal/acquisition.Result intent.selection.librivox.project.archive_item string ,omitempty
+internal/acquisition.Result intent.selection.librivox.project.id string
+internal/acquisition.Result intent.selection.librivox.project.language string ,omitempty
+internal/acquisition.Result intent.selection.librivox.project.metadata_sha256 string
+internal/acquisition.Result intent.selection.librivox.project.sections []LibriVoxSection
+internal/acquisition.Result intent.selection.librivox.project.sections[].declared_seconds int ,omitempty
+internal/acquisition.Result intent.selection.librivox.project.sections[].number int
+internal/acquisition.Result intent.selection.librivox.project.sections[].readers []Reader
+internal/acquisition.Result intent.selection.librivox.project.sections[].readers[].librivox_reader_id string
+internal/acquisition.Result intent.selection.librivox.project.sections[].readers[].name string
+internal/acquisition.Result intent.selection.librivox.project.sections[].title string ,omitempty
+internal/acquisition.Result intent.selection.librivox.project.title string
+internal/acquisition.Result intent.selection.librivox.project.url string ,omitempty
+internal/acquisition.Result intent.selection.librivox.project_id string
+internal/acquisition.Result intent.selection.librivox.status string
+internal/acquisition.Result intent.selection.limitations []string
+internal/acquisition.Result intent.selection.loc_classes []string ,omitempty
+internal/acquisition.Result intent.selection.media_types []string
+internal/acquisition.Result intent.selection.metadata_sha256 string
+internal/acquisition.Result intent.selection.metadata_url string
+internal/acquisition.Result intent.selection.openlibrary_edition string ,omitempty
+internal/acquisition.Result intent.selection.publishers []string
+internal/acquisition.Result intent.selection.recordings []Recording ,omitempty
+internal/acquisition.Result intent.selection.recordings[].acquirable bool
+internal/acquisition.Result intent.selection.recordings[].declared_bytes int64
+internal/acquisition.Result intent.selection.recordings[].findings []string
+internal/acquisition.Result intent.selection.recordings[].order_source string
+internal/acquisition.Result intent.selection.recordings[].reader_evidence string ,omitempty
+internal/acquisition.Result intent.selection.recordings[].source_format string
+internal/acquisition.Result intent.selection.recordings[].tracks []RecordingTrack
+internal/acquisition.Result intent.selection.recordings[].tracks[].declared_bytes int64
+internal/acquisition.Result intent.selection.recordings[].tracks[].declared_seconds float64 ,omitempty
+internal/acquisition.Result intent.selection.recordings[].tracks[].declared_track int ,omitempty
+internal/acquisition.Result intent.selection.recordings[].tracks[].file string
+internal/acquisition.Result intent.selection.recordings[].tracks[].position int
+internal/acquisition.Result intent.selection.recordings[].tracks[].readers []Reader ,omitempty
+internal/acquisition.Result intent.selection.recordings[].tracks[].readers[].librivox_reader_id string
+internal/acquisition.Result intent.selection.recordings[].tracks[].readers[].name string
+internal/acquisition.Result intent.selection.recordings[].tracks[].title string ,omitempty
+internal/acquisition.Result intent.selection.restriction_evidence map[string]string
+internal/acquisition.Result intent.selection.rights_statements []string
+internal/acquisition.Result intent.selection.source string
+internal/acquisition.Result intent.selection.subjects []string ,omitempty
+internal/acquisition.Result intent.selection.titles []string
+internal/acquisition.Result output string ,omitempty
+internal/acquisition.Result quarantined_path string ,omitempty
+internal/acquisition.Result resumed_from int64 ,omitempty
+internal/acquisition.Result scan *scanner.Result ,omitempty
+internal/acquisition.Result scan.error string ,omitempty
+internal/acquisition.Result scan.exit_code int
+internal/acquisition.Result scan.limitations []string ,omitempty
+internal/acquisition.Result scan.output string ,omitempty
+internal/acquisition.Result scan.output_truncated bool ,omitempty
+internal/acquisition.Result scan.started_at time.Time ,omitzero
+internal/acquisition.Result scan.status string
+internal/acquisition.Result scan.tool string ,omitempty
+internal/acquisition.Result schema_version int
+internal/acquisition.Result search_suggestion string ,omitempty
+internal/acquisition.Result size_note string ,omitempty
+internal/acquisition.Result status string
+internal/acquisition.Result transfer transfer.Result
+internal/acquisition.Result transfer.bytes int64
+internal/acquisition.Result transfer.sha256 string
+internal/acquisition.Result transfer_complete bool
+internal/acquisition.recordingIntent request RecordingRequest
+internal/acquisition.recordingIntent request.max_bytes int64
+internal/acquisition.recordingIntent request.no_scan bool ,omitempty
+internal/acquisition.recordingIntent request.on_detection string ,omitempty
+internal/acquisition.recordingIntent request.output string
+internal/acquisition.recordingIntent request.quarantine string ,omitempty
+internal/acquisition.recordingIntent request.resume bool ,omitempty
+internal/acquisition.recordingIntent request.source_format string
+internal/acquisition.recordingIntent request.source_id string
+internal/acquisition.recordingIntent requested_at time.Time
+internal/acquisition.recordingIntent schema_version int
+internal/acquisition.recordingIntent selection discovery.Evaluation
+internal/acquisition.recordingIntent selection.access_status string
+internal/acquisition.recordingIntent selection.bookshelves []string ,omitempty
+internal/acquisition.recordingIntent selection.checked_at time.Time
+internal/acquisition.recordingIntent selection.complete bool
+internal/acquisition.recordingIntent selection.creators []string
+internal/acquisition.recordingIntent selection.dates []string
+internal/acquisition.recordingIntent selection.declared_identifiers []DeclaredIdentifier ,omitempty
+internal/acquisition.recordingIntent selection.declared_identifiers[].field string
+internal/acquisition.recordingIntent selection.declared_identifiers[].value string
+internal/acquisition.recordingIntent selection.declared_license_urls []string
+internal/acquisition.recordingIntent selection.edition_count int ,omitempty
+internal/acquisition.recordingIntent selection.edition_offset int ,omitempty
+internal/acquisition.recordingIntent selection.editions []Edition ,omitempty
+internal/acquisition.recordingIntent selection.editions[].archive_id string ,omitempty
+internal/acquisition.recordingIntent selection.editions[].dates []string
+internal/acquisition.recordingIntent selection.editions[].findings []string ,omitempty
+internal/acquisition.recordingIntent selection.editions[].id string
+internal/acquisition.recordingIntent selection.editions[].isbns []string ,omitempty
+internal/acquisition.recordingIntent selection.editions[].landing_page string
+internal/acquisition.recordingIntent selection.editions[].languages []string
+internal/acquisition.recordingIntent selection.editions[].publishers []string
+internal/acquisition.recordingIntent selection.editions[].title string
+internal/acquisition.recordingIntent selection.files []OfferedFile
+internal/acquisition.recordingIntent selection.files[].access_status string
+internal/acquisition.recordingIntent selection.files[].candidate_kind string
+internal/acquisition.recordingIntent selection.files[].declared_bytes *int64 ,omitempty
+internal/acquisition.recordingIntent selection.files[].download_url string ,omitempty
+internal/acquisition.recordingIntent selection.files[].drm_status string
+internal/acquisition.recordingIntent selection.files[].findings []string
+internal/acquisition.recordingIntent selection.files[].name string
+internal/acquisition.recordingIntent selection.files[].private_state string
+internal/acquisition.recordingIntent selection.files[].restriction_state string
+internal/acquisition.recordingIntent selection.files[].rights_status string
+internal/acquisition.recordingIntent selection.files[].source_format string
+internal/acquisition.recordingIntent selection.files[].source_md5 string ,omitempty
+internal/acquisition.recordingIntent selection.files[].source_sha1 string ,omitempty
+internal/acquisition.recordingIntent selection.id string
+internal/acquisition.recordingIntent selection.landing_page string
+internal/acquisition.recordingIntent selection.languages []string
+internal/acquisition.recordingIntent selection.librivox *LibriVoxLink ,omitempty
+internal/acquisition.recordingIntent selection.librivox.detail string ,omitempty
+internal/acquisition.recordingIntent selection.librivox.project *LibriVoxProject ,omitempty
+internal/acquisition.recordingIntent selection.librivox.project.archive_item string ,omitempty
+internal/acquisition.recordingIntent selection.librivox.project.id string
+internal/acquisition.recordingIntent selection.librivox.project.language string ,omitempty
+internal/acquisition.recordingIntent selection.librivox.project.metadata_sha256 string
+internal/acquisition.recordingIntent selection.librivox.project.sections []LibriVoxSection
+internal/acquisition.recordingIntent selection.librivox.project.sections[].declared_seconds int ,omitempty
+internal/acquisition.recordingIntent selection.librivox.project.sections[].number int
+internal/acquisition.recordingIntent selection.librivox.project.sections[].readers []Reader
+internal/acquisition.recordingIntent selection.librivox.project.sections[].readers[].librivox_reader_id string
+internal/acquisition.recordingIntent selection.librivox.project.sections[].readers[].name string
+internal/acquisition.recordingIntent selection.librivox.project.sections[].title string ,omitempty
+internal/acquisition.recordingIntent selection.librivox.project.title string
+internal/acquisition.recordingIntent selection.librivox.project.url string ,omitempty
+internal/acquisition.recordingIntent selection.librivox.project_id string
+internal/acquisition.recordingIntent selection.librivox.status string
+internal/acquisition.recordingIntent selection.limitations []string
+internal/acquisition.recordingIntent selection.loc_classes []string ,omitempty
+internal/acquisition.recordingIntent selection.media_types []string
+internal/acquisition.recordingIntent selection.metadata_sha256 string
+internal/acquisition.recordingIntent selection.metadata_url string
+internal/acquisition.recordingIntent selection.openlibrary_edition string ,omitempty
+internal/acquisition.recordingIntent selection.publishers []string
+internal/acquisition.recordingIntent selection.recordings []Recording ,omitempty
+internal/acquisition.recordingIntent selection.recordings[].acquirable bool
+internal/acquisition.recordingIntent selection.recordings[].declared_bytes int64
+internal/acquisition.recordingIntent selection.recordings[].findings []string
+internal/acquisition.recordingIntent selection.recordings[].order_source string
+internal/acquisition.recordingIntent selection.recordings[].reader_evidence string ,omitempty
+internal/acquisition.recordingIntent selection.recordings[].source_format string
+internal/acquisition.recordingIntent selection.recordings[].tracks []RecordingTrack
+internal/acquisition.recordingIntent selection.recordings[].tracks[].declared_bytes int64
+internal/acquisition.recordingIntent selection.recordings[].tracks[].declared_seconds float64 ,omitempty
+internal/acquisition.recordingIntent selection.recordings[].tracks[].declared_track int ,omitempty
+internal/acquisition.recordingIntent selection.recordings[].tracks[].file string
+internal/acquisition.recordingIntent selection.recordings[].tracks[].position int
+internal/acquisition.recordingIntent selection.recordings[].tracks[].readers []Reader ,omitempty
+internal/acquisition.recordingIntent selection.recordings[].tracks[].readers[].librivox_reader_id string
+internal/acquisition.recordingIntent selection.recordings[].tracks[].readers[].name string
+internal/acquisition.recordingIntent selection.recordings[].tracks[].title string ,omitempty
+internal/acquisition.recordingIntent selection.restriction_evidence map[string]string
+internal/acquisition.recordingIntent selection.rights_statements []string
+internal/acquisition.recordingIntent selection.source string
+internal/acquisition.recordingIntent selection.subjects []string ,omitempty
+internal/acquisition.recordingIntent selection.titles []string
+internal/acquisition.transferRecord content_length int64
+internal/acquisition.transferRecord etag string ,omitempty
+internal/acquisition.transferRecord final_url string
+internal/acquisition.transferRecord last_modified string ,omitempty
+internal/acquisition.transferRecord schema_version int
+internal/acquisition.transferRecord source_file string
+internal/acquisition.transferRecord status int
+internal/acquisition.transferRecord strong_etag bool
+internal/app.CitationResult csl_json []CSLItem ,omitempty
+internal/app.CitationResult csl_json[].DOI string ,omitempty
+internal/app.CitationResult csl_json[].ISBN string ,omitempty
+internal/app.CitationResult csl_json[].id string
+internal/app.CitationResult csl_json[].language string ,omitempty
+internal/app.CitationResult csl_json[].title string ,omitempty
+internal/app.CitationResult csl_json[].type string
+internal/app.CitationResult fields []CitationField ,omitempty
+internal/app.CitationResult fields[].candidates []string
+internal/app.CitationResult fields[].field string
+internal/app.CitationResult fields[].origin string
+internal/app.CitationResult fields[].status string
+internal/app.CitationResult limitations []string
+internal/app.CitationResult metadata *library.HoldingMetadata ,omitempty
+internal/app.CitationResult metadata.asset_id string
+internal/app.CitationResult metadata.byte_status string
+internal/app.CitationResult metadata.format string
+internal/app.CitationResult metadata.holding_sha256 string
+internal/app.CitationResult metadata.identifiers_omitted int
+internal/app.CitationResult metadata.identities []Identity
+internal/app.CitationResult metadata.identities[].confidence string
+internal/app.CitationResult metadata.identities[].id string
+internal/app.CitationResult metadata.identities[].origin string
+internal/app.CitationResult metadata.identities[].package_unique bool ,omitempty
+internal/app.CitationResult metadata.identities[].raw string
+internal/app.CitationResult metadata.identities[].role string
+internal/app.CitationResult metadata.identities[].scheme string ,omitempty
+internal/app.CitationResult metadata.identities_recorded bool
+internal/app.CitationResult metadata.languages []string
+internal/app.CitationResult metadata.library_id string
+internal/app.CitationResult metadata.recorded_bytes int64
+internal/app.CitationResult metadata.recorded_status string
+internal/app.CitationResult metadata.recordings []MetadataRecording
+internal/app.CitationResult metadata.recordings[].byte_identity string ,omitempty
+internal/app.CitationResult metadata.recordings[].byte_identity_schema string ,omitempty
+internal/app.CitationResult metadata.recordings[].declared_tracks int
+internal/app.CitationResult metadata.recordings[].findings []string
+internal/app.CitationResult metadata.recordings[].held_tracks int
+internal/app.CitationResult metadata.recordings[].missing_positions []int
+internal/app.CitationResult metadata.recordings[].positions []int
+internal/app.CitationResult metadata.recordings[].provider_narration *Narration ,omitempty
+internal/app.CitationResult metadata.recordings[].provider_narration.evidence string
+internal/app.CitationResult metadata.recordings[].provider_narration.id string
+internal/app.CitationResult metadata.recordings[].provider_narration.title string ,omitempty
+internal/app.CitationResult metadata.recordings[].selection RecordingRef
+internal/app.CitationResult metadata.recordings[].selection.complete bool
+internal/app.CitationResult metadata.recordings[].selection.kind string
+internal/app.CitationResult metadata.recordings[].selection.source_format string
+internal/app.CitationResult metadata.recordings[].selection.source_id string
+internal/app.CitationResult metadata.recordings[].user_narrations []Narration
+internal/app.CitationResult metadata.recordings[].user_narrations[].evidence string
+internal/app.CitationResult metadata.recordings[].user_narrations[].id string
+internal/app.CitationResult metadata.recordings[].user_narrations[].title string ,omitempty
+internal/app.CitationResult metadata.schema string
+internal/app.CitationResult metadata.sources []MetadataSource
+internal/app.CitationResult metadata.sources[].declared_licenses []string ,omitempty
+internal/app.CitationResult metadata.sources[].declared_rights []string ,omitempty
+internal/app.CitationResult metadata.sources[].identities []Identity ,omitempty
+internal/app.CitationResult metadata.sources[].identities[].confidence string
+internal/app.CitationResult metadata.sources[].identities[].id string
+internal/app.CitationResult metadata.sources[].identities[].origin string
+internal/app.CitationResult metadata.sources[].identities[].package_unique bool ,omitempty
+internal/app.CitationResult metadata.sources[].identities[].raw string
+internal/app.CitationResult metadata.sources[].identities[].role string
+internal/app.CitationResult metadata.sources[].identities[].scheme string ,omitempty
+internal/app.CitationResult metadata.sources[].kind string
+internal/app.CitationResult metadata.sources[].narration *Narration ,omitempty
+internal/app.CitationResult metadata.sources[].narration.evidence string
+internal/app.CitationResult metadata.sources[].narration.id string
+internal/app.CitationResult metadata.sources[].narration.title string ,omitempty
+internal/app.CitationResult metadata.sources[].recording *SourceRecording ,omitempty
+internal/app.CitationResult metadata.sources[].recording.declared_seconds float64 ,omitempty
+internal/app.CitationResult metadata.sources[].recording.position int
+internal/app.CitationResult metadata.sources[].recording.readers []Reader ,omitempty
+internal/app.CitationResult metadata.sources[].recording.readers[].librivox_reader_id string
+internal/app.CitationResult metadata.sources[].recording.readers[].name string
+internal/app.CitationResult metadata.sources[].recording.source_format string
+internal/app.CitationResult metadata.sources[].recording.title string ,omitempty
+internal/app.CitationResult metadata.sources[].recording.tracks int
+internal/app.CitationResult metadata.sources[].source_file string ,omitempty
+internal/app.CitationResult metadata.sources[].source_id string ,omitempty
+internal/app.CitationResult metadata.titles []string
+internal/app.CitationResult metadata.user_declarations []NarrationDeclarationStatus
+internal/app.CitationResult metadata.user_declarations[].active bool
+internal/app.CitationResult metadata.user_declarations[].declaration NarrationDeclaration
+internal/app.CitationResult metadata.user_declarations[].declaration.narration_id string
+internal/app.CitationResult metadata.user_declarations[].declaration.recordings []NarrationSelection
+internal/app.CitationResult metadata.user_declarations[].declaration.recordings[].byte_identity string
+internal/app.CitationResult metadata.user_declarations[].declaration.recordings[].kind string
+internal/app.CitationResult metadata.user_declarations[].declaration.recordings[].source_format string
+internal/app.CitationResult metadata.user_declarations[].declaration.recordings[].source_id string
+internal/app.CitationResult metadata.user_declarations[].declaration.schema string
+internal/app.CitationResult metadata.user_declarations[].evidence string
+internal/app.CitationResult metadata.user_declarations[].id string
+internal/app.CitationResult metadata.user_declarations[].selections []NarrationSelectionStatus
+internal/app.CitationResult metadata.user_declarations[].selections[].ordered_assets []string ,omitempty
+internal/app.CitationResult metadata.user_declarations[].selections[].selection NarrationSelection
+internal/app.CitationResult metadata.user_declarations[].selections[].selection.byte_identity string
+internal/app.CitationResult metadata.user_declarations[].selections[].selection.kind string
+internal/app.CitationResult metadata.user_declarations[].selections[].selection.source_format string
+internal/app.CitationResult metadata.user_declarations[].selections[].selection.source_id string
+internal/app.CitationResult metadata.user_declarations[].selections[].status string
+internal/app.CitationResult metadata.user_declarations[].status string
+internal/app.CitationResult metadata_sha256 string ,omitempty
+internal/app.CitationResult schema string
+internal/app.CitationResult schema_version int
+internal/app.CitationResult status string
+internal/app.CitationResult unknown_fields []string ,omitempty
+internal/app.CollectionAcquireResult applied bool
+internal/app.CollectionAcquireResult complete bool
+internal/app.CollectionAcquireResult intake string
+internal/app.CollectionAcquireResult limitations []string
+internal/app.CollectionAcquireResult plan_digest string ,omitempty
+internal/app.CollectionAcquireResult schema_version int
+internal/app.CollectionAcquireResult status library.CollectionStatusResult
+internal/app.CollectionAcquireResult status.collection string
+internal/app.CollectionAcquireResult status.collection_sha256 string
+internal/app.CollectionAcquireResult status.held int
+internal/app.CollectionAcquireResult status.held_in_review int
+internal/app.CollectionAcquireResult status.items []CollectionItemStatus
+internal/app.CollectionAcquireResult status.items[].declared_tracks int ,omitempty
+internal/app.CollectionAcquireResult status.items[].detail string ,omitempty
+internal/app.CollectionAcquireResult status.items[].held_tracks int ,omitempty
+internal/app.CollectionAcquireResult status.items[].holdings []string
+internal/app.CollectionAcquireResult status.items[].item CollectionItem
+internal/app.CollectionAcquireResult status.items[].item.file string ,omitempty
+internal/app.CollectionAcquireResult status.items[].item.note string ,omitempty
+internal/app.CollectionAcquireResult status.items[].item.recording string ,omitempty
+internal/app.CollectionAcquireResult status.items[].item.source string
+internal/app.CollectionAcquireResult status.items[].packet string
+internal/app.CollectionAcquireResult status.items[].status string
+internal/app.CollectionAcquireResult status.library string
+internal/app.CollectionAcquireResult status.library_id string
+internal/app.CollectionAcquireResult status.limitations []string
+internal/app.CollectionAcquireResult status.name string
+internal/app.CollectionAcquireResult status.not_held int
+internal/app.CollectionAcquireResult status.recording_incomplete int
+internal/app.CollectionAcquireResult status.schema_version int
+internal/app.CollectionAcquireResult steps []CollectionStep
+internal/app.CollectionAcquireResult steps[].action string
+internal/app.CollectionAcquireResult steps[].antivirus string ,omitempty
+internal/app.CollectionAcquireResult steps[].bytes int64 ,omitempty
+internal/app.CollectionAcquireResult steps[].detail string ,omitempty
+internal/app.CollectionAcquireResult steps[].item library.CollectionItem
+internal/app.CollectionAcquireResult steps[].item.file string ,omitempty
+internal/app.CollectionAcquireResult steps[].item.note string ,omitempty
+internal/app.CollectionAcquireResult steps[].item.recording string ,omitempty
+internal/app.CollectionAcquireResult steps[].item.source string
+internal/app.CollectionAcquireResult steps[].outcome string ,omitempty
+internal/app.CollectionAcquireResult steps[].packet string
+internal/app.CollectionAcquireResult steps[].remaining_bytes int64 ,omitempty
+internal/app.CollectionAcquireResult steps[].sha256 string ,omitempty
+internal/app.CollectionAcquireResult transferred_bytes int64
+internal/app.Doctor capabilities []Capability
+internal/app.Doctor capabilities[].available bool
+internal/app.Doctor capabilities[].name string
+internal/app.Doctor capabilities[].recommended bool ,omitempty
+internal/app.Doctor capabilities[].use string
+internal/app.Doctor checksum_recommendation string
+internal/app.Doctor configuration config.Config
+internal/app.Doctor configuration.gutenberg_catalog string ,omitempty
+internal/app.Doctor configuration.library string ,omitempty
+internal/app.Doctor configuration.on_detection string ,omitempty
+internal/app.Doctor configuration.review string ,omitempty
+internal/app.Doctor go string
+internal/app.Doctor paths config.Paths
+internal/app.Doctor paths.cache string
+internal/app.Doctor paths.config string
+internal/app.Doctor paths.state string
+internal/app.Doctor platform string
+internal/app.Doctor scanner_recommendation string
+internal/app.Doctor scanner_setup string
+internal/app.Doctor security_status string
+internal/app.Doctor signatures *scanner.Signatures ,omitempty
+internal/app.Doctor signatures.advice string ,omitempty
+internal/app.Doctor signatures.age_days *int ,omitempty
+internal/app.Doctor signatures.source string ,omitempty
+internal/app.Doctor signatures.status string
+internal/app.Doctor signatures.tool string
+internal/app.Doctor signatures.updated *time.Time ,omitempty
+internal/app.Doctor signatures.version string ,omitempty
+internal/app.JobSnapshotResult catalog_observation string
+internal/app.JobSnapshotResult jobs []RecordedJob
+internal/app.JobSnapshotResult jobs[].error_recorded bool
+internal/app.JobSnapshotResult jobs[].id string
+internal/app.JobSnapshotResult jobs[].journal_integrity string
+internal/app.JobSnapshotResult jobs[].kind string
+internal/app.JobSnapshotResult jobs[].owner_observation string
+internal/app.JobSnapshotResult jobs[].past_retention_age bool
+internal/app.JobSnapshotResult jobs[].recorded_created string
+internal/app.JobSnapshotResult jobs[].recorded_progress *jobs.Progress ,omitempty
+internal/app.JobSnapshotResult jobs[].recorded_progress.done int64 ,omitempty
+internal/app.JobSnapshotResult jobs[].recorded_progress.phase string
+internal/app.JobSnapshotResult jobs[].recorded_progress.total int64 ,omitempty
+internal/app.JobSnapshotResult jobs[].recorded_progress.unit string ,omitempty
+internal/app.JobSnapshotResult jobs[].recorded_status string
+internal/app.JobSnapshotResult jobs[].recorded_updated string
+internal/app.JobSnapshotResult jobs[].related_held_tracks int ,omitempty
+internal/app.JobSnapshotResult jobs[].relationship string
+internal/app.JobSnapshotResult library_id string ,omitempty
+internal/app.JobSnapshotResult limitations []string
+internal/app.JobSnapshotResult limits JobSnapshotLimits
+internal/app.JobSnapshotResult limits.bytes_per_journal int
+internal/app.JobSnapshotResult limits.deadline_seconds int
+internal/app.JobSnapshotResult limits.directory_entries int
+internal/app.JobSnapshotResult limits.records_per_journal int
+internal/app.JobSnapshotResult limits.returned_jobs int
+internal/app.JobSnapshotResult limits.safe_json_bytes int
+internal/app.JobSnapshotResult limits.total_journal_bytes int
+internal/app.JobSnapshotResult observation_finished string
+internal/app.JobSnapshotResult observation_started string
+internal/app.JobSnapshotResult relationship_coverage string
+internal/app.JobSnapshotResult results_truncated bool
+internal/app.JobSnapshotResult schema string
+internal/app.JobSnapshotResult schema_version int
+internal/app.JobSnapshotResult status string
+internal/app.JobSnapshotResult work jobs.Observation
+internal/app.JobSnapshotResult work.complete bool
+internal/app.JobSnapshotResult work.entries_examined int
+internal/app.JobSnapshotResult work.journal_bytes_read int
+internal/app.JobSnapshotResult work.journals_read int
+internal/app.JobSnapshotResult work.problems []string
+internal/app.JobSnapshotResult work.store string
+internal/app.evidenceReference asset_id string
+internal/app.evidenceReference extractor string
+internal/app.evidenceReference holding_sha256 string
+internal/app.evidenceReference library_id string
+internal/app.evidenceReference metadata_sha256 string
+internal/app.evidenceReference representation_id string
+internal/app.evidenceReference retrieval_sha256 string
+internal/app.evidenceReference schema_version int
+internal/assessment.Report antivirus scanner.Result
+internal/assessment.Report antivirus.error string ,omitempty
+internal/assessment.Report antivirus.exit_code int
+internal/assessment.Report antivirus.limitations []string ,omitempty
+internal/assessment.Report antivirus.output string ,omitempty
+internal/assessment.Report antivirus.output_truncated bool ,omitempty
+internal/assessment.Report antivirus.started_at time.Time ,omitzero
+internal/assessment.Report antivirus.status string
+internal/assessment.Report antivirus.tool string ,omitempty
+internal/assessment.Report bytes int64
+internal/assessment.Report checked_at time.Time
+internal/assessment.Report checks Checks
+internal/assessment.Report checks.access_restrictions []string ,omitempty
+internal/assessment.Report checks.conformance string
+internal/assessment.Report checks.content_review string
+internal/assessment.Report checks.epub *EPUBFacts ,omitempty
+internal/assessment.Report checks.epub.expanded_bytes uint64
+internal/assessment.Report checks.epub.identifiers []EPUBIdentifier
+internal/assessment.Report checks.epub.identifiers[].package_unique bool ,omitempty
+internal/assessment.Report checks.epub.identifiers[].scheme string ,omitempty
+internal/assessment.Report checks.epub.identifiers[].value string
+internal/assessment.Report checks.epub.identifiers_omitted int ,omitempty
+internal/assessment.Report checks.epub.images int
+internal/assessment.Report checks.epub.languages []string
+internal/assessment.Report checks.epub.non_whitespace_body_text_characters int
+internal/assessment.Report checks.epub.obfuscated_fonts []string ,omitempty
+internal/assessment.Report checks.epub.page_count_status string
+internal/assessment.Report checks.epub.reading_order_documents int
+internal/assessment.Report checks.epub.titles []string
+internal/assessment.Report checks.epub_package string
+internal/assessment.Report checks.members int ,omitempty
+internal/assessment.Report checks.mp3 *MP3Facts ,omitempty
+internal/assessment.Report checks.mp3.channels int
+internal/assessment.Report checks.mp3.encoded_duration_ms int64
+internal/assessment.Report checks.mp3.format string
+internal/assessment.Report checks.mp3.frames int
+internal/assessment.Report checks.mp3.notes []string
+internal/assessment.Report checks.mp3.sample_rate int
+internal/assessment.Report checks.mp4 *MP4Facts ,omitempty
+internal/assessment.Report checks.mp4.brand string
+internal/assessment.Report checks.mp4.channels int
+internal/assessment.Report checks.mp4.chapter_source string ,omitempty
+internal/assessment.Report checks.mp4.chapters int
+internal/assessment.Report checks.mp4.codec string
+internal/assessment.Report checks.mp4.encoded_duration_ms int64
+internal/assessment.Report checks.mp4.notes []string
+internal/assessment.Report checks.mp4.sample_rate int
+internal/assessment.Report checks.mp4.samples int
+internal/assessment.Report checks.pdf *pdftext.Facts ,omitempty
+internal/assessment.Report checks.pdf.active_content []string
+internal/assessment.Report checks.pdf.active_content_examined bool
+internal/assessment.Report checks.pdf.findings []string
+internal/assessment.Report checks.pdf.first_label string ,omitempty
+internal/assessment.Report checks.pdf.labels_declared bool
+internal/assessment.Report checks.pdf.last_label string ,omitempty
+internal/assessment.Report checks.pdf.pages int
+internal/assessment.Report checks.pdf.partial bool
+internal/assessment.Report checks.pdf.version string
+internal/assessment.Report checks.pdf.web_links int
+internal/assessment.Report checks.signature string
+internal/assessment.Report checks.warnings []string ,omitempty
+internal/assessment.Report checks.zip_crc string
+internal/assessment.Report conformance *conformance.Result ,omitempty
+internal/assessment.Report conformance.detail string ,omitempty
+internal/assessment.Report conformance.errors int
+internal/assessment.Report conformance.executable string ,omitempty
+internal/assessment.Report conformance.fatal int
+internal/assessment.Report conformance.messages []Message
+internal/assessment.Report conformance.messages[].id string
+internal/assessment.Report conformance.messages[].locations []Location ,omitempty
+internal/assessment.Report conformance.messages[].locations[].column int ,omitempty
+internal/assessment.Report conformance.messages[].locations[].line int ,omitempty
+internal/assessment.Report conformance.messages[].locations[].path string
+internal/assessment.Report conformance.messages[].severity string
+internal/assessment.Report conformance.messages[].text string
+internal/assessment.Report conformance.messages_omitted int ,omitempty
+internal/assessment.Report conformance.status string
+internal/assessment.Report conformance.tool string
+internal/assessment.Report conformance.usage int
+internal/assessment.Report conformance.version string ,omitempty
+internal/assessment.Report conformance.warnings int
+internal/assessment.Report decode *decode.Result ,omitempty
+internal/assessment.Report decode.channels int ,omitempty
+internal/assessment.Report decode.decoded_duration_ms int64
+internal/assessment.Report decode.decoded_samples int64
+internal/assessment.Report decode.detail string ,omitempty
+internal/assessment.Report decode.errors int
+internal/assessment.Report decode.executable string ,omitempty
+internal/assessment.Report decode.messages []string
+internal/assessment.Report decode.messages_omitted int ,omitempty
+internal/assessment.Report decode.sample_rate int ,omitempty
+internal/assessment.Report decode.status string
+internal/assessment.Report decode.tool string
+internal/assessment.Report decode.version string ,omitempty
+internal/assessment.Report detected_format string
+internal/assessment.Report file string
+internal/assessment.Report findings []string
+internal/assessment.Report limitations []string
+internal/assessment.Report sha256 string
+internal/assessment.Report status string
+internal/cli.Envelope command string
+internal/cli.Envelope data any ,omitempty
+internal/cli.Envelope error string ,omitempty
+internal/cli.Envelope schema_version int
+internal/collection.Manifest resources []Resource
+internal/collection.Manifest resources[].assets []Asset
+internal/collection.Manifest resources[].assets[].contributors []string ,omitempty
+internal/collection.Manifest resources[].assets[].format string
+internal/collection.Manifest resources[].assets[].name string
+internal/collection.Manifest resources[].assets[].title string ,omitempty
+internal/collection.Manifest resources[].assets[].url string
+internal/collection.Manifest resources[].authors []string
+internal/collection.Manifest resources[].id string
+internal/collection.Manifest resources[].landing_url string
+internal/collection.Manifest resources[].languages []string
+internal/collection.Manifest resources[].metadata_url string
+internal/collection.Manifest resources[].notes string ,omitempty
+internal/collection.Manifest resources[].rationale string
+internal/collection.Manifest resources[].review_status string
+internal/collection.Manifest resources[].rights string
+internal/collection.Manifest resources[].rights_url string
+internal/collection.Manifest resources[].title string
+internal/collection.Manifest resources[].type string
+internal/collection.Manifest schema_version int
+internal/collection.Manifest title string
+internal/collection.Report acquired_resources int
+internal/collection.Report complete bool
+internal/collection.Report generated_at time.Time
+internal/collection.Report results []Result
+internal/collection.Report results[].acquired bool
+internal/collection.Report results[].assets []Receipt
+internal/collection.Report results[].assets[].acquired_at time.Time
+internal/collection.Report results[].assets[].antivirus string
+internal/collection.Report results[].assets[].asset Asset
+internal/collection.Report results[].assets[].asset.contributors []string ,omitempty
+internal/collection.Report results[].assets[].asset.format string
+internal/collection.Report results[].assets[].asset.name string
+internal/collection.Report results[].assets[].asset.title string ,omitempty
+internal/collection.Report results[].assets[].asset.url string
+internal/collection.Report results[].assets[].bytes int64
+internal/collection.Report results[].assets[].checks assessment.Checks
+internal/collection.Report results[].assets[].checks.access_restrictions []string ,omitempty
+internal/collection.Report results[].assets[].checks.conformance string
+internal/collection.Report results[].assets[].checks.content_review string
+internal/collection.Report results[].assets[].checks.epub *EPUBFacts ,omitempty
+internal/collection.Report results[].assets[].checks.epub.expanded_bytes uint64
+internal/collection.Report results[].assets[].checks.epub.identifiers []EPUBIdentifier
+internal/collection.Report results[].assets[].checks.epub.identifiers[].package_unique bool ,omitempty
+internal/collection.Report results[].assets[].checks.epub.identifiers[].scheme string ,omitempty
+internal/collection.Report results[].assets[].checks.epub.identifiers[].value string
+internal/collection.Report results[].assets[].checks.epub.identifiers_omitted int ,omitempty
+internal/collection.Report results[].assets[].checks.epub.images int
+internal/collection.Report results[].assets[].checks.epub.languages []string
+internal/collection.Report results[].assets[].checks.epub.non_whitespace_body_text_characters int
+internal/collection.Report results[].assets[].checks.epub.obfuscated_fonts []string ,omitempty
+internal/collection.Report results[].assets[].checks.epub.page_count_status string
+internal/collection.Report results[].assets[].checks.epub.reading_order_documents int
+internal/collection.Report results[].assets[].checks.epub.titles []string
+internal/collection.Report results[].assets[].checks.epub_package string
+internal/collection.Report results[].assets[].checks.members int ,omitempty
+internal/collection.Report results[].assets[].checks.mp3 *MP3Facts ,omitempty
+internal/collection.Report results[].assets[].checks.mp3.channels int
+internal/collection.Report results[].assets[].checks.mp3.encoded_duration_ms int64
+internal/collection.Report results[].assets[].checks.mp3.format string
+internal/collection.Report results[].assets[].checks.mp3.frames int
+internal/collection.Report results[].assets[].checks.mp3.notes []string
+internal/collection.Report results[].assets[].checks.mp3.sample_rate int
+internal/collection.Report results[].assets[].checks.mp4 *MP4Facts ,omitempty
+internal/collection.Report results[].assets[].checks.mp4.brand string
+internal/collection.Report results[].assets[].checks.mp4.channels int
+internal/collection.Report results[].assets[].checks.mp4.chapter_source string ,omitempty
+internal/collection.Report results[].assets[].checks.mp4.chapters int
+internal/collection.Report results[].assets[].checks.mp4.codec string
+internal/collection.Report results[].assets[].checks.mp4.encoded_duration_ms int64
+internal/collection.Report results[].assets[].checks.mp4.notes []string
+internal/collection.Report results[].assets[].checks.mp4.sample_rate int
+internal/collection.Report results[].assets[].checks.mp4.samples int
+internal/collection.Report results[].assets[].checks.pdf *pdftext.Facts ,omitempty
+internal/collection.Report results[].assets[].checks.pdf.active_content []string
+internal/collection.Report results[].assets[].checks.pdf.active_content_examined bool
+internal/collection.Report results[].assets[].checks.pdf.findings []string
+internal/collection.Report results[].assets[].checks.pdf.first_label string ,omitempty
+internal/collection.Report results[].assets[].checks.pdf.labels_declared bool
+internal/collection.Report results[].assets[].checks.pdf.last_label string ,omitempty
+internal/collection.Report results[].assets[].checks.pdf.pages int
+internal/collection.Report results[].assets[].checks.pdf.partial bool
+internal/collection.Report results[].assets[].checks.pdf.version string
+internal/collection.Report results[].assets[].checks.pdf.web_links int
+internal/collection.Report results[].assets[].checks.signature string
+internal/collection.Report results[].assets[].checks.warnings []string ,omitempty
+internal/collection.Report results[].assets[].checks.zip_crc string
+internal/collection.Report results[].assets[].final_url string
+internal/collection.Report results[].assets[].resource_id string
+internal/collection.Report results[].assets[].sha256 string
+internal/collection.Report results[].errors []string ,omitempty
+internal/collection.Report results[].resource_id string
+internal/collection.Report schema_version int
+internal/collection.Report security_status string
+internal/collection.Report stored_bytes int64
+internal/collection.Report transferred_bytes int64
+internal/config.Config gutenberg_catalog string ,omitempty
+internal/config.Config library string ,omitempty
+internal/config.Config on_detection string ,omitempty
+internal/config.Config review string ,omitempty
+internal/content.Capabilities consumption_state string
+internal/content.Capabilities default_representation string
+internal/content.Capabilities max_result_bytes int
+internal/content.Capabilities max_text_bytes int
+internal/content.Capabilities representations []RepresentationCapability
+internal/content.Capabilities representations[].description string
+internal/content.Capabilities representations[].extractor string
+internal/content.Capabilities representations[].id string
+internal/content.Capabilities representations[].operations []string
+internal/content.Capabilities schema_version int
+internal/content.Capabilities unsupported []string
+internal/content.Locator asset_id string
+internal/content.Locator end int
+internal/content.Locator extractor string
+internal/content.Locator member string ,omitempty
+internal/content.Locator offset_unit string ,omitempty
+internal/content.Locator page_label string ,omitempty
+internal/content.Locator representation_id string
+internal/content.Locator schema_version int
+internal/content.Locator start int
+internal/content.Locator unit int
+internal/content.PCMLocator asset_id string
+internal/content.PCMLocator end_sample string
+internal/content.PCMLocator extractor string
+internal/content.PCMLocator offset_unit string
+internal/content.PCMLocator representation_id string
+internal/content.PCMLocator schema_version int
+internal/content.PCMLocator start_sample string
+internal/content.PCMLocator unit int
+internal/content.Result asset_id string
+internal/content.Result audio *audio.Track ,omitempty
+internal/content.Result audio.audio_end int64
+internal/content.Result audio.audio_start int64
+internal/content.Result audio.bitrate string
+internal/content.Result audio.channel_mode string
+internal/content.Result audio.channels int
+internal/content.Result audio.chapters []Chapter
+internal/content.Result audio.chapters[].end_ms int64
+internal/content.Result audio.chapters[].id string
+internal/content.Result audio.chapters[].start_ms int64
+internal/content.Result audio.chapters[].title string ,omitempty
+internal/content.Result audio.declared Declared
+internal/content.Result audio.declared.bytes *int64 ,omitempty
+internal/content.Result audio.declared.encoder string ,omitempty
+internal/content.Result audio.declared.encoder_delay_samples *int ,omitempty
+internal/content.Result audio.declared.encoder_padding_samples *int ,omitempty
+internal/content.Result audio.declared.frames *int64 ,omitempty
+internal/content.Result audio.declared.id3_length_ms *int64 ,omitempty
+internal/content.Result audio.declared.info_frame string ,omitempty
+internal/content.Result audio.decoded string
+internal/content.Result audio.encoded_duration_ms int64
+internal/content.Result audio.encoded_samples int64
+internal/content.Result audio.findings []string
+internal/content.Result audio.format string
+internal/content.Result audio.frames int
+internal/content.Result audio.gaps []Region
+internal/content.Result audio.gaps[].end int64
+internal/content.Result audio.gaps[].kind string
+internal/content.Result audio.gaps[].start int64
+internal/content.Result audio.metadata Metadata
+internal/content.Result audio.metadata.album string ,omitempty
+internal/content.Result audio.metadata.artist string ,omitempty
+internal/content.Result audio.metadata.id3_version string ,omitempty
+internal/content.Result audio.metadata.language string ,omitempty
+internal/content.Result audio.metadata.skipped string ,omitempty
+internal/content.Result audio.metadata.title string ,omitempty
+internal/content.Result audio.metadata.track string ,omitempty
+internal/content.Result audio.presented_samples *int64 ,omitempty
+internal/content.Result audio.sample_rate int
+internal/content.Result audio.samples_per_frame int
+internal/content.Result audio.tags []Region
+internal/content.Result audio.tags[].end int64
+internal/content.Result audio.tags[].kind string
+internal/content.Result audio.tags[].start int64
+internal/content.Result audio_range *audio.Range ,omitempty
+internal/content.Result audio_range.byte_end int64
+internal/content.Result audio_range.byte_start int64
+internal/content.Result audio_range.channels int
+internal/content.Result audio_range.end_of_track bool
+internal/content.Result audio_range.first_frame int
+internal/content.Result audio_range.frames int
+internal/content.Result audio_range.minimum_max_bytes int ,omitempty
+internal/content.Result audio_range.next_frame int ,omitempty
+internal/content.Result audio_range.preroll_complete bool
+internal/content.Result audio_range.preroll_frames int
+internal/content.Result audio_range.preroll_sample_start int64
+internal/content.Result audio_range.presentation_note string
+internal/content.Result audio_range.sample_end int64
+internal/content.Result audio_range.sample_rate int
+internal/content.Result audio_range.sample_start int64
+internal/content.Result audio_range.samples_per_frame int
+internal/content.Result audio_range.stopped_at_gap bool
+internal/content.Result breaks []Break ,omitempty
+internal/content.Result breaks[].kind string
+internal/content.Result breaks[].offset int
+internal/content.Result catalog_id string ,omitempty
+internal/content.Result continuation string ,omitempty
+internal/content.Result coverage *Coverage ,omitempty
+internal/content.Result coverage.known_gaps []string
+internal/content.Result coverage.navigation string ,omitempty
+internal/content.Result coverage.navigation_conflict bool ,omitempty
+internal/content.Result coverage.referenced_outside_range []string
+internal/content.Result coverage.text string
+internal/content.Result coverage.unknown []string
+internal/content.Result coverage.unresolved_entries int ,omitempty
+internal/content.Result end_of_source bool
+internal/content.Result end_of_unit bool
+internal/content.Result evidence *Evidence ,omitempty
+internal/content.Result evidence.coverage EvidenceCoverage
+internal/content.Result evidence.coverage.end_of_source bool
+internal/content.Result evidence.coverage.end_of_unit bool
+internal/content.Result evidence.coverage.extraction *Coverage ,omitempty
+internal/content.Result evidence.coverage.extraction.known_gaps []string
+internal/content.Result evidence.coverage.extraction.navigation string ,omitempty
+internal/content.Result evidence.coverage.extraction.navigation_conflict bool ,omitempty
+internal/content.Result evidence.coverage.extraction.referenced_outside_range []string
+internal/content.Result evidence.coverage.extraction.text string
+internal/content.Result evidence.coverage.extraction.unknown []string
+internal/content.Result evidence.coverage.extraction.unresolved_entries int ,omitempty
+internal/content.Result evidence.coverage.gaps []Gap
+internal/content.Result evidence.coverage.gaps[].count int ,omitempty
+internal/content.Result evidence.coverage.gaps[].element string
+internal/content.Result evidence.coverage.gaps[].image *GapImage ,omitempty
+internal/content.Result evidence.coverage.gaps[].image.alt *string
+internal/content.Result evidence.coverage.gaps[].image.source string
+internal/content.Result evidence.coverage.gaps[].offset int
+internal/content.Result evidence.coverage.gaps[].part string
+internal/content.Result evidence.coverage.gaps[].reason string
+internal/content.Result evidence.coverage.has_continuation bool
+internal/content.Result evidence.coverage.range_status string ,omitempty
+internal/content.Result evidence.coverage.returned_units []int
+internal/content.Result evidence.coverage.scope string
+internal/content.Result evidence.coverage.unsupported_units []int
+internal/content.Result evidence.delivered_bytes int ,omitempty
+internal/content.Result evidence.delivered_sha256 string ,omitempty
+internal/content.Result evidence.extractor string
+internal/content.Result evidence.kind string
+internal/content.Result evidence.limitations []string
+internal/content.Result evidence.locator *Locator ,omitempty
+internal/content.Result evidence.locator.asset_id string
+internal/content.Result evidence.locator.end int
+internal/content.Result evidence.locator.extractor string
+internal/content.Result evidence.locator.member string ,omitempty
+internal/content.Result evidence.locator.offset_unit string ,omitempty
+internal/content.Result evidence.locator.page_label string ,omitempty
+internal/content.Result evidence.locator.representation_id string
+internal/content.Result evidence.locator.schema_version int
+internal/content.Result evidence.locator.start int
+internal/content.Result evidence.locator.unit int
+internal/content.Result evidence.metadata library.HoldingMetadata
+internal/content.Result evidence.metadata.asset_id string
+internal/content.Result evidence.metadata.byte_status string
+internal/content.Result evidence.metadata.format string
+internal/content.Result evidence.metadata.holding_sha256 string
+internal/content.Result evidence.metadata.identifiers_omitted int
+internal/content.Result evidence.metadata.identities []Identity
+internal/content.Result evidence.metadata.identities[].confidence string
+internal/content.Result evidence.metadata.identities[].id string
+internal/content.Result evidence.metadata.identities[].origin string
+internal/content.Result evidence.metadata.identities[].package_unique bool ,omitempty
+internal/content.Result evidence.metadata.identities[].raw string
+internal/content.Result evidence.metadata.identities[].role string
+internal/content.Result evidence.metadata.identities[].scheme string ,omitempty
+internal/content.Result evidence.metadata.identities_recorded bool
+internal/content.Result evidence.metadata.languages []string
+internal/content.Result evidence.metadata.library_id string
+internal/content.Result evidence.metadata.recorded_bytes int64
+internal/content.Result evidence.metadata.recorded_status string
+internal/content.Result evidence.metadata.recordings []MetadataRecording
+internal/content.Result evidence.metadata.recordings[].byte_identity string ,omitempty
+internal/content.Result evidence.metadata.recordings[].byte_identity_schema string ,omitempty
+internal/content.Result evidence.metadata.recordings[].declared_tracks int
+internal/content.Result evidence.metadata.recordings[].findings []string
+internal/content.Result evidence.metadata.recordings[].held_tracks int
+internal/content.Result evidence.metadata.recordings[].missing_positions []int
+internal/content.Result evidence.metadata.recordings[].positions []int
+internal/content.Result evidence.metadata.recordings[].provider_narration *Narration ,omitempty
+internal/content.Result evidence.metadata.recordings[].provider_narration.evidence string
+internal/content.Result evidence.metadata.recordings[].provider_narration.id string
+internal/content.Result evidence.metadata.recordings[].provider_narration.title string ,omitempty
+internal/content.Result evidence.metadata.recordings[].selection RecordingRef
+internal/content.Result evidence.metadata.recordings[].selection.complete bool
+internal/content.Result evidence.metadata.recordings[].selection.kind string
+internal/content.Result evidence.metadata.recordings[].selection.source_format string
+internal/content.Result evidence.metadata.recordings[].selection.source_id string
+internal/content.Result evidence.metadata.recordings[].user_narrations []Narration
+internal/content.Result evidence.metadata.recordings[].user_narrations[].evidence string
+internal/content.Result evidence.metadata.recordings[].user_narrations[].id string
+internal/content.Result evidence.metadata.recordings[].user_narrations[].title string ,omitempty
+internal/content.Result evidence.metadata.schema string
+internal/content.Result evidence.metadata.sources []MetadataSource
+internal/content.Result evidence.metadata.sources[].declared_licenses []string ,omitempty
+internal/content.Result evidence.metadata.sources[].declared_rights []string ,omitempty
+internal/content.Result evidence.metadata.sources[].identities []Identity ,omitempty
+internal/content.Result evidence.metadata.sources[].identities[].confidence string
+internal/content.Result evidence.metadata.sources[].identities[].id string
+internal/content.Result evidence.metadata.sources[].identities[].origin string
+internal/content.Result evidence.metadata.sources[].identities[].package_unique bool ,omitempty
+internal/content.Result evidence.metadata.sources[].identities[].raw string
+internal/content.Result evidence.metadata.sources[].identities[].role string
+internal/content.Result evidence.metadata.sources[].identities[].scheme string ,omitempty
+internal/content.Result evidence.metadata.sources[].kind string
+internal/content.Result evidence.metadata.sources[].narration *Narration ,omitempty
+internal/content.Result evidence.metadata.sources[].narration.evidence string
+internal/content.Result evidence.metadata.sources[].narration.id string
+internal/content.Result evidence.metadata.sources[].narration.title string ,omitempty
+internal/content.Result evidence.metadata.sources[].recording *SourceRecording ,omitempty
+internal/content.Result evidence.metadata.sources[].recording.declared_seconds float64 ,omitempty
+internal/content.Result evidence.metadata.sources[].recording.position int
+internal/content.Result evidence.metadata.sources[].recording.readers []Reader ,omitempty
+internal/content.Result evidence.metadata.sources[].recording.readers[].librivox_reader_id string
+internal/content.Result evidence.metadata.sources[].recording.readers[].name string
+internal/content.Result evidence.metadata.sources[].recording.source_format string
+internal/content.Result evidence.metadata.sources[].recording.title string ,omitempty
+internal/content.Result evidence.metadata.sources[].recording.tracks int
+internal/content.Result evidence.metadata.sources[].source_file string ,omitempty
+internal/content.Result evidence.metadata.sources[].source_id string ,omitempty
+internal/content.Result evidence.metadata.titles []string
+internal/content.Result evidence.metadata.user_declarations []NarrationDeclarationStatus
+internal/content.Result evidence.metadata.user_declarations[].active bool
+internal/content.Result evidence.metadata.user_declarations[].declaration NarrationDeclaration
+internal/content.Result evidence.metadata.user_declarations[].declaration.narration_id string
+internal/content.Result evidence.metadata.user_declarations[].declaration.recordings []NarrationSelection
+internal/content.Result evidence.metadata.user_declarations[].declaration.recordings[].byte_identity string
+internal/content.Result evidence.metadata.user_declarations[].declaration.recordings[].kind string
+internal/content.Result evidence.metadata.user_declarations[].declaration.recordings[].source_format string
+internal/content.Result evidence.metadata.user_declarations[].declaration.recordings[].source_id string
+internal/content.Result evidence.metadata.user_declarations[].declaration.schema string
+internal/content.Result evidence.metadata.user_declarations[].evidence string
+internal/content.Result evidence.metadata.user_declarations[].id string
+internal/content.Result evidence.metadata.user_declarations[].selections []NarrationSelectionStatus
+internal/content.Result evidence.metadata.user_declarations[].selections[].ordered_assets []string ,omitempty
+internal/content.Result evidence.metadata.user_declarations[].selections[].selection NarrationSelection
+internal/content.Result evidence.metadata.user_declarations[].selections[].selection.byte_identity string
+internal/content.Result evidence.metadata.user_declarations[].selections[].selection.kind string
+internal/content.Result evidence.metadata.user_declarations[].selections[].selection.source_format string
+internal/content.Result evidence.metadata.user_declarations[].selections[].selection.source_id string
+internal/content.Result evidence.metadata.user_declarations[].selections[].status string
+internal/content.Result evidence.metadata.user_declarations[].status string
+internal/content.Result evidence.metadata_sha256 string
+internal/content.Result evidence.pcm_range *PCMLocator ,omitempty
+internal/content.Result evidence.pcm_range.asset_id string
+internal/content.Result evidence.pcm_range.end_sample string
+internal/content.Result evidence.pcm_range.extractor string
+internal/content.Result evidence.pcm_range.offset_unit string
+internal/content.Result evidence.pcm_range.representation_id string
+internal/content.Result evidence.pcm_range.schema_version int
+internal/content.Result evidence.pcm_range.start_sample string
+internal/content.Result evidence.pcm_range.unit int
+internal/content.Result evidence.quotation string ,omitempty
+internal/content.Result evidence.reference string ,omitempty
+internal/content.Result evidence.representation string
+internal/content.Result evidence.representation_id string
+internal/content.Result evidence.retrieval_sha256 string
+internal/content.Result evidence.schema string
+internal/content.Result evidence.selection ReadSelection
+internal/content.Result evidence.selection.cursor string ,omitempty
+internal/content.Result evidence.selection.label string ,omitempty
+internal/content.Result evidence.selection.max_bytes int
+internal/content.Result evidence.selection.navigation string ,omitempty
+internal/content.Result evidence.selection.packet *int ,omitempty
+internal/content.Result evidence.selection.part string ,omitempty
+internal/content.Result evidence.selection.pcm_sample *int64 ,omitempty
+internal/content.Result evidence.selection.representation string ,omitempty
+internal/content.Result evidence.selection.sample int64 ,omitempty
+internal/content.Result evidence.selection.text_offset int ,omitempty
+internal/content.Result evidence.selection.unit int ,omitempty
+internal/content.Result extractor string
+internal/content.Result gaps []Gap ,omitempty
+internal/content.Result gaps[].count int ,omitempty
+internal/content.Result gaps[].element string
+internal/content.Result gaps[].image *GapImage ,omitempty
+internal/content.Result gaps[].image.alt *string
+internal/content.Result gaps[].image.source string
+internal/content.Result gaps[].offset int
+internal/content.Result gaps[].part string
+internal/content.Result gaps[].reason string
+internal/content.Result limitations []string
+internal/content.Result locator *Locator ,omitempty
+internal/content.Result locator.asset_id string
+internal/content.Result locator.end int
+internal/content.Result locator.extractor string
+internal/content.Result locator.member string ,omitempty
+internal/content.Result locator.offset_unit string ,omitempty
+internal/content.Result locator.page_label string ,omitempty
+internal/content.Result locator.representation_id string
+internal/content.Result locator.schema_version int
+internal/content.Result locator.start int
+internal/content.Result locator.unit int
+internal/content.Result matches []Match ,omitempty
+internal/content.Result matches[].cursor string
+internal/content.Result matches[].end int
+internal/content.Result matches[].member string ,omitempty
+internal/content.Result matches[].page_label string ,omitempty
+internal/content.Result matches[].start int
+internal/content.Result matches[].unit int
+internal/content.Result mp4 *audio.MP4 ,omitempty
+internal/content.Result mp4.audio_object_type int ,omitempty
+internal/content.Result mp4.average_bitrate int ,omitempty
+internal/content.Result mp4.brand string
+internal/content.Result mp4.channels int
+internal/content.Result mp4.chapter_source string ,omitempty
+internal/content.Result mp4.chapters []Chapter
+internal/content.Result mp4.chapters[].end_ms int64
+internal/content.Result mp4.chapters[].id string
+internal/content.Result mp4.chapters[].start_ms int64
+internal/content.Result mp4.chapters[].title string ,omitempty
+internal/content.Result mp4.chunks int
+internal/content.Result mp4.codec string
+internal/content.Result mp4.compatible_brands []string
+internal/content.Result mp4.declared_media_duration_ms int64
+internal/content.Result mp4.declared_movie_duration_ms int64
+internal/content.Result mp4.decoded string
+internal/content.Result mp4.edit_list bool
+internal/content.Result mp4.encoded_duration_ms int64
+internal/content.Result mp4.findings []string
+internal/content.Result mp4.language string ,omitempty
+internal/content.Result mp4.media_data []Region
+internal/content.Result mp4.media_data[].end int64
+internal/content.Result mp4.media_data[].kind string
+internal/content.Result mp4.media_data[].start int64
+internal/content.Result mp4.metadata MP4Metadata
+internal/content.Result mp4.metadata.album string ,omitempty
+internal/content.Result mp4.metadata.artist string ,omitempty
+internal/content.Result mp4.metadata.composer string ,omitempty
+internal/content.Result mp4.metadata.narrator string ,omitempty
+internal/content.Result mp4.metadata.title string ,omitempty
+internal/content.Result mp4.metadata.year string ,omitempty
+internal/content.Result mp4.notes []string
+internal/content.Result mp4.object_type int ,omitempty
+internal/content.Result mp4.sample_bytes int64
+internal/content.Result mp4.sample_entry string
+internal/content.Result mp4.sample_rate int
+internal/content.Result mp4.samples int
+internal/content.Result mp4.timescale uint32
+internal/content.Result mp4.tracks int
+internal/content.Result mp4.unreferenced_media_bytes int64
+internal/content.Result mp4_packets *MP4PacketAccess ,omitempty
+internal/content.Result mp4_packets.codec string
+internal/content.Result mp4_packets.declared_channels int
+internal/content.Result mp4_packets.declared_sample_rate int
+internal/content.Result mp4_packets.decoder_preroll string
+internal/content.Result mp4_packets.end_of_track bool
+internal/content.Result mp4_packets.initialization MP4Initialization
+internal/content.Result mp4_packets.initialization.data []byte
+internal/content.Result mp4_packets.initialization.encoding string
+internal/content.Result mp4_packets.initialization.kind string
+internal/content.Result mp4_packets.initialization.sha256 string
+internal/content.Result mp4_packets.initialization.stsd_version byte
+internal/content.Result mp4_packets.next_packet int
+internal/content.Result mp4_packets.packet_count int
+internal/content.Result mp4_packets.packets []MP4PacketLocation ,omitempty
+internal/content.Result mp4_packets.packets[].byte_end int64
+internal/content.Result mp4_packets.packets[].byte_start int64
+internal/content.Result mp4_packets.packets[].decode_end string
+internal/content.Result mp4_packets.packets[].decode_start string
+internal/content.Result mp4_packets.packets[].index int
+internal/content.Result mp4_packets.pcm_equivalence string
+internal/content.Result mp4_packets.presentation_mapping string
+internal/content.Result mp4_packets.stop string ,omitempty
+internal/content.Result mp4_packets.timeline string
+internal/content.Result mp4_packets.timescale uint32
+internal/content.Result mp4_pcm *DecodedMP4 ,omitempty
+internal/content.Result mp4_pcm.container_reported_channels int
+internal/content.Result mp4_pcm.container_reported_rate int
+internal/content.Result mp4_pcm.full_pcm_sha256 string
+internal/content.Result mp4_pcm.output_channels int
+internal/content.Result mp4_pcm.output_format string
+internal/content.Result mp4_pcm.output_sample_rate int
+internal/content.Result mp4_pcm.presentation_mapping string
+internal/content.Result mp4_pcm.probed_channels int
+internal/content.Result mp4_pcm.range *PCMLocator ,omitempty
+internal/content.Result mp4_pcm.range.asset_id string
+internal/content.Result mp4_pcm.range.end_sample string
+internal/content.Result mp4_pcm.range.extractor string
+internal/content.Result mp4_pcm.range.offset_unit string
+internal/content.Result mp4_pcm.range.representation_id string
+internal/content.Result mp4_pcm.range.schema_version int
+internal/content.Result mp4_pcm.range.start_sample string
+internal/content.Result mp4_pcm.range.unit int
+internal/content.Result mp4_pcm.range_pcm_sha256 string ,omitempty
+internal/content.Result mp4_pcm.source_clock PCMSourceClock
+internal/content.Result mp4_pcm.source_clock.declared_media_ticks string
+internal/content.Result mp4_pcm.source_clock.declared_movie_ticks string
+internal/content.Result mp4_pcm.source_clock.edit_list_declared bool
+internal/content.Result mp4_pcm.source_clock.encoded_media_ticks string
+internal/content.Result mp4_pcm.source_clock.media_timescale uint32
+internal/content.Result mp4_pcm.source_clock.movie_timescale uint32
+internal/content.Result mp4_pcm.source_initialization_sha256 string
+internal/content.Result mp4_pcm.timeline string
+internal/content.Result mp4_pcm.tool string
+internal/content.Result mp4_pcm.tool_version string
+internal/content.Result mp4_pcm.total_samples string
+internal/content.Result mp4_pcm.transform string
+internal/content.Result navigation []NavDocument ,omitempty
+internal/content.Result navigation[].entries []NavEntry
+internal/content.Result navigation[].entries[].alt_labels []string ,omitempty
+internal/content.Result navigation[].entries[].evidence string
+internal/content.Result navigation[].entries[].href string ,omitempty
+internal/content.Result navigation[].entries[].label string
+internal/content.Result navigation[].entries[].level int
+internal/content.Result navigation[].entries[].member string ,omitempty
+internal/content.Result navigation[].entries[].offset *int ,omitempty
+internal/content.Result navigation[].entries[].order int
+internal/content.Result navigation[].entries[].parent *int ,omitempty
+internal/content.Result navigation[].entries[].part string ,omitempty
+internal/content.Result navigation[].entries[].play_order *int ,omitempty
+internal/content.Result navigation[].entries[].range *NavRange ,omitempty
+internal/content.Result navigation[].entries[].range.end_at_source bool ,omitempty
+internal/content.Result navigation[].entries[].range.end_offset int
+internal/content.Result navigation[].entries[].range.end_unit int
+internal/content.Result navigation[].entries[].range.start_offset int
+internal/content.Result navigation[].entries[].range.start_unit int
+internal/content.Result navigation[].entries[].range.status string
+internal/content.Result navigation[].entries[].status string
+internal/content.Result navigation[].entries[].unit *int ,omitempty
+internal/content.Result navigation[].evidence string
+internal/content.Result navigation[].path string ,omitempty
+internal/content.Result navigation[].problem string ,omitempty
+internal/content.Result page *PageEntry ,omitempty
+internal/content.Result page.href string ,omitempty
+internal/content.Result page.label string
+internal/content.Result page.member string ,omitempty
+internal/content.Result page.offset *int ,omitempty
+internal/content.Result page.order int
+internal/content.Result page.part string ,omitempty
+internal/content.Result page.reference string ,omitempty
+internal/content.Result page.status string
+internal/content.Result page.unit *int ,omitempty
+internal/content.Result page_end *Locator ,omitempty
+internal/content.Result page_end.asset_id string
+internal/content.Result page_end.end int
+internal/content.Result page_end.extractor string
+internal/content.Result page_end.member string ,omitempty
+internal/content.Result page_end.offset_unit string ,omitempty
+internal/content.Result page_end.page_label string ,omitempty
+internal/content.Result page_end.representation_id string
+internal/content.Result page_end.schema_version int
+internal/content.Result page_end.start int
+internal/content.Result page_end.unit int
+internal/content.Result page_lists []PageList ,omitempty
+internal/content.Result page_lists[].entries []PageEntry
+internal/content.Result page_lists[].entries[].href string ,omitempty
+internal/content.Result page_lists[].entries[].label string
+internal/content.Result page_lists[].entries[].member string ,omitempty
+internal/content.Result page_lists[].entries[].offset *int ,omitempty
+internal/content.Result page_lists[].entries[].order int
+internal/content.Result page_lists[].entries[].part string ,omitempty
+internal/content.Result page_lists[].entries[].reference string ,omitempty
+internal/content.Result page_lists[].entries[].status string
+internal/content.Result page_lists[].entries[].unit *int ,omitempty
+internal/content.Result page_lists[].hidden bool ,omitempty
+internal/content.Result page_lists[].path string
+internal/content.Result page_lists[].problem string ,omitempty
+internal/content.Result pagination *Pagination ,omitempty
+internal/content.Result pagination.page_break_sources []string ,omitempty
+internal/content.Result pagination.sources []string ,omitempty
+internal/content.Result pagination.status string
+internal/content.Result parts []Part ,omitempty
+internal/content.Result parts[].direction string
+internal/content.Result parts[].end int
+internal/content.Result parts[].gap string ,omitempty
+internal/content.Result parts[].id string
+internal/content.Result parts[].image *Image ,omitempty
+internal/content.Result parts[].image.alt *string
+internal/content.Result parts[].image.bytes int ,omitempty
+internal/content.Result parts[].image.member string ,omitempty
+internal/content.Result parts[].image.reference string ,omitempty
+internal/content.Result parts[].image.sha256 string ,omitempty
+internal/content.Result parts[].image.source string
+internal/content.Result parts[].image.status string
+internal/content.Result parts[].kind string
+internal/content.Result parts[].language string
+internal/content.Result parts[].link *Link ,omitempty
+internal/content.Result parts[].link.cyclic bool
+internal/content.Result parts[].link.href string
+internal/content.Result parts[].link.reference string ,omitempty
+internal/content.Result parts[].link.status string
+internal/content.Result parts[].link.target_part string ,omitempty
+internal/content.Result parts[].link.target_unit int
+internal/content.Result parts[].locator *Locator ,omitempty
+internal/content.Result parts[].locator.asset_id string
+internal/content.Result parts[].locator.end int
+internal/content.Result parts[].locator.extractor string
+internal/content.Result parts[].locator.member string ,omitempty
+internal/content.Result parts[].locator.offset_unit string ,omitempty
+internal/content.Result parts[].locator.page_label string ,omitempty
+internal/content.Result parts[].locator.representation_id string
+internal/content.Result parts[].locator.schema_version int
+internal/content.Result parts[].locator.start int
+internal/content.Result parts[].locator.unit int
+internal/content.Result parts[].parent string ,omitempty
+internal/content.Result parts[].reference string ,omitempty
+internal/content.Result parts[].source_end int
+internal/content.Result parts[].source_reference string ,omitempty
+internal/content.Result parts[].source_start int
+internal/content.Result parts[].start int
+internal/content.Result range_end *Locator ,omitempty
+internal/content.Result range_end.asset_id string
+internal/content.Result range_end.end int
+internal/content.Result range_end.extractor string
+internal/content.Result range_end.member string ,omitempty
+internal/content.Result range_end.offset_unit string ,omitempty
+internal/content.Result range_end.page_label string ,omitempty
+internal/content.Result range_end.representation_id string
+internal/content.Result range_end.schema_version int
+internal/content.Result range_end.start int
+internal/content.Result range_end.unit int
+internal/content.Result range_status string ,omitempty
+internal/content.Result representation string ,omitempty
+internal/content.Result representation_id string ,omitempty
+internal/content.Result resource *ResourceData ,omitempty
+internal/content.Result resource.data []byte
+internal/content.Result resource.encoding string
+internal/content.Result resource.member string
+internal/content.Result resource.sha256 string
+internal/content.Result resource.total_bytes int
+internal/content.Result schema_version int
+internal/content.Result source_path string ,omitempty
+internal/content.Result status string
+internal/content.Result text string ,omitempty
+internal/content.Result units []Unit ,omitempty
+internal/content.Result units[].direction string ,omitempty
+internal/content.Result units[].extraction string
+internal/content.Result units[].index int
+internal/content.Result units[].kind string
+internal/content.Result units[].known_gaps int ,omitempty
+internal/content.Result units[].language string ,omitempty
+internal/content.Result units[].linear string
+internal/content.Result units[].member string
+internal/content.Result units[].package string
+internal/content.Result units[].page_label string ,omitempty
+internal/content.Result units[].parts int ,omitempty
+internal/content.Result units[].text_bytes int
+internal/content.Result unsupported_units []int ,omitempty
+internal/content.cursor asset_id string
+internal/content.cursor extractor string
+internal/content.cursor member string ,omitempty
+internal/content.cursor member_sha256 string ,omitempty
+internal/content.cursor offset int
+internal/content.cursor part string ,omitempty
+internal/content.cursor representation string ,omitempty
+internal/content.cursor representation_id string
+internal/content.cursor schema_version int
+internal/content.cursor unit int
+internal/content.pcmCursor asset_id string
+internal/content.pcmCursor extractor string
+internal/content.pcmCursor next_sample string
+internal/content.pcmCursor representation_id string
+internal/content.pcmCursor schema_version int
+internal/discovery.Evaluation access_status string
+internal/discovery.Evaluation bookshelves []string ,omitempty
+internal/discovery.Evaluation checked_at time.Time
+internal/discovery.Evaluation complete bool
+internal/discovery.Evaluation creators []string
+internal/discovery.Evaluation dates []string
+internal/discovery.Evaluation declared_identifiers []DeclaredIdentifier ,omitempty
+internal/discovery.Evaluation declared_identifiers[].field string
+internal/discovery.Evaluation declared_identifiers[].value string
+internal/discovery.Evaluation declared_license_urls []string
+internal/discovery.Evaluation edition_count int ,omitempty
+internal/discovery.Evaluation edition_offset int ,omitempty
+internal/discovery.Evaluation editions []Edition ,omitempty
+internal/discovery.Evaluation editions[].archive_id string ,omitempty
+internal/discovery.Evaluation editions[].dates []string
+internal/discovery.Evaluation editions[].findings []string ,omitempty
+internal/discovery.Evaluation editions[].id string
+internal/discovery.Evaluation editions[].isbns []string ,omitempty
+internal/discovery.Evaluation editions[].landing_page string
+internal/discovery.Evaluation editions[].languages []string
+internal/discovery.Evaluation editions[].publishers []string
+internal/discovery.Evaluation editions[].title string
+internal/discovery.Evaluation files []OfferedFile
+internal/discovery.Evaluation files[].access_status string
+internal/discovery.Evaluation files[].candidate_kind string
+internal/discovery.Evaluation files[].declared_bytes *int64 ,omitempty
+internal/discovery.Evaluation files[].download_url string ,omitempty
+internal/discovery.Evaluation files[].drm_status string
+internal/discovery.Evaluation files[].findings []string
+internal/discovery.Evaluation files[].name string
+internal/discovery.Evaluation files[].private_state string
+internal/discovery.Evaluation files[].restriction_state string
+internal/discovery.Evaluation files[].rights_status string
+internal/discovery.Evaluation files[].source_format string
+internal/discovery.Evaluation files[].source_md5 string ,omitempty
+internal/discovery.Evaluation files[].source_sha1 string ,omitempty
+internal/discovery.Evaluation id string
+internal/discovery.Evaluation landing_page string
+internal/discovery.Evaluation languages []string
+internal/discovery.Evaluation librivox *LibriVoxLink ,omitempty
+internal/discovery.Evaluation librivox.detail string ,omitempty
+internal/discovery.Evaluation librivox.project *LibriVoxProject ,omitempty
+internal/discovery.Evaluation librivox.project.archive_item string ,omitempty
+internal/discovery.Evaluation librivox.project.id string
+internal/discovery.Evaluation librivox.project.language string ,omitempty
+internal/discovery.Evaluation librivox.project.metadata_sha256 string
+internal/discovery.Evaluation librivox.project.sections []LibriVoxSection
+internal/discovery.Evaluation librivox.project.sections[].declared_seconds int ,omitempty
+internal/discovery.Evaluation librivox.project.sections[].number int
+internal/discovery.Evaluation librivox.project.sections[].readers []Reader
+internal/discovery.Evaluation librivox.project.sections[].readers[].librivox_reader_id string
+internal/discovery.Evaluation librivox.project.sections[].readers[].name string
+internal/discovery.Evaluation librivox.project.sections[].title string ,omitempty
+internal/discovery.Evaluation librivox.project.title string
+internal/discovery.Evaluation librivox.project.url string ,omitempty
+internal/discovery.Evaluation librivox.project_id string
+internal/discovery.Evaluation librivox.status string
+internal/discovery.Evaluation limitations []string
+internal/discovery.Evaluation loc_classes []string ,omitempty
+internal/discovery.Evaluation media_types []string
+internal/discovery.Evaluation metadata_sha256 string
+internal/discovery.Evaluation metadata_url string
+internal/discovery.Evaluation openlibrary_edition string ,omitempty
+internal/discovery.Evaluation publishers []string
+internal/discovery.Evaluation recordings []Recording ,omitempty
+internal/discovery.Evaluation recordings[].acquirable bool
+internal/discovery.Evaluation recordings[].declared_bytes int64
+internal/discovery.Evaluation recordings[].findings []string
+internal/discovery.Evaluation recordings[].order_source string
+internal/discovery.Evaluation recordings[].reader_evidence string ,omitempty
+internal/discovery.Evaluation recordings[].source_format string
+internal/discovery.Evaluation recordings[].tracks []RecordingTrack
+internal/discovery.Evaluation recordings[].tracks[].declared_bytes int64
+internal/discovery.Evaluation recordings[].tracks[].declared_seconds float64 ,omitempty
+internal/discovery.Evaluation recordings[].tracks[].declared_track int ,omitempty
+internal/discovery.Evaluation recordings[].tracks[].file string
+internal/discovery.Evaluation recordings[].tracks[].position int
+internal/discovery.Evaluation recordings[].tracks[].readers []Reader ,omitempty
+internal/discovery.Evaluation recordings[].tracks[].readers[].librivox_reader_id string
+internal/discovery.Evaluation recordings[].tracks[].readers[].name string
+internal/discovery.Evaluation recordings[].tracks[].title string ,omitempty
+internal/discovery.Evaluation restriction_evidence map[string]string
+internal/discovery.Evaluation rights_statements []string
+internal/discovery.Evaluation source string
+internal/discovery.Evaluation subjects []string ,omitempty
+internal/discovery.Evaluation titles []string
+internal/discovery.Page offset int
+internal/discovery.Page order string
+internal/discovery.Page query string
+internal/discovery.Page results []Result
+internal/discovery.Page results[].access_type string
+internal/discovery.Page results[].authors []string
+internal/discovery.Page results[].id string
+internal/discovery.Page results[].issued string ,omitempty
+internal/discovery.Page results[].landing_page string
+internal/discovery.Page results[].languages []string
+internal/discovery.Page results[].media_type string ,omitempty
+internal/discovery.Page results[].title string
+internal/discovery.Page source string
+internal/discovery.Page total int
+internal/inventory.PAR2Report bytes_read int64
+internal/inventory.PAR2Report complete bool
+internal/inventory.PAR2Report file_probe_attempts int
+internal/inventory.PAR2Report limitations []string
+internal/inventory.PAR2Report packet_attempts int
+internal/inventory.PAR2Report protected_data string
+internal/inventory.PAR2Report recoverability string
+internal/inventory.PAR2Report schema_version int
+internal/inventory.PAR2Report scope string
+internal/inventory.PAR2Report sets []PAR2Set
+internal/inventory.PAR2Report sets[].conflicts []string
+internal/inventory.PAR2Report sets[].creator_declarations []PAR2Creator
+internal/inventory.PAR2Report sets[].creator_declarations[].declared_text string ,omitempty
+internal/inventory.PAR2Report sets[].creator_declarations[].declared_text_hex string ,omitempty
+internal/inventory.PAR2Report sets[].creator_declarations[].locations []PAR2Location
+internal/inventory.PAR2Report sets[].creator_declarations[].locations[].file string
+internal/inventory.PAR2Report sets[].creator_declarations[].locations[].offset int64
+internal/inventory.PAR2Report sets[].declared_set_id string
+internal/inventory.PAR2Report sets[].file_declarations []PAR2Description
+internal/inventory.PAR2Report sets[].file_declarations[].declared_bytes uint64
+internal/inventory.PAR2Report sets[].file_declarations[].declared_file_id string
+internal/inventory.PAR2Report sets[].file_declarations[].declared_md5 string
+internal/inventory.PAR2Report sets[].file_declarations[].declared_md5_first_16k string
+internal/inventory.PAR2Report sets[].file_declarations[].declared_name string ,omitempty
+internal/inventory.PAR2Report sets[].file_declarations[].declared_name_hex string ,omitempty
+internal/inventory.PAR2Report sets[].file_declarations[].locations []PAR2Location
+internal/inventory.PAR2Report sets[].file_declarations[].locations[].file string
+internal/inventory.PAR2Report sets[].file_declarations[].locations[].offset int64
+internal/inventory.PAR2Report sets[].input_checksum_headers int
+internal/inventory.PAR2Report sets[].main_declarations []PAR2Main
+internal/inventory.PAR2Report sets[].main_declarations[].declared_file_ids []string
+internal/inventory.PAR2Report sets[].main_declarations[].declared_recoverable_files uint32
+internal/inventory.PAR2Report sets[].main_declarations[].declared_slice_bytes uint64
+internal/inventory.PAR2Report sets[].main_declarations[].locations []PAR2Location
+internal/inventory.PAR2Report sets[].main_declarations[].locations[].file string
+internal/inventory.PAR2Report sets[].main_declarations[].locations[].offset int64
+internal/inventory.PAR2Report sets[].matching_packet_checksums int
+internal/inventory.PAR2Report sets[].mismatched_packet_checksums int
+internal/inventory.PAR2Report sets[].observed_files []string
+internal/inventory.PAR2Report sets[].packet_headers int
+internal/inventory.PAR2Report sets[].recovery_slice_headers int
+internal/inventory.PAR2Report sets[].unchecked_packet_checksums int
+internal/inventory.PAR2Report sets[].unknown_packet_headers int
+internal/inventory.Report bytes_read int64
+internal/inventory.Report complete bool
+internal/inventory.Report entries []Entry
+internal/inventory.Report entries[].bytes int64 ,omitempty
+internal/inventory.Report entries[].finding string ,omitempty
+internal/inventory.Report entries[].kind string
+internal/inventory.Report entries[].par2_metadata *PAR2File ,omitempty
+internal/inventory.Report entries[].par2_metadata.declared_set_ids []string
+internal/inventory.Report entries[].par2_metadata.findings []PAR2Finding
+internal/inventory.Report entries[].par2_metadata.findings[].detail string
+internal/inventory.Report entries[].par2_metadata.findings[].offset int64
+internal/inventory.Report entries[].par2_metadata.headers_complete bool
+internal/inventory.Report entries[].par2_metadata.input_checksum_headers int
+internal/inventory.Report entries[].par2_metadata.matching_packet_checksums int
+internal/inventory.Report entries[].par2_metadata.metadata_complete bool
+internal/inventory.Report entries[].par2_metadata.mismatched_packet_checksums int
+internal/inventory.Report entries[].par2_metadata.packet_attempts int
+internal/inventory.Report entries[].par2_metadata.packet_headers int
+internal/inventory.Report entries[].par2_metadata.recovery_slice_headers int
+internal/inventory.Report entries[].par2_metadata.signature_probe_complete bool
+internal/inventory.Report entries[].par2_metadata.state string
+internal/inventory.Report entries[].par2_metadata.unchecked_packet_checksums int
+internal/inventory.Report entries[].par2_metadata.unknown_packet_headers int
+internal/inventory.Report entries[].path string
+internal/inventory.Report entries[].sha256 string ,omitempty
+internal/inventory.Report par2_metadata *PAR2Report ,omitempty
+internal/inventory.Report par2_metadata.bytes_read int64
+internal/inventory.Report par2_metadata.complete bool
+internal/inventory.Report par2_metadata.file_probe_attempts int
+internal/inventory.Report par2_metadata.limitations []string
+internal/inventory.Report par2_metadata.packet_attempts int
+internal/inventory.Report par2_metadata.protected_data string
+internal/inventory.Report par2_metadata.recoverability string
+internal/inventory.Report par2_metadata.schema_version int
+internal/inventory.Report par2_metadata.scope string
+internal/inventory.Report par2_metadata.sets []PAR2Set
+internal/inventory.Report par2_metadata.sets[].conflicts []string
+internal/inventory.Report par2_metadata.sets[].creator_declarations []PAR2Creator
+internal/inventory.Report par2_metadata.sets[].creator_declarations[].declared_text string ,omitempty
+internal/inventory.Report par2_metadata.sets[].creator_declarations[].declared_text_hex string ,omitempty
+internal/inventory.Report par2_metadata.sets[].creator_declarations[].locations []PAR2Location
+internal/inventory.Report par2_metadata.sets[].creator_declarations[].locations[].file string
+internal/inventory.Report par2_metadata.sets[].creator_declarations[].locations[].offset int64
+internal/inventory.Report par2_metadata.sets[].declared_set_id string
+internal/inventory.Report par2_metadata.sets[].file_declarations []PAR2Description
+internal/inventory.Report par2_metadata.sets[].file_declarations[].declared_bytes uint64
+internal/inventory.Report par2_metadata.sets[].file_declarations[].declared_file_id string
+internal/inventory.Report par2_metadata.sets[].file_declarations[].declared_md5 string
+internal/inventory.Report par2_metadata.sets[].file_declarations[].declared_md5_first_16k string
+internal/inventory.Report par2_metadata.sets[].file_declarations[].declared_name string ,omitempty
+internal/inventory.Report par2_metadata.sets[].file_declarations[].declared_name_hex string ,omitempty
+internal/inventory.Report par2_metadata.sets[].file_declarations[].locations []PAR2Location
+internal/inventory.Report par2_metadata.sets[].file_declarations[].locations[].file string
+internal/inventory.Report par2_metadata.sets[].file_declarations[].locations[].offset int64
+internal/inventory.Report par2_metadata.sets[].input_checksum_headers int
+internal/inventory.Report par2_metadata.sets[].main_declarations []PAR2Main
+internal/inventory.Report par2_metadata.sets[].main_declarations[].declared_file_ids []string
+internal/inventory.Report par2_metadata.sets[].main_declarations[].declared_recoverable_files uint32
+internal/inventory.Report par2_metadata.sets[].main_declarations[].declared_slice_bytes uint64
+internal/inventory.Report par2_metadata.sets[].main_declarations[].locations []PAR2Location
+internal/inventory.Report par2_metadata.sets[].main_declarations[].locations[].file string
+internal/inventory.Report par2_metadata.sets[].main_declarations[].locations[].offset int64
+internal/inventory.Report par2_metadata.sets[].matching_packet_checksums int
+internal/inventory.Report par2_metadata.sets[].mismatched_packet_checksums int
+internal/inventory.Report par2_metadata.sets[].observed_files []string
+internal/inventory.Report par2_metadata.sets[].packet_headers int
+internal/inventory.Report par2_metadata.sets[].recovery_slice_headers int
+internal/inventory.Report par2_metadata.sets[].unchecked_packet_checksums int
+internal/inventory.Report par2_metadata.sets[].unknown_packet_headers int
+internal/inventory.Report root string
+internal/inventory.Report security_status string
+internal/jobs.Job context any ,omitempty
+internal/jobs.Job created string
+internal/jobs.Job detail string ,omitempty
+internal/jobs.Job error string ,omitempty
+internal/jobs.Job id string
+internal/jobs.Job kind string
+internal/jobs.Job owner string
+internal/jobs.Job progress *Progress ,omitempty
+internal/jobs.Job progress.done int64 ,omitempty
+internal/jobs.Job progress.phase string
+internal/jobs.Job progress.total int64 ,omitempty
+internal/jobs.Job progress.unit string ,omitempty
+internal/jobs.Job request any
+internal/jobs.Job result any ,omitempty
+internal/jobs.Job status string
+internal/jobs.Job updated string
+internal/jobs.record at string
+internal/jobs.record context json.RawMessage ,omitempty
+internal/jobs.record detail string ,omitempty
+internal/jobs.record error string ,omitempty
+internal/jobs.record event string
+internal/jobs.record kind string ,omitempty
+internal/jobs.record progress *Progress ,omitempty
+internal/jobs.record progress.done int64 ,omitempty
+internal/jobs.record progress.phase string
+internal/jobs.record progress.total int64 ,omitempty
+internal/jobs.record progress.unit string ,omitempty
+internal/jobs.record request json.RawMessage ,omitempty
+internal/jobs.record result json.RawMessage ,omitempty
+internal/jobs.record schema_version int
+internal/jobs.record status string ,omitempty
+internal/library.Audit bytes_read int64
+internal/library.Audit complete bool
+internal/library.Audit findings []Finding
+internal/library.Audit findings[].actual_sha256 string ,omitempty
+internal/library.Audit findings[].detail string ,omitempty
+internal/library.Audit findings[].expected_sha256 string ,omitempty
+internal/library.Audit findings[].path string
+internal/library.Audit findings[].status string
+internal/library.Audit root string
+internal/library.Audit security_status string
+internal/library.Audit snapshot_id string
+internal/library.Audit unchanged_locations int
+internal/library.Bookmark asset_id string
+internal/library.Bookmark cursor string ,omitempty
+internal/library.Bookmark id string
+internal/library.Bookmark note string
+internal/library.Bookmark offset int
+internal/library.Bookmark representation string
+internal/library.Bookmark representation_id string
+internal/library.Bookmark unit int
+internal/library.BookmarkState bookmarks []Bookmark
+internal/library.BookmarkState bookmarks[].asset_id string
+internal/library.BookmarkState bookmarks[].cursor string ,omitempty
+internal/library.BookmarkState bookmarks[].id string
+internal/library.BookmarkState bookmarks[].note string
+internal/library.BookmarkState bookmarks[].offset int
+internal/library.BookmarkState bookmarks[].representation string
+internal/library.BookmarkState bookmarks[].representation_id string
+internal/library.BookmarkState bookmarks[].unit int
+internal/library.BookmarkState durability string
+internal/library.BookmarkState enabled bool
+internal/library.BookmarkState library string
+internal/library.BookmarkState library_id string
+internal/library.BookmarkState output string ,omitempty
+internal/library.Catalog assets []Asset
+internal/library.Catalog assets[].bytes int64
+internal/library.Catalog assets[].health *assessment.Report ,omitempty
+internal/library.Catalog assets[].health.antivirus scanner.Result
+internal/library.Catalog assets[].health.antivirus.error string ,omitempty
+internal/library.Catalog assets[].health.antivirus.exit_code int
+internal/library.Catalog assets[].health.antivirus.limitations []string ,omitempty
+internal/library.Catalog assets[].health.antivirus.output string ,omitempty
+internal/library.Catalog assets[].health.antivirus.output_truncated bool ,omitempty
+internal/library.Catalog assets[].health.antivirus.started_at time.Time ,omitzero
+internal/library.Catalog assets[].health.antivirus.status string
+internal/library.Catalog assets[].health.antivirus.tool string ,omitempty
+internal/library.Catalog assets[].health.bytes int64
+internal/library.Catalog assets[].health.checked_at time.Time
+internal/library.Catalog assets[].health.checks Checks
+internal/library.Catalog assets[].health.checks.access_restrictions []string ,omitempty
+internal/library.Catalog assets[].health.checks.conformance string
+internal/library.Catalog assets[].health.checks.content_review string
+internal/library.Catalog assets[].health.checks.epub *EPUBFacts ,omitempty
+internal/library.Catalog assets[].health.checks.epub.expanded_bytes uint64
+internal/library.Catalog assets[].health.checks.epub.identifiers []EPUBIdentifier
+internal/library.Catalog assets[].health.checks.epub.identifiers[].package_unique bool ,omitempty
+internal/library.Catalog assets[].health.checks.epub.identifiers[].scheme string ,omitempty
+internal/library.Catalog assets[].health.checks.epub.identifiers[].value string
+internal/library.Catalog assets[].health.checks.epub.identifiers_omitted int ,omitempty
+internal/library.Catalog assets[].health.checks.epub.images int
+internal/library.Catalog assets[].health.checks.epub.languages []string
+internal/library.Catalog assets[].health.checks.epub.non_whitespace_body_text_characters int
+internal/library.Catalog assets[].health.checks.epub.obfuscated_fonts []string ,omitempty
+internal/library.Catalog assets[].health.checks.epub.page_count_status string
+internal/library.Catalog assets[].health.checks.epub.reading_order_documents int
+internal/library.Catalog assets[].health.checks.epub.titles []string
+internal/library.Catalog assets[].health.checks.epub_package string
+internal/library.Catalog assets[].health.checks.members int ,omitempty
+internal/library.Catalog assets[].health.checks.mp3 *MP3Facts ,omitempty
+internal/library.Catalog assets[].health.checks.mp3.channels int
+internal/library.Catalog assets[].health.checks.mp3.encoded_duration_ms int64
+internal/library.Catalog assets[].health.checks.mp3.format string
+internal/library.Catalog assets[].health.checks.mp3.frames int
+internal/library.Catalog assets[].health.checks.mp3.notes []string
+internal/library.Catalog assets[].health.checks.mp3.sample_rate int
+internal/library.Catalog assets[].health.checks.mp4 *MP4Facts ,omitempty
+internal/library.Catalog assets[].health.checks.mp4.brand string
+internal/library.Catalog assets[].health.checks.mp4.channels int
+internal/library.Catalog assets[].health.checks.mp4.chapter_source string ,omitempty
+internal/library.Catalog assets[].health.checks.mp4.chapters int
+internal/library.Catalog assets[].health.checks.mp4.codec string
+internal/library.Catalog assets[].health.checks.mp4.encoded_duration_ms int64
+internal/library.Catalog assets[].health.checks.mp4.notes []string
+internal/library.Catalog assets[].health.checks.mp4.sample_rate int
+internal/library.Catalog assets[].health.checks.mp4.samples int
+internal/library.Catalog assets[].health.checks.pdf *pdftext.Facts ,omitempty
+internal/library.Catalog assets[].health.checks.pdf.active_content []string
+internal/library.Catalog assets[].health.checks.pdf.active_content_examined bool
+internal/library.Catalog assets[].health.checks.pdf.findings []string
+internal/library.Catalog assets[].health.checks.pdf.first_label string ,omitempty
+internal/library.Catalog assets[].health.checks.pdf.labels_declared bool
+internal/library.Catalog assets[].health.checks.pdf.last_label string ,omitempty
+internal/library.Catalog assets[].health.checks.pdf.pages int
+internal/library.Catalog assets[].health.checks.pdf.partial bool
+internal/library.Catalog assets[].health.checks.pdf.version string
+internal/library.Catalog assets[].health.checks.pdf.web_links int
+internal/library.Catalog assets[].health.checks.signature string
+internal/library.Catalog assets[].health.checks.warnings []string ,omitempty
+internal/library.Catalog assets[].health.checks.zip_crc string
+internal/library.Catalog assets[].health.conformance *conformance.Result ,omitempty
+internal/library.Catalog assets[].health.conformance.detail string ,omitempty
+internal/library.Catalog assets[].health.conformance.errors int
+internal/library.Catalog assets[].health.conformance.executable string ,omitempty
+internal/library.Catalog assets[].health.conformance.fatal int
+internal/library.Catalog assets[].health.conformance.messages []Message
+internal/library.Catalog assets[].health.conformance.messages[].id string
+internal/library.Catalog assets[].health.conformance.messages[].locations []Location ,omitempty
+internal/library.Catalog assets[].health.conformance.messages[].locations[].column int ,omitempty
+internal/library.Catalog assets[].health.conformance.messages[].locations[].line int ,omitempty
+internal/library.Catalog assets[].health.conformance.messages[].locations[].path string
+internal/library.Catalog assets[].health.conformance.messages[].severity string
+internal/library.Catalog assets[].health.conformance.messages[].text string
+internal/library.Catalog assets[].health.conformance.messages_omitted int ,omitempty
+internal/library.Catalog assets[].health.conformance.status string
+internal/library.Catalog assets[].health.conformance.tool string
+internal/library.Catalog assets[].health.conformance.usage int
+internal/library.Catalog assets[].health.conformance.version string ,omitempty
+internal/library.Catalog assets[].health.conformance.warnings int
+internal/library.Catalog assets[].health.decode *decode.Result ,omitempty
+internal/library.Catalog assets[].health.decode.channels int ,omitempty
+internal/library.Catalog assets[].health.decode.decoded_duration_ms int64
+internal/library.Catalog assets[].health.decode.decoded_samples int64
+internal/library.Catalog assets[].health.decode.detail string ,omitempty
+internal/library.Catalog assets[].health.decode.errors int
+internal/library.Catalog assets[].health.decode.executable string ,omitempty
+internal/library.Catalog assets[].health.decode.messages []string
+internal/library.Catalog assets[].health.decode.messages_omitted int ,omitempty
+internal/library.Catalog assets[].health.decode.sample_rate int ,omitempty
+internal/library.Catalog assets[].health.decode.status string
+internal/library.Catalog assets[].health.decode.tool string
+internal/library.Catalog assets[].health.decode.version string ,omitempty
+internal/library.Catalog assets[].health.detected_format string
+internal/library.Catalog assets[].health.file string
+internal/library.Catalog assets[].health.findings []string
+internal/library.Catalog assets[].health.limitations []string
+internal/library.Catalog assets[].health.sha256 string
+internal/library.Catalog assets[].health.status string
+internal/library.Catalog assets[].id string
+internal/library.Catalog assets[].locations []Location
+internal/library.Catalog assets[].locations[].candidate_kind string
+internal/library.Catalog assets[].locations[].path string
+internal/library.Catalog assets[].sha256 string
+internal/library.Catalog complete bool
+internal/library.Catalog created_at time.Time
+internal/library.Catalog excluded []inventory.Entry
+internal/library.Catalog excluded[].bytes int64 ,omitempty
+internal/library.Catalog excluded[].finding string ,omitempty
+internal/library.Catalog excluded[].kind string
+internal/library.Catalog excluded[].par2_metadata *PAR2File ,omitempty
+internal/library.Catalog excluded[].par2_metadata.declared_set_ids []string
+internal/library.Catalog excluded[].par2_metadata.findings []PAR2Finding
+internal/library.Catalog excluded[].par2_metadata.findings[].detail string
+internal/library.Catalog excluded[].par2_metadata.findings[].offset int64
+internal/library.Catalog excluded[].par2_metadata.headers_complete bool
+internal/library.Catalog excluded[].par2_metadata.input_checksum_headers int
+internal/library.Catalog excluded[].par2_metadata.matching_packet_checksums int
+internal/library.Catalog excluded[].par2_metadata.metadata_complete bool
+internal/library.Catalog excluded[].par2_metadata.mismatched_packet_checksums int
+internal/library.Catalog excluded[].par2_metadata.packet_attempts int
+internal/library.Catalog excluded[].par2_metadata.packet_headers int
+internal/library.Catalog excluded[].par2_metadata.recovery_slice_headers int
+internal/library.Catalog excluded[].par2_metadata.signature_probe_complete bool
+internal/library.Catalog excluded[].par2_metadata.state string
+internal/library.Catalog excluded[].par2_metadata.unchecked_packet_checksums int
+internal/library.Catalog excluded[].par2_metadata.unknown_packet_headers int
+internal/library.Catalog excluded[].path string
+internal/library.Catalog excluded[].sha256 string ,omitempty
+internal/library.Catalog id string
+internal/library.Catalog root_hint string
+internal/library.Catalog schema_version int
+internal/library.CleanupResult applied bool
+internal/library.CleanupResult cleanup_id string ,omitempty
+internal/library.CleanupResult entries []CleanupEntry
+internal/library.CleanupResult entries[].archive_leaves []CleanupArchiveLeaf ,omitempty
+internal/library.CleanupResult entries[].archive_leaves[].bytes int64
+internal/library.CleanupResult entries[].archive_leaves[].chain []string
+internal/library.CleanupResult entries[].archive_leaves[].holding string
+internal/library.CleanupResult entries[].archive_leaves[].sha256 string
+internal/library.CleanupResult entries[].archive_proof string ,omitempty
+internal/library.CleanupResult entries[].disposition string
+internal/library.CleanupResult entries[].files []CleanupFile ,omitempty
+internal/library.CleanupResult entries[].files[].bytes int64
+internal/library.CleanupResult entries[].files[].path string
+internal/library.CleanupResult entries[].files[].sha256 string
+internal/library.CleanupResult entries[].holdings []string ,omitempty
+internal/library.CleanupResult entries[].kind string
+internal/library.CleanupResult entries[].outcome string ,omitempty
+internal/library.CleanupResult entries[].path string
+internal/library.CleanupResult entries[].reason string
+internal/library.CleanupResult folder string
+internal/library.CleanupResult holding_area string ,omitempty
+internal/library.CleanupResult keep int
+internal/library.CleanupResult library string
+internal/library.CleanupResult library_id string ,omitempty
+internal/library.CleanupResult limitations []string
+internal/library.CleanupResult move int
+internal/library.CleanupResult move_bytes int64
+internal/library.CleanupResult moved int
+internal/library.CleanupResult not_moved int
+internal/library.CleanupResult plan_digest string
+internal/library.CleanupResult resumed bool
+internal/library.CleanupResult schema_version int
+internal/library.Collection items []CollectionItem
+internal/library.Collection items[].file string ,omitempty
+internal/library.Collection items[].note string ,omitempty
+internal/library.Collection items[].recording string ,omitempty
+internal/library.Collection items[].source string
+internal/library.Collection name string
+internal/library.Collection schema_version int
+internal/library.CollectionDiffResult added []CollectionPosition
+internal/library.CollectionDiffResult added[].item CollectionItem
+internal/library.CollectionDiffResult added[].item.file string ,omitempty
+internal/library.CollectionDiffResult added[].item.note string ,omitempty
+internal/library.CollectionDiffResult added[].item.recording string ,omitempty
+internal/library.CollectionDiffResult added[].item.source string
+internal/library.CollectionDiffResult added[].position int
+internal/library.CollectionDiffResult after CollectionRevision
+internal/library.CollectionDiffResult after.items int
+internal/library.CollectionDiffResult after.name string
+internal/library.CollectionDiffResult after.path string
+internal/library.CollectionDiffResult after.sha256 string
+internal/library.CollectionDiffResult before CollectionRevision
+internal/library.CollectionDiffResult before.items int
+internal/library.CollectionDiffResult before.name string
+internal/library.CollectionDiffResult before.path string
+internal/library.CollectionDiffResult before.sha256 string
+internal/library.CollectionDiffResult changed bool
+internal/library.CollectionDiffResult complete bool
+internal/library.CollectionDiffResult limitations []string
+internal/library.CollectionDiffResult name_changed bool
+internal/library.CollectionDiffResult notes_changed []CollectionNoteChange
+internal/library.CollectionDiffResult notes_changed[].after_position int
+internal/library.CollectionDiffResult notes_changed[].before_note string
+internal/library.CollectionDiffResult notes_changed[].before_position int
+internal/library.CollectionDiffResult notes_changed[].item CollectionItem
+internal/library.CollectionDiffResult notes_changed[].item.file string ,omitempty
+internal/library.CollectionDiffResult notes_changed[].item.note string ,omitempty
+internal/library.CollectionDiffResult notes_changed[].item.recording string ,omitempty
+internal/library.CollectionDiffResult notes_changed[].item.source string
+internal/library.CollectionDiffResult removed []CollectionPosition
+internal/library.CollectionDiffResult removed[].item CollectionItem
+internal/library.CollectionDiffResult removed[].item.file string ,omitempty
+internal/library.CollectionDiffResult removed[].item.note string ,omitempty
+internal/library.CollectionDiffResult removed[].item.recording string ,omitempty
+internal/library.CollectionDiffResult removed[].item.source string
+internal/library.CollectionDiffResult removed[].position int
+internal/library.CollectionDiffResult retained_order []CollectionOrderEntry
+internal/library.CollectionDiffResult retained_order[].after_position int
+internal/library.CollectionDiffResult retained_order[].before_position int
+internal/library.CollectionDiffResult retained_order[].item CollectionItem
+internal/library.CollectionDiffResult retained_order[].item.file string ,omitempty
+internal/library.CollectionDiffResult retained_order[].item.note string ,omitempty
+internal/library.CollectionDiffResult retained_order[].item.recording string ,omitempty
+internal/library.CollectionDiffResult retained_order[].item.source string
+internal/library.CollectionDiffResult schema_version int
+internal/library.CollectionStatusResult collection string
+internal/library.CollectionStatusResult collection_sha256 string
+internal/library.CollectionStatusResult held int
+internal/library.CollectionStatusResult held_in_review int
+internal/library.CollectionStatusResult items []CollectionItemStatus
+internal/library.CollectionStatusResult items[].declared_tracks int ,omitempty
+internal/library.CollectionStatusResult items[].detail string ,omitempty
+internal/library.CollectionStatusResult items[].held_tracks int ,omitempty
+internal/library.CollectionStatusResult items[].holdings []string
+internal/library.CollectionStatusResult items[].item CollectionItem
+internal/library.CollectionStatusResult items[].item.file string ,omitempty
+internal/library.CollectionStatusResult items[].item.note string ,omitempty
+internal/library.CollectionStatusResult items[].item.recording string ,omitempty
+internal/library.CollectionStatusResult items[].item.source string
+internal/library.CollectionStatusResult items[].packet string
+internal/library.CollectionStatusResult items[].status string
+internal/library.CollectionStatusResult library string
+internal/library.CollectionStatusResult library_id string
+internal/library.CollectionStatusResult limitations []string
+internal/library.CollectionStatusResult name string
+internal/library.CollectionStatusResult not_held int
+internal/library.CollectionStatusResult recording_incomplete int
+internal/library.CollectionStatusResult schema_version int
+internal/library.ExportResult asset_id string
+internal/library.ExportResult bytes int64
+internal/library.ExportResult format string
+internal/library.ExportResult launched string ,omitempty
+internal/library.ExportResult library_id string
+internal/library.ExportResult limitations []string
+internal/library.ExportResult path string
+internal/library.ExportResult read_only bool
+internal/library.ExportResult reused bool
+internal/library.ExportResult sha256 string
+internal/library.ExportResult title string ,omitempty
+internal/library.Holding bytes int64
+internal/library.Holding format string
+internal/library.Holding id string
+internal/library.Holding identifiers_omitted int ,omitempty
+internal/library.Holding identities []Identity ,omitempty
+internal/library.Holding identities[].confidence string
+internal/library.Holding identities[].id string
+internal/library.Holding identities[].origin string
+internal/library.Holding identities[].package_unique bool ,omitempty
+internal/library.Holding identities[].raw string
+internal/library.Holding identities[].role string
+internal/library.Holding identities[].scheme string ,omitempty
+internal/library.Holding identities_recorded bool ,omitempty
+internal/library.Holding languages []string
+internal/library.Holding library_id string
+internal/library.Holding path string
+internal/library.Holding reason string
+internal/library.Holding schema_version int
+internal/library.Holding sha256 string
+internal/library.Holding sources []Source
+internal/library.Holding sources[].declared_licenses []string ,omitempty
+internal/library.Holding sources[].declared_rights []string ,omitempty
+internal/library.Holding sources[].declared_url string ,omitempty
+internal/library.Holding sources[].identities []Identity ,omitempty
+internal/library.Holding sources[].identities[].confidence string
+internal/library.Holding sources[].identities[].id string
+internal/library.Holding sources[].identities[].origin string
+internal/library.Holding sources[].identities[].package_unique bool ,omitempty
+internal/library.Holding sources[].identities[].raw string
+internal/library.Holding sources[].identities[].role string
+internal/library.Holding sources[].identities[].scheme string ,omitempty
+internal/library.Holding sources[].kind string
+internal/library.Holding sources[].narration *Narration ,omitempty
+internal/library.Holding sources[].narration.evidence string
+internal/library.Holding sources[].narration.id string
+internal/library.Holding sources[].narration.title string ,omitempty
+internal/library.Holding sources[].path string
+internal/library.Holding sources[].recording *SourceRecording ,omitempty
+internal/library.Holding sources[].recording.declared_seconds float64 ,omitempty
+internal/library.Holding sources[].recording.position int
+internal/library.Holding sources[].recording.readers []Reader ,omitempty
+internal/library.Holding sources[].recording.readers[].librivox_reader_id string
+internal/library.Holding sources[].recording.readers[].name string
+internal/library.Holding sources[].recording.source_format string
+internal/library.Holding sources[].recording.title string ,omitempty
+internal/library.Holding sources[].recording.tracks int
+internal/library.Holding sources[].source_file string ,omitempty
+internal/library.Holding sources[].source_id string ,omitempty
+internal/library.Holding status string
+internal/library.Holding titles []string
+internal/library.ImportResult already_held bool
+internal/library.ImportResult antivirus string ,omitempty
+internal/library.ImportResult applied bool
+internal/library.ImportResult apply_requested bool ,omitempty
+internal/library.ImportResult asset_id string ,omitempty
+internal/library.ImportResult bytes int64 ,omitempty
+internal/library.ImportResult durability string
+internal/library.ImportResult findings []string
+internal/library.ImportResult format string ,omitempty
+internal/library.ImportResult holding *Holding ,omitempty
+internal/library.ImportResult holding.bytes int64
+internal/library.ImportResult holding.format string
+internal/library.ImportResult holding.id string
+internal/library.ImportResult holding.identifiers_omitted int ,omitempty
+internal/library.ImportResult holding.identities []Identity ,omitempty
+internal/library.ImportResult holding.identities[].confidence string
+internal/library.ImportResult holding.identities[].id string
+internal/library.ImportResult holding.identities[].origin string
+internal/library.ImportResult holding.identities[].package_unique bool ,omitempty
+internal/library.ImportResult holding.identities[].raw string
+internal/library.ImportResult holding.identities[].role string
+internal/library.ImportResult holding.identities[].scheme string ,omitempty
+internal/library.ImportResult holding.identities_recorded bool ,omitempty
+internal/library.ImportResult holding.languages []string
+internal/library.ImportResult holding.library_id string
+internal/library.ImportResult holding.path string
+internal/library.ImportResult holding.reason string
+internal/library.ImportResult holding.schema_version int
+internal/library.ImportResult holding.sha256 string
+internal/library.ImportResult holding.sources []Source
+internal/library.ImportResult holding.sources[].declared_licenses []string ,omitempty
+internal/library.ImportResult holding.sources[].declared_rights []string ,omitempty
+internal/library.ImportResult holding.sources[].declared_url string ,omitempty
+internal/library.ImportResult holding.sources[].identities []Identity ,omitempty
+internal/library.ImportResult holding.sources[].identities[].confidence string
+internal/library.ImportResult holding.sources[].identities[].id string
+internal/library.ImportResult holding.sources[].identities[].origin string
+internal/library.ImportResult holding.sources[].identities[].package_unique bool ,omitempty
+internal/library.ImportResult holding.sources[].identities[].raw string
+internal/library.ImportResult holding.sources[].identities[].role string
+internal/library.ImportResult holding.sources[].identities[].scheme string ,omitempty
+internal/library.ImportResult holding.sources[].kind string
+internal/library.ImportResult holding.sources[].narration *Narration ,omitempty
+internal/library.ImportResult holding.sources[].narration.evidence string
+internal/library.ImportResult holding.sources[].narration.id string
+internal/library.ImportResult holding.sources[].narration.title string ,omitempty
+internal/library.ImportResult holding.sources[].path string
+internal/library.ImportResult holding.sources[].recording *SourceRecording ,omitempty
+internal/library.ImportResult holding.sources[].recording.declared_seconds float64 ,omitempty
+internal/library.ImportResult holding.sources[].recording.position int
+internal/library.ImportResult holding.sources[].recording.readers []Reader ,omitempty
+internal/library.ImportResult holding.sources[].recording.readers[].librivox_reader_id string
+internal/library.ImportResult holding.sources[].recording.readers[].name string
+internal/library.ImportResult holding.sources[].recording.source_format string
+internal/library.ImportResult holding.sources[].recording.title string ,omitempty
+internal/library.ImportResult holding.sources[].recording.tracks int
+internal/library.ImportResult holding.sources[].source_file string ,omitempty
+internal/library.ImportResult holding.sources[].source_id string ,omitempty
+internal/library.ImportResult holding.status string
+internal/library.ImportResult holding.titles []string
+internal/library.ImportResult identifiers_omitted int ,omitempty
+internal/library.ImportResult identities []Identity ,omitempty
+internal/library.ImportResult identities[].confidence string
+internal/library.ImportResult identities[].id string
+internal/library.ImportResult identities[].origin string
+internal/library.ImportResult identities[].package_unique bool ,omitempty
+internal/library.ImportResult identities[].raw string
+internal/library.ImportResult identities[].role string
+internal/library.ImportResult identities[].scheme string ,omitempty
+internal/library.ImportResult identities_recorded bool ,omitempty
+internal/library.ImportResult languages []string
+internal/library.ImportResult library string
+internal/library.ImportResult library_id string ,omitempty
+internal/library.ImportResult limitations []string
+internal/library.ImportResult path string ,omitempty
+internal/library.ImportResult plan string ,omitempty
+internal/library.ImportResult reason string ,omitempty
+internal/library.ImportResult recovered_rescan bool ,omitempty
+internal/library.ImportResult resumed bool
+internal/library.ImportResult scan_requested bool ,omitempty
+internal/library.ImportResult schema_version int
+internal/library.ImportResult sha256 string ,omitempty
+internal/library.ImportResult source string
+internal/library.ImportResult source_evidence *Source ,omitempty
+internal/library.ImportResult source_evidence.declared_licenses []string ,omitempty
+internal/library.ImportResult source_evidence.declared_rights []string ,omitempty
+internal/library.ImportResult source_evidence.declared_url string ,omitempty
+internal/library.ImportResult source_evidence.identities []Identity ,omitempty
+internal/library.ImportResult source_evidence.identities[].confidence string
+internal/library.ImportResult source_evidence.identities[].id string
+internal/library.ImportResult source_evidence.identities[].origin string
+internal/library.ImportResult source_evidence.identities[].package_unique bool ,omitempty
+internal/library.ImportResult source_evidence.identities[].raw string
+internal/library.ImportResult source_evidence.identities[].role string
+internal/library.ImportResult source_evidence.identities[].scheme string ,omitempty
+internal/library.ImportResult source_evidence.kind string
+internal/library.ImportResult source_evidence.narration *Narration ,omitempty
+internal/library.ImportResult source_evidence.narration.evidence string
+internal/library.ImportResult source_evidence.narration.id string
+internal/library.ImportResult source_evidence.narration.title string ,omitempty
+internal/library.ImportResult source_evidence.path string
+internal/library.ImportResult source_evidence.recording *SourceRecording ,omitempty
+internal/library.ImportResult source_evidence.recording.declared_seconds float64 ,omitempty
+internal/library.ImportResult source_evidence.recording.position int
+internal/library.ImportResult source_evidence.recording.readers []Reader ,omitempty
+internal/library.ImportResult source_evidence.recording.readers[].librivox_reader_id string
+internal/library.ImportResult source_evidence.recording.readers[].name string
+internal/library.ImportResult source_evidence.recording.source_format string
+internal/library.ImportResult source_evidence.recording.title string ,omitempty
+internal/library.ImportResult source_evidence.recording.tracks int
+internal/library.ImportResult source_evidence.source_file string ,omitempty
+internal/library.ImportResult source_evidence.source_id string ,omitempty
+internal/library.ImportResult source_kind string ,omitempty
+internal/library.ImportResult status string ,omitempty
+internal/library.ImportResult titles []string
+internal/library.IngestResult applied bool
+internal/library.IngestResult checked int
+internal/library.IngestResult complete bool
+internal/library.IngestResult failed int
+internal/library.IngestResult folder string
+internal/library.IngestResult imported int
+internal/library.IngestResult items []IngestItem
+internal/library.IngestResult items[].detail string ,omitempty
+internal/library.IngestResult items[].import *ImportResult ,omitempty
+internal/library.IngestResult items[].import.already_held bool
+internal/library.IngestResult items[].import.antivirus string ,omitempty
+internal/library.IngestResult items[].import.applied bool
+internal/library.IngestResult items[].import.apply_requested bool ,omitempty
+internal/library.IngestResult items[].import.asset_id string ,omitempty
+internal/library.IngestResult items[].import.bytes int64 ,omitempty
+internal/library.IngestResult items[].import.durability string
+internal/library.IngestResult items[].import.findings []string
+internal/library.IngestResult items[].import.format string ,omitempty
+internal/library.IngestResult items[].import.holding *Holding ,omitempty
+internal/library.IngestResult items[].import.holding.bytes int64
+internal/library.IngestResult items[].import.holding.format string
+internal/library.IngestResult items[].import.holding.id string
+internal/library.IngestResult items[].import.holding.identifiers_omitted int ,omitempty
+internal/library.IngestResult items[].import.holding.identities []Identity ,omitempty
+internal/library.IngestResult items[].import.holding.identities[].confidence string
+internal/library.IngestResult items[].import.holding.identities[].id string
+internal/library.IngestResult items[].import.holding.identities[].origin string
+internal/library.IngestResult items[].import.holding.identities[].package_unique bool ,omitempty
+internal/library.IngestResult items[].import.holding.identities[].raw string
+internal/library.IngestResult items[].import.holding.identities[].role string
+internal/library.IngestResult items[].import.holding.identities[].scheme string ,omitempty
+internal/library.IngestResult items[].import.holding.identities_recorded bool ,omitempty
+internal/library.IngestResult items[].import.holding.languages []string
+internal/library.IngestResult items[].import.holding.library_id string
+internal/library.IngestResult items[].import.holding.path string
+internal/library.IngestResult items[].import.holding.reason string
+internal/library.IngestResult items[].import.holding.schema_version int
+internal/library.IngestResult items[].import.holding.sha256 string
+internal/library.IngestResult items[].import.holding.sources []Source
+internal/library.IngestResult items[].import.holding.sources[].declared_licenses []string ,omitempty
+internal/library.IngestResult items[].import.holding.sources[].declared_rights []string ,omitempty
+internal/library.IngestResult items[].import.holding.sources[].declared_url string ,omitempty
+internal/library.IngestResult items[].import.holding.sources[].identities []Identity ,omitempty
+internal/library.IngestResult items[].import.holding.sources[].identities[].confidence string
+internal/library.IngestResult items[].import.holding.sources[].identities[].id string
+internal/library.IngestResult items[].import.holding.sources[].identities[].origin string
+internal/library.IngestResult items[].import.holding.sources[].identities[].package_unique bool ,omitempty
+internal/library.IngestResult items[].import.holding.sources[].identities[].raw string
+internal/library.IngestResult items[].import.holding.sources[].identities[].role string
+internal/library.IngestResult items[].import.holding.sources[].identities[].scheme string ,omitempty
+internal/library.IngestResult items[].import.holding.sources[].kind string
+internal/library.IngestResult items[].import.holding.sources[].narration *Narration ,omitempty
+internal/library.IngestResult items[].import.holding.sources[].narration.evidence string
+internal/library.IngestResult items[].import.holding.sources[].narration.id string
+internal/library.IngestResult items[].import.holding.sources[].narration.title string ,omitempty
+internal/library.IngestResult items[].import.holding.sources[].path string
+internal/library.IngestResult items[].import.holding.sources[].recording *SourceRecording ,omitempty
+internal/library.IngestResult items[].import.holding.sources[].recording.declared_seconds float64 ,omitempty
+internal/library.IngestResult items[].import.holding.sources[].recording.position int
+internal/library.IngestResult items[].import.holding.sources[].recording.readers []Reader ,omitempty
+internal/library.IngestResult items[].import.holding.sources[].recording.readers[].librivox_reader_id string
+internal/library.IngestResult items[].import.holding.sources[].recording.readers[].name string
+internal/library.IngestResult items[].import.holding.sources[].recording.source_format string
+internal/library.IngestResult items[].import.holding.sources[].recording.title string ,omitempty
+internal/library.IngestResult items[].import.holding.sources[].recording.tracks int
+internal/library.IngestResult items[].import.holding.sources[].source_file string ,omitempty
+internal/library.IngestResult items[].import.holding.sources[].source_id string ,omitempty
+internal/library.IngestResult items[].import.holding.status string
+internal/library.IngestResult items[].import.holding.titles []string
+internal/library.IngestResult items[].import.identifiers_omitted int ,omitempty
+internal/library.IngestResult items[].import.identities []Identity ,omitempty
+internal/library.IngestResult items[].import.identities[].confidence string
+internal/library.IngestResult items[].import.identities[].id string
+internal/library.IngestResult items[].import.identities[].origin string
+internal/library.IngestResult items[].import.identities[].package_unique bool ,omitempty
+internal/library.IngestResult items[].import.identities[].raw string
+internal/library.IngestResult items[].import.identities[].role string
+internal/library.IngestResult items[].import.identities[].scheme string ,omitempty
+internal/library.IngestResult items[].import.identities_recorded bool ,omitempty
+internal/library.IngestResult items[].import.languages []string
+internal/library.IngestResult items[].import.library string
+internal/library.IngestResult items[].import.library_id string ,omitempty
+internal/library.IngestResult items[].import.limitations []string
+internal/library.IngestResult items[].import.path string ,omitempty
+internal/library.IngestResult items[].import.plan string ,omitempty
+internal/library.IngestResult items[].import.reason string ,omitempty
+internal/library.IngestResult items[].import.recovered_rescan bool ,omitempty
+internal/library.IngestResult items[].import.resumed bool
+internal/library.IngestResult items[].import.scan_requested bool ,omitempty
+internal/library.IngestResult items[].import.schema_version int
+internal/library.IngestResult items[].import.sha256 string ,omitempty
+internal/library.IngestResult items[].import.source string
+internal/library.IngestResult items[].import.source_evidence *Source ,omitempty
+internal/library.IngestResult items[].import.source_evidence.declared_licenses []string ,omitempty
+internal/library.IngestResult items[].import.source_evidence.declared_rights []string ,omitempty
+internal/library.IngestResult items[].import.source_evidence.declared_url string ,omitempty
+internal/library.IngestResult items[].import.source_evidence.identities []Identity ,omitempty
+internal/library.IngestResult items[].import.source_evidence.identities[].confidence string
+internal/library.IngestResult items[].import.source_evidence.identities[].id string
+internal/library.IngestResult items[].import.source_evidence.identities[].origin string
+internal/library.IngestResult items[].import.source_evidence.identities[].package_unique bool ,omitempty
+internal/library.IngestResult items[].import.source_evidence.identities[].raw string
+internal/library.IngestResult items[].import.source_evidence.identities[].role string
+internal/library.IngestResult items[].import.source_evidence.identities[].scheme string ,omitempty
+internal/library.IngestResult items[].import.source_evidence.kind string
+internal/library.IngestResult items[].import.source_evidence.narration *Narration ,omitempty
+internal/library.IngestResult items[].import.source_evidence.narration.evidence string
+internal/library.IngestResult items[].import.source_evidence.narration.id string
+internal/library.IngestResult items[].import.source_evidence.narration.title string ,omitempty
+internal/library.IngestResult items[].import.source_evidence.path string
+internal/library.IngestResult items[].import.source_evidence.recording *SourceRecording ,omitempty
+internal/library.IngestResult items[].import.source_evidence.recording.declared_seconds float64 ,omitempty
+internal/library.IngestResult items[].import.source_evidence.recording.position int
+internal/library.IngestResult items[].import.source_evidence.recording.readers []Reader ,omitempty
+internal/library.IngestResult items[].import.source_evidence.recording.readers[].librivox_reader_id string
+internal/library.IngestResult items[].import.source_evidence.recording.readers[].name string
+internal/library.IngestResult items[].import.source_evidence.recording.source_format string
+internal/library.IngestResult items[].import.source_evidence.recording.title string ,omitempty
+internal/library.IngestResult items[].import.source_evidence.recording.tracks int
+internal/library.IngestResult items[].import.source_evidence.source_file string ,omitempty
+internal/library.IngestResult items[].import.source_evidence.source_id string ,omitempty
+internal/library.IngestResult items[].import.source_kind string ,omitempty
+internal/library.IngestResult items[].import.status string ,omitempty
+internal/library.IngestResult items[].import.titles []string
+internal/library.IngestResult items[].kind string
+internal/library.IngestResult items[].outcome string
+internal/library.IngestResult items[].source string
+internal/library.IngestResult library string
+internal/library.IngestResult limitations []string
+internal/library.IngestResult not_imported int
+internal/library.IngestResult review int
+internal/library.IngestResult schema_version int
+internal/library.LibraryCheck checked int
+internal/library.LibraryCheck cleanups int
+internal/library.LibraryCheck healthy bool
+internal/library.LibraryCheck held_bytes int64
+internal/library.LibraryCheck held_files int
+internal/library.LibraryCheck holdings int
+internal/library.LibraryCheck issues []CheckIssue
+internal/library.LibraryCheck issues[].detail string
+internal/library.LibraryCheck issues[].kind string
+internal/library.LibraryCheck issues[].path string ,omitempty
+internal/library.LibraryCheck library string
+internal/library.LibraryCheck library_id string
+internal/library.LibraryCheck limitations []string
+internal/library.LibraryCheck next []string
+internal/library.LibraryCheck review_by_reason map[string]int
+internal/library.LibraryCheck schema_version int
+internal/library.LibraryCheck unverified int
+internal/library.LibraryCheck verified int
+internal/library.ManagedAudit assets int
+internal/library.ManagedAudit findings []Finding
+internal/library.ManagedAudit findings[].actual_sha256 string ,omitempty
+internal/library.ManagedAudit findings[].detail string ,omitempty
+internal/library.ManagedAudit findings[].expected_sha256 string ,omitempty
+internal/library.ManagedAudit findings[].path string
+internal/library.ManagedAudit findings[].status string
+internal/library.ManagedAudit library_id string
+internal/library.ManagedAudit matching_checked int
+internal/library.ManagedAudit root string
+internal/library.ManagedAudit security_status string
+internal/library.NarrationResult action string
+internal/library.NarrationResult already_recorded bool
+internal/library.NarrationResult applied bool
+internal/library.NarrationResult apply_requested bool
+internal/library.NarrationResult library string
+internal/library.NarrationResult library_id string ,omitempty
+internal/library.NarrationResult limitations []string
+internal/library.NarrationResult plan string ,omitempty
+internal/library.NarrationResult recovered_rescan bool ,omitempty
+internal/library.NarrationResult schema_version int
+internal/library.NarrationResult statement *NarrationDeclarationStatus ,omitempty
+internal/library.NarrationResult statement.active bool
+internal/library.NarrationResult statement.declaration NarrationDeclaration
+internal/library.NarrationResult statement.declaration.narration_id string
+internal/library.NarrationResult statement.declaration.recordings []NarrationSelection
+internal/library.NarrationResult statement.declaration.recordings[].byte_identity string
+internal/library.NarrationResult statement.declaration.recordings[].kind string
+internal/library.NarrationResult statement.declaration.recordings[].source_format string
+internal/library.NarrationResult statement.declaration.recordings[].source_id string
+internal/library.NarrationResult statement.declaration.schema string
+internal/library.NarrationResult statement.evidence string
+internal/library.NarrationResult statement.id string
+internal/library.NarrationResult statement.selections []NarrationSelectionStatus
+internal/library.NarrationResult statement.selections[].ordered_assets []string ,omitempty
+internal/library.NarrationResult statement.selections[].selection NarrationSelection
+internal/library.NarrationResult statement.selections[].selection.byte_identity string
+internal/library.NarrationResult statement.selections[].selection.kind string
+internal/library.NarrationResult statement.selections[].selection.source_format string
+internal/library.NarrationResult statement.selections[].selection.source_id string
+internal/library.NarrationResult statement.selections[].status string
+internal/library.NarrationResult statement.status string
+internal/library.NarrationResult verified_assets int
+internal/library.NarrationResult verified_bytes int64
+internal/library.Page assets []Asset
+internal/library.Page assets[].bytes int64
+internal/library.Page assets[].health *assessment.Report ,omitempty
+internal/library.Page assets[].health.antivirus scanner.Result
+internal/library.Page assets[].health.antivirus.error string ,omitempty
+internal/library.Page assets[].health.antivirus.exit_code int
+internal/library.Page assets[].health.antivirus.limitations []string ,omitempty
+internal/library.Page assets[].health.antivirus.output string ,omitempty
+internal/library.Page assets[].health.antivirus.output_truncated bool ,omitempty
+internal/library.Page assets[].health.antivirus.started_at time.Time ,omitzero
+internal/library.Page assets[].health.antivirus.status string
+internal/library.Page assets[].health.antivirus.tool string ,omitempty
+internal/library.Page assets[].health.bytes int64
+internal/library.Page assets[].health.checked_at time.Time
+internal/library.Page assets[].health.checks Checks
+internal/library.Page assets[].health.checks.access_restrictions []string ,omitempty
+internal/library.Page assets[].health.checks.conformance string
+internal/library.Page assets[].health.checks.content_review string
+internal/library.Page assets[].health.checks.epub *EPUBFacts ,omitempty
+internal/library.Page assets[].health.checks.epub.expanded_bytes uint64
+internal/library.Page assets[].health.checks.epub.identifiers []EPUBIdentifier
+internal/library.Page assets[].health.checks.epub.identifiers[].package_unique bool ,omitempty
+internal/library.Page assets[].health.checks.epub.identifiers[].scheme string ,omitempty
+internal/library.Page assets[].health.checks.epub.identifiers[].value string
+internal/library.Page assets[].health.checks.epub.identifiers_omitted int ,omitempty
+internal/library.Page assets[].health.checks.epub.images int
+internal/library.Page assets[].health.checks.epub.languages []string
+internal/library.Page assets[].health.checks.epub.non_whitespace_body_text_characters int
+internal/library.Page assets[].health.checks.epub.obfuscated_fonts []string ,omitempty
+internal/library.Page assets[].health.checks.epub.page_count_status string
+internal/library.Page assets[].health.checks.epub.reading_order_documents int
+internal/library.Page assets[].health.checks.epub.titles []string
+internal/library.Page assets[].health.checks.epub_package string
+internal/library.Page assets[].health.checks.members int ,omitempty
+internal/library.Page assets[].health.checks.mp3 *MP3Facts ,omitempty
+internal/library.Page assets[].health.checks.mp3.channels int
+internal/library.Page assets[].health.checks.mp3.encoded_duration_ms int64
+internal/library.Page assets[].health.checks.mp3.format string
+internal/library.Page assets[].health.checks.mp3.frames int
+internal/library.Page assets[].health.checks.mp3.notes []string
+internal/library.Page assets[].health.checks.mp3.sample_rate int
+internal/library.Page assets[].health.checks.mp4 *MP4Facts ,omitempty
+internal/library.Page assets[].health.checks.mp4.brand string
+internal/library.Page assets[].health.checks.mp4.channels int
+internal/library.Page assets[].health.checks.mp4.chapter_source string ,omitempty
+internal/library.Page assets[].health.checks.mp4.chapters int
+internal/library.Page assets[].health.checks.mp4.codec string
+internal/library.Page assets[].health.checks.mp4.encoded_duration_ms int64
+internal/library.Page assets[].health.checks.mp4.notes []string
+internal/library.Page assets[].health.checks.mp4.sample_rate int
+internal/library.Page assets[].health.checks.mp4.samples int
+internal/library.Page assets[].health.checks.pdf *pdftext.Facts ,omitempty
+internal/library.Page assets[].health.checks.pdf.active_content []string
+internal/library.Page assets[].health.checks.pdf.active_content_examined bool
+internal/library.Page assets[].health.checks.pdf.findings []string
+internal/library.Page assets[].health.checks.pdf.first_label string ,omitempty
+internal/library.Page assets[].health.checks.pdf.labels_declared bool
+internal/library.Page assets[].health.checks.pdf.last_label string ,omitempty
+internal/library.Page assets[].health.checks.pdf.pages int
+internal/library.Page assets[].health.checks.pdf.partial bool
+internal/library.Page assets[].health.checks.pdf.version string
+internal/library.Page assets[].health.checks.pdf.web_links int
+internal/library.Page assets[].health.checks.signature string
+internal/library.Page assets[].health.checks.warnings []string ,omitempty
+internal/library.Page assets[].health.checks.zip_crc string
+internal/library.Page assets[].health.conformance *conformance.Result ,omitempty
+internal/library.Page assets[].health.conformance.detail string ,omitempty
+internal/library.Page assets[].health.conformance.errors int
+internal/library.Page assets[].health.conformance.executable string ,omitempty
+internal/library.Page assets[].health.conformance.fatal int
+internal/library.Page assets[].health.conformance.messages []Message
+internal/library.Page assets[].health.conformance.messages[].id string
+internal/library.Page assets[].health.conformance.messages[].locations []Location ,omitempty
+internal/library.Page assets[].health.conformance.messages[].locations[].column int ,omitempty
+internal/library.Page assets[].health.conformance.messages[].locations[].line int ,omitempty
+internal/library.Page assets[].health.conformance.messages[].locations[].path string
+internal/library.Page assets[].health.conformance.messages[].severity string
+internal/library.Page assets[].health.conformance.messages[].text string
+internal/library.Page assets[].health.conformance.messages_omitted int ,omitempty
+internal/library.Page assets[].health.conformance.status string
+internal/library.Page assets[].health.conformance.tool string
+internal/library.Page assets[].health.conformance.usage int
+internal/library.Page assets[].health.conformance.version string ,omitempty
+internal/library.Page assets[].health.conformance.warnings int
+internal/library.Page assets[].health.decode *decode.Result ,omitempty
+internal/library.Page assets[].health.decode.channels int ,omitempty
+internal/library.Page assets[].health.decode.decoded_duration_ms int64
+internal/library.Page assets[].health.decode.decoded_samples int64
+internal/library.Page assets[].health.decode.detail string ,omitempty
+internal/library.Page assets[].health.decode.errors int
+internal/library.Page assets[].health.decode.executable string ,omitempty
+internal/library.Page assets[].health.decode.messages []string
+internal/library.Page assets[].health.decode.messages_omitted int ,omitempty
+internal/library.Page assets[].health.decode.sample_rate int ,omitempty
+internal/library.Page assets[].health.decode.status string
+internal/library.Page assets[].health.decode.tool string
+internal/library.Page assets[].health.decode.version string ,omitempty
+internal/library.Page assets[].health.detected_format string
+internal/library.Page assets[].health.file string
+internal/library.Page assets[].health.findings []string
+internal/library.Page assets[].health.limitations []string
+internal/library.Page assets[].health.sha256 string
+internal/library.Page assets[].health.status string
+internal/library.Page assets[].id string
+internal/library.Page assets[].locations []Location
+internal/library.Page assets[].locations[].candidate_kind string
+internal/library.Page assets[].locations[].path string
+internal/library.Page assets[].sha256 string
+internal/library.Page format_filter string
+internal/library.Page offset int
+internal/library.Page query string
+internal/library.Page snapshot_id string
+internal/library.Page total_assets int
+internal/library.PurgeResult applied bool
+internal/library.PurgeResult archive_groups []PurgeArchiveGroup ,omitempty
+internal/library.PurgeResult archive_groups[].file_indices []int
+internal/library.PurgeResult archive_groups[].leaf_digest string ,omitempty
+internal/library.PurgeResult archive_groups[].proof string
+internal/library.PurgeResult cleanup_id string
+internal/library.PurgeResult files []PurgeFile
+internal/library.PurgeResult files[].bytes int64
+internal/library.PurgeResult files[].disposition string
+internal/library.PurgeResult files[].holdings []string ,omitempty
+internal/library.PurgeResult files[].index int
+internal/library.PurgeResult files[].outcome string ,omitempty
+internal/library.PurgeResult files[].path string
+internal/library.PurgeResult files[].sha256 string
+internal/library.PurgeResult folder string
+internal/library.PurgeResult keep int
+internal/library.PurgeResult library string
+internal/library.PurgeResult library_id string ,omitempty
+internal/library.PurgeResult limitations []string
+internal/library.PurgeResult plan_digest string
+internal/library.PurgeResult purge int
+internal/library.PurgeResult purge_bytes int64
+internal/library.PurgeResult purged int
+internal/library.PurgeResult purged_bytes int64
+internal/library.PurgeResult resumed bool
+internal/library.PurgeResult schema_version int
+internal/library.RecordingsResult byte_identities []RecordingByteIdentity
+internal/library.RecordingsResult byte_identities[].id string
+internal/library.RecordingsResult byte_identities[].ordered_assets []string
+internal/library.RecordingsResult byte_identities[].recordings []RecordingRef
+internal/library.RecordingsResult byte_identities[].recordings[].complete bool
+internal/library.RecordingsResult byte_identities[].recordings[].kind string
+internal/library.RecordingsResult byte_identities[].recordings[].source_format string
+internal/library.RecordingsResult byte_identities[].recordings[].source_id string
+internal/library.RecordingsResult byte_identities[].schema string
+internal/library.RecordingsResult library string
+internal/library.RecordingsResult library_id string
+internal/library.RecordingsResult limitations []string
+internal/library.RecordingsResult narrations []NarrationGroup
+internal/library.RecordingsResult narrations[].narration Narration
+internal/library.RecordingsResult narrations[].narration.evidence string
+internal/library.RecordingsResult narrations[].narration.id string
+internal/library.RecordingsResult narrations[].narration.title string ,omitempty
+internal/library.RecordingsResult narrations[].recordings []RecordingRef
+internal/library.RecordingsResult narrations[].recordings[].complete bool
+internal/library.RecordingsResult narrations[].recordings[].kind string
+internal/library.RecordingsResult narrations[].recordings[].source_format string
+internal/library.RecordingsResult narrations[].recordings[].source_id string
+internal/library.RecordingsResult recordings []RecordingManifest
+internal/library.RecordingsResult recordings[].complete bool
+internal/library.RecordingsResult recordings[].declared_tracks int
+internal/library.RecordingsResult recordings[].findings []string
+internal/library.RecordingsResult recordings[].held_tracks int
+internal/library.RecordingsResult recordings[].kind string
+internal/library.RecordingsResult recordings[].missing_positions []int
+internal/library.RecordingsResult recordings[].narration *Narration ,omitempty
+internal/library.RecordingsResult recordings[].narration.evidence string
+internal/library.RecordingsResult recordings[].narration.id string
+internal/library.RecordingsResult recordings[].narration.title string ,omitempty
+internal/library.RecordingsResult recordings[].narrators []Reader
+internal/library.RecordingsResult recordings[].narrators[].librivox_reader_id string
+internal/library.RecordingsResult recordings[].narrators[].name string
+internal/library.RecordingsResult recordings[].probed bool
+internal/library.RecordingsResult recordings[].probed_duration_ms *int64 ,omitempty
+internal/library.RecordingsResult recordings[].schema string
+internal/library.RecordingsResult recordings[].source_format string
+internal/library.RecordingsResult recordings[].source_id string
+internal/library.RecordingsResult recordings[].tracks []RecordingEntry
+internal/library.RecordingsResult recordings[].tracks[].asset_id string
+internal/library.RecordingsResult recordings[].tracks[].bytes int64
+internal/library.RecordingsResult recordings[].tracks[].channels int ,omitempty
+internal/library.RecordingsResult recordings[].tracks[].chapters []audio.Chapter ,omitempty
+internal/library.RecordingsResult recordings[].tracks[].chapters[].end_ms int64
+internal/library.RecordingsResult recordings[].tracks[].chapters[].id string
+internal/library.RecordingsResult recordings[].tracks[].chapters[].start_ms int64
+internal/library.RecordingsResult recordings[].tracks[].chapters[].title string ,omitempty
+internal/library.RecordingsResult recordings[].tracks[].declared_seconds float64 ,omitempty
+internal/library.RecordingsResult recordings[].tracks[].declared_title string ,omitempty
+internal/library.RecordingsResult recordings[].tracks[].detail string ,omitempty
+internal/library.RecordingsResult recordings[].tracks[].encoded_duration_ms int64 ,omitempty
+internal/library.RecordingsResult recordings[].tracks[].encoded_samples int64 ,omitempty
+internal/library.RecordingsResult recordings[].tracks[].position int
+internal/library.RecordingsResult recordings[].tracks[].probe string
+internal/library.RecordingsResult recordings[].tracks[].readers []Reader ,omitempty
+internal/library.RecordingsResult recordings[].tracks[].readers[].librivox_reader_id string
+internal/library.RecordingsResult recordings[].tracks[].readers[].name string
+internal/library.RecordingsResult recordings[].tracks[].sample_rate int ,omitempty
+internal/library.RecordingsResult recordings[].tracks[].source_file string
+internal/library.RecordingsResult recordings[].tracks[].start_ms *int64 ,omitempty
+internal/library.RecordingsResult recordings[].tracks[].status string
+internal/library.RecordingsResult schema_version int
+internal/library.RecordingsResult user_declarations []NarrationDeclarationStatus
+internal/library.RecordingsResult user_declarations[].active bool
+internal/library.RecordingsResult user_declarations[].declaration NarrationDeclaration
+internal/library.RecordingsResult user_declarations[].declaration.narration_id string
+internal/library.RecordingsResult user_declarations[].declaration.recordings []NarrationSelection
+internal/library.RecordingsResult user_declarations[].declaration.recordings[].byte_identity string
+internal/library.RecordingsResult user_declarations[].declaration.recordings[].kind string
+internal/library.RecordingsResult user_declarations[].declaration.recordings[].source_format string
+internal/library.RecordingsResult user_declarations[].declaration.recordings[].source_id string
+internal/library.RecordingsResult user_declarations[].declaration.schema string
+internal/library.RecordingsResult user_declarations[].evidence string
+internal/library.RecordingsResult user_declarations[].id string
+internal/library.RecordingsResult user_declarations[].selections []NarrationSelectionStatus
+internal/library.RecordingsResult user_declarations[].selections[].ordered_assets []string ,omitempty
+internal/library.RecordingsResult user_declarations[].selections[].selection NarrationSelection
+internal/library.RecordingsResult user_declarations[].selections[].selection.byte_identity string
+internal/library.RecordingsResult user_declarations[].selections[].selection.kind string
+internal/library.RecordingsResult user_declarations[].selections[].selection.source_format string
+internal/library.RecordingsResult user_declarations[].selections[].selection.source_id string
+internal/library.RecordingsResult user_declarations[].selections[].status string
+internal/library.RecordingsResult user_declarations[].status string
+internal/library.RecordingsResult user_narrations []NarrationGroup
+internal/library.RecordingsResult user_narrations[].narration Narration
+internal/library.RecordingsResult user_narrations[].narration.evidence string
+internal/library.RecordingsResult user_narrations[].narration.id string
+internal/library.RecordingsResult user_narrations[].narration.title string ,omitempty
+internal/library.RecordingsResult user_narrations[].recordings []RecordingRef
+internal/library.RecordingsResult user_narrations[].recordings[].complete bool
+internal/library.RecordingsResult user_narrations[].recordings[].kind string
+internal/library.RecordingsResult user_narrations[].recordings[].source_format string
+internal/library.RecordingsResult user_narrations[].recordings[].source_id string
+internal/library.RelatedResult groups []RelatedGroup
+internal/library.RelatedResult groups[].key string
+internal/library.RelatedResult groups[].members []RelatedMember
+internal/library.RelatedResult groups[].members[].evidence []string
+internal/library.RelatedResult groups[].members[].format string
+internal/library.RelatedResult groups[].members[].holding string
+internal/library.RelatedResult groups[].members[].title string ,omitempty
+internal/library.RelatedResult groups[].members[].version int ,omitempty
+internal/library.RelatedResult groups[].relation string
+internal/library.RelatedResult holding string ,omitempty
+internal/library.RelatedResult library string
+internal/library.RelatedResult library_id string
+internal/library.RelatedResult limitations []string
+internal/library.RelatedResult offset int
+internal/library.RelatedResult schema_version int
+internal/library.RelatedResult total_groups int
+internal/library.RescanResult applied bool
+internal/library.RescanResult detections int
+internal/library.RescanResult incomplete int
+internal/library.RescanResult library string
+internal/library.RescanResult library_id string ,omitempty
+internal/library.RescanResult limitations []string
+internal/library.RescanResult promoted int
+internal/library.RescanResult scanned []RescanItem
+internal/library.RescanResult scanned[].after string ,omitempty
+internal/library.RescanResult scanned[].after_reason string ,omitempty
+internal/library.RescanResult scanned[].antivirus string ,omitempty
+internal/library.RescanResult scanned[].asset_id string
+internal/library.RescanResult scanned[].before string
+internal/library.RescanResult scanned[].before_reason string
+internal/library.RescanResult scanned[].changed bool
+internal/library.RescanResult scanned[].detail string ,omitempty
+internal/library.RescanResult scanned[].format string
+internal/library.RescanResult scanned[].path string
+internal/library.RescanResult schema_version int
+internal/library.RescanResult skipped []RescanItem
+internal/library.RescanResult skipped[].after string ,omitempty
+internal/library.RescanResult skipped[].after_reason string ,omitempty
+internal/library.RescanResult skipped[].antivirus string ,omitempty
+internal/library.RescanResult skipped[].asset_id string
+internal/library.RescanResult skipped[].before string
+internal/library.RescanResult skipped[].before_reason string
+internal/library.RescanResult skipped[].changed bool
+internal/library.RescanResult skipped[].detail string ,omitempty
+internal/library.RescanResult skipped[].format string
+internal/library.RescanResult skipped[].path string
+internal/library.RestoreResult already_present int
+internal/library.RestoreResult applied bool
+internal/library.RestoreResult blocked int
+internal/library.RestoreResult cleanup_id string
+internal/library.RestoreResult conflicts int
+internal/library.RestoreResult files []RestoreFile
+internal/library.RestoreResult files[].bytes int64
+internal/library.RestoreResult files[].disposition string
+internal/library.RestoreResult files[].outcome string ,omitempty
+internal/library.RestoreResult files[].path string
+internal/library.RestoreResult folder string
+internal/library.RestoreResult held_copy_changed int
+internal/library.RestoreResult library string
+internal/library.RestoreResult library_id string ,omitempty
+internal/library.RestoreResult limitations []string
+internal/library.RestoreResult not_held int
+internal/library.RestoreResult purged int
+internal/library.RestoreResult restore int
+internal/library.RestoreResult resumed bool
+internal/library.RestoreResult schema_version int
+internal/library.State created bool
+internal/library.State durability string
+internal/library.State initialized_at *time.Time ,omitempty
+internal/library.State journal_records int
+internal/library.State library_id string ,omitempty
+internal/library.State resumed bool
+internal/library.State root string
+internal/library.State status string
+internal/library.bookmarkEvent asset_id string ,omitempty
+internal/library.bookmarkEvent at string
+internal/library.bookmarkEvent cursor string ,omitempty
+internal/library.bookmarkEvent event string
+internal/library.bookmarkEvent id string ,omitempty
+internal/library.bookmarkEvent library_id string
+internal/library.bookmarkEvent note string
+internal/library.bookmarkEvent offset int
+internal/library.bookmarkEvent representation string ,omitempty
+internal/library.bookmarkEvent representation_id string ,omitempty
+internal/library.bookmarkEvent schema_version int
+internal/library.bookmarkEvent sequence int
+internal/library.bookmarkEvent unit int
+internal/library.bookmarkFile bookmarks []Bookmark
+internal/library.bookmarkFile bookmarks[].asset_id string
+internal/library.bookmarkFile bookmarks[].cursor string ,omitempty
+internal/library.bookmarkFile bookmarks[].id string
+internal/library.bookmarkFile bookmarks[].note string
+internal/library.bookmarkFile bookmarks[].offset int
+internal/library.bookmarkFile bookmarks[].representation string
+internal/library.bookmarkFile bookmarks[].representation_id string
+internal/library.bookmarkFile bookmarks[].unit int
+internal/library.bookmarkFile kind string
+internal/library.bookmarkFile library_id string
+internal/library.bookmarkFile schema_version int
+internal/library.cleanupManifest cleanup_id string
+internal/library.cleanupManifest entries []CleanupEntry
+internal/library.cleanupManifest entries[].archive_leaves []CleanupArchiveLeaf ,omitempty
+internal/library.cleanupManifest entries[].archive_leaves[].bytes int64
+internal/library.cleanupManifest entries[].archive_leaves[].chain []string
+internal/library.cleanupManifest entries[].archive_leaves[].holding string
+internal/library.cleanupManifest entries[].archive_leaves[].sha256 string
+internal/library.cleanupManifest entries[].archive_proof string ,omitempty
+internal/library.cleanupManifest entries[].disposition string
+internal/library.cleanupManifest entries[].files []CleanupFile ,omitempty
+internal/library.cleanupManifest entries[].files[].bytes int64
+internal/library.cleanupManifest entries[].files[].path string
+internal/library.cleanupManifest entries[].files[].sha256 string
+internal/library.cleanupManifest entries[].holdings []string ,omitempty
+internal/library.cleanupManifest entries[].kind string
+internal/library.cleanupManifest entries[].outcome string ,omitempty
+internal/library.cleanupManifest entries[].path string
+internal/library.cleanupManifest entries[].reason string
+internal/library.cleanupManifest folder string
+internal/library.cleanupManifest library_id string
+internal/library.cleanupManifest plan_digest string
+internal/library.cleanupManifest schema_version int
+internal/library.cleanupRecord at string
+internal/library.cleanupRecord cleanup_id string
+internal/library.cleanupRecord count int
+internal/library.cleanupRecord event string
+internal/library.cleanupRecord folder string ,omitempty
+internal/library.cleanupRecord index int
+internal/library.cleanupRecord library_id string
+internal/library.cleanupRecord manifest_sha256 string ,omitempty
+internal/library.cleanupRecord outcome string ,omitempty
+internal/library.cleanupRecord plan_digest string ,omitempty
+internal/library.cleanupRecord schema_version int
+internal/library.cleanupRecord sequence int
+internal/library.journalEvent at time.Time
+internal/library.journalEvent event string
+internal/library.journalEvent library_id string
+internal/library.journalEvent operation_id string
+internal/library.journalEvent schema_version int
+internal/library.journalEvent sequence int
+internal/library.narrationEvent at string
+internal/library.narrationEvent declaration *NarrationDeclaration ,omitempty
+internal/library.narrationEvent declaration.narration_id string
+internal/library.narrationEvent declaration.recordings []NarrationSelection
+internal/library.narrationEvent declaration.recordings[].byte_identity string
+internal/library.narrationEvent declaration.recordings[].kind string
+internal/library.narrationEvent declaration.recordings[].source_format string
+internal/library.narrationEvent declaration.recordings[].source_id string
+internal/library.narrationEvent declaration.schema string
+internal/library.narrationEvent event string
+internal/library.narrationEvent id string
+internal/library.narrationEvent library_id string
+internal/library.narrationEvent schema_version int
+internal/library.narrationEvent sequence int
+internal/library.operation asset_id string
+internal/library.operation at string
+internal/library.operation bytes int64
+internal/library.operation event string
+internal/library.operation format string
+internal/library.operation import_holding_sha256 string ,omitempty
+internal/library.operation import_source_sha256 string ,omitempty
+internal/library.operation library_id string
+internal/library.operation operation_id string
+internal/library.operation reason string
+internal/library.operation schema_version int
+internal/library.operation sequence int
+internal/library.operation source string
+internal/library.operation status string
+internal/library.packetReceipt antivirus string
+internal/library.packetReceipt complete bool
+internal/library.packetReceipt final_url string
+internal/library.packetReceipt intent *struct{Request struct{SourceID string; File string; Recording *SourceRecording}; Selection struct{Rights []string; Licenses []string; LibriVox *struct{ProjectID string; Status string; Project *struct{Title string; ArchiveItem string}}; Identifiers []declaredIdentifier}}
+internal/library.packetReceipt scan *scanner.Result
+internal/library.packetReceipt scan.error string ,omitempty
+internal/library.packetReceipt scan.exit_code int
+internal/library.packetReceipt scan.limitations []string ,omitempty
+internal/library.packetReceipt scan.output string ,omitempty
+internal/library.packetReceipt scan.output_truncated bool ,omitempty
+internal/library.packetReceipt scan.started_at time.Time ,omitzero
+internal/library.packetReceipt scan.status string
+internal/library.packetReceipt scan.tool string ,omitempty
+internal/library.packetReceipt schema_version int
+internal/library.packetReceipt status string
+internal/library.packetReceipt transfer struct{SHA256 string; Bytes int64}
+internal/library.purgeManifest archive_groups []PurgeArchiveGroup ,omitempty
+internal/library.purgeManifest archive_groups[].file_indices []int
+internal/library.purgeManifest archive_groups[].leaf_digest string ,omitempty
+internal/library.purgeManifest archive_groups[].proof string
+internal/library.purgeManifest cleanup_id string
+internal/library.purgeManifest files []PurgeFile
+internal/library.purgeManifest files[].bytes int64
+internal/library.purgeManifest files[].disposition string
+internal/library.purgeManifest files[].holdings []string ,omitempty
+internal/library.purgeManifest files[].index int
+internal/library.purgeManifest files[].outcome string ,omitempty
+internal/library.purgeManifest files[].path string
+internal/library.purgeManifest files[].sha256 string
+internal/library.purgeManifest library_id string
+internal/library.purgeManifest plan_digest string
+internal/library.purgeManifest schema_version int
+internal/mcpserver.Capabilities content content.Capabilities
+internal/mcpserver.Capabilities content.consumption_state string
+internal/mcpserver.Capabilities content.default_representation string
+internal/mcpserver.Capabilities content.max_result_bytes int
+internal/mcpserver.Capabilities content.max_text_bytes int
+internal/mcpserver.Capabilities content.representations []RepresentationCapability
+internal/mcpserver.Capabilities content.representations[].description string
+internal/mcpserver.Capabilities content.representations[].extractor string
+internal/mcpserver.Capabilities content.representations[].id string
+internal/mcpserver.Capabilities content.representations[].operations []string
+internal/mcpserver.Capabilities content.schema_version int
+internal/mcpserver.Capabilities content.unsupported []string
+internal/mcpserver.Capabilities decode bool ,omitempty
+internal/mcpserver.Capabilities limits []string
+internal/mcpserver.Capabilities network bool
+internal/mcpserver.Capabilities read_only bool
+internal/mcpserver.Capabilities scopes []string
+internal/mcpserver.Capabilities tools []string
+internal/mcpserver.Capabilities version string
+internal/mcpserver.Envelope data T
+internal/mcpserver.Envelope error string ,omitempty
+internal/mcpserver.Envelope schema_version int
+internal/mcpserver.Envelope tool string
