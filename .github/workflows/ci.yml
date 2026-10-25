@@ -31,7 +31,7 @@ jobs:
       - name: Verify formatting, build, vet, static analysis, coverage, vulnerabilities
         run: go run ./cmd/verify
       - name: Race detection
-        run: go test -race ./...
+        run: go test -race -timeout=25m ./...
       - name: Exercise native Windows reparse-point boundaries
         if: runner.os == 'Windows'
         run: go test -count=1 -v -run '^TestWindowsReparse' ./internal/safeio ./internal/app ./internal/library

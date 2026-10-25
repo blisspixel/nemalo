@@ -37,7 +37,7 @@ func TestVerificationOrderAndFailures(t *testing.T) {
 	if err := Steps(context.Background(), &out, run, open); err != nil {
 		t.Fatal(err)
 	}
-	if len(commands) != 6 || !strings.Contains(commands[3], "staticcheck") || !strings.Contains(commands[4], "-coverpkg=./...") || !strings.Contains(commands[5], "govulncheck") {
+	if len(commands) != 6 || !strings.Contains(commands[3], "staticcheck") || !strings.Contains(commands[4], "-coverpkg=./...") || !strings.Contains(commands[4], "-timeout=25m") || !strings.Contains(commands[5], "govulncheck") {
 		t.Fatal(commands)
 	}
 	if err := Steps(context.Background(), io.Discard, func(context.Context, string, ...string) ([]byte, error) { return []byte("x.go\n"), nil }, open); err == nil {

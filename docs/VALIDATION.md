@@ -429,7 +429,7 @@ case, because of that junction. Tool versions follow the runner images and are
 recorded, not pinned. This is selected installed-tool behavior, not detection
 coverage, every archive layout or codec, or a release.
 
-### Terminal keyboard and cursor access candidate
+### Terminal keyboard and cursor access
 
 The first accessibility increment
 ([decision 0094](decisions/0094-terminal-keyboard-and-cursor-access.md)) found
@@ -441,9 +441,13 @@ while busy or in a review, physical review confirmation and wide characters.
 The first native run also caught the harness's own wrong field label and an
 identical-screen replay step, both corrected in the harness. On 2026-10-24 a clean exact Linux executable passed all 55 native
 terminal cases, including the real cursor visible at column 84 of the focused
-field and `Ctrl+O` reaching the citation report without a function key. Exact
-hosted runs on all three OSes and a person's screen reader, magnifier and
-keyboard-only review remain required.
+field and `Ctrl+O` reaching the citation report without a function key. Hosted
+[CI 40135336281](https://github.com/blisspixel/nemalo/actions/runs/40135336281)
+and the `main` push run
+[40136786114](https://github.com/blisspixel/nemalo/actions/runs/40136786114)
+passed all six jobs at `dbd0470`, so all 55 terminal cases passed under a real
+macOS PTY and Windows ConPTY too. A person's screen reader, magnifier and
+keyboard-only review remains required.
 
 ## Cited evidence and citation export
 

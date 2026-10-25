@@ -157,8 +157,9 @@ verified, not when code exists. No stage has a time estimate.
    The shared passive `jobs snapshot` prerequisite for
    [issue 59](https://github.com/blisspixel/nemalo/issues/59) is implemented in
    source under [decision 0088](docs/decisions/0088-non-mutating-library-job-snapshot.md).
-   The issue records verification; its optional panel, explicit reader handoff
-   and native lifecycle acceptance remain open. This does not complete stage 5.
+   The issue records verification. Its optional panel, explicit reader handoff
+   and native lifecycle acceptance were deferred past 1.0 by the user on
+   2026-10-24; the panel needs a recorded non-Go adapter decision first.
    State's explicit F10 Jobs view consumes the same passive service. Collections
    now has offline status, revision comparison and a bound acquisition review in
    source ([decision 0089](docs/decisions/0089-collection-acquisition-review.md));
@@ -191,9 +192,9 @@ all of these.
 
 As of 2026-10-24, stages 1 to 4 are accepted and stage 5 is in progress. `main`
 is the only branch and passes hosted CI on Linux, macOS and Windows. No wave is in
-flight. Open issues are [59](https://github.com/blisspixel/nemalo/issues/59)
-(optional desktop panel) and the post-1.0 proposals
-[37](https://github.com/blisspixel/nemalo/issues/37) and
+flight. Open issues are all post-1.0:
+[59](https://github.com/blisspixel/nemalo/issues/59) (optional desktop panel,
+deferred 2026-10-24), [37](https://github.com/blisspixel/nemalo/issues/37) and
 [38](https://github.com/blisspixel/nemalo/issues/38).
 
 Remaining stage 5 work, in order:
@@ -214,13 +215,15 @@ Remaining stage 5 work, in order:
 3. Accessibility review of the TUI and reader. The first increment
    ([decision 0094](docs/decisions/0094-terminal-keyboard-and-cursor-access.md))
    adds `Ctrl+O` for every function-key action and the real terminal cursor in
-   text fields; its exact hosted gate is required. Then a person must run at
+   text fields, and passed all six hosted jobs at `dbd0470`, including the new
+   native cursor and `Ctrl+O` cases on every OS. Then a person must run at
    least one screen reader and magnifier per OS (for example Orca, VoiceOver,
    NVDA) and a keyboard-only session through search, holdings, reading and
    the write reviews, recording what works and what does not.
-4. Issue 59 panel. Its shared snapshot is accepted. The panel needs a recorded
-   decision on a thin QML adapter before any implementation; it is optional and
-   does not gate 1.0.
+
+Hosted Windows runs the test packages with a measured 25-minute budget
+([decision 0095](docs/decisions/0095-windows-test-package-budget.md)); profiling
+the Windows library suite to reduce its time remains worthwhile.
 
 Then stage 6: freeze and document the on-disk formats, envelopes, extractor IDs
 and evidence contract, decide alpha library upgrade or refusal, and run every

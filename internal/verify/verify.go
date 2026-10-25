@@ -81,7 +81,7 @@ func Run(ctx context.Context, out io.Writer) error {
 
 // Steps is injectable to test gate ordering, failure propagation, and coverage enforcement.
 func Steps(ctx context.Context, out io.Writer, run Runner, open func(string) (*os.File, error)) error {
-	commands := [][]string{{"gofmt", "-l", "."}, {"go", "build", "./..."}, {"go", "vet", "./..."}, {"go", "tool", "staticcheck", "./..."}, {"go", "test", "./...", "-coverpkg=./...", "-covermode=atomic", "-coverprofile=coverage.out"}, {"go", "tool", "govulncheck", "./..."}}
+	commands := [][]string{{"gofmt", "-l", "."}, {"go", "build", "./..."}, {"go", "vet", "./..."}, {"go", "tool", "staticcheck", "./..."}, {"go", "test", "-timeout=25m", "./...", "-coverpkg=./...", "-covermode=atomic", "-coverprofile=coverage.out"}, {"go", "tool", "govulncheck", "./..."}}
 	for i, command := range commands {
 		if _, err := fmt.Fprintln(out, strings.Join(command, " ")); err != nil {
 			return err

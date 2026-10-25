@@ -1126,7 +1126,11 @@ go test -race ./...
 
 `verify` runs formatting, build, vet, `go tool staticcheck`, offline tests with all
 first-party packages instrumented, an enforced 80% aggregate statement threshold,
-and `go tool govulncheck`. Exact tool modules/checksums are in `go.mod`/`go.sum`.
+and `go tool govulncheck`. Its tests and the CI race step run with
+`-timeout=25m`, because hosted 4-core Windows runners take most of Go's
+ten-minute default for the library suite
+([decision 0095](decisions/0095-windows-test-package-budget.md)).
+Exact tool modules/checksums are in `go.mod`/`go.sum`.
 Vulnerability checking accesses the Go vulnerability database. Normal unit tests
 use local synthetic fixtures/HTTP servers and do not access public providers.
 Synchronous synthetic archiver children set only `atexit_sleep_ms=0` in their
