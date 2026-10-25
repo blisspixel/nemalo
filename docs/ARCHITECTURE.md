@@ -746,6 +746,10 @@ fetch one bibliographic record from gutenberg.pglaf.org and can download one
 pinned EPUB from that host.
 [Decision 0028](decisions/0028-gutenberg-local-catalog.md) records the catalog.
 [Decision 0029](decisions/0029-gutenberg-selected-epub.md) records the EPUB.
+arXiv evaluation and acquisition accept only an explicit versioned `arxiv:IDvN`,
+from `export.arxiv.org` and `oaipmh.arxiv.org` at one request every three
+seconds, with no search
+([decision 0047](decisions/0047-arxiv-selected-versions.md)).
 Website search and the wider provider behavior below remain planned.
 
 Provider capabilities distinguish search, lookup, asset resolution, download,

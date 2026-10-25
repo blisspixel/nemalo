@@ -48,9 +48,10 @@ three hosted OSes. See
 
 `help`, `version`, `doctor`, `search`, `evaluate`, `catalog fetch`, `acquire`, `inspect`, `check`, `library snapshot`,
 `library list`, `library audit`, `library check`, `library import`, `library ingest`, `library cleanup`, `library restore`, `library purge`,
-`library rescan`, `library recordings`, `library citation`,
+`library rescan`, `library recordings`, `library related`, `library narration`, `library citation`,
+`collection status`, `collection diff`, `collection acquire`,
 `library open`, `library export`, `library init`, `library status`, `bookmark`,
-`content units`, `content navigation`,
+`content units`, `content navigation`, `content pages`,
 `content read`, `content locate`, `content source`, `content resource`, `content capabilities`,
 `read`, `mcp serve`, `jobs`, and `tui` are implemented.
 Managed `content read` can add `--evidence`, or compare the same explicit
@@ -485,7 +486,7 @@ Snapshot/audit use inventory defaults and accept `--max-*` limits, capped at
 Assessment makes an additional source pass over supported unique assets. Catalog
 JSON is bounded to 16 MiB. `list` searches literal metadata/path/hash text, with
 limit 1-100 and offset 0-100000. TUI holdings show 50 matching assets per page.
-`--format all|epub|pdf|mp3` uses exact case-insensitive filename suffixes, excluding
+`--format all|epub|pdf|mp3|m4b|m4a` uses exact case-insensitive filename suffixes, excluding
 `.epub.receipt.json` from EPUB results. It does not manufacture assessment evidence;
 invalid or unassessed files remain representable. CLI defaults to all files; TUI
 defaults to EPUB filenames. Byte duplicates retain all locations even when only
@@ -976,7 +977,8 @@ nemalo mcp serve --scope /path/to/library
 ```
 
 `mcp serve` runs read-only MCP tools on stdio for an agent host: library status,
-holdings, audit, file checks without antivirus, and EPUB content retrieval, each
+holdings, audit, file checks without antivirus, and EPUB, PDF, MP3 and MP4 content,
+collection, citation and evidence reads, each
 over the same services and JSON data as the CLI. `--allow-network` adds catalog
 search and Archive evaluation. `--allow-write` adds `library_import_preview`
 and `library_import_apply`; an apply stores only the plan digest its preview
@@ -1059,14 +1061,17 @@ Applied changes are journaled as `rescan_intent`, holding line, and
 
 ## Configuration
 
-Configuration is an optional strict JSON object with `library` and `review` paths
-and `on_detection` (`quarantine`, the default, or `delete`) for downloads the
-scanner flags. Both paths must be absolute and must not overlap. Unknown fields, multiple JSON
-values, nonregular files, and files over 64 KiB are rejected. These are reserved
-settings for upcoming content operations; current init/status require their own
-explicit directory and do not adopt these settings implicitly.
+Configuration is an optional strict JSON object with `library` and `review` paths,
+`gutenberg_catalog` (the local `pg_catalog.csv`), and `on_detection`
+(`quarantine`, the default, or `delete`) for downloads the scanner flags. Both
+library paths must be absolute and must not overlap. Unknown fields, multiple JSON
+values, nonregular files, and files over 64 KiB are rejected. `mcp serve` adds the
+configured library and review folders to its scopes, Gutenberg search and
+evaluation read the configured catalog, and acquire names the library in its
+next step; init and status still require their own explicit directory.
 
-Precedence: file, then `NEMALO_LIBRARY`/`NEMALO_REVIEW`, then command flags.
+Precedence: file, then `NEMALO_LIBRARY`/`NEMALO_REVIEW`/`NEMALO_GUTENBERG_CATALOG`,
+then command flags.
 `--config FILE` overrides `NEMALO_CONFIG`, which overrides the default config path.
 An explicitly selected missing file is an error. Flags can precede/follow positional
 arguments; `--` ends option parsing. Flags for another command are rejected.
@@ -1105,8 +1110,8 @@ link when the library stays on one filesystem. A source on another filesystem is
 copied, then linked only inside the library. `nemalo doctor` reports
 `descriptor_bridge` for the `/proc/self/fd` check.
 
-`foot`, Ghostty, Alacritty, and Kitty are recognized as truecolor. `NO_COLOR`
-and `TERM=dumb` still disable color. A tmux session stays 256-color. Omarchy
+The TUI uses the terminal's own ANSI palette, so foot, Ghostty, Alacritty, Kitty
+and tmux render it with their themes; `NO_COLOR` and `TERM=dumb` disable color. Omarchy
 4.0.4 binds Super shortcuts and uses F9 for dictation. It does not bind
 Alt+1 through Alt+0, F2 through F8, or Ctrl+C. Ctrl+C still quits Nemalo.
 Super+C is the desktop copy key. Nemalo does not read the Wayland clipboard.
@@ -1202,7 +1207,7 @@ remain available for full-suite coverage comparisons. See
 [Go's integration coverage tools](https://go.dev/doc/build-cover).
 Race instrumentation, every case/assertion and real
 durability operations stay enabled. Children have a four-minute timeout inside
-the parent's unchanged ten-minute package timeout. An unknown/unexecuted group
+the package's 25-minute timeout ([decision 0095](decisions/0095-windows-test-package-budget.md)). An unknown/unexecuted group
 or a failed child fails the parent. Explicit `-run` filters keep their original
 serial subtest selection.
 

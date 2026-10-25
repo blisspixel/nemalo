@@ -462,6 +462,20 @@ no failing input, crash or hang. The dispatched `fuzz.yml` workflow repeats
 this on a hosted runner. Fuzzing finds inputs the targets can reach; it does
 not prove the parsers correct or bound every resource.
 
+The first hosted run,
+[fuzz 40175568819](https://github.com/blisspixel/nemalo/actions/runs/40175568819)
+at `de8cebe` with two minutes per target, passed 23 targets and found a real
+defect in `FuzzNavigationLists` after 1.2 million executions: a 92-byte EPUB
+navigation document made `parseNavList` panic with a copied non-empty
+`strings.Builder`. Its frames stored label text in a Builder by value, and
+growing the frame stack after label text copied it. A crafted EPUB could
+therefore crash the CLI, TUI or MCP server instead of being refused. The NCX
+parser had the same latent pattern without a fuzz target. Both now keep label
+text as copyable bytes. The failing input is a committed corpus case, a
+deterministic test panicked before the fix and passes after it, and the fuzz
+target now also exercises the NCX parser; three further minutes, 8.9 million
+executions, found nothing else.
+
 ## Cited evidence and citation export
 
 On 2026-10-23, local verification of the

@@ -1,6 +1,7 @@
 # Selected source acquisition
 
-Implemented in CLI, JSON, and TUI through `internal/app` and
+Implemented in CLI, JSON, TUI and the MCP `acquisition_start` job (with
+`--allow-write --allow-network`) through `internal/app` and
 `internal/acquisition`. It acquires one selected file, or every track of one
 declared recording, into untrusted intake, and resumes an interrupted transfer
 against the same bytes. It is not checked library publication or a queue.
@@ -74,7 +75,7 @@ creation are exclusive. A completed packet has:
 | --- | --- |
 | `intent.json` | Selected asset, fresh declaration evidence, metadata digest, request bounds, time |
 | `transfer.json` | Response status, `ETag` and whether it is strong, `Last-Modified`, length, final URL; synced before the body |
-| `content.epub`, `content.pdf`, or `content.mp3` | Actual bytes, with a controlled local name |
+| `content.epub`, `.pdf`, `.mp3`, `.m4b` or `.m4a` | Actual bytes, with a controlled local name |
 | `receipt.json` | Measured bytes/SHA-256, source checks, final delivery URL, limited assessment, scan result |
 
 Intent is synced before requesting content. Records are synced pending files
@@ -106,7 +107,7 @@ the file on its own during the scan, the packet is retained incomplete.
 
 | Scan result | Outcome |
 | --- | --- |
-| `no_detections_reported` | `untrusted_intake`; `library import` of the packet records an EPUB as `checked` without scanning again |
+| `no_detections_reported` | `untrusted_intake`; `library import` of the packet records a format whose checks pass as `checked` without scanning again |
 | `unavailable`, `incomplete` | `untrusted_intake`, treated as unscanned; one line names the install command or a retry |
 | `findings` | The content moves to `<state>/quarantine/<time>-<hash>/content.<ext>.quarantined`, or is deleted with `--on-detection delete` or configuration `"on_detection": "delete"`; exit 1 |
 
@@ -163,7 +164,8 @@ checks of the audio. See
 - At most 256 MiB per selected file, or 2 GiB for an M4B or M4A, configurable
   lower with `--max-file-bytes`
   ([decision 0040](decisions/0040-large-mp4-audio-and-scan-limits.md)).
-  One extra byte detects an over-budget response. No automatic retry or bulk fetch.
+  One extra byte detects an over-budget response. No bulk fetch; automatic
+  continuation and retry are bounded as described below.
 - A deadline of five minutes plus a second per 512 KiB of the byte budget, a
   30-second response-header timeout, a 60-second stall timeout that ends a
   silent body as a dropped connection, and shared

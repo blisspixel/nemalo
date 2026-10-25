@@ -128,8 +128,10 @@ discards all quotation, resource bytes, evidence and continuation.
 MCP uses optional `evidence` and `evidence_reference` only on `content_read` and
 explicitly enabled `content_decode_read`. Scopes and existing per-call decoder
 permission still apply. CLI decoded evidence still requires `--decode`; a
-reference never selects a decoder by itself. Units, locate, raw source, resources,
-TUI and snapshot reads retain their earlier contracts.
+reference never selects a decoder by itself. Units, locate, raw source, resources
+and snapshot reads retain their earlier contracts. The TUI requests evidence
+only through its explicit F4 report and replays it with F3 or `r`
+([decision 0090](decisions/0090-terminal-cited-evidence.md)).
 
 `library citation` and scoped read-only MCP `library_citation` export schema
 `nemalo-citation/1`: a standard CSL-JSON item array in `csl_json`, separately from
@@ -504,7 +506,7 @@ It does not test caller-owned atomic acknowledgements or certify subjective expe
 Remaining work, without moving post-1.0 analysis ahead of library delivery:
 
 - TUI unit browsing, bounded reading, repeat, and continuation expose this service.
-  Future MCP must preserve its representation negotiation and failure facts.
+  MCP preserves its representation negotiation and failure facts.
 - Milestone 7: done for PDF access: `pdf-text/1` gives the zero-based physical
   page index and the printed page label separately, text in content-stream order
   with located gaps (images, unmapped font codes, pages without a text layer),
@@ -518,8 +520,9 @@ Remaining work, without moving post-1.0 analysis ahead of library delivery:
   M4B and M4A list sample tables and chapters as `mp4-audio/1`
   ([decision 0039](decisions/0039-mp4-audio-samples.md)); explicit `mp4-audio/2`
   adds bounded original packets and sample-entry evidence. Explicit `mp4-pcm/1`
-  adds full-output-hash-bound decoded samples and small playable WAV ranges;
-  final stage-wide acceptance remains issue 60.
+  adds full-output-hash-bound decoded samples and small playable WAV ranges.
+  Stage 3 acceptance closed issue 60 with its
+  [receipt](https://github.com/blisspixel/nemalo/issues/60#issuecomment-6374231710).
 - External caller: Claude Code on Windows, through `nemalo mcp serve`, read,
   switched works, and resumed from a continuation at the exact stopping byte
   ([decision 0014](decisions/0014-read-only-mcp-server.md)). Other hosts and
