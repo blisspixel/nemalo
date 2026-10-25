@@ -91,7 +91,9 @@ source/library mutation or network is introduced. See the
 `catalog_search` and `catalog_evaluate` exist only with
 `--allow-network`. They search Open Library and Internet Archive.
 Gutenberg search, `evaluate --files`, and `acquire gutenberg:NUMBER` are CLI
-and TUI only. They are not MCP tools. Open Library edition listing and
+and TUI only. They are not MCP tools. arXiv and PMC evaluation/acquisition
+also remain CLI/TUI-only; network/write permission does not add their providers
+to the MCP acquisition tool. Open Library edition listing and
 edition-to-Archive resolution are CLI and TUI only. `catalog_search` still
 returns works, and `catalog_evaluate` still requires `archive:ITEM`. The MCP tools return the CLI's data in a
 `{schema_version, tool, data, error}` envelope; failures are tool errors that keep

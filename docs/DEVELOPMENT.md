@@ -1059,6 +1059,40 @@ Applied changes are journaled as `rescan_intent`, holding line, and
 `rescan_completed`; the next writer completes an interrupted rescan first. See
 [decision 0012](decisions/0012-scan-on-acquire-quarantine-and-rescan.md).
 
+## Selected PMC article versions
+
+```sh
+nemalo evaluate pmc:PMC10009416
+nemalo evaluate pmc:PMC10009416.1
+nemalo acquire pmc:PMC10009416.1 --file PMC10009416.1.pdf --output /path/to/new-packet
+```
+
+Evaluation lists at most 1,000 version prefixes and resolves the highest
+available number when no version was selected. It reads that version's metadata
+and lists only its exact PDF key, on `pmc-oa-opendata.s3.amazonaws.com`.
+Each response is at most 1 MiB and the complete evaluation has a 30-second
+deadline. Truncated, mismatched or ambiguous listings are refused. Requests
+share a one-second minimum interval, bounded retries and source quota waits.
+Redirects are refused. Separate CLI processes do not coordinate this pace.
+
+Acquisition requires an explicit version, the exact PDF name, a positive size
+inside the ordinary PDF budget, a metadata MD5, an explicit open-access flag
+and a recognized CC license code. TDM and unknown rights remain visible without
+a download offer. Retraction is reported separately and does not imply a rights
+restriction. The flags and license are provider declarations. Version objects
+can change; fresh evaluation and size/MD5 checks bind a transfer, and measured
+SHA-256 identifies the received bytes. Assessment, scanning and checked import
+use the existing services. Interrupted packets stay retained; choose new output
+for a fresh transfer. There is no PMC search, collection selection, byte resume
+or MCP tool. TUI evaluation and its explicit acquisition review use the same service.
+
+The intake receipt retains DOI, PMID, citation, version flags and metadata hash.
+Imported holdings retain the versioned source ID, file URL, license statement
+and NLM acknowledgement. This increment does not normalize DOI/PMID into held
+bibliographic identities or infer authors from a citation string. Ordinary
+PDF content access remains source-bound and offline. See
+[decision 0100](decisions/0100-pmc-selected-article-versions.md).
+
 ## Configuration
 
 Configuration is an optional strict JSON object with an optional `schema_version`

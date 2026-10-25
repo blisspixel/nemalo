@@ -6,8 +6,8 @@ local catalog search, evaluation, explicit catalog fetch, and selected EPUB
 intake from gutenberg.pglaf.org are implemented
 ([decision 0028](decisions/0028-gutenberg-local-catalog.md),
 [decision 0029](decisions/0029-gutenberg-selected-epub.md)). Website search,
-formats other than the three pinned EPUBs, and the other integrations below
-remain planned. See [decision 0005](decisions/0005-provider-search-and-evaluation.md) for
+formats other than the three pinned EPUBs, and unimplemented integrations below
+remain planned. Selected arXiv and PMC version PDFs are implemented as described below. See [decision 0005](decisions/0005-provider-search-and-evaluation.md) for
 implemented contracts and limits. The [acquisition guide](ACQUISITION.md)
 distinguishes metadata from actual transfers. This directory
 covers books, scholarly literature, textbooks, audio, children's reading, and
@@ -77,6 +77,18 @@ record; `arXivRaw` also exposes history. Do not assign a latest-record license t
 older file versions without evidence that it applies. Nemalo evaluates and acquires
 one explicit version through the query API, OAI-PMH, and `export.arxiv.org/pdf`, at
 one request every three seconds ([decision 0047](decisions/0047-arxiv-selected-versions.md)).
+
+PMC's [approved automated channels](https://pmc.ncbi.nlm.nih.gov/tools/developers/)
+and [Cloud Service](https://pmc.ncbi.nlm.nih.gov/tools/pmcaws/) were rechecked on
+2026-10-25. The [dataset contract](https://pmc-oa-opendata.s3.amazonaws.com/README.txt)
+provides per-version metadata and PDF MD5 values. Nemalo uses only this anonymous
+HTTPS bucket, not the retired OA Web Service or FTP article packages. It resolves
+one accession/version and acquires one exact PDF only with explicit open-access
+and known CC declarations. Objects within a version can change. No account,
+AWS SDK, search, website scraping or Europe PMC retrieval fallback is added.
+NLM acknowledgement and the warning that observations may not reflect current
+NLM data accompany evaluation and retained rights statements. See
+[decision 0100](decisions/0100-pmc-selected-article-versions.md).
 
 ## Corrections and implementation caveats
 

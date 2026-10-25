@@ -750,6 +750,9 @@ arXiv evaluation and acquisition accept only an explicit versioned `arxiv:IDvN`,
 from `export.arxiv.org` and `oaipmh.arxiv.org` at one request every three
 seconds, with no search
 ([decision 0047](decisions/0047-arxiv-selected-versions.md)).
+PMC uses the same selected-acquisition services for explicit version PDFs, with
+exact-version CC/open-access declarations, size and MD5 checks, one checked host
+and shared request pacing ([decision 0100](decisions/0100-pmc-selected-article-versions.md)).
 Website search and the wider provider behavior below remain planned.
 
 Provider capabilities distinguish search, lookup, asset resolution, download,

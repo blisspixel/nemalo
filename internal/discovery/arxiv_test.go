@@ -105,7 +105,7 @@ func TestArxivEvaluateResolvesVersionsAndLicenses(t *testing.T) {
 func TestArxivWaitingCallRechecksAnExtendedRetryAfter(t *testing.T) {
 	synctest.Test(t, func(t *testing.T) {
 		start := time.Now()
-		a := &Arxiv{next: start.Add(arxivPace)}
+		a := &Arxiv{requestPacer: requestPacer{next: start.Add(arxivPace)}}
 		granted := make(chan time.Time, 1)
 		go func() {
 			if err := a.wait(context.Background()); err != nil {
@@ -132,7 +132,7 @@ func TestArxivWaitingCallRechecksAnExtendedRetryAfter(t *testing.T) {
 func TestArxivWaitingRequestRefusesANewLongRetryAfter(t *testing.T) {
 	synctest.Test(t, func(t *testing.T) {
 		tr := &statusTransport{codes: []int{200}}
-		a := &Arxiv{Client: &http.Client{Transport: tr}, next: time.Now().Add(arxivPace)}
+		a := &Arxiv{Client: &http.Client{Transport: tr}, requestPacer: requestPacer{next: time.Now().Add(arxivPace)}}
 		result := make(chan error, 1)
 		go func() {
 			_, err := a.get(context.Background(), http.MethodGet, "https://export.arxiv.org/api/query")

@@ -17,7 +17,8 @@ No telemetry or required AI service.
 **Early development, not 1.0.** Current source capabilities include:
 
 - Discover and evaluate books through Open Library, Internet Archive and a local
-  Gutenberg catalog; acquire selected ebooks, papers and audiobook recordings.
+  Gutenberg catalog; acquire selected ebooks, explicit arXiv and PMC paper
+  versions, and audiobook recordings.
 - Inspect downloads and supported archives, import into a managed library, audit
   stored bytes, and recover interrupted operations. Sources stay intact on import.
 - Browse holdings and collections, observe scoped recorded jobs, open verified

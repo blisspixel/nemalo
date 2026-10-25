@@ -29,7 +29,7 @@ import (
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
-const Version = "0.1.0-alpha.18"
+const Version = "0.1.0-alpha.19"
 
 type Envelope struct {
 	SchemaVersion int    `json:"schema_version"`
@@ -390,8 +390,9 @@ func Execute(ctx context.Context, args []string, out, errOut io.Writer, service 
 		workID := discovery.ValidOpenLibraryWork(id)
 		editionID := discovery.ValidOpenLibraryEdition(id)
 		arxivID := discovery.ValidArxivID(id)
-		if flags.NArg() != 1 || (!archiveID && !gutenbergID && !workID && !editionID && !arxivID) {
-			return write(nil, errors.New("evaluate requires exactly one archive:ITEM, gutenberg:NUMBER, arxiv:ID[vN], or openlibrary:WORK or openlibrary:EDITION identifier"), 2)
+		pmcID := discovery.ValidPMCID(id)
+		if flags.NArg() != 1 || (!archiveID && !gutenbergID && !workID && !editionID && !arxivID && !pmcID) {
+			return write(nil, errors.New("evaluate requires exactly one archive:ITEM, gutenberg:NUMBER, arxiv:ID[vN], pmc:PMCnumber[.version], or openlibrary:WORK or openlibrary:EDITION identifier"), 2)
 		}
 		if *listFiles && *listEditions {
 			return write(nil, errors.New("evaluate accepts either --files or --editions"), 2)

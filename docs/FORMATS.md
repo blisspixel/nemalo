@@ -84,6 +84,7 @@ refusal, gates compatibility there.
 | Cleanup proofs | `archive-tree/1`, `/2`, `/3`, `rar5-frames/1`, `rar4-frames/1`, `rar5-set/1`, `rar4-set/1`, `rar5-old-set/1`, `rar4-old-set/1`, `zip-stream/1`, `zip-segments/1`. Unknown proofs retain bytes. See [architecture](ARCHITECTURE.md). |
 | Acceptance reports | `nemalo-native-check/1`, `nemalo-terminal-check/1`, `nemalo-installed-tools-check/1` (tooling only) |
 | State IDs | `library:`, `operation:`, `cleanup:`, `bookmark:`, `job:` followed by 32 hex digits |
+| Selected PMC sources | `pmc:PMCnumber.N` binds the explicitly selected distributed version; the file is `PMCnumber.N.pdf`. Existing receipt and holding source fields carry these values. Version objects can change, so the source ID is not byte identity. No new record schema or collection selection is introduced ([0100](decisions/0100-pmc-selected-article-versions.md)). |
 
 ## Freeze status
 

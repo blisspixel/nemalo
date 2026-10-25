@@ -51,6 +51,13 @@ func (s Service) Acquire(ctx context.Context, request acquisition.Request) (acqu
 // acquireProvider selects Archive for archive:ITEM and the bibliographic
 // record for gutenberg:NUMBER. Recordings stay on Archive.
 func (s Service) acquireProvider(id string) (acquisition.Provider, error) {
+	if discovery.ValidPMCID(id) {
+		p, ok := s.Providers["pmc"].(acquisition.Provider)
+		if !ok {
+			return nil, errors.New("PMC acquisition is unavailable")
+		}
+		return p, nil
+	}
 	if discovery.ValidArxivID(id) {
 		a, ok := s.Providers["arxiv"].(acquisition.Provider)
 		if !ok {
@@ -215,11 +222,18 @@ func New() Service {
 		"archive":     archiveWithLibriVox(),
 		"gutenberg":   discovery.NewGutenberg(),
 		"arxiv":       arxivSearcher{discovery.NewArxiv()},
+		"pmc":         pmcSearcher{discovery.NewPMC()},
 	}}
 }
 
-// arxivSearcher registers the arXiv provider, which evaluates explicit
-// identifiers and has no search.
+// pmcSearcher registers explicit PMC evaluation without enabling search.
+type pmcSearcher struct{ *discovery.PMC }
+
+func (pmcSearcher) Search(context.Context, string, int, int) (discovery.Page, error) {
+	return discovery.Page{}, errors.New("PMC requires an explicit identifier with evaluate pmc:PMCnumber; it has no search here")
+}
+
+// arxivSearcher registers explicit arXiv evaluation without enabling search.
 type arxivSearcher struct{ *discovery.Arxiv }
 
 func (arxivSearcher) Search(context.Context, string, int, int) (discovery.Page, error) {

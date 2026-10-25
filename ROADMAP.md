@@ -193,7 +193,10 @@ all of these.
 As of 2026-10-25, stages 1 to 4 are accepted, stage 5 is complete except for
 person-run checks, and stage 6 is in progress. `main`
 is the only branch and passes hosted CI on Linux, macOS and Windows. No wave is in
-flight. Open issues are all post-1.0:
+flight before the PMC increment. Release acceptance is tracked in
+[63](https://github.com/blisspixel/nemalo/issues/63), person-run checks in
+[62](https://github.com/blisspixel/nemalo/issues/62), and the bounded PMC provider
+in [64](https://github.com/blisspixel/nemalo/issues/64). Post-1.0 issues are:
 [59](https://github.com/blisspixel/nemalo/issues/59) (optional desktop panel,
 deferred 2026-10-24), [37](https://github.com/blisspixel/nemalo/issues/37) and
 [38](https://github.com/blisspixel/nemalo/issues/38).
@@ -262,7 +265,12 @@ Next, in order:
 4. The person-run items in issue 62, which do not change formats.
 
 Milestone 7's remaining paper providers and DOI resolution may proceed
-alongside; they are not 1.0 gates. Start each session with the workspace check
+alongside; they are not 1.0 gates. The PMC selected-version increment is
+implemented under [decision 0100](docs/decisions/0100-pmc-selected-article-versions.md)
+and tracked in [issue 64](https://github.com/blisspixel/nemalo/issues/64); its
+acceptance receipt and alpha.19 release evidence are recorded there separately.
+Next provider work is OpenAlex discovery and Unpaywall DOI resolution, each
+requiring a fresh bounded decision and issue before implementation. Start each session with the workspace check
 in `AGENTS.md`.
 
 ## Implementation status
@@ -813,8 +821,11 @@ reported, and a clean PDF can be checked
 ([decision 0032](docs/decisions/0032-pdf-checked-policy.md)). One explicit
 arXiv paper version can be evaluated and acquired, with its latest-version
 license applied only to that version
-([decision 0047](docs/decisions/0047-arxiv-selected-versions.md)). OCR, column
-reconstruction, other providers, and citation export remain. Depends on shared assessment/publication and recovery milestones.
+([decision 0047](docs/decisions/0047-arxiv-selected-versions.md)). PMC version
+evaluation and selected CC-licensed open-access PDF acquisition are implemented
+([decision 0100](docs/decisions/0100-pmc-selected-article-versions.md),
+[issue 64](https://github.com/blisspixel/nemalo/issues/64)). Citation export was
+delivered with milestone 9. OCR, column reconstruction and other providers remain. Depends on shared assessment/publication and recovery milestones.
 
 Deliver a PDF assessment policy, a separate paper collection, arXiv and Europe
 PMC/PMC resolution, then OpenAlex discovery and Unpaywall DOI resolution. Enable

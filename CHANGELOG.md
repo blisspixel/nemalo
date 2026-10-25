@@ -2,6 +2,20 @@
 
 ## Unreleased
 
+## 0.1.0-alpha.19
+
+- Evaluate one PubMed Central article version and acquire its explicitly selected
+  eligible PDF through the PMC Cloud Service. Preserve version-specific rights,
+  retraction and manuscript declarations, NLM acknowledgement, declared size and
+  MD5, and measured SHA-256. Use the existing intake, scanner and import services.
+  PMC has no search, MCP tool, collection selection or byte resume.
+- Share paced request and retry handling between arXiv and PMC, retaining
+  arXiv's three-second interval. TUI acquisition reviews resolve an unversioned
+  PMC selection and retain interrupted PMC/arXiv packets without offering resume.
+- Native CI and installer checks now cover every shipped architecture: Linux,
+  macOS and Windows on amd64 and arm64. Windows arm64 has no Go race detector.
+  This is an alpha release; person-run host/accessibility acceptance remains open.
+
 ## 0.1.0-alpha.18
 
 - Fix a panic in EPUB navigation and NCX parsing: a crafted contents document

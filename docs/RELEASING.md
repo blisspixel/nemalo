@@ -19,7 +19,7 @@ native validation, cross-built artifacts, and remaining limits.
 4. From the clean committed checkout, run:
 
    ```sh
-   go run ./cmd/package --output dist/0.1.0-alpha.18
+   go run ./cmd/package --output dist/0.1.0-alpha.19
    ```
 
 5. Verify `BUILD.txt` against the intended full commit. Verify every `SHA256SUMS`

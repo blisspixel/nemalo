@@ -49,6 +49,12 @@ func (m *model) requestDownload() tea.Cmd {
 			sourceID = m.lastEvaluation.ID
 		}
 	}
+	if m.lastEvaluation != nil && discovery.ValidPMCID(m.submittedInput) && discovery.ValidPMCID(m.lastEvaluation.ID) {
+		paper, _, _ := discovery.SplitPMCID(m.submittedInput)
+		if resolved, _, _ := discovery.SplitPMCID(m.lastEvaluation.ID); resolved == paper {
+			sourceID = m.lastEvaluation.ID
+		}
+	}
 	request := acquisition.Request{SourceID: sourceID, File: m.entries[m.selected].sourceID, Output: m.secondary.Value(), MaxBytes: acquisition.DefaultMaxBytes(m.entries[m.selected].sourceID)}
 	if err := request.Validate(); err != nil {
 		m.status = fmt.Sprintf("Acquisition error: %s", present.Error(err))
@@ -66,6 +72,12 @@ func (m *model) requestDownload() tea.Cmd {
 	// An existing packet for this file with intent and no receipt is an
 	// interrupted transfer: d reviews resuming it instead of a new download.
 	request.Resume = interruptedPacket(abs)
+	if request.Resume && (discovery.ValidPMCID(sourceID) || discovery.ValidArxivID(sourceID)) {
+		m.status = "This provider cannot resume. The interrupted packet is retained; choose a new intake directory."
+		m.outcome = outcomeFailed
+		m.resize()
+		return nil
+	}
 	m.downloadReview, m.confirmReport, m.confirmStatus = &request, m.report, m.status
 	m.input.Blur()
 	m.secondary.Blur()
@@ -81,7 +93,9 @@ func (m *model) requestDownload() tea.Cmd {
 		m.resize()
 		return nil
 	}
-	if discovery.ValidArxivID(request.SourceID) {
+	if discovery.ValidPMCID(request.SourceID) {
+		m.setReport(fmt.Sprintf("Acquire one PMC article version\n\nSource: %s\nSelected file: %s\nNew intake directory: %s\nMaximum transfer: %d bytes\n\nReads fresh version metadata from pmc-oa-opendata.s3.amazonaws.com, then checks the exact PDF size and MD5 and records measured SHA-256. Open-access and known Creative Commons declarations are required. NLM is the source of the data and does not endorse Nemalo. Version objects can change; this observation may not reflect current NLM data.\n\nRuns local assessment and the installed scanner. This is untrusted intake, not checked publication. Existing output is refused. Interrupted packets are retained and cannot be resumed.\n\nEnter acquires this exact selection. Escape returns without writing.\n", request.SourceID, request.File, request.Output, request.MaxBytes))
+	} else if discovery.ValidArxivID(request.SourceID) {
 		m.setReport(fmt.Sprintf("Acquire one arXiv paper version\n\nSource: %s\nSelected file: %s\nNew intake directory: %s\nMaximum transfer: %d bytes\n\nReads the paper's arXiv record again, then downloads this version's PDF from export.arxiv.org at one request every three seconds. arXiv publishes no checksum: the transfer must be exactly the length the host declares, and Nemalo records the SHA-256 it measures. An interrupted transfer cannot be resumed.\n\nCreates intent.json, transfer.json, content.pdf, and receipt.json on success. Existing output is refused. An interrupted packet is kept.\n\nRuns local structure checks without rendering or execution, then scans the downloaded bytes once with the installed scanner, if one is installed. A detection moves the file to the Nemalo quarantine instead of intake. This is untrusted intake, not checked publication. The license applies only when this is the latest version.\n\nEnter acquires this exact selection. Escape returns without writing.\n", request.SourceID, request.File, request.Output, request.MaxBytes))
 	} else if discovery.ValidGutenbergID(request.SourceID) {
 		m.setReport(fmt.Sprintf("Acquire one Gutenberg EPUB\n\nSource: %s\nSelected file: %s\nNew intake directory: %s\nMaximum transfer: %d bytes\n\nRequests the bibliographic record again from gutenberg.pglaf.org, then one EPUB that record names. The record has no checksum. The declared extent may differ from the response length; the transfer checks the response length and stays inside the byte budget. A response without a strong validator cannot be resumed.\n\nCreates intent.json, transfer.json, content.epub, and receipt.json on success. Existing output is refused. An interrupted packet is kept.\n\nRuns local structure checks without rendering or execution, then scans the downloaded bytes once with the installed scanner, if one is installed. A detection moves the file to the Nemalo quarantine instead of intake. This is untrusted intake, not checked publication. The rights sentence is the record's statement.\n\nEnter acquires this exact selection. Escape returns without writing.\n", request.SourceID, request.File, request.Output, request.MaxBytes))

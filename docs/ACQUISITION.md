@@ -235,3 +235,16 @@ source. Failed intake retains its report and output; cancellation does not
 remove partial files. When the selected file belongs to an acquirable recording,
 `a` reviews acquiring every track of that recording into the Intake directory;
 resume a partial recording with the CLI `--resume`.
+
+## PMC versions
+
+`evaluate pmc:PMCnumber[.N]` resolves one distributed version; acquisition
+requires `pmc:PMCnumber.N --file PMCnumber.N.pdf`. The selected PDF must have
+an explicit open-access and known CC declaration, exact pinned cloud object,
+positive declared size and metadata MD5. Fresh metadata precedes the ordinary
+exclusive intake packet. Size and MD5 are verified; SHA-256 records byte identity.
+Article versions can change upstream. NLM attribution and declared license are
+retained, and flags/citation/DOI/PMID remain in the receipt. Missing or unknown
+rights do not enable acquisition. An interrupted packet cannot resume and stays
+retained for review; a new acquisition requires new output. No collection or MCP
+selection is added. See [decision 0100](decisions/0100-pmc-selected-article-versions.md).

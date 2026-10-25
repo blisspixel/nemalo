@@ -74,11 +74,18 @@ func (r Request) Validate() error {
 	archiveID := discovery.ValidArchiveID(r.SourceID)
 	gutenbergID := discovery.ValidGutenbergID(r.SourceID)
 	arxivID := discovery.ValidArxivID(r.SourceID)
-	if (!archiveID && !gutenbergID && !arxivID) || r.File == "." || !fs.ValidPath(r.File) || len(r.File) > 1000 || strings.ContainsAny(r.File, "\\:\x00\r\n") || r.Output == "" || r.MaxBytes < 1 || r.MaxBytes > DefaultMaxBytes(r.File) {
-		return errors.New("acquire requires archive:ITEM, gutenberg:NUMBER, or arxiv:ID, an exact source filename, a new output directory, and a byte budget of 1 through 268435456, or 2147483648 for an M4B or M4A")
+	pmcID := discovery.ValidPMCID(r.SourceID)
+	if (!archiveID && !gutenbergID && !arxivID && !pmcID) || r.File == "." || !fs.ValidPath(r.File) || len(r.File) > 1000 || strings.ContainsAny(r.File, "\\:\x00\r\n") || r.Output == "" || r.MaxBytes < 1 || r.MaxBytes > DefaultMaxBytes(r.File) {
+		return errors.New("acquire requires archive:ITEM, gutenberg:NUMBER, arxiv:IDvN, or pmc:PMCnumber.version, an exact source filename, a new output directory, and a byte budget of 1 through 268435456, or 2147483648 for an M4B or M4A")
 	}
 	if archiveID && format(r.File) == "" {
 		return errors.New("acquisition currently supports selected EPUB, PDF, MP3, M4B, and M4A files")
+	}
+	if pmcID {
+		paper, version, _ := discovery.SplitPMCID(r.SourceID)
+		if version == 0 || r.File != discovery.PMCPDFName(paper, version) {
+			return errors.New("PMC acquisition requires an explicit version and its exact PDF name from evaluate")
+		}
 	}
 	if arxivID {
 		// An explicit version only: an unversioned identifier is resolved by
@@ -612,6 +619,10 @@ func selectFile(e discovery.Evaluation, request Request) (discovery.OfferedFile,
 	case e.Source == "archive" && e.Access == "no_item_restriction_declared":
 		if f.Access != "public_file_candidate" || f.DownloadURL == "" || f.Bytes == nil || *f.Bytes < 1 || *f.Bytes > request.MaxBytes || (f.MD5 == "" && f.SHA1 == "") {
 			return f, errors.New("selected file needs public availability, a positive size within budget, and a source checksum")
+		}
+	case e.Source == "pmc" && e.Access == discovery.PMCAccess:
+		if f.Access != discovery.PMCPDFAccess || f.DownloadURL == "" || f.Bytes == nil || *f.Bytes < 1 || *f.Bytes > request.MaxBytes || f.MD5 == "" || contentFormat(f) != "pdf" {
+			return f, errors.New("selected file needs an eligible PMC version PDF, declared size within budget and MD5")
 		}
 	case e.Source == "arxiv" && e.Access == discovery.ArxivAccess:
 		// arXiv publishes no checksum; the host-declared length is checked.

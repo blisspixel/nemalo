@@ -63,6 +63,9 @@ func InspectPacket(dir string) PacketState {
 		return retained("it holds no intent from acquire")
 	}
 	file := intent.Selection.Files[0]
+	if discovery.ValidPMCID(intent.Request.SourceID) {
+		return retained("a PMC transfer cannot be resumed")
+	}
 	if discovery.ValidArxivID(intent.Request.SourceID) {
 		return retained("an arXiv transfer cannot be resumed")
 	}
