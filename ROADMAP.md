@@ -250,8 +250,11 @@ Next, in order:
    pinned, replaced and uninstalled.
 2. Finish stage 6. The remaining format items are settled
    ([decision 0098](docs/decisions/0098-settle-remaining-format-items.md)).
-   Track the 1.0 release candidate in one issue with each gate and its
-   evidence, and declare FORMATS.md frozen when it is cut.
+   Every shipped architecture now runs native CI
+   ([decision 0099](docs/decisions/0099-native-ci-for-every-shipped-architecture.md)).
+   The release candidate is tracked in
+   [issue 63](https://github.com/blisspixel/nemalo/issues/63), one item per
+   gate with its evidence; declare FORMATS.md frozen when it is cut.
 3. Profile the Windows library suite to restore margin under decision 0095.
 4. The person-run items in issue 62, which do not change formats.
 
