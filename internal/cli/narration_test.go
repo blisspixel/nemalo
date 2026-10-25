@@ -34,7 +34,7 @@ func TestNarrationCLIJSONPreviewApplyReadAndWithdraw(t *testing.T) {
 	for i, item := range []string{"first", "second"} {
 		body := []byte(fmt.Sprintf("ID3 synthetic track %d", i))
 		packet := t.TempDir()
-		receipt := fmt.Sprintf(`{"complete":true,"status":"untrusted_intake","transfer":{"bytes":%d,"sha256":"%x"},"intent":{"request":{"source_id":"archive:%s","source_file":"track.mp3","recording":{"source_format":"MP3","position":1,"tracks":1}}}}`, len(body), sha256.Sum256(body), item)
+		receipt := fmt.Sprintf(`{"schema_version":1,"complete":true,"status":"untrusted_intake","transfer":{"bytes":%d,"sha256":"%x"},"intent":{"request":{"source_id":"archive:%s","source_file":"track.mp3","recording":{"source_format":"MP3","position":1,"tracks":1}}}}`, len(body), sha256.Sum256(body), item)
 		for name, data := range map[string][]byte{"content.mp3": body, "receipt.json": []byte(receipt)} {
 			if err := os.WriteFile(filepath.Join(packet, name), data, 0600); err != nil {
 				t.Fatal(err)

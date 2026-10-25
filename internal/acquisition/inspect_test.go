@@ -30,7 +30,7 @@ func TestInspectPacketReadsWhatAPacketHolds(t *testing.T) {
 		return d
 	}
 	done := packet()
-	writeJSON(t, done, "receipt.json", Result{Complete: true, Status: "untrusted_intake", Intent: &Intent{Request: Request{SourceID: "archive:a", File: "a.epub"}}})
+	writeJSON(t, done, "receipt.json", Result{SchemaVersion: 1, Complete: true, Status: "untrusted_intake", Intent: &Intent{Request: Request{SourceID: "archive:a", File: "a.epub"}}})
 	if s := InspectPacket(done); s.State != PacketImportable || s.SourceID != "archive:a" || s.File != "a.epub" {
 		t.Fatal(s)
 	}
@@ -69,9 +69,14 @@ func TestInspectPacketReadsWhatAPacketHolds(t *testing.T) {
 	if s := InspectRecording(recording); s.State != PacketResumable || s.Remaining != 900 || s.SourceID != "archive:a" || s.Recording != "64Kbps MP3" {
 		t.Fatal(s)
 	}
-	writeJSON(t, recording, recordingReceiptName, RecordingResult{Complete: true, Status: "untrusted_intake", SourceID: "archive:a", Format: "64Kbps MP3"})
+	writeJSON(t, recording, recordingReceiptName, RecordingResult{SchemaVersion: 1, Complete: true, Status: "untrusted_intake", SourceID: "archive:a", Format: "64Kbps MP3"})
 	if s := InspectRecording(recording); s.State != PacketImportable || s.SourceID != "archive:a" || s.Recording != "64Kbps MP3" {
 		t.Fatal(s)
+	}
+	// A receipt of an unknown schema version is never treated as importable.
+	writeJSON(t, recording, recordingReceiptName, RecordingResult{SchemaVersion: 2, Complete: true, Status: "untrusted_intake", SourceID: "archive:a", Format: "64Kbps MP3"})
+	if s := InspectRecording(recording); s.State != PacketRetained {
+		t.Fatal("a newer recording receipt was importable:", s)
 	}
 	if s := InspectRecording(packet()); s.State != PacketRetained {
 		t.Fatal(s)

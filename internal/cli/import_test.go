@@ -137,7 +137,7 @@ func TestCLIImportPlanBindsPacketDeclarations(t *testing.T) {
 	}
 	writeReceipt := func(id string) {
 		t.Helper()
-		b, err := json.Marshal(map[string]any{"complete": true, "status": "untrusted_intake", "transfer": map[string]any{"bytes": len(body), "sha256": fmt.Sprintf("%x", sha256.Sum256(body))}, "intent": map[string]any{"request": map[string]string{"source_id": id, "source_file": "book.epub"}}})
+		b, err := json.Marshal(map[string]any{"schema_version": 1, "complete": true, "status": "untrusted_intake", "transfer": map[string]any{"bytes": len(body), "sha256": fmt.Sprintf("%x", sha256.Sum256(body))}, "intent": map[string]any{"request": map[string]string{"source_id": id, "source_file": "book.epub"}}})
 		if err != nil {
 			t.Fatal(err)
 		}

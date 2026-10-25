@@ -230,7 +230,7 @@ func TestHoldingsShowsATracksRecordingAndKeepsTheList(t *testing.T) {
 	copy(frame, []byte{0xFF, 0xFB, 0x90, 0x40})
 	body := bytes.Repeat(frame, 20)
 	sum := sha256.Sum256(body)
-	receipt, _ := json.Marshal(map[string]any{"complete": true, "status": "untrusted_intake", "antivirus": "not_scanned",
+	receipt, _ := json.Marshal(map[string]any{"schema_version": 1, "complete": true, "status": "untrusted_intake", "antivirus": "not_scanned",
 		"transfer": map[string]any{"bytes": len(body), "sha256": hex.EncodeToString(sum[:])},
 		"intent":   map[string]any{"request": map[string]any{"source_id": "archive:demo", "source_file": "one.mp3", "recording": map[string]any{"source_format": "64Kbps MP3", "position": 1, "tracks": 2, "title": "Chapter one"}}}})
 	packet := filepath.Join(t.TempDir(), "0001")

@@ -23,7 +23,7 @@ func audioReceipt(t *testing.T, body []byte, item, file, project, archiveItem st
 		selection["librivox"] = map[string]any{"project_id": project, "status": "linked", "project": map[string]any{"id": project, "title": "Reading " + project, "archive_item": archiveItem}}
 	}
 	b, err := json.Marshal(map[string]any{
-		"complete": true, "status": "untrusted_intake", "antivirus": "not_scanned",
+		"schema_version": 1, "complete": true, "status": "untrusted_intake", "antivirus": "not_scanned",
 		"transfer": map[string]any{"bytes": len(body), "sha256": hex.EncodeToString(sum[:])},
 		"intent":   map[string]any{"request": request, "selection": selection},
 	})

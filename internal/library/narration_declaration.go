@@ -244,6 +244,9 @@ func parseNarrationJournal(data []byte, libraryID string) (narrationView, error)
 	}
 	if len(data) > 0 {
 		for _, line := range bytes.Split(data[:len(data)-1], []byte{'\n'}) {
+			if err := newerRecord(line, narrationName); err != nil {
+				return v, err
+			}
 			var e narrationEvent
 			if len(line)+1 > maxRecord || canonical(line, &e) != nil || e.SchemaVersion != 1 || e.Sequence != len(v.events)+1 || e.LibraryID != libraryID {
 				return v, ErrStateReview

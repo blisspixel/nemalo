@@ -1237,7 +1237,7 @@ func readManifest(store *os.Root, started cleanupRecord, libraryID string) (clea
 		return m, err
 	}
 	sum := sha256.Sum256(data)
-	if hex.EncodeToString(sum[:]) != started.Manifest || canonical(data, &m) != nil || m.CleanupID != started.CleanupID || m.LibraryID != libraryID || m.Folder != started.Folder || m.Digest != started.Digest || len(m.Entries) != started.Count {
+	if hex.EncodeToString(sum[:]) != started.Manifest || canonical(data, &m) != nil || m.SchemaVersion != 1 || m.CleanupID != started.CleanupID || m.LibraryID != libraryID || m.Folder != started.Folder || m.Digest != started.Digest || len(m.Entries) != started.Count {
 		return m, fmt.Errorf("%w: cleanup manifest does not match its journal record", ErrStateReview)
 	}
 	for _, e := range m.Entries {
@@ -1268,6 +1268,9 @@ func readCleanup(control *control, libraryID string) ([]cleanupRecord, error) {
 	indices := map[int]bool{}
 	var open *cleanupRecord
 	for i, line := range lines {
+		if err := newerRecord(line, cleanupName); err != nil {
+			return nil, err
+		}
 		var r cleanupRecord
 		if err := canonical(line, &r); err != nil || r.SchemaVersion != 1 || r.Sequence != i+1 || r.LibraryID != libraryID || !validStateID(r.CleanupID, "cleanup") || r.At == "" {
 			return nil, ErrStateReview

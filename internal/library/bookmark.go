@@ -422,6 +422,9 @@ func parseBookmarkJournal(b []byte, libraryID string) (bookmarkView, error) {
 		if len(line) == 0 {
 			return bookmarkView{}, ErrStateReview
 		}
+		if err := newerRecord(line, bookmarkName); err != nil {
+			return bookmarkView{}, err
+		}
 		var event bookmarkEvent
 		if err := canonical(line, &event); err != nil {
 			return bookmarkView{}, ErrStateReview

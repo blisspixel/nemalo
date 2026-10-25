@@ -22,7 +22,7 @@ func identifiedReceipt(t *testing.T, body []byte, source, file string, declared 
 		ids = append(ids, map[string]string{"field": d[0], "value": d[1]})
 	}
 	b, err := json.Marshal(map[string]any{
-		"complete": true, "status": "untrusted_intake", "antivirus": "not_scanned",
+		"schema_version": 1, "complete": true, "status": "untrusted_intake", "antivirus": "not_scanned",
 		"transfer": map[string]any{"bytes": len(body), "sha256": hex.EncodeToString(sum[:])},
 		"intent":   map[string]any{"request": map[string]any{"source_id": source, "source_file": file}, "selection": map[string]any{"declared_identifiers": ids}},
 	})

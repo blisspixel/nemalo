@@ -71,11 +71,11 @@ func TestCollectionExistingPacketsMustNameTheExactSelection(t *testing.T) {
 					files := map[string]string{}
 					switch {
 					case recording && receipted:
-						files["recording.json"] = fmt.Sprintf(`{"complete":true,"status":"untrusted_intake","source_id":%q,"source_format":%q}`, source, format)
+						files["recording.json"] = fmt.Sprintf(`{"schema_version":1,"complete":true,"status":"untrusted_intake","source_id":%q,"source_format":%q}`, source, format)
 					case recording:
 						files["recording-intent.json"] = fmt.Sprintf(`{"request":{"source_id":%q,"source_format":%q},"selection":{"recordings":[{"source_format":%q,"declared_bytes":100}]}}`, source, format, format)
 					case receipted:
-						files["receipt.json"] = fmt.Sprintf(`{"complete":true,"status":"untrusted_intake","intent":{"request":{"source_id":%q,"source_file":%q}}}`, source, file)
+						files["receipt.json"] = fmt.Sprintf(`{"schema_version":1,"complete":true,"status":"untrusted_intake","intent":{"request":{"source_id":%q,"source_file":%q}}}`, source, file)
 					default:
 						files["intent.json"] = fmt.Sprintf(`{"schema_version":1,"request":{"source_id":%q,"source_file":%q},"selection":{"files":[{"name":%q,"source_format":"Text PDF","declared_bytes":100}]}}`, source, file, file)
 						files["transfer.json"] = fmt.Sprintf(`{"schema_version":1,"status":200,"etag":"\"same\"","strong_etag":true,"source_file":%q}`, file)

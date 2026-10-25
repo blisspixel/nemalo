@@ -459,7 +459,7 @@ func TestEvidenceReplayRefusesChangedRelatedTrackMetadata(t *testing.T) {
 		data := bytes.Repeat(frame, 10+position)
 		hash := sha256.Sum256(data)
 		packet := t.TempDir()
-		receipt, err := json.Marshal(map[string]any{"complete": true, "status": "untrusted_intake", "antivirus": "not_scanned", "transfer": map[string]any{"bytes": len(data), "sha256": hex.EncodeToString(hash[:])}, "intent": map[string]any{"request": map[string]any{"source_id": "archive:synthetic-recording", "source_file": fmt.Sprintf("part-%d.mp3", position), "recording": map[string]any{"source_format": "MP3", "position": position, "tracks": 2}}, "selection": map[string]any{}}})
+		receipt, err := json.Marshal(map[string]any{"schema_version": 1, "complete": true, "status": "untrusted_intake", "antivirus": "not_scanned", "transfer": map[string]any{"bytes": len(data), "sha256": hex.EncodeToString(hash[:])}, "intent": map[string]any{"request": map[string]any{"source_id": "archive:synthetic-recording", "source_file": fmt.Sprintf("part-%d.mp3", position), "recording": map[string]any{"source_format": "MP3", "position": position, "tracks": 2}}, "selection": map[string]any{}}})
 		if err != nil {
 			t.Fatal(err)
 		}

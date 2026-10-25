@@ -430,7 +430,7 @@ func TestTerminalCollectionRestoredFramesStayWithinResizedScreen(t *testing.T) {
 	if err := os.MkdirAll(packet, 0700); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(packet, "receipt.json"), []byte(`{"complete":true,"status":"untrusted_intake","intent":{"request":{"source_id":"archive:one","source_file":"one.pdf"}}}`), 0600); err != nil {
+	if err := os.WriteFile(filepath.Join(packet, "receipt.json"), []byte(`{"schema_version":1,"complete":true,"status":"untrusted_intake","intent":{"request":{"source_id":"archive:one","source_file":"one.pdf"}}}`), 0600); err != nil {
 		t.Fatal(err)
 	}
 	collectionKeys(m, "f8")

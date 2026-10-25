@@ -285,7 +285,7 @@ func TestImportUsesBoundIntakeReceiptScan(t *testing.T) {
 		if hash == "" {
 			hash = hex.EncodeToString(sum[:])
 		}
-		receipt := map[string]any{"complete": true, "status": "untrusted_intake", "antivirus": antivirus, "scan": scan, "transfer": map[string]any{"bytes": len(body), "sha256": hash}}
+		receipt := map[string]any{"schema_version": 1, "complete": true, "status": "untrusted_intake", "antivirus": antivirus, "scan": scan, "transfer": map[string]any{"bytes": len(body), "sha256": hash}}
 		b, _ := json.Marshal(receipt)
 		if err := os.WriteFile(filepath.Join(dir, "receipt.json"), b, 0600); err != nil {
 			t.Fatal(err)
@@ -367,7 +367,7 @@ func TestReceiptScanNeverReplacesLaterScanEvidence(t *testing.T) {
 	}
 	body := mustRead(t, filepath.Join(dir, "content.epub"))
 	sum := sha256.Sum256(body)
-	receipt, _ := json.Marshal(map[string]any{"complete": true, "status": "untrusted_intake", "antivirus": "no_detections_reported", "scan": scanner.Result{Status: "no_detections_reported"}, "transfer": map[string]any{"bytes": len(body), "sha256": hex.EncodeToString(sum[:])}})
+	receipt, _ := json.Marshal(map[string]any{"schema_version": 1, "complete": true, "status": "untrusted_intake", "antivirus": "no_detections_reported", "scan": scanner.Result{Status: "no_detections_reported"}, "transfer": map[string]any{"bytes": len(body), "sha256": hex.EncodeToString(sum[:])}})
 	if err := os.WriteFile(filepath.Join(dir, "receipt.json"), receipt, 0600); err != nil {
 		t.Fatal(err)
 	}

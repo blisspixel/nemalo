@@ -18,7 +18,7 @@ func trackReceipt(t *testing.T, body []byte, position, tracks int) []byte {
 	t.Helper()
 	sum := sha256.Sum256(body)
 	receipt, err := json.Marshal(map[string]any{
-		"complete": true, "status": "untrusted_intake", "antivirus": "not_scanned",
+		"schema_version": 1, "complete": true, "status": "untrusted_intake", "antivirus": "not_scanned",
 		"transfer": map[string]any{"bytes": len(body), "sha256": hex.EncodeToString(sum[:])},
 		"intent": map[string]any{"request": map[string]any{"source_id": "archive:demo", "source_file": fmt.Sprintf("part_%02d_64kb.mp3", position),
 			"recording": map[string]any{"source_format": "64Kbps MP3", "position": position, "tracks": tracks}}},

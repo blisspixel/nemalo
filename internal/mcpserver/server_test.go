@@ -174,7 +174,7 @@ func TestRecordingByteIdentitiesThroughReadOnlyMCP(t *testing.T) {
 	body := []byte("ID3 synthetic track")
 	for _, item := range []string{"first", "mirror"} {
 		packet := t.TempDir()
-		receipt := fmt.Sprintf(`{"complete":true,"status":"untrusted_intake","antivirus":"not_scanned","transfer":{"bytes":%d,"sha256":"%x"},"intent":{"request":{"source_id":"archive:%s","source_file":"track.mp3","recording":{"source_format":"MP3","position":1,"tracks":1}}}}`, len(body), sha256.Sum256(body), item)
+		receipt := fmt.Sprintf(`{"schema_version":1,"complete":true,"status":"untrusted_intake","antivirus":"not_scanned","transfer":{"bytes":%d,"sha256":"%x"},"intent":{"request":{"source_id":"archive:%s","source_file":"track.mp3","recording":{"source_format":"MP3","position":1,"tracks":1}}}}`, len(body), sha256.Sum256(body), item)
 		for name, data := range map[string][]byte{"content.mp3": body, "receipt.json": []byte(receipt)} {
 			if err := os.WriteFile(filepath.Join(packet, name), data, 0600); err != nil {
 				t.Fatal(err)
@@ -562,7 +562,7 @@ func TestMCPImportRefusesChangedPacketProvenance(t *testing.T) {
 	}
 	writeReceipt := func(id string) {
 		t.Helper()
-		b, err := json.Marshal(map[string]any{"complete": true, "status": "untrusted_intake", "transfer": map[string]any{"bytes": len(body), "sha256": fmt.Sprintf("%x", sha256.Sum256(body))}, "intent": map[string]any{"request": map[string]string{"source_id": id, "source_file": "book.epub"}}})
+		b, err := json.Marshal(map[string]any{"schema_version": 1, "complete": true, "status": "untrusted_intake", "transfer": map[string]any{"bytes": len(body), "sha256": fmt.Sprintf("%x", sha256.Sum256(body))}, "intent": map[string]any{"request": map[string]string{"source_id": id, "source_file": "book.epub"}}})
 		if err != nil {
 			t.Fatal(err)
 		}

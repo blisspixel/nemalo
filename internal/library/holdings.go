@@ -345,6 +345,9 @@ func parseOperations(b []byte, libraryID string) ([]operation, error) {
 	lines := bytes.Split(b[:len(b)-1], []byte{'\n'})
 	events := make([]operation, 0, len(lines))
 	for i, line := range lines {
+		if err := newerRecord(line, operationsName); err != nil {
+			return nil, err
+		}
 		var event operation
 		if err := canonical(line, &event); err != nil || event.SchemaVersion != 1 || event.Sequence != i+1 || event.LibraryID != libraryID || !validStateID(event.OperationID, "operation") || event.At == "" {
 			return nil, ErrStateReview
@@ -405,6 +408,9 @@ func parseHoldings(b []byte, libraryID string) ([]Holding, error) {
 	lines := bytes.Split(b[:len(b)-1], []byte{'\n'})
 	out := make([]Holding, 0, len(lines))
 	for _, line := range lines {
+		if err := newerRecord(line, holdingsName); err != nil {
+			return nil, err
+		}
 		var holding Holding
 		if err := canonical(line, &holding); err != nil || !validHolding(holding, libraryID) {
 			return nil, ErrStateReview

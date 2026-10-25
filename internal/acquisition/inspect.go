@@ -96,7 +96,7 @@ func InspectRecording(dir string) PacketState {
 	defer root.Close()
 	if _, err := root.Lstat(recordingReceiptName); err == nil {
 		var receipt RecordingResult
-		if err := readRecord(root, recordingReceiptName, &receipt); err != nil || !receipt.Complete || receipt.Status != "untrusted_intake" {
+		if err := readRecord(root, recordingReceiptName, &receipt); err != nil || receipt.SchemaVersion != 1 || !receipt.Complete || receipt.Status != "untrusted_intake" {
 			return retained("its recording receipt is not completed untrusted intake")
 		}
 		return PacketState{State: PacketImportable, SourceID: receipt.SourceID, Recording: receipt.Format}

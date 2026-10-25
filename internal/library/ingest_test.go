@@ -42,7 +42,7 @@ func messyFolder(t *testing.T) (string, [][]byte) {
 		}
 	}
 	sum := sha256.Sum256(packetBook)
-	receipt, _ := json.Marshal(map[string]any{"complete": true, "status": "untrusted_intake", "antivirus": "not_scanned", "transfer": map[string]any{"bytes": len(packetBook), "sha256": hex.EncodeToString(sum[:])}})
+	receipt, _ := json.Marshal(map[string]any{"schema_version": 1, "complete": true, "status": "untrusted_intake", "antivirus": "not_scanned", "transfer": map[string]any{"bytes": len(packetBook), "sha256": hex.EncodeToString(sum[:])}})
 	if err := os.WriteFile(filepath.Join(dir, "intake", "p1", "receipt.json"), receipt, 0o600); err != nil {
 		t.Fatal(err)
 	}
@@ -238,7 +238,7 @@ func writeTree(t *testing.T, dir string, files map[string][]byte) {
 func intakeReceipt(t *testing.T, book []byte) []byte {
 	t.Helper()
 	sum := sha256.Sum256(book)
-	receipt, err := json.Marshal(map[string]any{"complete": true, "status": "untrusted_intake", "antivirus": "not_scanned", "transfer": map[string]any{"bytes": len(book), "sha256": hex.EncodeToString(sum[:])}})
+	receipt, err := json.Marshal(map[string]any{"schema_version": 1, "complete": true, "status": "untrusted_intake", "antivirus": "not_scanned", "transfer": map[string]any{"bytes": len(book), "sha256": hex.EncodeToString(sum[:])}})
 	if err != nil {
 		t.Fatal(err)
 	}

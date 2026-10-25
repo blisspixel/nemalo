@@ -99,10 +99,11 @@ type selected struct {
 }
 
 type packetReceipt struct {
-	Complete  bool   `json:"complete"`
-	Status    string `json:"status"`
-	FinalURL  string `json:"final_url"`
-	Antivirus string `json:"antivirus"`
+	SchemaVersion int    `json:"schema_version"`
+	Complete      bool   `json:"complete"`
+	Status        string `json:"status"`
+	FinalURL      string `json:"final_url"`
+	Antivirus     string `json:"antivirus"`
 	// Scan is the acquisition-time scan of the intake bytes, when one ran.
 	Scan     *scanner.Result `json:"scan"`
 	Transfer struct {
@@ -490,7 +491,12 @@ func readReceipt(root *os.Root) (*packetReceipt, error) {
 		return nil, errors.New("intake receipt size changed while reading; nothing imported")
 	}
 	var receipt packetReceipt
-	if err := json.Unmarshal(b, &receipt); err != nil || !receipt.Complete || receipt.Status != "untrusted_intake" || receipt.Antivirus == "findings" || receipt.Transfer.Bytes < 1 || !validHash(receipt.Transfer.SHA256) {
+	// Only the version gates compatibility: this struct reads a subset of the receipt.
+	err = json.Unmarshal(b, &receipt)
+	if err == nil && receipt.SchemaVersion > 1 {
+		return nil, fmt.Errorf("intake receipt schema_version %d is not supported by this Nemalo; it may come from a newer version, and nothing was imported", receipt.SchemaVersion)
+	}
+	if err != nil || receipt.SchemaVersion != 1 || !receipt.Complete || receipt.Status != "untrusted_intake" || receipt.Antivirus == "findings" || receipt.Transfer.Bytes < 1 || !validHash(receipt.Transfer.SHA256) {
 		return nil, errors.New("intake packet receipt is incomplete or not untrusted intake")
 	}
 	return &receipt, nil

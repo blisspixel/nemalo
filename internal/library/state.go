@@ -23,6 +23,31 @@ const maxJournalBytes = 64 << 10
 var ErrBusy = errors.New("library state is busy; retry after the active operation")
 var ErrStateReview = errors.New("library control state needs review; preserve .nemalo and do not remove its lock file")
 var ErrInitializationPending = errors.New("initialization is pending; repeat library init with this explicit root")
+
+// newerFormatError refines ErrStateReview when a library holds a control file
+// or record version this executable does not know, such as one written by a
+// newer Nemalo. Refusal is unchanged; only the explanation is specific.
+type newerFormatError struct{ what string }
+
+func (e newerFormatError) Error() string {
+	return "library control state needs review: " + e.what + ", which may come from a newer Nemalo; use that version, and preserve .nemalo without removing its lock file"
+}
+
+func (e newerFormatError) Is(target error) bool { return target == ErrStateReview }
+
+// newerRecord reports a record whose schema_version is above the one this
+// executable writes. It reads only that field; the caller still refuses every
+// other unexpected record, so nothing is accepted that was refused before.
+func newerRecord(line []byte, file string) error {
+	var v struct {
+		SchemaVersion int `json:"schema_version"`
+	}
+	if json.Unmarshal(line, &v) == nil && v.SchemaVersion > 1 {
+		return newerFormatError{fmt.Sprintf("%s has schema_version %d", file, v.SchemaVersion)}
+	}
+	return nil
+}
+
 var errNoControl = errors.New("no library control directory")
 
 // State describes control metadata only, never content eligibility or integrity.
@@ -241,6 +266,9 @@ func parseInitializationJournal(b []byte) ([]journalEvent, error) {
 	}
 	events := make([]journalEvent, 0, len(lines))
 	for i, line := range lines {
+		if err := newerRecord(line, journalName); err != nil {
+			return nil, err
+		}
 		var e journalEvent
 		if err := json.Unmarshal(line, &e); err != nil {
 			return nil, errors.Join(ErrStateReview, err)
@@ -386,7 +414,11 @@ func validateControl(root *os.Root) (err error) {
 		delete(seen, name)
 	}
 	for name, entry := range seen {
-		if (name != operationsName && name != holdingsName && name != cleanupName && name != bookmarkName && name != narrationName) || !entry.Type().IsRegular() {
+		known := name == operationsName || name == holdingsName || name == cleanupName || name == bookmarkName || name == narrationName
+		if !known && entry.Type().IsRegular() {
+			return newerFormatError{fmt.Sprintf("unknown control file %q", name)}
+		}
+		if !known || !entry.Type().IsRegular() {
 			return ErrStateReview
 		}
 	}
