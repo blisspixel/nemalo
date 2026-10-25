@@ -449,6 +449,19 @@ passed all six jobs at `dbd0470`, so all 55 terminal cases passed under a real
 macOS PTY and Windows ConPTY too. A person's screen reader, magnifier and
 keyboard-only review remains required.
 
+### Parser fuzzing
+
+The 24 fuzz targets cover EPUB inspection and extraction, cursors, navigation
+lists, PDF text, MP3 and MP4 probing, catalog, edition and Gutenberg RDF
+records, PAR2 metadata, ZIP extraction and cleanup proofs, ZIP segments, and
+RAR4/RAR5 headers, extras, time metadata and volume accounting. Ordinary tests
+replay only their seed inputs. On 2026-10-24 each target was fuzzed for 60
+seconds on a 16-thread Linux machine at `62d7abb`: about 170 million executions
+in total, from 0.2 million (ZIP extraction) to 17.9 million (MP4 probing), with
+no failing input, crash or hang. The dispatched `fuzz.yml` workflow repeats
+this on a hosted runner. Fuzzing finds inputs the targets can reach; it does
+not prove the parsers correct or bound every resource.
+
 ## Cited evidence and citation export
 
 On 2026-10-23, local verification of the

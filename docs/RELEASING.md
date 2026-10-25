@@ -13,6 +13,9 @@ native validation, cross-built artifacts, and remaining limits.
    documentation checks, and adversarial review for consequential changes.
 3. Commit the reviewed source and require the actual main CI run to pass on Linux,
    macOS, and Windows. Do not publish while a relevant job remains queued or failed.
+   At that commit, dispatch `installed-tools.yml` and `fuzz.yml` (every parser
+   fuzz target, two minutes each by default) and require both to pass; read
+   their logs rather than relying on the status alone.
 4. From the clean committed checkout, run:
 
    ```sh
@@ -49,11 +52,18 @@ Downloaded content, validation libraries, personal metadata, and scanner logs mu
 never enter release assets or Git.
 
 After its existing executable smoke, each native CI job also runs
-`go run ./cmd/nativecheck` against that exact clean cgo-free executable and commit.
-The harness exercises 39 CLI lifecycle cases in a new outside-checkout workspace:
-previews and changed-plan refusals, import/source preservation, content and
-evidence, explicit bookmarks, export, ZIP ingest, integrity, cleanup, conflicting
-raw restore and fresh purge. It disables external tool discovery and keeps
-unscanned holdings in review. Its report must not be presented as installed
-antivirus coverage, a real host/plugin test or a release. Existing recovery,
-race, coverage, native Windows boundaries and live-release installer checks stay.
+`go run ./cmd/nativecheck --terminal` against that exact clean cgo-free
+executable and commit. The harness exercises 39 CLI lifecycle cases in a new
+outside-checkout workspace: previews and changed-plan refusals, import/source
+preservation, content and evidence, explicit bookmarks, export, ZIP ingest,
+integrity, cleanup, conflicting raw restore and fresh purge. It then runs 55
+current-screen observations in real PTY or ConPTY sessions
+([decision 0092](decisions/0092-native-terminal-acceptance.md),
+[0094](decisions/0094-terminal-keyboard-and-cursor-access.md)). These cases
+disable external tool discovery and keep unscanned holdings in review.
+Installed ClamAV or Defender, 7-Zip and FFmpeg are exercised only by the
+dispatched `installed-tools.yml` workflow
+([decision 0093](decisions/0093-native-installed-tool-acceptance.md)); dispatch
+it at the release commit. No report is a real host/plugin test or a release.
+Existing recovery, race, coverage, native Windows boundaries and live-release
+installer checks stay.

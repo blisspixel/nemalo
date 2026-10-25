@@ -1,0 +1,54 @@
+name: Fuzz
+
+# Release gate: run every parser fuzz target for real, not only its seed
+# corpus. Dispatched manually at a release commit; targets are discovered,
+# so new ones are included without editing this file.
+on:
+  workflow_dispatch:
+    inputs:
+      fuzztime:
+        description: Fuzzing time per target, as a Go duration
+        default: 2m
+        required: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: fuzz-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  fuzz:
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+      - name: Fuzz every target
+        env:
+          FUZZTIME: ${{ inputs.fuzztime }}
+        run: |
+          set -u
+          failed=0
+          count=0
+          for pkg in $(go list ./internal/...); do
+            for target in $(go test -list '^Fuzz' "$pkg" | grep '^Fuzz' || true); do
+              count=$((count + 1))
+              if go test -run '^$' -fuzz "^${target}\$" -fuzztime "$FUZZTIME" "$pkg" > fuzz.log 2>&1; then
+                echo "pass $target $(grep -oE 'execs: [0-9]+' fuzz.log | tail -1)"
+              else
+                failed=$((failed + 1))
+                echo "FAIL $target in $pkg"
+                tail -40 fuzz.log
+              fi
+            done
+          done
+          echo "targets=$count failed=$failed"
+          # A failing input is written under testdata/fuzz; print it to reproduce.
+          find . -path '*/testdata/fuzz/*' -newer go.mod -type f -print -exec cat {} \; || true
+          test "$count" -gt 0 && test "$failed" -eq 0

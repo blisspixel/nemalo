@@ -942,6 +942,16 @@ formatting and coverage thresholds, not merely print them. Include all first-par
 packages in the profile and test destructive paths individually. Publish checksums
 and dependency requirements. Do not claim hosted CI passed without an actual run.
 
+Where each gate is enforced today: formatting, vet, Staticcheck, coverage and
+govulncheck in the verifier on all three OSes; race tests on all three; the
+cgo-free executable smoke, the 39-case lifecycle harness and 55 terminal cases
+in native CI; installers against the published release; hostile archive,
+scanner skip/timeout and cleanup crash/fault tests in the ordinary suites.
+Parser fuzzing has 24 targets: ordinary tests replay their seeds, and the
+dispatched `fuzz.yml` workflow fuzzes each for real. Installed tools use the
+dispatched `installed-tools.yml`. Both dispatched workflows are release steps
+in [releasing](docs/RELEASING.md).
+
 Current Go verification commands:
 
 ```sh
