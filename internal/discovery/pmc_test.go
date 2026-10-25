@@ -116,8 +116,8 @@ func TestPMCRejectsMalformedOrIncompleteEvidence(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			synctest.Test(t, func(t *testing.T) {
 				p := pmcFixture(t, func(_ string, b string) string { return strings.ReplaceAll(b, change[0], change[1]) }, nil)
-				if _, err := p.Evaluate(context.Background(), "pmc:PMC13901.2"); err == nil {
-					t.Fatal("accepted invalid evidence")
+				if e, err := p.Evaluate(context.Background(), "pmc:PMC13901.2"); err == nil || e.Complete {
+					t.Fatal("invalid evidence reported as complete", e, err)
 				}
 			})
 		})

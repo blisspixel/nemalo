@@ -260,10 +260,10 @@ func (p *PMC) Evaluate(ctx context.Context, id string) (Evaluation, error) {
 	e.Restrictions["is_manuscript"] = pmcFlag(m.Manuscript)
 	e.Restrictions["is_historical_ocr"] = pmcFlag(m.HistoricalOCR)
 	e.Restrictions["is_retracted"] = pmcFlag(m.Retracted)
-	e.CheckedAt = time.Now().UTC()
-	e.Complete = len(e.Title) > 0
 	if m.PDFURL == "" {
 		e.Limitations = append(e.Limitations, "PMC declares no PDF for this version.")
+		e.CheckedAt = time.Now().UTC()
+		e.Complete = len(e.Title) > 0
 		return e, nil
 	}
 	// Accept only the exact canonical S3 key and a single MD5 query parameter.
@@ -293,6 +293,8 @@ func (p *PMC) Evaluate(ctx context.Context, id string) (Evaluation, error) {
 		f.Findings = append(f.Findings, "acquisition requires a known Creative Commons license and explicit open-access subset declaration")
 	}
 	e.Files = append(e.Files, f)
+	e.CheckedAt = time.Now().UTC()
+	e.Complete = len(e.Title) > 0
 	return e, nil
 }
 
