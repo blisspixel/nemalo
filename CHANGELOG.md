@@ -2,6 +2,37 @@
 
 ## Unreleased
 
+## 0.1.0-alpha.18
+
+- Fix a panic in EPUB navigation and NCX parsing: a crafted contents document
+  could crash the CLI, TUI or MCP server instead of being refused. Found by the
+  new hosted fuzzing release step; the failing input is a permanent test case.
+
+- Add `Ctrl+O` in the terminal interface, listing every function-key and
+  control-key action of the current view for keyboards and terminals where
+  function keys are awkward. Text fields now use the terminal's real cursor, so
+  screen magnifiers and readers can follow it, and `r` replays evidence as F3
+  does. Write reviews still require their own physical Enter.
+
+- `nemalo doctor` now reports 7-Zip when only `7zz` is installed, as with
+  Homebrew's `sevenzip`, matching what archive intake already used.
+
+- Check the schema version of intake receipts, recording receipts and cleanup
+  manifests. Refusals caused by an unknown control file or a newer record now
+  say a newer Nemalo may have written it. Libraries from earlier alphas open in
+  place without migration; see `docs/FORMATS.md`.
+
+- Add a TUI Jobs view (State, F10) over a non-mutating, library-scoped job
+  snapshot (`jobs snapshot LIBRARY --json`); it never reconciles or prunes jobs.
+  Browse collections and review an acquisition bound to its exact preview.
+
+- In the reader: find exact source text across the whole book, choose declared
+  contents or PDF pages, keep the reading place through help and page context,
+  and open explicit citation and evidence reports from Read (F2/F4).
+
+- Write-review dialogs accept only physical keystrokes; committed text that
+  spells `enter` or `esc` cannot confirm or dismiss a review.
+
 - Add opt-in `nemalo-evidence/1` to managed content reads, with exact source
   quotations or delivered audio hashes, typed ranges, declared identities and
   single-request coverage. Replay compares metadata, the original explicit
