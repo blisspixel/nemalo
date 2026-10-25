@@ -74,9 +74,10 @@ jobs:
           dir="$RUNNER_TEMP/nemalo-bin"
           sh scripts/install.sh --dir "$dir"
           "$dir/nemalo" version
-          current_version="$("$dir/nemalo" version)"
+          current_version="$("$dir/nemalo" version --json | sed -n 's/.*"data":"\([^"]*\)".*/\1/p')"
+          test -n "$current_version"
           sh scripts/install.sh --dir "$dir" --version "$current_version"
-          test "$("$dir/nemalo" version)" = "$current_version"
+          test "$("$dir/nemalo" version --json | sed -n 's/.*"data":"\([^"]*\)".*/\1/p')" = "$current_version"
           sh scripts/install.sh --dir "$dir" --version 0.1.0-alpha.1
           test "$("$dir/nemalo" version)" = "0.1.0-alpha.1"
           sh scripts/install.sh --dir "$dir" --uninstall
@@ -94,10 +95,10 @@ jobs:
             & $host_ -NoProfile -ExecutionPolicy Bypass -File scripts/install.ps1 -Dir $dir -NoPath
             if ($LASTEXITCODE -ne 0) { throw "$host_ install failed" }
             & $exe version
-            $currentVersion = & $exe version
+            $currentVersion = (& $exe version --json | ConvertFrom-Json).data
             & $host_ -NoProfile -ExecutionPolicy Bypass -File scripts/install.ps1 -Dir $dir -Version $currentVersion -NoPath
             if ($LASTEXITCODE -ne 0) { throw "$host_ current-version pin failed" }
-            if ((& $exe version) -ne $currentVersion) { throw "$host_ current version not installed" }
+            if ((& $exe version --json | ConvertFrom-Json).data -ne $currentVersion) { throw "$host_ current version not installed" }
             & $host_ -NoProfile -ExecutionPolicy Bypass -File scripts/install.ps1 -Dir $dir -Version 0.1.0-alpha.1 -NoPath
             if ((& $exe version) -ne '0.1.0-alpha.1') { throw "$host_ pinned version not installed" }
             & $host_ -NoProfile -ExecutionPolicy Bypass -File scripts/install.ps1 -Dir $dir -Uninstall
