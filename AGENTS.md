@@ -91,6 +91,9 @@ Decision 0081 changes only owned coverage-counter scratch after child exit and
 required merge/publication. Preserve counters, cases, instrumentation, worker
 limits, deadlines and production durability; never use it for application sources,
 stores or recovery fixtures.
+A new field in a versioned record or result fails `internal/contract` until it is
+reviewed and regenerated with `-update`; removing, renaming or retyping one needs
+a new schema version and a decision (0096, 0097). See `docs/FORMATS.md`.
 For docs, check links/anchors, examples, consistency, whitespace, and citations.
 Hosted CI passes require an actual hosted run; a local pass is not equivalent.
 

@@ -1130,6 +1130,10 @@ and `go tool govulncheck`. Its tests and the CI race step run with
 `-timeout=25m`, because hosted 4-core Windows runners take most of Go's
 ten-minute default for the library suite
 ([decision 0095](decisions/0095-windows-test-package-budget.md)).
+The field contract test in `internal/contract` fails on any change to a
+versioned record or result; regenerate its snapshot with
+`go test ./internal/contract -update` only after reviewing an addition
+([decision 0097](decisions/0097-versioned-field-contract.md)).
 Exact tool modules/checksums are in `go.mod`/`go.sum`.
 Vulnerability checking accesses the Go vulnerability database. Normal unit tests
 use local synthetic fixtures/HTTP servers and do not access public providers.

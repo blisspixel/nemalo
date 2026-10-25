@@ -234,9 +234,10 @@ identifier, and [decision 0096](docs/decisions/0096-on-disk-compatibility-policy
 records the compatibility policy: alpha libraries open in place (a committed
 `0.1.0-alpha.2` library is a regression fixture), older executables refuse
 newer state and now say so, and intake receipt, recording and cleanup manifest
-versions are checked. Next in stage 6: define field-level stability for CLI and
-MCP results, settle the items FORMATS.md lists as not yet settled, review the
-documentation against behavior, then run every release gate. Start each
+versions are checked. Every versioned record and CLI/MCP result now has an
+enforced field contract ([decision 0097](docs/decisions/0097-versioned-field-contract.md)).
+Next in stage 6: settle the items FORMATS.md lists as not yet settled, review
+the documentation against behavior, then run every release gate. Start each
 session with the workspace check in `AGENTS.md`.
 
 ## Implementation status

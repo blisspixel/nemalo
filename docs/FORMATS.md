@@ -68,8 +68,10 @@ refusal, gates compatibility there.
 - MCP tools: `{"schema_version":1,"tool":...,"data":...,"error":...}`
   ([0014](decisions/0014-read-only-mcp-server.md)). Capabilities report the
   executable version, which plugin manifests repeat.
-- Result payloads inside `data` carry their own `schema_version` 1. Which of
-  their fields are stable for 1.0 is still to be defined.
+- Result payloads inside `data` carry their own `schema_version` 1. Within a
+  version their fields are only added; the field contract test in
+  `internal/contract` fails on any removed, renamed or retyped field
+  ([decision 0097](decisions/0097-versioned-field-contract.md)).
 
 ## Identifiers
 
@@ -85,7 +87,6 @@ refusal, gates compatibility there.
 
 ## Not yet settled for 1.0
 
-- Field-level stability of CLI and MCP result payloads.
 - `config.json` and the cleanup plan digest have no version tag.
 - The job writer's own journal read tolerates unknown fields; the passive
   snapshot does not.
