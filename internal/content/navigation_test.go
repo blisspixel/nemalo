@@ -500,9 +500,15 @@ func TestAbsentOversizedAndUnreadableNavigation(t *testing.T) {
 
 	var huge strings.Builder
 	huge.WriteString(`<?xml version="1.0" encoding="UTF-8"?><html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops"><body><nav epub:type="toc"><ol>`)
+	// Exercise the navigation byte limit independently of the entry-count
+	// limit above. Tens of thousands of links add unrelated full-document
+	// validation work and can exhaust the unchanged content deadline under
+	// the race detector. Keep each XML token below its own inspection limit.
+	padding := "<!--" + strings.Repeat("A", 64<<10) + "-->"
 	for huge.Len() <= 2<<20 {
-		huge.WriteString(`<li><a href="unit0.xhtml">A</a></li>`)
+		huge.WriteString(padding)
 	}
+	huge.WriteString(`<li><a href="unit0.xhtml">A</a></li>`)
 	huge.WriteString(`</ol></nav></body></html>`)
 	over := publishEPUB(t, map[string]string{
 		"META-INF/container.xml": containerXML(),
