@@ -1,6 +1,6 @@
 # 0100: one explicit PubMed Central article version
 
-Status: implemented, 2026-10-25; acceptance tracked in
+Status: accepted and implemented, 2026-10-25; acceptance recorded in
 [issue 64](https://github.com/blisspixel/nemalo/issues/64). Milestone 7, after the arXiv
 provider ([decision 0047](0047-arxiv-selected-versions.md)), reusing selected
 acquisition ([0007](0007-selected-acquisition.md)), PDF assessment
@@ -98,3 +98,18 @@ fixtures, and fixed the TUI resume review for providers without range support.
 The shared pacer retains the existing arXiv quota, cancellation, redirect and
 delayed-dispatch regression cases. Local and exact hosted gate results and
 release publication are recorded separately in issue 64.
+
+The source gate at `57caee4` passed [all twelve native CI and installer jobs](https://github.com/blisspixel/nemalo/actions/runs/40247130028),
+[CodeQL](https://github.com/blisspixel/nemalo/actions/runs/40247130283),
+[installed tools on all three OSes](https://github.com/blisspixel/nemalo/actions/runs/40247133570),
+and [all 25 fuzz targets](https://github.com/blisspixel/nemalo/actions/runs/40247130823)
+at two minutes each, with zero failures. The final local verifier reported 86.6%
+aggregate coverage; the refreshed native race suite passed. Error-path regressions
+also require `complete: false` after invalid PDF declarations or listings.
+
+[Alpha.19](https://github.com/blisspixel/nemalo/releases/tag/v0.1.0-alpha.19)
+publishes that exact clean source. Six cgo-free archives, their checksums and
+build record were verified; the Linux archive matches the final live-tested
+binary byte for byte. The published asset, installer and final-main receipts
+are recorded in issue 64. This completes the selected-provider increment, not
+milestone 7's remaining providers or the person-run and 1.0 candidate gates.

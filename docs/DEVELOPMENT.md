@@ -1279,10 +1279,14 @@ Explicit narration declarations beyond LibriVox are implemented in stage 1.
 Explicit decoded MP4 access passed stage 3 acceptance at `5091ce7`, with its
 [receipt](https://github.com/blisspixel/nemalo/issues/60#issuecomment-6374231710)
 read back before issue 60 closed. The remaining 1.0 work is
-ordered by dependency in the [roadmap](../ROADMAP.md#order-of-work-to-10), starting
-with cited evidence before interfaces and release gates.
-Cited evidence for agent-led reading is milestone 9
+ordered by dependency in the [roadmap](../ROADMAP.md#order-of-work-to-10): remaining
+person-run host/accessibility acceptance and the stage 6 release-candidate gates.
+Cited evidence for agent-led reading was delivered with milestone 9
 ([decision 0048](decisions/0048-cited-evidence-before-1-0.md)); generated analysis
 inside Nemalo and model/harness integrations remain post-1.0. Issues 1 and 2 are
 closed; remaining OCR and column reconstruction are milestone 7 work, while the
 separate stage 3 receipt governs acceptance of explicit decoded audio.
+Selected PMC versions are accepted in alpha.19 under
+[decision 0100](decisions/0100-pmc-selected-article-versions.md). Further paper
+providers and DOI resolution remain separately scoped milestone 7 work; no new
+provider wave has started.

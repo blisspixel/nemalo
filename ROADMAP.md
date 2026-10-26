@@ -192,11 +192,14 @@ all of these.
 
 As of 2026-10-25, stages 1 to 4 are accepted, stage 5 is complete except for
 person-run checks, and stage 6 is in progress. `main`
-is the only branch and passes hosted CI on Linux, macOS and Windows. No wave is in
-flight before the PMC increment. Release acceptance is tracked in
+is the only branch and passes hosted CI on all six shipped targets. The bounded
+PMC provider wave is delivered in
+[`0.1.0-alpha.19`](https://github.com/blisspixel/nemalo/releases/tag/v0.1.0-alpha.19),
+with its acceptance and publication receipt in
+[64](https://github.com/blisspixel/nemalo/issues/64). No next feature wave has started.
+The 1.0 release candidate remains tracked in
 [63](https://github.com/blisspixel/nemalo/issues/63), person-run checks in
-[62](https://github.com/blisspixel/nemalo/issues/62), and the bounded PMC provider
-in [64](https://github.com/blisspixel/nemalo/issues/64). Post-1.0 issues are:
+[62](https://github.com/blisspixel/nemalo/issues/62). Post-1.0 issues are:
 [59](https://github.com/blisspixel/nemalo/issues/59) (optional desktop panel,
 deferred 2026-10-24), [37](https://github.com/blisspixel/nemalo/issues/37) and
 [38](https://github.com/blisspixel/nemalo/issues/38).
@@ -246,11 +249,13 @@ run found and fixed a navigation parser panic.
 
 Next, in order:
 
-1. Done: [`0.1.0-alpha.18`](https://github.com/blisspixel/nemalo/releases/tag/v0.1.0-alpha.18)
-   was published on 2026-10-25 from `ac7cc41` after CI, CodeQL, the dispatched
-   fuzz run (24 targets) and installed-tools run all passed there, with
-   published checksums verified and the Linux installer checked unpinned,
-   pinned, replaced and uninstalled.
+1. Done: [`0.1.0-alpha.19`](https://github.com/blisspixel/nemalo/releases/tag/v0.1.0-alpha.19)
+   was published on 2026-10-25 from `57caee4` after all twelve CI jobs, CodeQL,
+   the full fuzz run (25 targets, zero failures), and installed-tool checks on
+   all three OSes passed. All six archive checksums and the published tag and
+   assets were verified. The Linux installer was checked unpinned, pinned,
+   replaced and uninstalled. Post-publication native installer evidence and
+   the final wave receipt are kept in [issue 64](https://github.com/blisspixel/nemalo/issues/64).
 2. Finish stage 6. The remaining format items are settled
    ([decision 0098](docs/decisions/0098-settle-remaining-format-items.md)).
    Every shipped architecture now runs native CI
@@ -266,12 +271,12 @@ Next, in order:
 
 Milestone 7's remaining paper providers and DOI resolution may proceed
 alongside; they are not 1.0 gates. The PMC selected-version increment is
-implemented under [decision 0100](docs/decisions/0100-pmc-selected-article-versions.md)
+accepted under [decision 0100](docs/decisions/0100-pmc-selected-article-versions.md)
 and tracked in [issue 64](https://github.com/blisspixel/nemalo/issues/64); its
 acceptance receipt and alpha.19 release evidence are recorded there separately.
 Next provider work is OpenAlex discovery and Unpaywall DOI resolution, each
-requiring a fresh bounded decision and issue before implementation. Start each session with the workspace check
-in `AGENTS.md`.
+requiring a fresh bounded decision and issue before implementation. Neither has
+started in this wave. Start each session with the workspace check in `AGENTS.md`.
 
 ## Implementation status
 
