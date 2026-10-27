@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.1.0-alpha.21
+
 - The terminal interface reports finished work in words from the typed result
   instead of "Complete.", shows elapsed time and phase while work runs, a byte
   bar for acquisitions, outcome toasts in the footer and a session message log

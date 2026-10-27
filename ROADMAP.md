@@ -219,7 +219,8 @@ no format. Its increments, in order:
    observed; synthetic events are not that evidence.
 4. Done in source: feedback, toasts and a session log
    ([71](https://github.com/blisspixel/nemalo/issues/71),
-   [decision 0104](docs/decisions/0104-terminal-feedback.md)).
+   [decision 0104](docs/decisions/0104-terminal-feedback.md)), prepared for
+   `0.1.0-alpha.21`.
 5. Next: EPUB covers ([72](https://github.com/blisspixel/nemalo/issues/72)), which
    read untrusted image bytes and need their own threat and budget review.
 
