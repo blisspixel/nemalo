@@ -179,6 +179,9 @@ their columns, filter the loaded page locally with `/`, continue past either end
 typed outcomes, elapsed time, byte progress where counted, toasts and a session
 log, with `NEMALO_REDUCE_MOTION` for still output
 ([decision 0104](decisions/0104-terminal-feedback.md)).
+A held EPUB's declared cover appears in its details in Kitty and Ghostty, read
+and decoded under fixed limits and never fetched, with a title card elsewhere
+([decision 0105](decisions/0105-local-epub-covers.md)).
 It makes no startup network request. Source text and paths are escaped; reports are wrapped
 at grapheme boundaries without discarding original evidence. Scopes and scanner
 cloud policy remain explicit. See the [terminal guide](TUI.md) for keyboard
@@ -1113,7 +1116,9 @@ PDF content access remains source-bound and offline. See
 Configuration is an optional strict JSON object with an optional `schema_version`
 (absent means 1; a higher one is refused), `library` and `review` paths,
 `gutenberg_catalog` (the local `pg_catalog.csv`), and `on_detection`
-(`quarantine`, the default, or `delete`) for downloads the scanner flags. Both
+(`quarantine`, the default, or `delete`) for downloads the scanner flags, and
+`covers` (`on`, the default, or `off`) for EPUB covers in the TUI
+([decision 0105](decisions/0105-local-epub-covers.md)). Both
 library paths must be absolute and must not overlap. Unknown fields, multiple JSON
 values, nonregular files, and files over 64 KiB are rejected. `mcp serve` adds the
 configured library and review folders to its scopes, Gutenberg search and

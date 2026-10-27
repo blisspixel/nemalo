@@ -100,7 +100,21 @@ shows every message of the session with its time, in memory only.
 and change the busy line at most every five seconds
 ([decision 0104](decisions/0104-terminal-feedback.md)).
 
-In the panel layout a click selects a row or opens a section or step, the wheel
+The details of a held EPUB show its declared cover in a 14 by 10 column beside
+the card, in Kitty and Ghostty (Kitty graphics with Unicode placeholders). The
+cover is read only when the details open, from the EPUB's own `cover-image` or
+EPUB 2 cover declaration, never from a provider and never by guessing a file.
+Only JPEG, PNG and GIF are decoded, and images over 4096 pixels a side or 8
+megapixels are refused from their header. Thumbnails stay in memory for the
+session, and the image is removed from the terminal when the details close, the
+step changes, the window resizes and at exit. Everywhere else, including WezTerm,
+iTerm2, foot, Windows Terminal, tmux, screen, `NO_COLOR` and fewer than 256
+colours, a title card of the same size stands in, and a `Cover` line says why.
+`"covers": "off"` in config.json or `NEMALO_COVERS=off` turns covers off; plain
+mode shows neither
+([decision 0105](decisions/0105-local-epub-covers.md)).
+
+In the panel layout a click) selects a row or opens a section or step, the wheel
 moves the selection or scrolls, and a double click is Enter. Plain mode does not
 take the mouse, so the terminal keeps its own text selection; most terminals
 also select text with Shift held. Every action stays on the keyboard.

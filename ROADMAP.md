@@ -221,8 +221,12 @@ no format. Its increments, in order:
    ([71](https://github.com/blisspixel/nemalo/issues/71),
    [decision 0104](docs/decisions/0104-terminal-feedback.md)), prepared for
    `0.1.0-alpha.21`.
-5. Next: EPUB covers ([72](https://github.com/blisspixel/nemalo/issues/72)), which
-   read untrusted image bytes and need their own threat and budget review.
+5. Done in source for Kitty and Ghostty: EPUB covers
+   ([72](https://github.com/blisspixel/nemalo/issues/72),
+   [decision 0105](docs/decisions/0105-local-epub-covers.md)), prepared for
+   `0.1.0-alpha.22`. WezTerm, iTerm2 and Sixel terminals show the title card;
+   drawing there needs a placement that survives the cell renderer. Covers in
+   real Kitty, Ghostty and WezTerm windows are not yet observed.
 
 Increments 1 to 3 are prepared for the `0.1.0-alpha.20` prerelease; its receipts
 are recorded on those issues. The person-run sessions in 62 should now observe

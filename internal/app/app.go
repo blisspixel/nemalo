@@ -598,6 +598,12 @@ func (s Service) TextUnits(ctx context.Context, catalog, root, asset string) (co
 
 func (s Service) ContentCapabilities() content.Capabilities { return content.Available() }
 
+// Cover returns a held or cataloged EPUB's declared cover bytes for the
+// terminal (decision 0105). It reads nothing from the network and writes nothing.
+func (s Service) Cover(ctx context.Context, catalog, root, asset string) (content.Cover, error) {
+	return content.GetCover(ctx, catalog, root, asset)
+}
+
 type Capability struct {
 	Name        string `json:"name"`
 	Available   bool   `json:"available"`

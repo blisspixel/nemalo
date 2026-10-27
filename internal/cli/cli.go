@@ -40,7 +40,7 @@ type Envelope struct {
 
 func Run(ctx context.Context, args []string, out, errOut io.Writer) int {
 	return Execute(ctx, args, out, errOut, app.New(), os.Getenv, config.DefaultPaths, func(ctx context.Context, s app.Service, o TerminalOptions) error {
-		return tui.Run(ctx, s, os.Stdin, out, tui.Options{Plain: o.Plain, Library: o.Library, Doctor: o.Doctor})
+		return tui.Run(ctx, s, os.Stdin, out, tui.Options{Plain: o.Plain, Library: o.Library, Doctor: o.Doctor, CoversOff: o.CoversOff})
 	})
 }
 
@@ -53,6 +53,8 @@ type TerminalOptions struct {
 	// nemalo doctor, which executes nothing.
 	Library string
 	Doctor  *app.Doctor
+	// CoversOff is config.json's "covers": "off".
+	CoversOff bool
 }
 
 func Execute(ctx context.Context, args []string, out, errOut io.Writer, service app.Service, env func(string) string, paths func() (config.Paths, error), terminal func(context.Context, app.Service, TerminalOptions) error) int {
@@ -928,7 +930,7 @@ func Execute(ctx context.Context, args []string, out, errOut io.Writer, service 
 			return write(nil, errors.New("tui requires an interactive terminal"), 2)
 		}
 		d := service.Doctor(p, c, app.Lookup)
-		if err := terminal(ctx, service, TerminalOptions{Plain: *plain, Library: c.Library, Doctor: &d}); err != nil {
+		if err := terminal(ctx, service, TerminalOptions{Plain: *plain, Library: c.Library, Doctor: &d, CoversOff: c.Covers == "off"}); err != nil {
 			return write(nil, err, 1)
 		}
 	case "mcp":

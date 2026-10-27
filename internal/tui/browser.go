@@ -45,6 +45,8 @@ type entry struct {
 	// or an explicit saved bookmark to open in Read.
 	step     string
 	bookmark *library.Bookmark
+	// epub marks a held EPUB, whose details can show its declared cover.
+	epub bool
 }
 
 // Browsing is a presentation of shared service results, not another catalog.
@@ -222,7 +224,7 @@ func (m *model) populate(data any) {
 				c.keys += "  t shows the whole recording"
 			}
 			detail := m.render(c)
-			m.entries = append(m.entries, entry{title: line(title), summary: joinParts(list(h.Languages), words(h.Status)), right: strings.ToUpper(words(h.Format)) + "  " + byteSize(h.Bytes), detail: detail, sourceID: h.ID, identity: h.ID, audio: h.Format == "mp3", pdf: h.Format == "pdf", mp4: h.Format == "m4b" || h.Format == "m4a", managed: true, recording: recording})
+			m.entries = append(m.entries, entry{title: line(title), summary: joinParts(list(h.Languages), words(h.Status)), right: strings.ToUpper(words(h.Format)) + "  " + byteSize(h.Bytes), detail: detail, sourceID: h.ID, identity: h.ID, audio: h.Format == "mp3", pdf: h.Format == "pdf", mp4: h.Format == "m4b" || h.Format == "m4a", managed: true, recording: recording, epub: h.Format == "epub"})
 		}
 	case content.Result:
 		if p.Status == "units_available" && p.Audio != nil {
@@ -377,6 +379,10 @@ func (m *model) selectEntry(index int) {
 
 func (m *model) refreshPreview() {
 	if len(m.entries) > 0 {
+		if e, ok := m.coverEntry(); ok {
+			m.preview.SetContent(m.withCover(e, m.preview.Width()))
+			return
+		}
 		// Pre-wrap at grapheme boundaries. The viewport's cell slicing can split
 		// wide characters, causing its renderer to wrap an already sliced line.
 		m.preview.SetContent(lipgloss.Wrap(m.entries[m.selected].detail, max(1, m.preview.Width()), ""))

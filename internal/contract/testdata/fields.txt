@@ -580,6 +580,7 @@ internal/app.Doctor capabilities[].recommended bool ,omitempty
 internal/app.Doctor capabilities[].use string
 internal/app.Doctor checksum_recommendation string
 internal/app.Doctor configuration config.Config
+internal/app.Doctor configuration.covers string ,omitempty
 internal/app.Doctor configuration.gutenberg_catalog string ,omitempty
 internal/app.Doctor configuration.library string ,omitempty
 internal/app.Doctor configuration.on_detection string ,omitempty
@@ -852,6 +853,7 @@ internal/collection.Report schema_version int
 internal/collection.Report security_status string
 internal/collection.Report stored_bytes int64
 internal/collection.Report transferred_bytes int64
+internal/config.Config covers string ,omitempty
 internal/config.Config gutenberg_catalog string ,omitempty
 internal/config.Config library string ,omitempty
 internal/config.Config on_detection string ,omitempty

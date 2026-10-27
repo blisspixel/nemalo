@@ -144,6 +144,8 @@ type model struct {
 	recordingReview *acquisition.RecordingRequest
 	// lastEvaluation lets a detected download offer the item's other files.
 	lastEvaluation *discovery.Evaluation
+	// covers holds decoded covers and the one image in the terminal.
+	covers coverState
 }
 
 func newModel(ctx context.Context, service app.Service) *model {
@@ -198,11 +200,17 @@ func (m *model) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 	wasBusy := m.busy
 	model, cmd := m.update(message)
 	m.afterUpdate(wasBusy, message)
+	if sync := m.syncCover(); sync != nil {
+		cmd = tea.Batch(cmd, sync)
+	}
 	return model, cmd
 }
 
 func (m *model) update(message tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := message.(type) {
+	case coverLoaded:
+		m.coverLoaded(msg)
+		return m, nil
 	case readAuxReply:
 		m.acceptReadAux(msg)
 		return m, nil
@@ -258,8 +266,13 @@ func (m *model) update(message tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.ColorProfileMsg:
 		profile := msg.Profile.String()
 		m.color = (profile == "ANSI" || profile == "ANSI256" || profile == "TrueColor") && os.Getenv("NO_COLOR") == "" && os.Getenv("TERM") != "dumb"
+		if m.covers.protocol != "" && profile != "ANSI256" && profile != "TrueColor" {
+			// Placeholder cells carry the image number as a 256-colour foreground.
+			m.covers.protocol, m.covers.off = "", "not drawn with fewer than 256 colours"
+		}
 	case tea.WindowSizeMsg:
 		m.width = max(1, msg.Width)
+		m.covers.resized = true
 		m.height = msg.Height
 		m.input.SetWidth(max(1, msg.Width-4))
 		m.secondary.SetWidth(max(1, msg.Width-4))
@@ -872,6 +885,8 @@ type Options struct {
 	// its overview. Doctor reports scanner availability without running one.
 	Library string
 	Doctor  *app.Doctor
+	// CoversOff is the configured switch that turns covers off.
+	CoversOff bool
 }
 
 func Run(ctx context.Context, service app.Service, in io.Reader, out io.Writer, options Options) error {
@@ -881,6 +896,7 @@ func Run(ctx context.Context, service app.Service, in io.Reader, out io.Writer, 
 	m := newModel(ctx, service)
 	m.plain = options.Plain || os.Getenv("TERM") == "dumb"
 	m.reduceMotion = m.plain || os.Getenv("NEMALO_REDUCE_MOTION") != ""
+	m.covers.protocol, m.covers.off = coverProtocol(os.Getenv, m.plain, options.CoversOff)
 	m.initial = m.configure(options)
 	defer func() {
 		if m.cancel != nil {
@@ -888,5 +904,8 @@ func Run(ctx context.Context, service app.Service, in io.Reader, out io.Writer, 
 		}
 	}()
 	_, err := tea.NewProgram(m, tea.WithContext(ctx), tea.WithInput(in), tea.WithOutput(out)).Run()
+	if release := m.releaseCover(); release != "" {
+		_, _ = io.WriteString(out, release)
+	}
 	return err
 }

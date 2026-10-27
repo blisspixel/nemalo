@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+## 0.1.0-alpha.22
+
+- Holding details show an EPUB's declared cover in Kitty and Ghostty, through
+  Kitty graphics Unicode placeholders, with a title card of the same size
+  elsewhere. The cover is read from the book only when its details open, checked
+  against its declared type and refused from its header beyond 4096 pixels a side
+  or 8 megapixels; nothing is fetched or written. `"covers": "off"` in
+  config.json or `NEMALO_COVERS=off` turns covers off.
+
 ## 0.1.0-alpha.21
 
 - The terminal interface reports finished work in words from the typed result

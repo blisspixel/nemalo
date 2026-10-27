@@ -51,7 +51,7 @@ other entry in `.nemalo` is refused. Temporary names beginning `.nemalo-` or
 | Packet `content.<format>` | The downloaded bytes | none | hashed against the receipt |
 | `recording-intent.json`, `recording.json` | Whole-recording intent and result | 1 | other versions are retained, not imported |
 | Quarantine `<UTC>-<hash>/<name>.quarantined` | A detected download, never executed | none | not read by Nemalo |
-| `config.json` | `schema_version` (optional), `library`, `review`, `gutenberg_catalog`, `on_detection` | 1 (absent means 1) | higher refused as possibly newer; unknown fields refused; written only by the user |
+| `config.json` | `schema_version` (optional), `library`, `review`, `gutenberg_catalog`, `on_detection`, `covers` | 1 (absent means 1) | higher refused as possibly newer; unknown fields refused; written only by the user |
 | Catalog snapshot (user-named) | Byte identities of an explicit root | 1 | strict ([0004](decisions/0004-portable-library-snapshots.md)) |
 | Collection file (user-written) | Exact selections | 1 | strict ([0050](decisions/0050-collections.md)) |
 | Bookmark export | `kind` `nemalo-bookmarks/1` | 1 | unknown fields refused |

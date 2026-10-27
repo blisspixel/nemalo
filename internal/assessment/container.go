@@ -173,6 +173,11 @@ type memberRequest struct {
 	name  string
 	limit uint64
 	data  []byte
+	// cover selects the declared cover image instead of a named member;
+	// name, media and declaration are then filled from the package.
+	cover              bool
+	media, declaration string
+	packagePath        string
 }
 
 // VisitEPUBResource performs the same complete bounded validation and returns
@@ -408,6 +413,7 @@ func inspectEPUB(ctx context.Context, r io.ReaderAt, size int64, c *Checks, visi
 				Media      string `xml:"media-type,attr"`
 				Properties string `xml:"properties,attr"`
 			} `xml:"manifest>item"`
+			Metas []opfMeta `xml:"metadata>meta"`
 			Spine []struct {
 				ID     string `xml:"idref,attr"`
 				Linear string `xml:"linear,attr"`
@@ -417,6 +423,8 @@ func inspectEPUB(ctx context.Context, r io.ReaderAt, size int64, c *Checks, visi
 			return errors.New("invalid EPUB package manifest or spine")
 		}
 		ids := map[string]bool{}
+		local := map[string]bool{}
+		coverID := ""
 		text := map[string]int{}
 		documents := map[string]EPUBDocument{}
 		c.EPUB.Titles = append(c.EPUB.Titles, pkg.Titles...)
@@ -434,6 +442,9 @@ func inspectEPUB(ctx context.Context, r io.ReaderAt, size int64, c *Checks, visi
 			ids[item.ID] = true
 			documents[item.ID] = EPUBDocument{Package: entry.Path, Path: item.Href, Media: item.Media}
 			for _, property := range strings.Fields(item.Properties) {
+				if property == "cover-image" && coverID == "" {
+					coverID = item.ID
+				}
 				if property == "scripted" {
 					c.Warnings = append(c.Warnings, "scripted manifest item declared")
 					c.AccessRestrictions = append(c.AccessRestrictions, "scripted_manifest_item")
@@ -453,6 +464,7 @@ func inspectEPUB(ctx context.Context, r io.ReaderAt, size int64, c *Checks, visi
 				return fmt.Errorf("EPUB manifest references missing member %q", name)
 			}
 			documents[item.ID] = EPUBDocument{Package: entry.Path, Path: name, Media: item.Media}
+			local[item.ID] = true
 			if visit != nil {
 				m := members[name]
 				m.Media = item.Media
@@ -486,6 +498,9 @@ func inspectEPUB(ctx context.Context, r io.ReaderAt, size int64, c *Checks, visi
 					c.AccessRestrictions = append(c.AccessRestrictions, "active_content")
 				}
 			}
+		}
+		if resource != nil && resource.cover && resource.declaration == "" {
+			declareCover(resource, entry.Path, coverID, pkg.Metas, documents, local)
 		}
 		seenSpine := map[string]bool{}
 		for index, spine := range pkg.Spine {
@@ -530,6 +545,9 @@ func inspectEPUB(ctx context.Context, r io.ReaderAt, size int64, c *Checks, visi
 	c.EPUBPackage = "container_manifest_spine_checked"
 	c.ContentReview = "limited_token_indicators_only"
 	if resource != nil {
+		if resource.cover && resource.name == "" {
+			return nil
+		}
 		if containsString(c.EPUB.ObfuscatedFonts, resource.name) {
 			return errObfuscatedFont
 		}

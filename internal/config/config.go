@@ -25,6 +25,9 @@ type Config struct {
 	// OnDetection is what acquisition does with a download the scanner flags:
 	// "quarantine" (the default when empty) or "delete".
 	OnDetection string `json:"on_detection,omitempty"`
+	// Covers is "off" to stop the TUI drawing EPUB covers; empty or "on"
+	// draws them where the terminal supports it (decision 0105).
+	Covers string `json:"covers,omitempty"`
 }
 
 type Paths struct {
@@ -129,6 +132,9 @@ func Load(path string, explicit bool, env func(string) string, overrides Config)
 	}
 	if c.OnDetection != "" && c.OnDetection != "quarantine" && c.OnDetection != "delete" {
 		return c, errors.New("on_detection must be quarantine or delete")
+	}
+	if c.Covers != "" && c.Covers != "on" && c.Covers != "off" {
+		return c, errors.New("covers must be on or off")
 	}
 	if c.Library != "" && c.Review != "" && (within(c.Library, c.Review) || within(c.Review, c.Library)) {
 		return c, errors.New("library and review directories must not overlap")
