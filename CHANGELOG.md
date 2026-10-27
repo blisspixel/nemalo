@@ -2,6 +2,32 @@
 
 ## Unreleased
 
+## 0.1.0-alpha.20
+
+- The terminal interface groups its operations into sections (Home, Discover,
+  Library, Collections, Check files, Manage, Jobs) with titled panels, a sections
+  sidebar at 100 columns and wider, and a one-line footer. Every existing key and
+  Alt shortcut still works; Tab follows section order. `nemalo tui --plain`, or
+  `TERM=dumb`, keeps a linear layout without panels for screen readers and
+  magnifiers.
+- One action registry drives the footer, a searchable `Ctrl+O` palette, a Space
+  menu of the selected item's actions and `?` help. Network actions are marked,
+  reviews still need their own Enter, and actions that run on Enter, use the
+  network or write without a review are only prepared, never run, from a list.
+- The interface opens on Home: an offline, read-only overview of the configured
+  library (status, holdings by status, scanner availability from the same
+  lookups as `doctor`, saved bookmarks, recorded jobs), with first-run choices
+  when no library is configured. The configured library prefills the library
+  fields of other steps.
+- Holdings, search results, evaluation files and jobs share one card with status
+  chips from typed values and a short identity; `y` sends the full identity to
+  the terminal clipboard with OSC 52. The full report keeps every recorded field.
+- Lists align their columns, `/` filters the loaded page as you type without a
+  request, Down and Up continue past the ends (network pages only on Enter on
+  their own row), and the panel layout accepts clicks and the wheel. Mouse
+  behaviour in real terminals is not yet observed; person-run accessibility
+  checks remain open.
+
 ## 0.1.0-alpha.19
 
 - Evaluate one PubMed Central article version and acquire its explicitly selected

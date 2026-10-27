@@ -111,7 +111,7 @@ func TestTerminalJobsExplicitReadPreservesJournalsAndDisabledBookmarks(t *testin
 		}
 		msg := cmd()
 		m.Update(msg)
-		if m.busy || len(m.entries) != 1 || m.entries[0].title != id || m.outcome != outcomeAttention || !strings.Contains(m.report, "Job observation: incomplete") || !strings.Contains(m.status, "Incomplete recorded job observation") {
+		if m.busy || len(m.entries) != 1 || m.entries[0].title != shortID(id) || m.entries[0].identity != id || m.outcome != outcomeAttention || !strings.Contains(m.report, "Job observation: incomplete") || !strings.Contains(m.status, "Incomplete recorded job observation") {
 			t.Fatal(m.status, m.report, m.entries)
 		}
 		if strings.Contains(m.report, "hidden request") || strings.ContainsRune(m.report, '\x1b') || strings.ContainsRune(m.entries[0].detail, '\x1b') || !strings.Contains(m.entries[0].detail, "not observed") {

@@ -29,7 +29,7 @@ import (
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
-const Version = "0.1.0-alpha.19"
+const Version = "0.1.0-alpha.20"
 
 type Envelope struct {
 	SchemaVersion int    `json:"schema_version"`

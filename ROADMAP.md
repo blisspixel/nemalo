@@ -203,17 +203,27 @@ before the release candidate, because it changes the terminal layout that the
 candidate's PTY gates and the person-run sessions in 62 must observe. It changes
 no format. Its increments, in order:
 
-1. Task sections, panels and one action registry
+1. Done in source: task sections, panels and one action registry
    ([66](https://github.com/blisspixel/nemalo/issues/66),
    [69](https://github.com/blisspixel/nemalo/issues/69),
    [decision 0101](docs/decisions/0101-task-sections-and-action-registry.md)).
-2. Home and detail cards ([67](https://github.com/blisspixel/nemalo/issues/67),
-   [68](https://github.com/blisspixel/nemalo/issues/68)).
-3. List interaction without hidden requests
-   ([70](https://github.com/blisspixel/nemalo/issues/70)).
-4. Feedback and covers ([71](https://github.com/blisspixel/nemalo/issues/71),
+2. Done in source: Home and detail cards
+   ([67](https://github.com/blisspixel/nemalo/issues/67),
+   [68](https://github.com/blisspixel/nemalo/issues/68),
+   [decision 0102](docs/decisions/0102-home-overview-and-detail-cards.md)).
+3. Done in source except real-terminal mouse observation: list columns, local
+   filter, continuous paging and mouse
+   ([70](https://github.com/blisspixel/nemalo/issues/70),
+   [decision 0103](docs/decisions/0103-list-filter-paging-and-mouse.md)).
+   Mouse behaviour in Ghostty, Kitty, WezTerm and Windows Terminal is not yet
+   observed; synthetic events are not that evidence.
+4. Next: feedback and covers ([71](https://github.com/blisspixel/nemalo/issues/71),
    [72](https://github.com/blisspixel/nemalo/issues/72)) only after the above,
    each with its own threat and budget review.
+
+Increments 1 to 3 are prepared for the `0.1.0-alpha.20` prerelease; its receipts
+are recorded on those issues. The person-run sessions in 62 should now observe
+this layout and plain mode.
 The 1.0 release candidate remains tracked in
 [63](https://github.com/blisspixel/nemalo/issues/63), person-run checks in
 [62](https://github.com/blisspixel/nemalo/issues/62). Post-1.0 issues are:

@@ -134,6 +134,31 @@ func TestHomeStatesAndExplicitBookmarks(t *testing.T) {
 		t.Fatal(err)
 	}
 	held := holdTUIBook(t, ctx, root, "book.epub", plainEPUB(t, "Bookmark word."))
+	// A journal from a newer Nemalo is reported, not repaired.
+	newer := t.TempDir()
+	if _, err := library.Initialize(ctx, newer); err != nil {
+		t.Fatal(err)
+	}
+	journal := filepath.Join(newer, ".nemalo", "journal.jsonl")
+	data, err := os.ReadFile(journal)
+	if err != nil {
+		t.Fatal(err)
+	}
+	changed := []byte(strings.Replace(string(data), `"schema_version":1`, `"schema_version":9`, 1))
+	if err := os.Chmod(journal, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(journal, changed, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	m.input.SetValue(newer)
+	run(m, m.start(true))
+	if !strings.Contains(m.report, "newer Nemalo") || m.outcome != outcomeAttention {
+		t.Fatal("newer state", m.report)
+	}
+	if after, _ := os.ReadFile(journal); string(after) != string(changed) {
+		t.Fatal("overview rewrote newer state")
+	}
 	if _, err := library.EnableBookmarks(ctx, root); err != nil {
 		t.Fatal(err)
 	}

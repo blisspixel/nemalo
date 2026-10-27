@@ -410,7 +410,7 @@ func scrollState(v viewport.Model) string {
 func (m *model) caveat() string {
 	switch m.mode {
 	case "home":
-		return "Offline and read-only. Scripts and agents: nemalo COMMAND --json, or nemalo mcp serve."
+		return "Offline and read-only. Scripts and agents: nemalo COMMAND --json, or nemalo mcp serve; see nemalo help."
 	case "search":
 		if m.source == "gutenberg" {
 			return "Local catalog; the Gutenberg website is not queried."

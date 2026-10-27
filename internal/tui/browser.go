@@ -59,7 +59,7 @@ func (m *model) populate(data any) {
 		m.entries = collectionEntries(p)
 	case app.JobSnapshotResult:
 		for _, j := range p.Jobs {
-			c := card{title: line(j.ID), facts: nonEmpty(words(j.Kind), words(j.Relationship)), chips: append([]chip{jobChip(j.RecordedStatus)}, labelledChips("Owner", words(j.Owner), "Journal", words(j.Integrity))...), identity: j.ID}
+			c := card{title: firstOf(words(j.Kind), "Recorded job"), facts: nonEmpty(words(j.Relationship)), chips: append([]chip{jobChip(j.RecordedStatus)}, labelledChips("Owner", words(j.Owner), "Journal", words(j.Integrity))...), identity: j.ID}
 			c.lists = append(c.lists, cardList{"Created", []string{line(j.Created)}}, cardList{"Updated", []string{line(j.Updated)}}, cardList{"Observed", []string{line(p.Finished)}})
 			if j.Progress != nil {
 				c.lists = append(c.lists, cardList{"Progress", []string{fmt.Sprintf("%s: %d of %d %s", line(j.Progress.Phase), j.Progress.Done, j.Progress.Total, line(j.Progress.Unit))}})
@@ -72,7 +72,7 @@ func (m *model) populate(data any) {
 				notes = append(notes, fmt.Sprintf("%d related held tracks do not establish a complete recording.", j.HeldTracks))
 			}
 			c.caveat = strings.Join(append(notes, "Recorded outcome only; unfinished owner liveness is not observed."), " ")
-			m.entries = append(m.entries, entry{title: line(j.ID), summary: words(j.Kind), right: "recorded " + words(j.RecordedStatus), detail: m.render(c), identity: j.ID})
+			m.entries = append(m.entries, entry{title: shortID(j.ID), summary: words(j.Kind), right: "recorded " + words(j.RecordedStatus), detail: m.render(c), identity: j.ID})
 		}
 	case discovery.Evaluation:
 		if p.Access == discovery.OpenLibraryEditionList {
@@ -151,7 +151,7 @@ func (m *model) populate(data any) {
 		}
 	case library.Page:
 		for _, a := range p.Assets {
-			title, languages := a.ID, []string{}
+			title, languages := shortID(a.ID), []string{}
 			if len(a.Locations) > 0 {
 				title = a.Locations[0].Path
 			}
