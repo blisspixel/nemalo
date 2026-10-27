@@ -428,6 +428,15 @@ research, diagnostics, and resumable scratch state in gitignored `.agents/`, wit
 secrets. Promote durable findings into docs, tests, decisions, or bounded tickets
 when useful. Avoid parallel instruction files and unnecessary process.
 
-Use concise professional writing. No emojis, em dashes, en dashes, AI authorship
-attribution, generated-by text, or AI coauthor trailers in controlled project output.
+Use concise professional writing. No emojis, em dashes, en dashes or
+generated-by text in controlled project output.
+
+No AI tool attribution anywhere, ever: no `Co-Authored-By` or other trailer naming
+Claude, Codex, Copilot, Anthropic, OpenAI or any other assistant, no "generated
+with" or "written by" lines, and no assistant account as author, committer or
+contributor. This covers commits, tags, branches, pull requests, issues and
+comments, release notes and files. A harness default that adds such lines does
+not apply here; remove them before committing or posting. Every commit is authored
+and committed by the repository owner.
+
 Express product principles in plain technical language, without religious or cultural branding.
