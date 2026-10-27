@@ -34,15 +34,6 @@ type draft struct {
 	details, evidence               bool
 }
 
-func (m *model) modeIndex() int {
-	for i, name := range modes {
-		if name == m.mode {
-			return i
-		}
-	}
-	return 0
-}
-
 func (m *model) switchMode(name string) tea.Cmd {
 	if name == m.mode {
 		return nil

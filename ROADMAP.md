@@ -190,13 +190,30 @@ all of these.
 
 ## Current position and next steps
 
-As of 2026-10-25, stages 1 to 4 are accepted, stage 5 is complete except for
-person-run checks, and stage 6 is in progress. `main`
+As of 2026-10-27, stages 1 to 4 are accepted, stage 5 is complete except for
+person-run checks and the TUI design wave below, and stage 6 is in progress. `main`
 is the only branch and passes hosted CI on all six shipped targets. The bounded
 PMC provider wave is delivered in
 [`0.1.0-alpha.19`](https://github.com/blisspixel/nemalo/releases/tag/v0.1.0-alpha.19),
 with its acceptance and publication receipt in
-[64](https://github.com/blisspixel/nemalo/issues/64). No next feature wave has started.
+[64](https://github.com/blisspixel/nemalo/issues/64).
+
+The TUI design wave ([65](https://github.com/blisspixel/nemalo/issues/65)) runs
+before the release candidate, because it changes the terminal layout that the
+candidate's PTY gates and the person-run sessions in 62 must observe. It changes
+no format. Its increments, in order:
+
+1. Task sections, panels and one action registry
+   ([66](https://github.com/blisspixel/nemalo/issues/66),
+   [69](https://github.com/blisspixel/nemalo/issues/69),
+   [decision 0101](docs/decisions/0101-task-sections-and-action-registry.md)).
+2. Home and detail cards ([67](https://github.com/blisspixel/nemalo/issues/67),
+   [68](https://github.com/blisspixel/nemalo/issues/68)).
+3. List interaction without hidden requests
+   ([70](https://github.com/blisspixel/nemalo/issues/70)).
+4. Feedback and covers ([71](https://github.com/blisspixel/nemalo/issues/71),
+   [72](https://github.com/blisspixel/nemalo/issues/72)) only after the above,
+   each with its own threat and budget review.
 The 1.0 release candidate remains tracked in
 [63](https://github.com/blisspixel/nemalo/issues/63), person-run checks in
 [62](https://github.com/blisspixel/nemalo/issues/62). Post-1.0 issues are:

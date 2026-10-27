@@ -21,7 +21,9 @@ EPUB/PDF reading and TUI citation/evidence navigation, exact source positions,
 help dwell, resize, continuation and primary-screen restoration on exit. Three
 PDF setup commands and 55 terminal observations have separate receipt fields,
 including the real cursor position and `Ctrl+O` actions
-([decision 0094](decisions/0094-terminal-keyboard-and-cursor-access.md)).
+([decision 0094](decisions/0094-terminal-keyboard-and-cursor-access.md)), reached by
+name from the searchable palette
+([decision 0101](decisions/0101-task-sections-and-action-registry.md)).
 The tool records bounded raw output and current-screen frames, with unchanged
 source/library snapshots. This fixed terminal profile does not establish every
 graphical terminal, assistive technology or host integration. See
@@ -163,8 +165,12 @@ coverage that finished. Header counts cannot establish missing files or recovery
 completeness. See [decision 0059](decisions/0059-par2-metadata-inventory.md).
 
 The TUI exposes search, evaluation, inventory, checks, and library services with session-scoped forms/results, selectable
-search/holdings, adaptive detail panes, and complete report access. It makes no
-startup network request. Source text and paths are escaped; reports are wrapped
+search/holdings, adaptive detail panes, and complete report access. Operations are
+steps in named sections (Discover, Library, Collections, Check files, Manage,
+Jobs), and one action registry drives the footer, the `Ctrl+O` palette, the Space
+item menu and `?` help. `nemalo tui --plain`, or `TERM=dumb`, keeps a linear
+layout without panels ([decision 0101](decisions/0101-task-sections-and-action-registry.md)).
+It makes no startup network request. Source text and paths are escaped; reports are wrapped
 at grapheme boundaries without discarding original evidence. Scopes and scanner
 cloud policy remain explicit. See the [terminal guide](TUI.md) for keyboard
 controls, budgets, paging, appearance, and application-view captures.

@@ -2,9 +2,11 @@ package tui
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 
 	"charm.land/bubbles/v2/textinput"
+	"charm.land/bubbles/v2/viewport"
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 	"github.com/blisspixel/nemalo/internal/present"
@@ -181,7 +183,10 @@ func (m *model) layout() frame {
 	f := frame{}
 	if m.width >= 100 {
 		f.side = sidebarWidth
-		left := "Nemalo  " + sectionOf(m.mode).name + " / " + stepTitle(m.mode)
+		left := "Nemalo  " + sectionOf(m.mode).name
+		if stepTitle(m.mode) != sectionOf(m.mode).name {
+			left += " / " + stepTitle(m.mode)
+		}
 		f.header = []string{m.paint("Nemalo", accent, true) + strings.TrimPrefix(left, "Nemalo")}
 		right := m.netWord()
 		if gap := m.width - lipgloss.Width(left) - lipgloss.Width(right); gap >= 2 {
@@ -302,6 +307,9 @@ func (m *model) sidebar(height int) string {
 			continue
 		}
 		lines = append(lines, m.paint("["+s.name+"]", accent, true))
+		if len(s.steps) == 1 {
+			continue
+		}
 		for _, step := range s.steps {
 			if step == m.mode {
 				lines = append(lines, "  "+m.paint("["+stepTitle(step)+"]", accent, true))
@@ -315,7 +323,7 @@ func (m *model) sidebar(height int) string {
 
 // panelTitle is the main panel's title, its state and its tone.
 func (m *model) panelTitle(f frame) (string, string, role) {
-	scroll := fmt.Sprintf("scroll %.0f%%", m.viewport.ScrollPercent()*100)
+	scroll := scrollState(m.viewport)
 	switch {
 	case m.collectionReview != nil:
 		return "Review collection acquisition", scroll, warning
@@ -338,7 +346,7 @@ func (m *model) panelTitle(f frame) (string, string, role) {
 		state = append(state, scroll)
 	case m.details && len(m.entries) > 0:
 		title += ": details"
-		state = append(state, fmt.Sprintf("scroll %.0f%%", m.preview.ScrollPercent()*100))
+		state = append(state, scrollState(m.preview))
 	case len(m.entries) > 0:
 		state = append(state, fmt.Sprintf("%d of %d", m.selected+1, len(m.entries)))
 	}
@@ -351,7 +359,16 @@ func (m *model) panelTitle(f frame) (string, string, role) {
 	if f.side == 0 {
 		state = append(state, m.netWord())
 	}
+	state = slices.DeleteFunc(state, func(s string) bool { return s == "" })
 	return title, strings.Join(state, "  "), accent
+}
+
+// scrollState is how far a pane has scrolled, or "" when it all fits.
+func scrollState(v viewport.Model) string {
+	if v.TotalLineCount() <= v.Height() {
+		return ""
+	}
+	return fmt.Sprintf("scroll %.0f%%", v.ScrollPercent()*100)
 }
 
 // caveat is the step's standing limit, kept visible under its form. Keys and
@@ -446,7 +463,7 @@ func (m *model) panelView() (string, *tea.Cursor) {
 		panels = m.box(title, right, lines, f.mainW, f.height, focused, tone)
 		if f.detailW > 0 {
 			detail := strings.Split(m.preview.View(), "\n")
-			panels = lipgloss.JoinHorizontal(lipgloss.Top, panels, m.box("Details", fmt.Sprintf("scroll %.0f%%", m.preview.ScrollPercent()*100), detail, f.detailW, f.height, false, accent))
+			panels = lipgloss.JoinHorizontal(lipgloss.Top, panels, m.box("Details", scrollState(m.preview), detail, f.detailW, f.height, false, accent))
 		}
 	}
 	if f.side > 0 {

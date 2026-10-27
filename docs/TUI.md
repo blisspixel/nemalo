@@ -1,25 +1,53 @@
 # Terminal guide
 
 Nemalo uses the same application services as the CLI. No provider request runs at
-startup. Select an operation, fill its fields, and press Enter to run it.
-Results and form drafts remain with each operation for the current session.
-Write-review controls use physical keystrokes. A committed text string spelling
-`enter`, `esc` or another control name cannot confirm or dismiss a review.
+startup. Operations are steps grouped into sections named for what you come to do:
 
-`Ctrl+O` lists every function-key and control-key action the current view
-accepts, with its key, for keyboards or terminals where function keys are
-awkward: a Mac without Fn held, GNOME Terminal's F10 menu, or a compact keyboard.
-Up and Down choose, Enter runs it, and Escape closes. A chosen review still asks
-for its own Enter. In the evidence report, `r` replays as F3 does. Text fields
-use the terminal's real cursor at the edit position, so screen magnifiers and
-screen readers that follow the cursor can track it
-([decision 0094](decisions/0094-terminal-keyboard-and-cursor-access.md)).
-For linear reading with a screen reader, `nemalo content read` without `--json`
-prints a located passage and its next step as plain lines.
+| Section | Steps |
+| --- | --- |
+| Discover | Search, Evaluate |
+| Library | Holdings, Read |
+| Collections | Collections, Revisions |
+| Check files | Inspect, Check, Scan, Snapshot, Audit |
+| Manage | Status (initialize, import, rescan, clean up, restore, purge) |
+| Jobs | Recorded jobs |
+
+Fill a step's fields and press Enter to run it. Results and form drafts remain
+with each step for the current session. Write-review controls use physical
+keystrokes. A committed text string spelling `enter`, `esc` or another control
+name cannot confirm or dismiss a review.
+
+At 100 columns and wider a Sections sidebar lists every section, with the current
+section's steps under it. Narrower terminals name the sections on the header row
+and the current section's steps in the panel title. The current section and step
+are bracketed, so location never depends on colour. Panels have titled borders;
+the focused panel's border is heavy, and `>` marks the focused field or row. The
+footer shows at most six keys for the focused part of the screen
+([decision 0101](decisions/0101-task-sections-and-action-registry.md)).
+
+`Ctrl+O` opens a palette of every action in every section, searchable as you
+type: `acq` finds the acquisition reviews and `jobs` the Jobs step. The current
+step's available actions come first. Unavailable actions are dim and say why,
+network actions are marked `network`, and actions that open a write review are
+marked `review`. Up and Down choose, Enter runs, and Escape or `Ctrl+O` closes.
+An action that runs on Enter, uses the network, or writes without a review only
+moves to its step and names the key to press. A chosen review still asks for its
+own Enter. With results focused, Space lists the selected item's actions, `?`
+shows every key grouped by section, and `:` also opens the palette; in a text
+field these keys are typed. In the evidence report, `r` replays as F3 does. Text
+fields use the terminal's real cursor at the edit position, and the palette puts
+it on the chosen row, so screen magnifiers and screen readers that follow the
+cursor can track it ([decision 0094](decisions/0094-terminal-keyboard-and-cursor-access.md)).
+
+`nemalo tui --plain`, or `TERM=dumb`, keeps a linear layout without borders or a
+sidebar: a location line, the context line, the fields, status, position and
+content, in that order. For linear reading with a screen reader,
+`nemalo content read` without `--json` prints a located passage and its next
+step as plain lines.
 
 ## Browse and inspect
 
-Search and holdings show a selectable list, with an adjacent evidence pane in
+Search and holdings show a selectable list, with an adjacent Details panel in
 terminals at least 100 columns wide. Narrower terminals show the list; Enter in
 results opens the selected item's details. F5 switches to the complete report,
 including identifiers, provenance, findings, and limitations.
@@ -45,9 +73,11 @@ item's other files for a new, deliberate review. See
 
 | Key | Action |
 | --- | --- |
-| Tab / Shift+Tab | Next / previous operation |
-| Alt+1..9, Alt+0 | Jump to the numbered operation; 0 selects Read |
-| Alt+A / Alt+B | Collections / collection Revisions, preserving numeric shortcuts |
+| Tab / Shift+Tab | Next / previous step, in section order |
+| Alt+1..9, Alt+0 | Search, Inspect, Check, Scan, Snapshot, Holdings, Audit, Evaluate, Status, Read |
+| Alt+A / Alt+B | Collections / collection Revisions. Jobs has no Alt key; use Tab or the palette |
+| Ctrl+O | Searchable palette of every action |
+| Space / ? / : in results | Selected item's actions / every key / the palette |
 | Enter in form | Run the explicit operation |
 | F6 | Focus results / return to editing |
 | Up / Down, Home / End in results | Select an item |
@@ -61,18 +91,18 @@ item's other files for a new, deliberate review. See
 | F3 in inspect, snapshot, audit | Select bounded 1 GiB / 5 GiB read budget |
 | F3 in Collections | Select a 1 GiB / 5 GiB total acquisition transfer cap; this does not fetch |
 | F4 in holdings | Cycle EPUB / PDF / MP3 / M4B / M4A / all filename filters |
-| F7 in State | Review initialization of an explicit existing folder |
-| F8 in State | Review import of the folder and one source; no antivirus scan |
+| F7 in Status | Review initialization of an explicit existing folder |
+| F8 in Status | Review import of the folder and one source; no antivirus scan |
 | F8 in Collections | Preview acquisition offline, then review the bound request before a separate confirming Enter permits network and intake writes |
-| Ctrl+R in State | Review a rescan of review holdings that lack scan evidence |
-| F10 in State | Observe bounded recorded jobs for the selected existing library, without reconciliation, polling or job cancellation |
-| Ctrl+N in two-field forms | Switch between fields, including the Gutenberg catalog and the State source |
+| Ctrl+R in Status | Review a rescan of review holdings that lack scan evidence |
+| F10 in Status or Jobs, Enter in Jobs | Observe bounded recorded jobs for the selected existing library, without reconciliation, polling or job cancellation |
+| Ctrl+N in two-field forms | Switch between fields, including the Gutenberg catalog and the Status source |
 | Ctrl+N in Collections | Cycle collection file, initialized library and absolute outside intake |
 | Ctrl+A in snapshot | Toggle historical health metadata |
 | e in Archive, Gutenberg, or Open Library results | Prepare selected-item evaluation, without requesting it. A Gutenberg catalog row lists no files. An Open Library work lists editions on Enter. e on an edition row selects that edition |
 | d in Evaluate results | Review selected-file acquisition into a new intake directory. An empty Intake field asks for a folder (Ctrl+N) and does not fetch. On a Gutenberg catalog row, d then requests that one bibliographic record and lists EPUB offers. After an Open Library edition names an Archive item, d reviews that Archive file |
-| F9 in State | Preview moving the source folder's held files to the holding area; Enter applies that exact plan. With a cleanup ID in the source field (set after a cleanup), preview restoring it |
-| Ctrl+P in State | With a cleanup ID in the source field, preview purging its held copies whose bytes the library holds and verifies; Enter removes exactly those. The library keeps its own copy |
+| F9 in Status | Preview moving the source folder's held files to the holding area; Enter applies that exact plan. With a cleanup ID in the source field (set after a cleanup), preview restoring it |
+| Ctrl+P in Status | With a cleanup ID in the source field, preview purging its held copies whose bytes the library holds and verifies; Enter removes exactly those. The library keeps its own copy |
 | t in Holdings results | Show the recording that holds the selected track: order, missing tracks, timing |
 | a in Evaluate results | Review acquiring every track of the recording that holds the selected MP3. An empty Intake field asks for a folder (Ctrl+N) and does not open that review |
 | r in Holdings results | Stage source access; explicit root still required |
@@ -95,7 +125,7 @@ catalog and root. Edited queries require Enter before paging. Holdings start wit
 filename filtering does not validate content. Snapshot success fills empty
 holdings/audit forms but does not automatically open or audit anything.
 
-State (operation 9) reads local control identity/status on Enter. F7 reviews the
+Status (Manage, Alt+9) reads local control identity/status on Enter. F7 reviews the
 exact folder and control-file writes; a second Enter initializes it. Ctrl+N sets
 one EPUB, PDF, MP3, M4B, M4A, or completed intake packet. F8 reviews that import; a second
 Enter copies it into the library without scanning; a packet whose acquisition
@@ -108,16 +138,17 @@ PageUp/PageDown. Initialization is not import; see
 [decision 0012](decisions/0012-scan-on-acquire-quarantine-and-rescan.md), and
 [the state contract](decisions/0006-library-control-state.md).
 
-F10 observes recent selected-library job relationships through the same passive
-snapshot service as `nemalo jobs snapshot`. It reads only on that explicit key:
-opening State, changing focus and resizing do not poll. Results label recorded
+F10 in Status, or Enter in the Jobs step, observes recent selected-library job
+relationships through the same passive snapshot service as `nemalo jobs snapshot`.
+It reads only on that explicit key: opening Status or Jobs, changing focus and
+resizing do not poll. Results label recorded
 outcomes and unobserved ownership; a recorded running job can be abandoned.
 F6 and Enter browse summaries/details, and F5 shows coverage and limitations.
 An incomplete observation is marked for attention. Escape cancels an observation;
 results from a cancelled generation cannot replace a later selection.
 Missing state stays missing, and jobs, holdings and disabled bookmarks stay
 unchanged. The action neither starts nor cancels jobs, probes owners, imports
-content or opens a stored asset. Enter in the form still reads library status.
+content or opens a stored asset. Enter in the Status form still reads library status.
 The [snapshot contract](decisions/0088-non-mutating-library-job-snapshot.md)
 defines its relationships, bounds and legacy omissions.
 
@@ -308,18 +339,20 @@ text has no links to follow.
 ## Appearance and boundaries
 
 Colours are the terminal's own ANSI colours, so the terminal theme sets their
-shade and their contrast on its background: blue for the brand, selected mode,
-and headings; green for done (imported, verified, checked); yellow for active
-work, reviews, and results that need attention; red for failures and
-detections; dim for context and hints. No truecolor value is emitted and the
+shade and their contrast on its background: blue for the brand, the current
+section and step, focus and headings; green for done (imported, verified,
+checked); yellow for active work, reviews, and results that need attention; red
+for failures and detections; cyan for actions that use the network; dim for
+context and hints. No truecolor value is emitted and the
 background is not queried. The status line's colour is the operation's
 outcome, read from its result, never from the status wording, and every
-outcome also has explicit text. `NO_COLOR` and `TERM=dumb` disable styling. Minimum size is 40 columns by 20 rows; state survives
-the resize prompt. No image, animation, or color is required for navigation.
-Mode labels keep their number and name together: when every name does not
-fit, the other modes show their numbers and the selected mode keeps its name.
-Field hints and the context line end at a whole word with `...`; each mode's
-empty view keeps the full explanation. The footer is one line when it fits.
+outcome also has explicit text. `NO_COLOR` and `TERM=dumb` disable styling;
+`TERM=dumb` also selects the plain layout. Minimum size is 40 columns by 20 rows;
+state survives the resize prompt. No image, animation, or color is required for
+navigation. Section names stay whole and wrap below 80 columns. Field hints end
+at a whole word with `...`; each step's empty view keeps the full explanation,
+and its standing limit (such as scanner policy or an offline comparison) stays
+under its form. The footer is always one line.
 The reader names the unit in its header except where the page opens on that
 unit's own heading.
 Omarchy's Super shortcuts and F9 dictation binding do not take Nemalo's Alt+1
@@ -336,7 +369,10 @@ proof the file is safe. See
 ## Application-view captures
 
 These application-view captures were refreshed on 2026-10-24 from the current Go
-TUI model at 116 columns and 36 rows, in its supported no-color mode. Frames are
+TUI model at 116 columns and 36 rows, in its supported no-color mode. The Holdings,
+Discovery, Jobs, Collections and Revisions views were refreshed on 2026-10-27 from
+the same inputs after the section and panel frame (decision 0101); the reader,
+citation and evidence views are unchanged. Frames are
 rendered as fixed-width text to PNG; they are not OS window screenshots.
 Holdings come from a fresh offline snapshot of validation copies of Montaigne's
 essays, A Vindication of the Rights of Woman and Pride and Prejudice. Five files
@@ -346,7 +382,7 @@ provider request. Reading uses the actual source-bound terminal reader over
 Pride and Prejudice. Displayed catalog/root names are portable aliases; private
 paths are excluded. Capture work runs no scanner, acquires no files and changes
 no existing library. The captures demonstrate these views, not every workflow.
-The Jobs view uses synthetic canonical state with disabled bookmarks and an
+The Jobs step uses synthetic canonical state with disabled bookmarks and an
 abandoned recorded running job with a torn tail. Its observation timestamp and
 uncertain owner stay distinct from the older recorded progress. Repeated
 observations preserve the fixture bytes; the view does not start a scan.
