@@ -37,8 +37,10 @@ type entry struct {
 	page                 bool
 	pageRef              string
 	pageUnit, pageOffset int
-	// identity is the full value y copies; cards show it shortened.
+	// identity is the full value y copies; cards show it shortened. right is
+	// the list's right-aligned column, such as format and size.
 	identity string
+	right    string
 	// step and bookmark are Home's destinations: a section's first step,
 	// or an explicit saved bookmark to open in Read.
 	step     string
@@ -50,6 +52,7 @@ type entry struct {
 // as words, and empty values are left out, as in the command-line output.
 func (m *model) populate(data any) {
 	m.entries, m.selected, m.details, m.evidence = nil, 0, false, false
+	m.filter, m.loadMore = nil, 0
 	line, words, list := present.Line, present.Words, present.List
 	switch p := data.(type) {
 	case library.CollectionStatusResult, library.CollectionDiffResult, app.CollectionAcquireResult:
@@ -69,7 +72,7 @@ func (m *model) populate(data any) {
 				notes = append(notes, fmt.Sprintf("%d related held tracks do not establish a complete recording.", j.HeldTracks))
 			}
 			c.caveat = strings.Join(append(notes, "Recorded outcome only; unfinished owner liveness is not observed."), " ")
-			m.entries = append(m.entries, entry{title: line(j.ID), summary: joinParts(words(j.Kind), "recorded "+words(j.RecordedStatus)), detail: m.render(c), identity: j.ID})
+			m.entries = append(m.entries, entry{title: line(j.ID), summary: words(j.Kind), right: "recorded " + words(j.RecordedStatus), detail: m.render(c), identity: j.ID})
 		}
 	case discovery.Evaluation:
 		if p.Access == discovery.OpenLibraryEditionList {
@@ -114,7 +117,7 @@ func (m *model) populate(data any) {
 			}
 			c.caveat = "Declarations, not file rights or safety. Availability is resolved again before transfer."
 			c.keys = "d reviews an explicit intake download"
-			m.entries = append(m.entries, entry{title: line(f.Name), summary: joinParts(size, words(f.Access)), detail: m.render(c), sourceID: f.Name})
+			m.entries = append(m.entries, entry{title: line(f.Name), summary: words(f.Access), right: size, detail: m.render(c), sourceID: f.Name})
 		}
 		if len(p.Files) == 0 && p.Source == "gutenberg" && p.Access == "local_catalog" {
 			m.entries = append(m.entries, entry{
@@ -159,22 +162,23 @@ func (m *model) populate(data any) {
 					title = e.Titles[0]
 				}
 			}
-			c := card{title: line(title), facts: nonEmpty(list(languages), fmt.Sprintf("%s (%d bytes)", byteSize(a.Bytes), a.Bytes), fmt.Sprintf("%d copies", len(a.Locations))), identity: a.ID, caveat: "Recorded when cataloged. Audit checks current bytes."}
+			c := card{title: line(title), facts: nonEmpty(list(languages), fmt.Sprintf("%s (%d bytes)", byteSize(a.Bytes), a.Bytes), copies(len(a.Locations))), identity: a.ID, caveat: "Recorded when cataloged. Audit checks current bytes."}
 			if a.Health != nil {
 				c.chips = []chip{healthChip(a.Health.Status), antivirusChip(a.Health.Antivirus.Status)}
 			} else {
 				c.chips = []chip{healthChip(""), antivirusChip("")}
 			}
-			copies := cardList{label: "Copies"}
+			held := cardList{label: "Copies"}
 			for _, l := range a.Locations {
-				copies.values = append(copies.values, fmt.Sprintf("%s (%s)", line(l.Path), words(l.CandidateKind)))
+				held.values = append(held.values, fmt.Sprintf("%s (%s)", line(l.Path), words(l.CandidateKind)))
 			}
-			c.lists = append(c.lists, copies)
+			c.lists = append(c.lists, held)
 			c.keys = "r reads this asset"
 			detail := m.render(c)
 			m.entries = append(m.entries, entry{
 				title:    line(title),
-				summary:  joinParts(byteSize(a.Bytes), list(languages), fmt.Sprintf("%d location(s)", len(a.Locations))),
+				summary:  joinParts(list(languages), copies(len(a.Locations))),
+				right:    byteSize(a.Bytes),
 				detail:   detail,
 				sourceID: a.ID, identity: a.ID,
 				audio: len(a.Locations) > 0 && strings.HasSuffix(strings.ToLower(a.Locations[0].Path), ".mp3"),
@@ -218,22 +222,22 @@ func (m *model) populate(data any) {
 				c.keys += "  t shows the whole recording"
 			}
 			detail := m.render(c)
-			m.entries = append(m.entries, entry{title: line(title), summary: joinParts(words(h.Format), words(h.Status), byteSize(h.Bytes), list(h.Languages)), detail: detail, sourceID: h.ID, identity: h.ID, audio: h.Format == "mp3", pdf: h.Format == "pdf", mp4: h.Format == "m4b" || h.Format == "m4a", managed: true, recording: recording})
+			m.entries = append(m.entries, entry{title: line(title), summary: joinParts(list(h.Languages), words(h.Status)), right: strings.ToUpper(words(h.Format)) + "  " + byteSize(h.Bytes), detail: detail, sourceID: h.ID, identity: h.ID, audio: h.Format == "mp3", pdf: h.Format == "pdf", mp4: h.Format == "m4b" || h.Format == "m4a", managed: true, recording: recording})
 		}
 	case content.Result:
 		if p.Status == "units_available" && p.Audio != nil {
 			a := p.Audio
-			m.entries = append(m.entries, entry{title: "MP3 track: " + line(a.Format), summary: fmt.Sprintf("%d Hz | %d ch | %d frames | %d ms encoded", a.SampleRate, a.Channels, a.Frames, a.EncodedDurationMs), detail: fmt.Sprintf("MP3 track\n\nFormat: %s\nSample rate: %d Hz\nChannels: %d\nIndexed frames: %d\nEncoded duration: %d ms\nDeclared chapters: %d\nUnindexed regions: %d\n\nEnter retrieves a frame range from the start; n continues.\nAudio bytes are not shown or played here.\nNo listening progress is recorded.", line(a.Format), a.SampleRate, a.Channels, a.Frames, a.EncodedDurationMs, len(a.Chapters), len(a.Gaps))})
+			m.entries = append(m.entries, entry{title: "MP3 track: " + line(a.Format), summary: fmt.Sprintf("%d Hz   %d ch   %d frames   %d ms encoded", a.SampleRate, a.Channels, a.Frames, a.EncodedDurationMs), detail: fmt.Sprintf("MP3 track\n\nFormat: %s\nSample rate: %d Hz\nChannels: %d\nIndexed frames: %d\nEncoded duration: %d ms\nDeclared chapters: %d\nUnindexed regions: %d\n\nEnter retrieves a frame range from the start; n continues.\nAudio bytes are not shown or played here.\nNo listening progress is recorded.", line(a.Format), a.SampleRate, a.Channels, a.Frames, a.EncodedDurationMs, len(a.Chapters), len(a.Gaps))})
 		} else if p.Status == "units_available" && p.MP4 != nil {
 			a := p.MP4
-			m.entries = append(m.entries, entry{title: "MP4 audio: " + words(a.Codec), summary: fmt.Sprintf("%d Hz | %d ch | %d samples | %s encoded", a.SampleRate, a.Channels, a.Samples, present.Clock(a.EncodedDurationMs)), detail: fmt.Sprintf("MP4 audio\n\nCodec: %s\nSample rate: %d Hz\nChannels: %d\nLocated samples: %d\nEncoded duration: %s\nDeclared chapters: %d\nFindings: %s\n\nEvery sample was located in the file; nothing was decoded.\nAudio is not played here: in Holdings, o opens a verified copy in a player.\nNo listening progress is recorded.", words(a.Codec), a.SampleRate, a.Channels, a.Samples, present.Clock(a.EncodedDurationMs), len(a.Chapters), firstOf(list(a.Findings), "none"))})
+			m.entries = append(m.entries, entry{title: "MP4 audio: " + words(a.Codec), summary: fmt.Sprintf("%d Hz   %d ch   %d samples   %s encoded", a.SampleRate, a.Channels, a.Samples, present.Clock(a.EncodedDurationMs)), detail: fmt.Sprintf("MP4 audio\n\nCodec: %s\nSample rate: %d Hz\nChannels: %d\nLocated samples: %d\nEncoded duration: %s\nDeclared chapters: %d\nFindings: %s\n\nEvery sample was located in the file; nothing was decoded.\nAudio is not played here: in Holdings, o opens a verified copy in a player.\nNo listening progress is recorded.", words(a.Codec), a.SampleRate, a.Channels, a.Samples, present.Clock(a.EncodedDurationMs), len(a.Chapters), firstOf(list(a.Findings), "none"))})
 			for _, c := range a.Chapters {
 				m.entries = append(m.entries, entry{title: "Chapter: " + firstOf(line(c.Title), line(c.ID)), summary: present.Clock(c.StartMs) + " to " + present.Clock(c.EndMs), detail: fmt.Sprintf("Declared chapter\n\nTitle: %s\nStart: %s\nEnd: %s\nSource: %s\n\nChapter times are the file's own declarations, not checked by decoding.\n", line(c.Title), present.Clock(c.StartMs), present.Clock(c.EndMs), words(a.ChapterSource))})
 			}
 		} else if p.Status == "units_available" && p.Representation == "pdf-text/1" {
 			for _, u := range p.Units {
 				label := pageLabel(u.PageLabel)
-				m.entries = append(m.entries, entry{title: fmt.Sprintf("Page %d, label %s", u.Index, label), summary: fmt.Sprintf("%s | %d text bytes | %d gaps", words(u.Extraction), u.TextBytes, u.KnownGaps), detail: fmt.Sprintf("PDF page\n\nPhysical index: %d (zero-based)\nPrinted label: %s\nExtraction: %s\nText bytes: %d; located gaps: %d\n\nText is in content-stream order; columns are not reconstructed and there is no OCR.\nEnter retrieves a bounded range of this page.\nNo reading progress is recorded.", u.Index, label, words(u.Extraction), u.TextBytes, u.KnownGaps)})
+				m.entries = append(m.entries, entry{title: fmt.Sprintf("Page %d, label %s", u.Index, label), summary: fmt.Sprintf("%s   %d text bytes   %d gaps", words(u.Extraction), u.TextBytes, u.KnownGaps), detail: fmt.Sprintf("PDF page\n\nPhysical index: %d (zero-based)\nPrinted label: %s\nExtraction: %s\nText bytes: %d; located gaps: %d\n\nText is in content-stream order; columns are not reconstructed and there is no OCR.\nEnter retrieves a bounded range of this page.\nNo reading progress is recorded.", u.Index, label, words(u.Extraction), u.TextBytes, u.KnownGaps)})
 			}
 		} else if p.Representation == "epub-page-list/1" && (p.Status == "units_available" || p.Status == "no_page_list") {
 			source := "Pagination source: not stated by the package."
@@ -325,7 +329,7 @@ func findings(values []string) string {
 	return "\n" + b.String()
 }
 
-// joinParts joins the non-empty summary parts with " | ".
+// joinParts joins the non-empty summary parts with spaces, without pipes.
 func joinParts(parts ...string) string {
 	shown := parts[:0:0]
 	for _, p := range parts {
@@ -333,7 +337,14 @@ func joinParts(parts ...string) string {
 			shown = append(shown, p)
 		}
 	}
-	return strings.Join(shown, " | ")
+	return strings.Join(shown, "   ")
+}
+
+func copies(n int) string {
+	if n == 1 {
+		return "1 copy"
+	}
+	return fmt.Sprintf("%d copies", n)
 }
 
 // pageLabel is a printed PDF page label, or "none".
@@ -417,7 +428,14 @@ func (m *model) browserKey(key string) (bool, tea.Cmd) {
 	if !m.resultsFocused {
 		return false, nil
 	}
+	if key != "enter" {
+		m.loadMore = 0
+	}
 	switch key {
+	case "/":
+		if len(m.entries) > 0 || m.filter != nil {
+			return true, m.openFilter()
+		}
 	case "y":
 		return true, m.copyIdentity()
 	case "d":
@@ -430,9 +448,20 @@ func (m *model) browserKey(key string) (bool, tea.Cmd) {
 			return true, nil
 		}
 	case "esc":
+		if m.filter != nil {
+			m.clearFilter()
+			return true, nil
+		}
 		return true, m.focusForm()
 	case "up", "down", "home", "end":
 		if !m.details && !m.evidence {
+			// Past either end, paging continues (decision 0103).
+			if key == "down" && m.selected == len(m.entries)-1 && m.morePages(true) {
+				return true, m.continuePast(true)
+			}
+			if key == "up" && m.selected == 0 && m.morePages(false) {
+				return true, m.continuePast(false)
+			}
 			index := m.selected
 			switch key {
 			case "up":
@@ -448,6 +477,12 @@ func (m *model) browserKey(key string) (bool, tea.Cmd) {
 			return true, nil
 		}
 	case "enter":
+		if m.loadMore != 0 {
+			forward := m.loadMore > 0
+			m.loadMore = 0
+			m.selectLast = !forward
+			return true, m.turnPage(forward)
+		}
 		if m.mode == "home" && len(m.entries) > 0 && !m.details && !m.evidence && (m.entries[m.selected].step != "" || m.entries[m.selected].bookmark != nil) {
 			return true, m.homeEnter()
 		}
@@ -612,7 +647,7 @@ func (m *model) browseView() string {
 	if width >= 98 {
 		listWidth = width / 2
 	}
-	rows := m.listRows(listWidth-2, height)
+	rows := m.resultRows(listWidth-2, height)
 	if m.mode == "home" {
 		rows = m.homeLines(listWidth-2, height)
 	}

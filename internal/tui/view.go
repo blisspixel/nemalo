@@ -170,6 +170,9 @@ func (m *model) footer() string {
 	if m.overlay != nil {
 		return m.paint(clipWords("Up/Down choose  Enter run  Esc close  Ctrl+C quit", max(1, m.width-2)), muted, false)
 	}
+	if m.filter != nil && m.filter.editing {
+		return m.paint(clipWords("Type to filter  Enter keep  Esc restore  Up/Down select  Ctrl+C quit", max(1, m.width-2)), muted, false)
+	}
 	if m.busy {
 		return m.paint("Esc cancel  Ctrl+C quit", muted, false)
 	}
@@ -209,6 +212,9 @@ func (m *model) View() tea.View {
 		v := tea.NewView(content)
 		v.AltScreen = true
 		v.Cursor = cursor
+		// Mouse selection is a convenience over the complete keyboard path;
+		// plain mode leaves the terminal's own mouse alone (decision 0103).
+		v.MouseMode = tea.MouseModeCellMotion
 		return v
 	}
 	state := m.statusLine()
@@ -240,6 +246,9 @@ func (m *model) screenCursor(contentRow, overlayRow int) *tea.Cursor {
 			return nil
 		}
 		return tea.NewCursor(0, contentRow+overlayRow)
+	}
+	if m.filter != nil && m.filter.editing && m.filterLine >= 0 {
+		return inputCursor(m.filter.input, lipgloss.Width("> Filter "), contentRow+m.filterLine, m.width)
 	}
 	if m.resultsFocused || m.reviewing() {
 		return nil

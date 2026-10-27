@@ -9,6 +9,7 @@ import (
 	"os"
 	"slices"
 	"strings"
+	"time"
 
 	"github.com/charmbracelet/x/term"
 
@@ -53,6 +54,19 @@ type model struct {
 	// availability report (decision 0102); neither is written.
 	library string
 	doctor  *app.Doctor
+	// List interaction (decision 0103): a local filter, a pending network
+	// page, the page end to select after a local page loads, and the last
+	// frame's click regions.
+	filter     *listFilter
+	loadMore   more
+	selectLast bool
+	hits       []hit
+	rowEntries []int
+	// filterLine is the filter field's row in the content area (-1 when
+	// none) and filterTop the content area's first row inside the panel.
+	filterLine, filterTop int
+	lastClick             time.Time
+	clock                 func() time.Time
 	// fieldRow is the screen row of the first form field; fieldAt holds each
 	// input's row offset (-1 when hidden) and fieldX its value column.
 	fieldRow, fieldCol int
@@ -205,6 +219,10 @@ func (m *model) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 		}
 	}
 	switch msg := message.(type) {
+	case tea.MouseClickMsg:
+		return m, m.mouse(msg)
+	case tea.MouseWheelMsg:
+		return m, m.mouse(msg)
 	case tea.ColorProfileMsg:
 		profile := msg.Profile.String()
 		m.color = (profile == "ANSI" || profile == "ANSI256" || profile == "TrueColor") && os.Getenv("NO_COLOR") == "" && os.Getenv("TERM") != "dumb"
@@ -410,6 +428,10 @@ func (m *model) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 			m.bookmarkStatus(fmt.Sprintf("Incomplete: %s", present.Error(msg.err)))
 		}
 		m.populate(msg.data)
+		if m.selectLast && len(m.entries) > 0 {
+			m.selectEntry(len(m.entries) - 1)
+		}
+		m.selectLast = false
 		if msg.err != nil {
 			m.populate(nil)
 			m.evidence = true
@@ -535,6 +557,9 @@ func (m *model) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		if m.overlay != nil {
 			return m, m.overlayKey(msg)
+		}
+		if m.filter != nil && m.filter.editing && !m.busy {
+			return m, m.filterKey(msg)
 		}
 		if msg.Keystroke() == "ctrl+o" && !m.busy {
 			m.openOverlay(palette)
@@ -753,17 +778,22 @@ func (m *model) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 	if m.busy {
 		return m, nil
 	}
-	if m.resultsFocused {
-		return m, nil
-	}
-	if m.collectionReview != nil {
-		return m, nil
-	}
 	var cmd tea.Cmd
 	if m.overlay != nil {
 		m.overlay.query, cmd = m.overlay.query.Update(message)
 		m.overlay.filter()
 		return m, cmd
+	}
+	if m.filter != nil && m.filter.editing {
+		m.filter.input, cmd = m.filter.input.Update(message)
+		m.applyFilter()
+		return m, cmd
+	}
+	if m.resultsFocused {
+		return m, nil
+	}
+	if m.collectionReview != nil {
+		return m, nil
 	}
 	if m.intakeFocused {
 		m.intake, cmd = m.intake.Update(message)

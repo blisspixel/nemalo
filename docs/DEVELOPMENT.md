@@ -172,7 +172,10 @@ item menu and `?` help. `nemalo tui --plain`, or `TERM=dumb`, keeps a linear
 layout without panels ([decision 0101](decisions/0101-task-sections-and-action-registry.md)).
 It opens on Home, an offline read-only overview of the configured library, and
 shows items as cards with typed status chips and a copyable short identity
-([decision 0102](decisions/0102-home-overview-and-detail-cards.md)).
+([decision 0102](decisions/0102-home-overview-and-detail-cards.md)). Lists align
+their columns, filter the loaded page locally with `/`, continue past either end
+(network pages only on Enter) and accept the mouse outside plain mode
+([decision 0103](decisions/0103-list-filter-paging-and-mouse.md)).
 It makes no startup network request. Source text and paths are escaped; reports are wrapped
 at grapheme boundaries without discarding original evidence. Scopes and scanner
 cloud policy remain explicit. See the [terminal guide](TUI.md) for keyboard

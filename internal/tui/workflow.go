@@ -38,6 +38,10 @@ func (m *model) switchMode(name string) tea.Cmd {
 	if name == m.mode {
 		return nil
 	}
+	if m.filter != nil {
+		m.entries, m.selected, m.filter = m.filter.all, m.filter.before, nil
+	}
+	m.loadMore = 0
 	m.drafts[m.mode] = draft{input: m.input.Value(), second: m.secondary.Value(), intake: m.intake.Value(), content: m.report, status: m.status, submittedInput: m.submittedInput, submittedSecond: m.submittedSecond, offset: m.offset, total: m.total, entries: m.entries, selected: m.selected, details: m.details, evidence: m.evidence}
 	m.mode = name
 	d := m.drafts[name]

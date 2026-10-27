@@ -73,7 +73,7 @@ func fingerprint(m *model) string {
 		m.assess, m.largeBudget, m.collectionLargeBudget, m.overlay != nil, m.confirmKind, m.confirmRoot,
 		m.downloadReview != nil, m.recordingReview != nil, m.collectionReview != nil, m.readAux != nil, m.pager != nil,
 		m.initializeAction || m.importAction || m.rescanAction || m.cleanupPlan || m.purgePlan, m.restorePlan, m.restoreAction,
-		m.offset, m.id, len(m.entries), m.viewport.YOffset() > 0)
+		m.offset, m.id, len(m.entries), m.viewport.YOffset() > 0) + fmt.Sprintf("|%t|%d", m.filter != nil, m.loadMore)
 }
 
 // Every key that changes the main view is in the registry for that step and

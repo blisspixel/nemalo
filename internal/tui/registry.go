@@ -130,6 +130,7 @@ func buildRegistry() []command {
 		{key: "space", name: "Actions for the selected item", label: "item actions", footer: 3, focus: listFocus, when: needs(reasonNoItem, hasEntries)},
 		{key: "?", name: "Show help for every key", label: "help", footer: 4, focus: listFocus, when: notBusy},
 		{key: ":", name: "Open the action palette", focus: listFocus, when: notBusy},
+		{key: "/", name: "Filter this page as you type, offline", label: "filter", footer: 4, focus: listFocus, when: needs(reasonNoItem, func(m *model) bool { return hasEntries(m) || m.filter != nil })},
 		{key: "y", name: "Copy the selected item's full identity", label: "copy", footer: 5, focus: listFocus, when: needs("This item has no identity to copy", func(m *model) bool { return hasEntries(m) && m.entries[m.selected].identity != "" })},
 		{key: "ctrl+right", name: "Next results page", steps: []string{"search", "holdings", "evaluate"}, unprobed: true, when: needs("Only search, holdings and Open Library editions page", pageable)},
 		{key: "ctrl+left", name: "Previous results page", steps: []string{"search", "holdings", "evaluate"}, unprobed: true, when: needs("Only search, holdings and Open Library editions page", pageable)},

@@ -222,7 +222,7 @@ func TestEvaluateDetailsReadAsWords(t *testing.T) {
 	n := int64(10 << 20)
 	m.populate(discovery.Evaluation{ID: "archive:ozymandias_librivox", Source: "archive", Files: []discovery.OfferedFile{{Name: "OzymandiasOfEgypt_librivox.m4b", Bytes: &n, Access: "public_file_candidate", RightsStatus: "not_resolved_at_file_level", Findings: []string{}}}, Rights: []string{}})
 	e := m.entries[0]
-	if e.title != "OzymandiasOfEgypt_librivox.m4b" || e.summary != "10.0 MiB | public file candidate" {
+	if e.title != "OzymandiasOfEgypt_librivox.m4b" || e.summary != "public file candidate" || e.right != "10.0 MiB" {
 		t.Fatalf("%q %q", e.title, e.summary)
 	}
 	for _, want := range []string{"OzymandiasOfEgypt_librivox.m4b\n", "Access public file candidate", "Rights not resolved at file level"} {

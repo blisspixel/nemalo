@@ -79,6 +79,21 @@ Home/End select the first/last item on the current page. PageUp/PageDown scroll
 the evidence pane or report. Escape returns from details, then to the form.
 While work runs, Escape cancels it. Ctrl+C quits from anywhere.
 
+Rows show a title clipped at a whole word, a right-aligned size or format, and a
+dim line of languages, copies and status; the panel title shows the absolute
+position, such as `12 of 340`. With results focused, `/` filters the loaded page
+as you type, offline: Enter keeps the filter, `/` edits it, and Escape restores
+the full page and its selection. Down past the last item continues to the next
+page and Up past the first to the previous one. Holdings and a local Gutenberg
+catalog load at once; a network provider shows a "Load the next page (network)"
+row, and only Enter on it sends the request
+([decision 0103](decisions/0103-list-filter-paging-and-mouse.md)).
+
+In the panel layout a click selects a row or opens a section or step, the wheel
+moves the selection or scrolls, and a double click is Enter. Plain mode does not
+take the mouse, so the terminal keeps its own text selection; most terminals
+also select text with Shift held. Every action stays on the keyboard.
+
 In Archive search results, `e` fills the evaluation form with the selected item
 ID. This makes no request; Enter explicitly retrieves metadata. Evaluation does
 not download content, determine file-level rights, or establish safety.
@@ -108,6 +123,8 @@ item's other files for a new, deliberate review. See
 | F5 | Toggle complete operation report |
 | PageUp / PageDown | Scroll detail/report |
 | Ctrl+Left / Ctrl+Right | Previous / next search or holdings page |
+| / in results | Filter the loaded page as you type, offline; Enter keeps, Escape restores |
+| Down past the last item / Up past the first | Next / previous page: local pages load, network pages wait for Enter on their own row |
 | F2 in search | Switch Open Library / Internet Archive / local Gutenberg catalog |
 | F3 in Archive search | Cycle relevance / downloads / identifier order |
 | F3 in Gutenberg search | Cycle relevance / identifier. The website is not queried |

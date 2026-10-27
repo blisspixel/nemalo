@@ -216,6 +216,39 @@ func (m *model) layout() frame {
 	return f
 }
 
+// navHits are the clickable section names and steps of the frame.
+func (m *model) navHits(f frame) []hit {
+	var hits []hit
+	if f.side > 0 {
+		y := f.top + 1
+		current := sectionOf(m.mode)
+		for _, s := range sections {
+			hits = append(hits, hit{y0: y, y1: y, x0: 0, x1: f.side - 1, entry: -1, step: s.steps[0]})
+			y++
+			if s.name == current.name && len(s.steps) > 1 {
+				for _, step := range s.steps {
+					hits = append(hits, hit{y0: y, y1: y, x0: 0, x1: f.side - 1, entry: -1, step: step})
+					y++
+				}
+			}
+		}
+		return hits
+	}
+	x, y := lipgloss.Width("Nemalo")+2, 0
+	for _, s := range sections {
+		w := lipgloss.Width(s.name)
+		if sectionOf(m.mode).name == s.name {
+			w += 2
+		}
+		if x+w > m.width {
+			x, y = 0, y+1
+		}
+		hits = append(hits, hit{y0: y, y1: y, x0: x, x1: x + w - 1, entry: -1, step: s.steps[0]})
+		x += w + 2
+	}
+	return hits
+}
+
 // tabRows names every section on the header row, wrapping whole names.
 func (m *model) tabRows() []string {
 	current := sectionOf(m.mode).name
@@ -349,11 +382,10 @@ func (m *model) panelTitle(f frame) (string, string, role) {
 	case m.details && len(m.entries) > 0:
 		title += ": details"
 		state = append(state, scrollState(m.preview))
+	case len(m.entries) > 0 && m.filter == nil && m.total > 0 && pageable(m):
+		state = append(state, fmt.Sprintf("%d of %d", m.offset+m.selected+1, m.total))
 	case len(m.entries) > 0:
 		state = append(state, fmt.Sprintf("%d of %d", m.selected+1, len(m.entries)))
-	}
-	if (m.mode == "search" || m.mode == "holdings") && m.total > 0 && !m.busy {
-		state = append(state, fmt.Sprintf("%d matches", m.total))
 	}
 	if s := m.stepState(); s != "" {
 		state = append(state, s)
@@ -462,7 +494,20 @@ func (m *model) panelView() (string, *tea.Cursor) {
 				}
 			}
 		}
+		m.rowEntries = m.rowEntries[:0]
+		contentTop := len(lines)
+		m.filterTop = contentTop
 		lines = append(lines, m.contentLines(f)...)
+		m.hits = m.hits[:0]
+		if m.viewport.GetContent() != "" || m.mode == "home" {
+			for r, e := range m.rowEntries {
+				if e >= 0 && contentTop+r < f.height-2 {
+					y := f.top + 1 + contentTop + r
+					m.hits = append(m.hits, hit{y0: y, y1: y, x0: f.side, x1: f.side + f.mainW - 1, entry: e})
+				}
+			}
+		}
+		m.hits = append(m.hits, m.navHits(f)...)
 		focused := true
 		panels = m.box(title, right, lines, f.mainW, f.height, focused, tone)
 		if f.detailW > 0 {
@@ -481,6 +526,8 @@ func (m *model) panelView() (string, *tea.Cursor) {
 		if cursorRow >= 0 {
 			cursor = tea.NewCursor(f.side+2, f.top+1+cursorRow)
 		}
+	case m.filter != nil && m.filter.editing && m.filterLine >= 0:
+		cursor = inputCursor(m.filter.input, f.side+2+lipgloss.Width("> Filter "), f.top+1+m.filterTop+m.filterLine, m.width)
 	case focusedField >= 0 && !m.resultsFocused && !m.reviewing():
 		for i, in := range []textinput.Model{m.input, m.secondary, m.intake} {
 			if in.Focused() && m.fieldAt[i] >= 0 {
@@ -505,7 +552,7 @@ func (m *model) contentLines(f frame) []string {
 	case m.mode == "home":
 		return m.homeLines(f.inner, f.contentH)
 	}
-	return m.listRows(f.inner, f.contentH)
+	return m.resultRows(f.inner, f.contentH)
 }
 
 // homeLines puts Home's summary above its list of destinations.
@@ -516,14 +563,25 @@ func (m *model) homeLines(width, height int) []string {
 		summary = summary[:max(0, min(len(summary), height-7))]
 		room = height - len(summary) - 1
 	}
-	return append(append(summary, ""), m.listRows(width, max(3, room))...)
+	rows := m.resultRows(width, max(3, room))
+	pad := make([]int, len(summary)+1)
+	for i := range pad {
+		pad[i] = -1
+	}
+	m.rowEntries = append(pad, m.rowEntries...)
+	if m.filterLine >= 0 {
+		m.filterLine += len(pad)
+	}
+	return append(append(summary, ""), rows...)
 }
 
-// listRows renders one page of results: a numbered title and a dim summary
-// for each item, with > on the selected row.
+// listRows renders one page of results in aligned columns: a numbered title
+// clipped at a word, a right-aligned column and a dim second line, with > on
+// the selected row. rowEntries records which item each row shows, for clicks.
 func (m *model) listRows(width, height int) []string {
 	count := max(1, height/3)
 	start := (m.selected / count) * count
+	m.rowEntries = m.rowEntries[:0]
 	var rows []string
 	for i := start; i < min(len(m.entries), start+count); i++ {
 		e := m.entries[i]
@@ -531,13 +589,57 @@ func (m *model) listRows(width, height int) []string {
 		if i == m.selected {
 			marker = ">"
 		}
-		title := fmt.Sprintf("%s %2d  %s", marker, m.offset+i+1, e.title)
-		if i == m.selected {
-			title = m.paint(clip(title, width), accent, true)
-		} else {
-			title = clip(title, width)
+		number := m.offset + i + 1
+		if m.filter != nil {
+			number = i + 1
 		}
-		rows = append(rows, title, m.paint(clip("      "+e.summary, width), muted, false), "")
+		head := fmt.Sprintf("%s %2d  ", marker, number)
+		right := clip(e.right, max(1, width/3))
+		room := width - lipgloss.Width(head)
+		if e.right != "" {
+			room -= lipgloss.Width(right) + 2
+		}
+		row := head + clipWords(e.title, max(1, room))
+		if e.right != "" {
+			row += strings.Repeat(" ", max(2, width-lipgloss.Width(row)-lipgloss.Width(right))) + right
+		}
+		if i == m.selected {
+			row = m.paint(clip(row, width), accent, true)
+		} else {
+			row = m.highlight(clip(row, width))
+		}
+		rows = append(rows, row, m.paint(clip("      "+e.summary, width), muted, false), "")
+		m.rowEntries = append(m.rowEntries, i, i, -1)
+	}
+	return rows
+}
+
+// resultRows is the list with the filter field above it and a pending
+// network page on its own row.
+func (m *model) resultRows(width, height int) []string {
+	var top []string
+	m.filterLine = -1
+	if m.filter != nil {
+		m.filterLine = 0
+		top = append(top, m.filterRow(width))
+	}
+	if m.loadMore < 0 {
+		top = append(top, m.moreRow(width))
+	}
+	room := height - len(top)
+	if m.loadMore > 0 {
+		room--
+	}
+	rows := m.listRows(width, max(1, room))
+	pad := make([]int, len(top))
+	for i := range pad {
+		pad[i] = -1
+	}
+	m.rowEntries = append(pad, m.rowEntries...)
+	rows = append(top, rows...)
+	if m.loadMore > 0 {
+		rows = append(rows, m.moreRow(width))
+		m.rowEntries = append(m.rowEntries, -1)
 	}
 	return rows
 }
