@@ -217,9 +217,11 @@ no format. Its increments, in order:
    [decision 0103](docs/decisions/0103-list-filter-paging-and-mouse.md)).
    Mouse behaviour in Ghostty, Kitty, WezTerm and Windows Terminal is not yet
    observed; synthetic events are not that evidence.
-4. Next: feedback and covers ([71](https://github.com/blisspixel/nemalo/issues/71),
-   [72](https://github.com/blisspixel/nemalo/issues/72)) only after the above,
-   each with its own threat and budget review.
+4. Done in source: feedback, toasts and a session log
+   ([71](https://github.com/blisspixel/nemalo/issues/71),
+   [decision 0104](docs/decisions/0104-terminal-feedback.md)).
+5. Next: EPUB covers ([72](https://github.com/blisspixel/nemalo/issues/72)), which
+   read untrusted image bytes and need their own threat and budget review.
 
 Increments 1 to 3 are prepared for the `0.1.0-alpha.20` prerelease; its receipts
 are recorded on those issues. The person-run sessions in 62 should now observe

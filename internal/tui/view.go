@@ -167,6 +167,9 @@ func (m *model) footer() string {
 		verb := map[string]string{"init": "initialize", "import": "import", "rescan": "rescan", "cleanup": "move to holding", "restore": "restore", "purge": "purge"}[m.confirmKind]
 		return lipgloss.Wrap(m.paint("Enter "+verb+"  Esc back  PgUp/PgDown review  Ctrl+C quit", warning, false), max(1, m.width-2), " ")
 	}
+	if m.logOpen {
+		return m.paint(clipWords("Up/Down scroll  Esc or L close  Ctrl+C quit", max(1, m.width-2)), muted, false)
+	}
 	if m.overlay != nil {
 		return m.paint(clipWords("Up/Down choose  Enter run  Esc close  Ctrl+C quit", max(1, m.width-2)), muted, false)
 	}
@@ -223,6 +226,13 @@ func (m *model) View() tea.View {
 	if m.viewport.GetContent() == "" && !m.busy {
 		lines := strings.Split(lipgloss.Wrap(m.emptyHelp(), m.width-2, " "), "\n")
 		content = lipgloss.NewStyle().Height(m.viewport.Height()).Render(strings.Join(lines[:min(len(lines), m.viewport.Height())], "\n"))
+	}
+	if m.busy && m.viewport.GetContent() == "" {
+		lines := m.busyLines(m.width - 2)
+		content = lipgloss.NewStyle().Height(m.viewport.Height()).Render(strings.Join(lines[:min(m.viewport.Height(), len(lines))], "\n"))
+	}
+	if m.logOpen {
+		content = lipgloss.NewStyle().Height(m.viewport.Height()).Render(strings.Join(m.logLines(m.width-2, m.viewport.Height()), "\n"))
 	}
 	overlayRow := -1
 	if m.overlay != nil {

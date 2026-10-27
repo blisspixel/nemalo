@@ -89,6 +89,17 @@ catalog load at once; a network provider shows a "Load the next page (network)"
 row, and only Enter on it sends the request
 ([decision 0103](decisions/0103-list-filter-paging-and-mouse.md)).
 
+Finished work reports its outcome in words from the typed result, such as
+`Imported Essays as review (unscanned).` or a scan's "no detections reported (not
+proof of safety)". Running work shows elapsed time and its phase; a single-file or
+recording acquisition also shows a byte bar that stops at 99% until the result.
+A toast with the outcome word appears at the right of the footer: others fade
+after five seconds, failures stay until the next key. `L` with results focused
+shows every message of the session with its time, in memory only.
+`NEMALO_REDUCE_MOTION`, `--plain` and `TERM=dumb` remove the spinner and toasts
+and change the busy line at most every five seconds
+([decision 0104](decisions/0104-terminal-feedback.md)).
+
 In the panel layout a click selects a row or opens a section or step, the wheel
 moves the selection or scrolls, and a double click is Enter. Plain mode does not
 take the mouse, so the terminal keeps its own text selection; most terminals
@@ -124,6 +135,7 @@ item's other files for a new, deliberate review. See
 | PageUp / PageDown | Scroll detail/report |
 | Ctrl+Left / Ctrl+Right | Previous / next search or holdings page |
 | / in results | Filter the loaded page as you type, offline; Enter keeps, Escape restores |
+| L in results | This session's messages, with times |
 | Down past the last item / Up past the first | Next / previous page: local pages load, network pages wait for Enter on their own row |
 | F2 in search | Switch Open Library / Internet Archive / local Gutenberg catalog |
 | F3 in Archive search | Cycle relevance / downloads / identifier order |

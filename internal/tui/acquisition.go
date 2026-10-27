@@ -136,11 +136,13 @@ func (m *model) confirmDownload(msg tea.KeyPressMsg) tea.Cmd {
 		if m.recordingReview != nil {
 			request := *m.recordingReview
 			m.recordingReview = nil
+			request.Progress = m.trackProgress()
 			m.status = "Acquiring every track to untrusted intake. Escape cancels; completed tracks are kept for a resume."
 			return func() tea.Msg { data, err := m.service.AcquireRecording(ctx, request); return result{id, data, err} }
 		}
 		request := *m.downloadReview
 		m.downloadReview = nil
+		request.Progress = m.trackProgress()
 		return func() tea.Msg { data, err := m.service.Acquire(ctx, request); return result{id, data, err} }
 	}
 	return nil

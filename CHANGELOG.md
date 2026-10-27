@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- The terminal interface reports finished work in words from the typed result
+  instead of "Complete.", shows elapsed time and phase while work runs, a byte
+  bar for acquisitions, outcome toasts in the footer and a session message log
+  (`L`). `NEMALO_REDUCE_MOTION`, `--plain` and `TERM=dumb` keep the screen still.
+- Race-built content tests extend the request deadline so a slow, contended
+  runner cannot fail the full-size navigation fixture; production keeps 15 s.
+
 ## 0.1.0-alpha.20
 
 - The terminal interface groups its operations into sections (Home, Discover,

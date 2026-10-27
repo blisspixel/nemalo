@@ -71,7 +71,9 @@ func terminalEnvironment(root string) []string {
 		}
 		return strings.HasPrefix(value, "=") // No drive-relative paths are used.
 	})
-	env = append(env, "TERM=xterm-256color", "TERM_PROGRAM=nemalo-native-check", "NO_COLOR=1", "CLICOLOR=0", "CLICOLOR_FORCE=0", "FORCE_COLOR=0")
+	// Reduced motion keeps every observed screen deterministic: no spinner
+	// frames and no timed toasts (decision 0104).
+	env = append(env, "TERM=xterm-256color", "TERM_PROGRAM=nemalo-native-check", "NO_COLOR=1", "CLICOLOR=0", "CLICOLOR_FORCE=0", "FORCE_COLOR=0", "NEMALO_REDUCE_MOTION=1")
 	// The maintained ConPTY spawn API consumes a Windows environment block.
 	slices.SortFunc(env, func(a, b string) int {
 		a, _, _ = strings.Cut(a, "=")

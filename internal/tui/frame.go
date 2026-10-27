@@ -375,7 +375,7 @@ func (m *model) panelTitle(f frame) (string, string, role) {
 	var state []string
 	switch {
 	case m.busy:
-		state = append(state, "working")
+		state = append(state, m.busyLabel())
 	case m.evidence:
 		title += ": full report"
 		state = append(state, scroll)
@@ -474,6 +474,8 @@ func (m *model) panelView() (string, *tea.Cursor) {
 	cursorRow := -1
 	focusedField := -1
 	switch {
+	case m.logOpen:
+		panels = m.box("Messages", fmt.Sprintf("%d this session", len(m.messages)), m.logLines(full-4, f.height-2), full, f.height, true, accent)
 	case m.overlay != nil:
 		lines, row := m.overlayLines(full-4, f.height-2)
 		cursorRow = row
@@ -519,9 +521,10 @@ func (m *model) panelView() (string, *tea.Cursor) {
 		panels = lipgloss.JoinHorizontal(lipgloss.Top, m.sidebar(f.height), panels)
 	}
 	m.fieldRow, m.fieldCol = f.top+1, f.side+2
-	view := strings.Join(f.header, "\n") + "\n" + panels + "\n" + m.statusLine() + "\n" + m.footer()
+	view := strings.Join(f.header, "\n") + "\n" + panels + "\n" + m.statusLine() + "\n" + m.footerWithToast(m.footer())
 	var cursor *tea.Cursor
 	switch {
+	case m.logOpen:
 	case m.overlay != nil:
 		if cursorRow >= 0 {
 			cursor = tea.NewCursor(f.side+2, f.top+1+cursorRow)
@@ -542,7 +545,7 @@ func (m *model) panelView() (string, *tea.Cursor) {
 func (m *model) contentLines(f frame) []string {
 	switch {
 	case m.busy && m.viewport.GetContent() == "":
-		return []string{m.paint("Working. Escape cancels; Ctrl+C quits.", muted, false)}
+		return m.busyLines(f.inner)
 	case m.viewport.GetContent() == "" && !m.busy && !m.reviewing():
 		return strings.Split(lipgloss.Wrap(m.emptyHelp(), f.inner, " "), "\n")
 	case m.evidence || len(m.entries) == 0 || m.reviewing():

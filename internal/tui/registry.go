@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"slices"
 	"strings"
 
 	tea "charm.land/bubbletea/v2"
@@ -130,6 +131,7 @@ func buildRegistry() []command {
 		{key: "space", name: "Actions for the selected item", label: "item actions", footer: 3, focus: listFocus, when: needs(reasonNoItem, hasEntries)},
 		{key: "?", name: "Show help for every key", label: "help", footer: 4, focus: listFocus, when: notBusy},
 		{key: ":", name: "Open the action palette", focus: listFocus, when: notBusy},
+		{key: "L", name: "Show this session's messages", focus: listFocus, when: notBusy},
 		{key: "/", name: "Filter this page as you type, offline", label: "filter", footer: 4, focus: listFocus, when: needs(reasonNoItem, func(m *model) bool { return hasEntries(m) || m.filter != nil })},
 		{key: "y", name: "Copy the selected item's full identity", label: "copy", footer: 5, focus: listFocus, when: needs("This item has no identity to copy", func(m *model) bool { return hasEntries(m) && m.entries[m.selected].identity != "" })},
 		{key: "ctrl+right", name: "Next results page", steps: []string{"search", "holdings", "evaluate"}, unprobed: true, when: needs("Only search, holdings and Open Library editions page", pageable)},
@@ -269,25 +271,40 @@ func effectTag(e effect) string {
 // footerKeys is the focused context's most useful actions, at most six,
 // ending with quit. Reviews and running work have their own fixed keys.
 func (m *model) footerKeys() []command {
+	// Candidates in footer order; the registry order breaks ties.
+	var candidates []command
+	for _, c := range footerOrder {
+		if !c.applies(m) || m.resultsFocused && c.focus != listFocus && c.key != "ctrl+c" {
+			continue
+		}
+		candidates = append(candidates, c)
+	}
 	var picked []command
 	seen := map[string]bool{}
-	for p := 1; p <= 99 && len(picked) < 6; p++ {
-		for _, c := range registry {
-			if c.footer != p || seen[c.label] || seen[c.key] || !c.applies(m) || c.when(m) != "" {
-				continue
-			}
-			// With results focused the footer is about the list.
-			if m.resultsFocused && c.focus != listFocus && c.key != "ctrl+c" {
-				continue
-			}
-			if c.key == "ctrl+c" || len(picked) < 5 {
-				picked = append(picked, c)
-				seen[c.label], seen[c.key] = true, true
-			}
+	for _, c := range candidates {
+		if len(picked) == 6 {
+			break
 		}
+		if seen[c.label] || seen[c.key] || c.key != "ctrl+c" && len(picked) >= 5 || c.when(m) != "" {
+			continue
+		}
+		picked = append(picked, c)
+		seen[c.label], seen[c.key] = true, true
 	}
 	return picked
 }
+
+// footerOrder is the registry's footer entries by footer priority.
+var footerOrder = func() []command {
+	var order []command
+	for _, c := range registry {
+		if c.footer > 0 {
+			order = append(order, c)
+		}
+	}
+	slices.SortStableFunc(order, func(a, b command) int { return a.footer - b.footer })
+	return order
+}()
 
 func footerKey(c command) string {
 	switch c.key {

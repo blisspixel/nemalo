@@ -67,6 +67,18 @@ type model struct {
 	filterLine, filterTop int
 	lastClick             time.Time
 	clock                 func() time.Time
+	// Feedback (decision 0104): when work started, what its service last
+	// reported, the spinner frame, the session log, the current toast and
+	// whether motion is reduced.
+	started      time.Time
+	progress     *progressState
+	spin         int
+	messages     []logEntry
+	lastLogged   string
+	logOpen      bool
+	logTop       int
+	toast        *toast
+	reduceMotion bool
 	// fieldRow is the screen row of the first form field; fieldAt holds each
 	// input's row offset (-1 when hidden) and fieldX its value column.
 	fieldRow, fieldCol int
@@ -166,10 +178,30 @@ func newModel(ctx context.Context, service app.Service) *model {
 }
 
 func (m *model) Init() tea.Cmd {
-	return tea.Batch(m.input.Focus(), m.initial)
+	return tea.Batch(m.input.Focus(), m.initial, tickAfter(idleInterval))
 }
 
+// Update handles one message, then records feedback: when work started or
+// ended, a toast, and the session log (decision 0104).
 func (m *model) Update(message tea.Msg) (tea.Model, tea.Cmd) {
+	if _, ok := message.(tick); ok {
+		return m, m.onTick()
+	}
+	if key, ok := message.(tea.KeyPressMsg); ok {
+		if m.toast != nil && m.toast.outcome == outcomeFailed {
+			m.toast = nil
+		}
+		if m.logOpen {
+			return m, m.logKey(key)
+		}
+	}
+	wasBusy := m.busy
+	model, cmd := m.update(message)
+	m.afterUpdate(wasBusy, message)
+	return model, cmd
+}
+
+func (m *model) update(message tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := message.(type) {
 	case readAuxReply:
 		m.acceptReadAux(msg)
@@ -251,7 +283,7 @@ func (m *model) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 			m.cancel()
 			m.cancel = nil
 		}
-		m.status = "Complete."
+		m.status = summary(msg.data)
 		m.outcome = resultOutcome(msg.data, msg.err)
 		if o, ok := msg.data.(homeOverview); ok {
 			m.showOverview(o)
@@ -579,6 +611,9 @@ func (m *model) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 			case ":":
 				m.openOverlay(palette)
 				return m, nil
+			case "L":
+				m.openLog()
+				return m, nil
 			}
 		}
 		if m.mode == "read" && !m.busy {
@@ -845,6 +880,7 @@ func Run(ctx context.Context, service app.Service, in io.Reader, out io.Writer, 
 	}
 	m := newModel(ctx, service)
 	m.plain = options.Plain || os.Getenv("TERM") == "dumb"
+	m.reduceMotion = m.plain || os.Getenv("NEMALO_REDUCE_MOTION") != ""
 	m.initial = m.configure(options)
 	defer func() {
 		if m.cancel != nil {
