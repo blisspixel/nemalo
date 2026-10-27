@@ -177,11 +177,11 @@ func TestBrowserEscapingEvidenceAndResponsiveLayouts(t *testing.T) {
 		}
 	}
 	m.populate(library.Page{Assets: []library.Asset{{ID: "hash", Bytes: 10, Locations: []library.Location{{Path: "bad\x1b.epub", CandidateKind: "epub"}, {Path: "copy.epub", CandidateKind: "epub"}}}}})
-	if !strings.Contains(m.entries[0].detail, "No recorded assessment") || !strings.Contains(m.entries[0].detail, "copy.epub") || strings.Contains(m.entries[0].detail, "\x1b") {
+	if !strings.Contains(m.entries[0].detail, "Not assessed") || !strings.Contains(m.entries[0].detail, "Not scanned") || !strings.Contains(m.entries[0].detail, "copy.epub") || strings.Contains(m.entries[0].detail, "\x1b") {
 		t.Fatal("unassessed identity or all locations lost")
 	}
 	m.populate(library.Page{Assets: []library.Asset{{ID: "hash", Bytes: 1 << 20, Health: &assessment.Report{Status: "limited_checks_passed"}}}})
-	if !strings.Contains(m.entries[0].detail, "historical") || !strings.Contains(m.entries[0].detail, "limited checks passed") {
+	if !strings.Contains(m.entries[0].detail, "Recorded when cataloged") || !strings.Contains(m.entries[0].detail, "Limited checks passed") {
 		t.Fatal("historical assessment hidden")
 	}
 	m.populate(nil)
@@ -225,12 +225,12 @@ func TestEvaluateDetailsReadAsWords(t *testing.T) {
 	if e.title != "OzymandiasOfEgypt_librivox.m4b" || e.summary != "10.0 MiB | public file candidate" {
 		t.Fatalf("%q %q", e.title, e.summary)
 	}
-	for _, want := range []string{"File: OzymandiasOfEgypt_librivox.m4b\n", "Access: public file candidate\n", "Rights: not resolved at file level\n"} {
+	for _, want := range []string{"OzymandiasOfEgypt_librivox.m4b\n", "Access public file candidate", "Rights not resolved at file level"} {
 		if !strings.Contains(e.detail, want) {
 			t.Fatalf("missing %q in\n%s", want, e.detail)
 		}
 	}
-	for _, absent := range []string{`"`, "[]", "Findings", "Item rights", "DRM:"} {
+	for _, absent := range []string{`"`, "[]", "Findings", "Item rights", "DRM"} {
 		if strings.Contains(e.detail, absent) {
 			t.Fatalf("%q in\n%s", absent, e.detail)
 		}

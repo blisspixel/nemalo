@@ -37,11 +37,13 @@ Exit codes: 0 success, 1 operation failed or incomplete, 2 invalid usage.
 
 // commandHelp is each command's usage, options, and limits.
 var commandHelp = map[string]string{
-	"tui": `nemalo tui [--plain]
+	"tui": `nemalo tui [--plain] [--library DIR] [--catalog FILE]
   Open the interactive terminal interface. It needs a terminal and has no
-  --json. Ctrl+O searches every action; ? lists every key while results have
-  focus. Keys are also in docs/TUI.md. --plain (or TERM=dumb) keeps a linear
-  layout without panels, for screen readers and magnifiers.
+  --json. It opens on Home, which reads the configured library's overview
+  offline and writes nothing. Ctrl+O searches every action; ? lists every key
+  while results have focus. Keys are also in docs/TUI.md. --plain (or
+  TERM=dumb) keeps a linear layout without panels, for screen readers and
+  magnifiers.
 `,
 	"doctor": `nemalo doctor [--json]
   Report paths, configuration, the recommended scanner and its signature age,

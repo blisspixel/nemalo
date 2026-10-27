@@ -373,7 +373,8 @@ loop:
 }
 
 func (d *terminalDriver) reference(lib, asset string) {
-	d.observe("startup", 0, containsScreen("Nemalo", "[Discover]", "[Search]"))
+	// No library is configured here, so Home opens on its first-run choices.
+	d.observe("startup", 0, containsScreen("Nemalo", "[Home]", "Find a public-domain book", "mcp serve"))
 	d.send("\x1b6") // xterm Alt+6: Holdings.
 	d.send(lib)
 	d.send("\x0e") // Ctrl+N changes the field; Tab changes modes.

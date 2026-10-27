@@ -107,7 +107,7 @@ func TestRegistryMatchesTheHandlers(t *testing.T) {
 func TestRegistryKeysRoundTrip(t *testing.T) {
 	for _, c := range registry {
 		if c.key == "" {
-			if c.nav != "jobs" {
+			if c.nav != "jobs" && c.nav != "home" {
 				t.Errorf("%q has no key", c.name)
 			}
 			continue
@@ -124,7 +124,7 @@ func TestRegistryKeysRoundTrip(t *testing.T) {
 			t.Errorf("step %s has no title or section", step)
 		}
 	}
-	if !slices.Equal(steps()[:2], []string{"search", "evaluate"}) || len(steps()) != len(modes)+1 {
+	if !slices.Equal(steps()[:3], []string{"home", "search", "evaluate"}) || len(steps()) != len(modes)+2 {
 		t.Fatal("steps", steps())
 	}
 }

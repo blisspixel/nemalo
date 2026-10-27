@@ -5,6 +5,7 @@ startup. Operations are steps grouped into sections named for what you come to d
 
 | Section | Steps |
 | --- | --- |
+| Home | Library overview, saved bookmarks, first-run choices |
 | Discover | Search, Evaluate |
 | Library | Holdings, Read |
 | Collections | Collections, Revisions |
@@ -13,7 +14,21 @@ startup. Operations are steps grouped into sections named for what you come to d
 | Jobs | Recorded jobs |
 
 Fill a step's fields and press Enter to run it. Results and form drafts remain
-with each step for the current session. Write-review controls use physical
+with each step for the current session.
+
+Nemalo opens on Home. The library resolved as for the CLI (`--library`,
+`NEMALO_LIBRARY`, then `library` in `config.json`) prefills Home, Holdings, Read,
+Status, Jobs, Audit and the Collections library field; every field stays
+editable. With a configured library Home reads an offline overview at startup:
+control status, holdings checked and in review, scanner availability from the
+same lookups as `nemalo doctor` (no scan runs), saved bookmarks and recorded
+jobs. It writes nothing, reads nothing more from a folder that is not an
+initialized library, and Escape cancels it. Each explicit bookmark is a Continue
+entry that Enter opens in Read; nothing else about reading is shown or inferred.
+Section entries go there on Enter, and Library lists the holdings. Without a
+library, Home offers three starts: find a public-domain book, look at files you
+already have, or set up a library folder
+([decision 0102](decisions/0102-home-overview-and-detail-cards.md)). Write-review controls use physical
 keystrokes. A committed text string spelling `enter`, `esc` or another control
 name cannot confirm or dismiss a review.
 
@@ -48,7 +63,13 @@ step as plain lines.
 ## Browse and inspect
 
 Search and holdings show a selectable list, with an adjacent Details panel in
-terminals at least 100 columns wide. Narrower terminals show the list; Enter in
+terminals at least 100 columns wide. Holdings, search results, evaluation files
+and jobs share one card: title, a line of facts, status chips taken from typed
+values, a short identity (the first 12 and last 4 characters), aligned lists and
+one dim caveat line, with each fact shown once. A missing or partial scan is
+never shown as clean. `y` sends the selected item's full identity to the
+terminal clipboard with OSC 52; a terminal can ignore that silently, so the
+status says the request was sent and F5 still shows the full value. Narrower terminals show the list; Enter in
 results opens the selected item's details. F5 switches to the complete report,
 including identifiers, provenance, findings, and limitations.
 
@@ -78,6 +99,8 @@ item's other files for a new, deliberate review. See
 | Alt+A / Alt+B | Collections / collection Revisions. Jobs has no Alt key; use Tab or the palette |
 | Ctrl+O | Searchable palette of every action |
 | Space / ? / : in results | Selected item's actions / every key / the palette |
+| y in results | Copy the selected item's full identity (OSC 52) |
+| Enter in Home results | Go to the selected section, or open the selected bookmark in Read |
 | Enter in form | Run the explicit operation |
 | F6 | Focus results / return to editing |
 | Up / Down, Home / End in results | Select an item |
@@ -371,8 +394,10 @@ proof the file is safe. See
 These application-view captures were refreshed on 2026-10-24 from the current Go
 TUI model at 116 columns and 36 rows, in its supported no-color mode. The Holdings,
 Discovery, Jobs, Collections and Revisions views were refreshed on 2026-10-27 from
-the same inputs after the section and panel frame (decision 0101); the reader,
-citation and evidence views are unchanged. Frames are
+the same inputs after the section and panel frame and the detail cards (decisions
+0101 and 0102), and the Home view was added; the reader, citation and evidence
+views are unchanged. Home reads the managed capture library with a real
+`doctor` scanner lookup; its displayed library path is a portable alias. Frames are
 rendered as fixed-width text to PNG; they are not OS window screenshots.
 Holdings come from a fresh offline snapshot of validation copies of Montaigne's
 essays, A Vindication of the Rights of Woman and Pride and Prejudice. Five files
@@ -399,6 +424,8 @@ bounded source excerpt, including coverage limitations and explicit replay. Impo
 for these captures requested no scanner; the holding stays in review. The views
 neither promote it nor infer missing bibliographic fields. The complete portable
 sidecars continue below the displayed screen.
+
+![Home: an offline overview of a managed library and where to go next](images/tui-home.png)
 
 ![EPUB holdings, duplicate locations and selected historical evidence](images/tui-holdings.png)
 

@@ -10,6 +10,7 @@ type section struct {
 }
 
 var sections = []section{
+	{"Home", []string{"home"}},
 	{"Discover", []string{"search", "evaluate"}},
 	{"Library", []string{"holdings", "read"}},
 	{"Collections", []string{"collections", "revisions"}},
@@ -21,7 +22,7 @@ var sections = []section{
 var stepTitles = map[string]string{
 	"search": "Search", "evaluate": "Evaluate", "holdings": "Holdings", "read": "Read",
 	"collections": "Collections", "revisions": "Revisions", "inspect": "Inspect", "check": "Check",
-	"scan": "Scan", "snapshot": "Snapshot", "audit": "Audit", "state": "Status", "jobs": "Jobs",
+	"scan": "Scan", "snapshot": "Snapshot", "audit": "Audit", "state": "Status", "jobs": "Jobs", "home": "Home",
 }
 
 // steps is every step in section order, which Tab follows.

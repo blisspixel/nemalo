@@ -64,7 +64,9 @@ an interactive prompt to convey required information. Preserve noninteractive
 automation and structured error details. The TUI groups its operations into task
 sections and describes every key once, in a registry that drives its footer,
 palette, item menu and help; a plain linear layout remains
-([decision 0101](decisions/0101-task-sections-and-action-registry.md)).
+([decision 0101](decisions/0101-task-sections-and-action-registry.md)). Its Home
+overview and detail cards read existing services only and add no store
+([decision 0102](decisions/0102-home-overview-and-detail-cards.md)).
 
 Recommendation and curation objectives follow the user's stated question, language,
 format, access needs, and collection preferences. Expose the evidence and criteria

@@ -63,6 +63,8 @@ func (m *model) formFields() []formField {
 		label, hint, second = "Folder", "Existing library folder; Enter reads status", "Source"
 	case "jobs":
 		label, hint = "Library", "Existing initialized library folder; Enter reads recorded jobs"
+	case "home":
+		label, hint = "Library", "Existing library folder; Enter reads its overview offline"
 	case "read":
 		label, hint, second = "Catalog", "Catalog selected from Holdings", "Root"
 	case "collections":
@@ -375,6 +377,8 @@ func scrollState(v viewport.Model) string {
 // settings are in the footer and title instead.
 func (m *model) caveat() string {
 	switch m.mode {
+	case "home":
+		return "Offline and read-only. Scripts and agents: nemalo COMMAND --json, or nemalo mcp serve."
 	case "search":
 		if m.source == "gutenberg" {
 			return "Local catalog; the Gutenberg website is not queried."
@@ -498,8 +502,21 @@ func (m *model) contentLines(f frame) []string {
 		return strings.Split(m.viewport.View(), "\n")
 	case m.details:
 		return strings.Split(m.preview.View(), "\n")
+	case m.mode == "home":
+		return m.homeLines(f.inner, f.contentH)
 	}
 	return m.listRows(f.inner, f.contentH)
+}
+
+// homeLines puts Home's summary above its list of destinations.
+func (m *model) homeLines(width, height int) []string {
+	summary := strings.Split(strings.TrimRight(hardWrap(m.report, width), "\n"), "\n")
+	room := height - len(summary) - 1
+	if room < 6 {
+		summary = summary[:max(0, min(len(summary), height-7))]
+		room = height - len(summary) - 1
+	}
+	return append(append(summary, ""), m.listRows(width, max(3, room))...)
 }
 
 // listRows renders one page of results: a numbered title and a dim summary

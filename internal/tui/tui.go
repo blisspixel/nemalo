@@ -49,6 +49,10 @@ type model struct {
 	// (decision 0101); inputHint is the main field's unclipped hint.
 	plain     bool
 	inputHint string
+	// library and doctor are the configured library and the scanner
+	// availability report (decision 0102); neither is written.
+	library string
+	doctor  *app.Doctor
 	// fieldRow is the screen row of the first form field; fieldAt holds each
 	// input's row offset (-1 when hidden) and fieldX its value column.
 	fieldRow, fieldCol int
@@ -231,6 +235,11 @@ func (m *model) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		m.status = "Complete."
 		m.outcome = resultOutcome(msg.data, msg.err)
+		if o, ok := msg.data.(homeOverview); ok {
+			m.showOverview(o)
+			m.resize()
+			return m, nil
+		}
 		if value, ok := msg.data.(app.CollectionAcquireResult); ok {
 			pending := m.collectionPending
 			m.collectionPending = nil
@@ -454,7 +463,15 @@ func (m *model) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 		case library.Snapshot:
 			data = []byte(present.Snapshot(value))
 		case library.Page:
-			data = []byte(present.Holdings(value))
+			// Cards keep each fact once; the full report keeps every
+			// recorded assessment field and limitation (decision 0102).
+			text := present.Holdings(value)
+			for _, a := range value.Assets {
+				if a.Health != nil {
+					text += "\nRecorded assessment (historical) of " + present.Line(a.ID) + ":\n" + present.Health(*a.Health)
+				}
+			}
+			data = []byte(text)
 		case library.ManagedPage:
 			data = []byte(present.ManagedHoldings(value))
 		case library.ExportResult:
@@ -786,6 +803,10 @@ func interactiveTerminal(in io.Reader, out io.Writer) bool {
 // selects it too.
 type Options struct {
 	Plain bool
+	// Library is the configured library: it prefills fields and Home reads
+	// its overview. Doctor reports scanner availability without running one.
+	Library string
+	Doctor  *app.Doctor
 }
 
 func Run(ctx context.Context, service app.Service, in io.Reader, out io.Writer, options Options) error {
@@ -794,7 +815,7 @@ func Run(ctx context.Context, service app.Service, in io.Reader, out io.Writer, 
 	}
 	m := newModel(ctx, service)
 	m.plain = options.Plain || os.Getenv("TERM") == "dumb"
-	m.resize()
+	m.initial = m.configure(options)
 	defer func() {
 		if m.cancel != nil {
 			m.cancel()

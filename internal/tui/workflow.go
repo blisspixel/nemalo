@@ -58,6 +58,9 @@ func (m *model) switchMode(name string) tea.Cmd {
 	m.entries, m.details, m.evidence = d.entries, d.details, d.evidence
 	m.resultsFocused = false
 	m.selectEntry(d.selected)
+	if name == "home" && len(m.entries) == 0 && m.report == "" && m.input.Value() == "" {
+		m.homeWelcome()
+	}
 	m.viewport.GotoTop()
 	m.resize()
 	return m.input.Focus()
@@ -109,6 +112,9 @@ func (m *model) start(reset bool) tea.Cmd {
 	}
 	if m.mode == "jobs" {
 		return m.observeJobs()
+	}
+	if m.mode == "home" {
+		return m.readOverview()
 	}
 	if m.busy || m.input.Value() == "" {
 		return nil

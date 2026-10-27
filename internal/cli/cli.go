@@ -40,7 +40,7 @@ type Envelope struct {
 
 func Run(ctx context.Context, args []string, out, errOut io.Writer) int {
 	return Execute(ctx, args, out, errOut, app.New(), os.Getenv, config.DefaultPaths, func(ctx context.Context, s app.Service, o TerminalOptions) error {
-		return tui.Run(ctx, s, os.Stdin, out, tui.Options(o))
+		return tui.Run(ctx, s, os.Stdin, out, tui.Options{Plain: o.Plain, Library: o.Library, Doctor: o.Doctor})
 	})
 }
 
@@ -48,6 +48,11 @@ func Run(ctx context.Context, args []string, out, errOut io.Writer) int {
 // TerminalOptions are the terminal interface's presentation choices.
 type TerminalOptions struct {
 	Plain bool
+	// Library is the configured library, with the CLI's precedence; the
+	// terminal only reads it. Doctor is the same availability report as
+	// nemalo doctor, which executes nothing.
+	Library string
+	Doctor  *app.Doctor
 }
 
 func Execute(ctx context.Context, args []string, out, errOut io.Writer, service app.Service, env func(string) string, paths func() (config.Paths, error), terminal func(context.Context, app.Service, TerminalOptions) error) int {
@@ -922,7 +927,8 @@ func Execute(ctx context.Context, args []string, out, errOut io.Writer, service 
 		if !stdinTerminal() {
 			return write(nil, errors.New("tui requires an interactive terminal"), 2)
 		}
-		if err := terminal(ctx, service, TerminalOptions{Plain: *plain}); err != nil {
+		d := service.Doctor(p, c, app.Lookup)
+		if err := terminal(ctx, service, TerminalOptions{Plain: *plain, Library: c.Library, Doctor: &d}); err != nil {
 			return write(nil, err, 1)
 		}
 	case "mcp":
@@ -1125,7 +1131,7 @@ func flagApplies(command, action, name string) bool {
 	case "evaluate":
 		return name == "catalog" || name == "files" || name == "editions" || name == "limit" || name == "offset"
 	case "tui":
-		return name == "catalog" || name == "plain"
+		return name == "catalog" || name == "plain" || name == "library"
 	case "catalog":
 		return action == "fetch" && name == "output"
 	case "check":

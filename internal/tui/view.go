@@ -362,6 +362,8 @@ func (m *model) position() string {
 
 func (m *model) emptyHelp() string {
 	switch m.mode {
+	case "home":
+		return "Start here.\n\nEnter an existing library folder and press Enter for an offline overview: its status, holdings, scanner, saved bookmarks and recorded jobs. Nothing is written.\nScripts and agents: nemalo COMMAND --json, or nemalo mcp serve. See nemalo help."
 	case "search":
 		return "Find something worth keeping.\n\nEnter a title, author, or topic. F2 selects Open Library, Internet Archive, or a local Project Gutenberg catalog.\nEnter searches that provider. Gutenberg reads the catalog file and does not contact gutenberg.org.\nDiscovery does not download files."
 	case "scan":

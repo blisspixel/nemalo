@@ -122,13 +122,20 @@ func buildRegistry() []command {
 		{key: "down", name: "Select the next item", label: "select", footer: 1, focus: listFocus, when: needs(reasonNoItem, func(m *model) bool { return browsing(m) && m.selected < len(m.entries)-1 })},
 		{key: "home", name: "Select the first item on this page", focus: listFocus, when: needs(reasonNoItem, func(m *model) bool { return browsing(m) && m.selected > 0 })},
 		{key: "end", name: "Select the last item on this page", focus: listFocus, when: needs(reasonNoItem, func(m *model) bool { return browsing(m) && m.selected < len(m.entries)-1 })},
+		{key: "enter", name: "Go to the selected section or bookmark", label: "go", footer: 2, focus: listFocus, steps: []string{"home"}, when: needs("Select a section or bookmark", func(m *model) bool {
+			return browsing(m) && (m.entries[m.selected].step != "" || m.entries[m.selected].bookmark != nil)
+		})},
 		{key: "enter", name: "Retrieve the selected unit", label: "read", footer: 2, focus: listFocus, steps: read, when: needs(reasonNoItem, hasEntries)},
 		{key: "enter", name: "Show or hide the selected item's details", label: "details", footer: 2, focus: listFocus, when: needs(reasonNoItem, hasEntries)},
 		{key: "space", name: "Actions for the selected item", label: "item actions", footer: 3, focus: listFocus, when: needs(reasonNoItem, hasEntries)},
 		{key: "?", name: "Show help for every key", label: "help", footer: 4, focus: listFocus, when: notBusy},
 		{key: ":", name: "Open the action palette", focus: listFocus, when: notBusy},
+		{key: "y", name: "Copy the selected item's full identity", label: "copy", footer: 5, focus: listFocus, when: needs("This item has no identity to copy", func(m *model) bool { return hasEntries(m) && m.entries[m.selected].identity != "" })},
 		{key: "ctrl+right", name: "Next results page", steps: []string{"search", "holdings", "evaluate"}, unprobed: true, when: needs("Only search, holdings and Open Library editions page", pageable)},
 		{key: "ctrl+left", name: "Previous results page", steps: []string{"search", "holdings", "evaluate"}, unprobed: true, when: needs("Only search, holdings and Open Library editions page", pageable)},
+
+		// Home.
+		{key: "enter", name: "Read the library overview", label: "overview", footer: 1, focus: formFocus, steps: []string{"home"}, when: needs("Enter a library folder first", hasInput)},
 
 		// Discover.
 		{key: "enter", name: "Search the selected provider", label: "search", footer: 1, focus: formFocus, steps: []string{"search"}, effect: network, when: needs("Type a query first", hasInput)},
@@ -265,7 +272,7 @@ func (m *model) footerKeys() []command {
 	seen := map[string]bool{}
 	for p := 1; p <= 99 && len(picked) < 6; p++ {
 		for _, c := range registry {
-			if c.footer != p || seen[c.label] || !c.applies(m) || c.when(m) != "" {
+			if c.footer != p || seen[c.label] || seen[c.key] || !c.applies(m) || c.when(m) != "" {
 				continue
 			}
 			// With results focused the footer is about the list.
@@ -274,7 +281,7 @@ func (m *model) footerKeys() []command {
 			}
 			if c.key == "ctrl+c" || len(picked) < 5 {
 				picked = append(picked, c)
-				seen[c.label] = true
+				seen[c.label], seen[c.key] = true, true
 			}
 		}
 	}

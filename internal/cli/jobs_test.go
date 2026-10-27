@@ -178,3 +178,36 @@ func TestTerminalReceivesTheConfiguredPassiveJobsDirectoryWithoutCreatingIt(t *t
 		}
 	}
 }
+
+// The terminal receives the library with the CLI's precedence and the
+// doctor report, and --plain; it is not given anything to write.
+func TestTerminalReceivesTheConfiguredLibraryAndPlainLayout(t *testing.T) {
+	saved := stdinTerminal
+	stdinTerminal = func() bool { return true }
+	t.Cleanup(func() { stdinTerminal = saved })
+	root := t.TempDir()
+	configured, flagged := filepath.Join(root, "configured"), filepath.Join(root, "flagged")
+	file := filepath.Join(root, "config.json")
+	if err := os.WriteFile(file, []byte(`{"library":"`+filepath.ToSlash(configured)+`"}`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	for _, tc := range []struct {
+		args    []string
+		library string
+		plain   bool
+	}{{[]string{"tui"}, configured, false}, {[]string{"tui", "--plain", "--library", flagged}, flagged, true}} {
+		var got TerminalOptions
+		code := Execute(context.Background(), tc.args, &bytes.Buffer{}, &bytes.Buffer{}, app.Service{}, func(string) string { return "" }, func() (config.Paths, error) {
+			return config.Paths{Config: file, State: filepath.Join(root, "state")}, nil
+		}, func(_ context.Context, _ app.Service, o TerminalOptions) error {
+			got = o
+			return nil
+		})
+		if code != 0 || filepath.Clean(got.Library) != filepath.Clean(tc.library) || got.Plain != tc.plain || got.Doctor == nil {
+			t.Fatalf("%v: code %d options %+v", tc.args, code, got)
+		}
+	}
+	if _, err := os.Stat(filepath.Join(root, "state")); !errors.Is(err, os.ErrNotExist) {
+		t.Fatal("terminal setup created state", err)
+	}
+}

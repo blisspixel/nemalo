@@ -37,6 +37,12 @@ type entry struct {
 	page                 bool
 	pageRef              string
 	pageUnit, pageOffset int
+	// identity is the full value y copies; cards show it shortened.
+	identity string
+	// step and bookmark are Home's destinations: a section's first step,
+	// or an explicit saved bookmark to open in Read.
+	step     string
+	bookmark *library.Bookmark
 }
 
 // Browsing is a presentation of shared service results, not another catalog.
@@ -50,20 +56,20 @@ func (m *model) populate(data any) {
 		m.entries = collectionEntries(p)
 	case app.JobSnapshotResult:
 		for _, j := range p.Jobs {
-			detail := rows("Job", line(j.ID), "Kind", words(j.Kind), "Recorded status", words(j.RecordedStatus), "Created", line(j.Created), "Updated", line(j.Updated), "Owner observation", words(j.Owner), "Relationship", words(j.Relationship), "Journal integrity", words(j.Integrity))
-			detail += rows("Observed at", line(p.Finished))
+			c := card{title: line(j.ID), facts: nonEmpty(words(j.Kind), words(j.Relationship)), chips: append([]chip{jobChip(j.RecordedStatus)}, labelledChips("Owner", words(j.Owner), "Journal", words(j.Integrity))...), identity: j.ID}
+			c.lists = append(c.lists, cardList{"Created", []string{line(j.Created)}}, cardList{"Updated", []string{line(j.Updated)}}, cardList{"Observed", []string{line(p.Finished)}})
 			if j.Progress != nil {
-				detail += rows("Recorded phase", line(j.Progress.Phase), "Recorded progress", fmt.Sprintf("%d of %d %s", j.Progress.Done, j.Progress.Total, line(j.Progress.Unit)))
+				c.lists = append(c.lists, cardList{"Progress", []string{fmt.Sprintf("%s: %d of %d %s", line(j.Progress.Phase), j.Progress.Done, j.Progress.Total, line(j.Progress.Unit))}})
 			}
+			var notes []string
 			if j.ErrorRecorded {
-				detail += "An error was recorded. Raw error text is omitted.\n"
+				notes = append(notes, "An error was recorded; raw error text is omitted.")
 			}
 			if j.HeldTracks > 0 {
-				detail += fmt.Sprintf("Related held tracks: %d. This does not establish a complete held recording.\n", j.HeldTracks)
+				notes = append(notes, fmt.Sprintf("%d related held tracks do not establish a complete recording.", j.HeldTracks))
 			}
-			detail += "\nRecorded outcome only. Unfinished owner liveness is not observed.\n"
-			detail += "F5 shows observation scope, coverage and limits.\n"
-			m.entries = append(m.entries, entry{title: line(j.ID), summary: joinParts(words(j.Kind), "recorded "+words(j.RecordedStatus)), detail: detail})
+			c.caveat = strings.Join(append(notes, "Recorded outcome only; unfinished owner liveness is not observed."), " ")
+			m.entries = append(m.entries, entry{title: line(j.ID), summary: joinParts(words(j.Kind), "recorded "+words(j.RecordedStatus)), detail: m.render(c), identity: j.ID})
 		}
 	case discovery.Evaluation:
 		if p.Access == discovery.OpenLibraryEditionList {
@@ -96,12 +102,19 @@ func (m *model) populate(data any) {
 			if f.Bytes != nil {
 				size = byteSize(*f.Bytes)
 			}
-			detail := rows("File", line(f.Name), "Source format", line(f.Format), "Size", size, "Access", words(f.Access), "Rights", words(f.RightsStatus), "DRM", words(f.DRMStatus)) + findings(f.Findings)
-			if item := rows("Item rights", list(p.Rights), "License declarations", list(p.LicenseURLs)); item != "" {
-				detail += "\n" + item
+			c := card{title: line(f.Name), facts: nonEmpty(line(f.Format), size), chips: labelledChips("Access", words(f.Access), "Rights", words(f.RightsStatus), "DRM", words(f.DRMStatus))}
+			if len(f.Findings) > 0 {
+				c.lists = append(c.lists, cardList{"Findings", strings.Split(strings.TrimSpace(list(f.Findings)), ", ")})
 			}
-			detail += "\nUse d to review an explicit intake download. Availability is resolved again before transfer; restricted, uncertain, unsupported, or unbounded files are refused.\n"
-			m.entries = append(m.entries, entry{title: line(f.Name), summary: joinParts(size, words(f.Access)), detail: detail, sourceID: f.Name})
+			if v := list(p.Rights); v != "" {
+				c.lists = append(c.lists, cardList{"Item rights", []string{v}})
+			}
+			if v := list(p.LicenseURLs); v != "" {
+				c.lists = append(c.lists, cardList{"Licenses", []string{v}})
+			}
+			c.caveat = "Declarations, not file rights or safety. Availability is resolved again before transfer."
+			c.keys = "d reviews an explicit intake download"
+			m.entries = append(m.entries, entry{title: line(f.Name), summary: joinParts(size, words(f.Access)), detail: m.render(c), sourceID: f.Name})
 		}
 		if len(p.Files) == 0 && p.Source == "gutenberg" && p.Access == "local_catalog" {
 			m.entries = append(m.entries, entry{
@@ -113,17 +126,24 @@ func (m *model) populate(data any) {
 		}
 	case discovery.Page:
 		for _, r := range p.Results {
-			note := "Discovery metadata only.\nDownload availability not resolved.\n"
+			note := "Discovery metadata only; download availability not resolved."
 			if r.Access == "local_catalog" {
-				note = "Local catalog row. The Gutenberg website was not queried.\nNo file or download URL is listed.\n"
+				note = "Local catalog row; the Gutenberg website was not queried. No file or download URL is listed."
 			}
 			claim := present.CatalogClaim(r)
+			c := card{title: line(r.Title), facts: nonEmpty(list(r.Authors), list(r.Languages)), chips: labelledChips("Declared", words(r.Access)), identity: r.ID, caveat: note}
+			if claim != "" {
+				c.chips = append(c.chips, chip{claim, muted})
+			}
+			if r.LandingPage != "" {
+				c.lists = append(c.lists, cardList{"Source page", []string{line(r.LandingPage)}})
+			}
+			c.keys = "e prepares an evaluation; nothing is requested until Enter"
 			m.entries = append(m.entries, entry{
-				title:   line(r.Title),
-				summary: joinParts(list(r.Authors), list(r.Languages), claim),
-				detail: line(r.Title) + "\n\n" + rows("Author", list(r.Authors), "Language", list(r.Languages), "Catalog", claim) + "\n" + note + "\n" +
-					rows("ID", line(r.ID), "Source page", line(r.LandingPage), "Declared access", words(r.Access)),
-				sourceID: r.ID,
+				title:    line(r.Title),
+				summary:  joinParts(list(r.Authors), list(r.Languages), claim),
+				detail:   m.render(c),
+				sourceID: r.ID, identity: r.ID,
 			})
 		}
 	case library.Page:
@@ -139,28 +159,27 @@ func (m *model) populate(data any) {
 					title = e.Titles[0]
 				}
 			}
-			detail := line(title) + "\n\n" + rows("Language", list(languages), "Size", fmt.Sprintf("%s (%d bytes)", byteSize(a.Bytes), a.Bytes)) + "\n"
+			c := card{title: line(title), facts: nonEmpty(list(languages), fmt.Sprintf("%s (%d bytes)", byteSize(a.Bytes), a.Bytes), fmt.Sprintf("%d copies", len(a.Locations))), identity: a.ID, caveat: "Recorded when cataloged. Audit checks current bytes."}
 			if a.Health != nil {
-				detail += rows("Recorded health", words(a.Health.Status), "Antivirus", words(a.Health.Antivirus.Status))
+				c.chips = []chip{healthChip(a.Health.Status), antivirusChip(a.Health.Antivirus.Status)}
 			} else {
-				detail += "No recorded assessment.\nAntivirus: not recorded\n"
+				c.chips = []chip{healthChip(""), antivirusChip("")}
 			}
-			detail += "Historical catalog evidence.\nAudit to check current bytes.\n\nLocations (filename candidates):\n"
+			copies := cardList{label: "Copies"}
 			for _, l := range a.Locations {
-				detail += fmt.Sprintf("  %s (%s)\n", line(l.Path), words(l.CandidateKind))
+				copies.values = append(copies.values, fmt.Sprintf("%s (%s)", line(l.Path), words(l.CandidateKind)))
 			}
-			detail += "\nID: " + line(a.ID) + "\n"
-			if a.Health != nil {
-				detail += "\nRecorded assessment (historical):\n" + present.Health(*a.Health)
-			}
+			c.lists = append(c.lists, copies)
+			c.keys = "r reads this asset"
+			detail := m.render(c)
 			m.entries = append(m.entries, entry{
 				title:    line(title),
 				summary:  joinParts(byteSize(a.Bytes), list(languages), fmt.Sprintf("%d location(s)", len(a.Locations))),
 				detail:   detail,
-				sourceID: a.ID,
-				audio:    len(a.Locations) > 0 && strings.HasSuffix(strings.ToLower(a.Locations[0].Path), ".mp3"),
-				pdf:      len(a.Locations) > 0 && strings.HasSuffix(strings.ToLower(a.Locations[0].Path), ".pdf"),
-				mp4:      len(a.Locations) > 0 && (strings.HasSuffix(strings.ToLower(a.Locations[0].Path), ".m4b") || strings.HasSuffix(strings.ToLower(a.Locations[0].Path), ".m4a")),
+				sourceID: a.ID, identity: a.ID,
+				audio: len(a.Locations) > 0 && strings.HasSuffix(strings.ToLower(a.Locations[0].Path), ".mp3"),
+				pdf:   len(a.Locations) > 0 && strings.HasSuffix(strings.ToLower(a.Locations[0].Path), ".pdf"),
+				mp4:   len(a.Locations) > 0 && (strings.HasSuffix(strings.ToLower(a.Locations[0].Path), ".m4b") || strings.HasSuffix(strings.ToLower(a.Locations[0].Path), ".m4a")),
 			})
 		}
 	case library.ManagedPage:
@@ -169,31 +188,37 @@ func (m *model) populate(data any) {
 			if len(h.Titles) > 0 {
 				title = h.Titles[0]
 			}
-			status := words(h.Status)
-			if h.Reason != "" && h.Reason != h.Status {
-				status += " (" + words(h.Reason) + ")"
-			}
-			detail := line(title) + "\n\n" + rows("Format", words(h.Format), "Status", status, "Language", list(h.Languages), "Size", fmt.Sprintf("%s (%d bytes)", byteSize(h.Bytes), h.Bytes), "Stored at", line(h.Path)) + "\n"
+			c := card{title: line(title), facts: nonEmpty(strings.ToUpper(words(h.Format)), list(h.Languages), fmt.Sprintf("%s (%d bytes)", byteSize(h.Bytes), h.Bytes)), chips: []chip{holdingChip(h.Status, h.Reason)}, identity: h.ID, caveat: "Recorded journal facts. Audit rechecks stored bytes."}
+			c.lists = append(c.lists, cardList{"Stored at", []string{line(h.Path)}})
+			ids := cardList{label: "Identifiers"}
 			for _, id := range h.Identities {
-				detail += fmt.Sprintf("Identifier: %s (%s)\n", line(id.ID), words(id.Role))
+				ids.values = append(ids.values, fmt.Sprintf("%s (%s)", line(id.ID), words(id.Role)))
+			}
+			if len(ids.values) > 0 {
+				c.lists = append(c.lists, ids)
 			}
 			recording := ""
+			sources := cardList{label: "Sources"}
 			for _, src := range h.Sources {
 				source := line(src.Path)
 				if src.SourceID != "" {
 					source = joinParts(line(src.SourceID), line(src.SourceFile), source)
 				}
-				detail += "Source: " + source + "\n"
+				sources.values = append(sources.values, source)
 				if src.Recording != nil && src.SourceID != "" {
-					detail += fmt.Sprintf("Track %d of %d in %s (declared order)\n", src.Recording.Position, src.Recording.Tracks, line(src.Recording.Format))
+					sources.values = append(sources.values, fmt.Sprintf("  track %d of %d in %s (declared order)", src.Recording.Position, src.Recording.Tracks, line(src.Recording.Format)))
 					recording = firstOf(recording, src.SourceID)
 				}
 			}
-			detail += "\nID: " + line(h.ID) + "\n\nRecorded journal facts. Audit rechecks stored bytes.\nr stages Read for this holding.\no opens a verified read-only copy in the default application.\n"
-			if recording != "" {
-				detail += "t shows the whole recording: declared order, missing tracks, and indexed timing.\n"
+			if len(sources.values) > 0 {
+				c.lists = append(c.lists, sources)
 			}
-			m.entries = append(m.entries, entry{title: line(title), summary: joinParts(words(h.Format), words(h.Status), byteSize(h.Bytes), list(h.Languages)), detail: detail, sourceID: h.ID, audio: h.Format == "mp3", pdf: h.Format == "pdf", mp4: h.Format == "m4b" || h.Format == "m4a", managed: true, recording: recording})
+			c.keys = "r reads  o opens a verified copy"
+			if recording != "" {
+				c.keys += "  t shows the whole recording"
+			}
+			detail := m.render(c)
+			m.entries = append(m.entries, entry{title: line(title), summary: joinParts(words(h.Format), words(h.Status), byteSize(h.Bytes), list(h.Languages)), detail: detail, sourceID: h.ID, identity: h.ID, audio: h.Format == "mp3", pdf: h.Format == "pdf", mp4: h.Format == "m4b" || h.Format == "m4a", managed: true, recording: recording})
 		}
 	case content.Result:
 		if p.Status == "units_available" && p.Audio != nil {
@@ -393,6 +418,8 @@ func (m *model) browserKey(key string) (bool, tea.Cmd) {
 		return false, nil
 	}
 	switch key {
+	case "y":
+		return true, m.copyIdentity()
 	case "d":
 		if m.mode == "evaluate" && len(m.entries) > 0 {
 			return true, m.requestDownload()
@@ -421,6 +448,9 @@ func (m *model) browserKey(key string) (bool, tea.Cmd) {
 			return true, nil
 		}
 	case "enter":
+		if m.mode == "home" && len(m.entries) > 0 && !m.details && !m.evidence && (m.entries[m.selected].step != "" || m.entries[m.selected].bookmark != nil) {
+			return true, m.homeEnter()
+		}
 		if m.mode == "read" && len(m.entries) > 0 {
 			return true, m.startRead(false, m.selected, "", false)
 		}
@@ -582,7 +612,11 @@ func (m *model) browseView() string {
 	if width >= 98 {
 		listWidth = width / 2
 	}
-	list := lipgloss.NewStyle().Width(listWidth).Height(height).MaxHeight(height).Render(strings.Join(m.listRows(listWidth-2, height), "\n"))
+	rows := m.listRows(listWidth-2, height)
+	if m.mode == "home" {
+		rows = m.homeLines(listWidth-2, height)
+	}
+	list := lipgloss.NewStyle().Width(listWidth).Height(height).MaxHeight(height).Render(strings.Join(rows, "\n"))
 	if listWidth == width {
 		return list
 	}
