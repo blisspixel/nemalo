@@ -501,9 +501,10 @@ func TestAbsentOversizedAndUnreadableNavigation(t *testing.T) {
 	var huge strings.Builder
 	huge.WriteString(`<?xml version="1.0" encoding="UTF-8"?><html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops"><body><nav epub:type="toc"><ol>`)
 	// Exercise the navigation byte limit independently of the entry-count
-	// limit above. Tens of thousands of links add unrelated full-document
-	// validation work and can exhaust the unchanged content deadline under
-	// the race detector. Keep each XML token below its own inspection limit.
+	// limit above, keeping each XML token below its own inspection limit.
+	// Assessment still tokenizes all 2 MiB, which under the race detector on
+	// a contended runner can exceed the production deadline; race builds
+	// extend it (race_enabled_test.go) and leave this fixture at full size.
 	padding := "<!--" + strings.Repeat("A", 64<<10) + "-->"
 	for huge.Len() <= 2<<20 {
 		huge.WriteString(padding)

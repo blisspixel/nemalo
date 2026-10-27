@@ -26,6 +26,12 @@ import (
 
 const Extractor = "nemalo.epub.text/1"
 const maxInput = 32 << 20
+
+// requestDeadline bounds one content request. Only tests built with the race
+// detector, which multiplies CPU cost many times, extend it; a test pins the
+// production value.
+var requestDeadline = 15 * time.Second
+
 const maxManagedInput = 256 << 20
 const maxText = 8 << 20
 const maxUnits = 512
@@ -281,7 +287,7 @@ func GetWithDecoder(ctx context.Context, req Request, decoder PCMDecoder) (resul
 	}
 	result.AssetID = req.AssetID
 	callerCtx := ctx
-	ctx, cancel := context.WithTimeout(ctx, 15*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, requestDeadline)
 	defer cancel()
 	if err = ctx.Err(); err != nil {
 		result.Status = "cancelled"
