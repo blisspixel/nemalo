@@ -219,9 +219,7 @@ func (m *model) logLines(width, height int) []string {
 	var rows []string
 	for _, e := range m.messages {
 		row := e.at.Format("15:04:05") + "  " + outcomeWord(e.outcome) + "  " + e.text
-		for _, line := range strings.Split(lipgloss.Wrap(row, max(1, width), " "), "\n") {
-			rows = append(rows, line)
-		}
+		rows = append(rows, strings.Split(lipgloss.Wrap(row, max(1, width), " "), "\n")...)
 	}
 	m.logTop = max(0, min(m.logTop, len(rows)-height))
 	return rows[m.logTop:min(len(rows), m.logTop+height)]
