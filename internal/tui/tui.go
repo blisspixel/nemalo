@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"slices"
 	"strings"
 
 	"github.com/charmbracelet/x/term"
@@ -43,15 +44,19 @@ type model struct {
 	intakeFocused     bool
 	collectionPending *app.CollectionAcquireRequest
 	collectionReview  *collectionReview
-	actions           *actionMenu
+	overlay           *overlay
+	// plain keeps the linear layout for screen readers and magnifiers
+	// (decision 0101); inputHint is the main field's unclipped hint.
+	plain     bool
+	inputHint string
 	// fieldRow is the screen row of the first form field; fieldAt holds each
 	// input's row offset (-1 when hidden) and fieldX its value column.
-	fieldRow        int
-	fieldAt, fieldX [3]int
-	assess          bool
-	height          int
-	width           int
-	color           bool
+	fieldRow, fieldCol int
+	fieldAt, fieldX    [3]int
+	assess             bool
+	height             int
+	width              int
+	color              bool
 	// outcome colours the status line. A key press clears it; a result,
 	// or a refusal before any request, sets it from the operation itself.
 	outcome               outcome
@@ -511,12 +516,28 @@ func (m *model) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 		if m.confirmRoot != "" {
 			return m, m.confirmInitialization(msg)
 		}
-		if m.actions != nil {
-			return m, m.actionKey(msg)
+		if m.overlay != nil {
+			return m, m.overlayKey(msg)
 		}
 		if msg.Keystroke() == "ctrl+o" && !m.busy {
-			m.openActions()
+			m.openOverlay(palette)
 			return m, nil
+		}
+		// List-only keys never take a key typed into a field (decision 0101).
+		if m.resultsFocused && !m.busy {
+			switch msg.String() {
+			case "space":
+				if len(m.entries) > 0 {
+					m.openOverlay(itemMenu)
+				}
+				return m, nil
+			case "?":
+				m.openOverlay(helpView)
+				return m, nil
+			case ":":
+				m.openOverlay(palette)
+				return m, nil
+			}
 		}
 		if m.mode == "read" && !m.busy {
 			switch msg.Keystroke() {
@@ -547,7 +568,7 @@ func (m *model) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 		if msg.String() == "ctrl+p" && m.mode == "state" && !m.busy {
 			return m, m.requestPurge()
 		}
-		if msg.String() == "f10" && m.mode == "state" {
+		if msg.String() == "f10" && (m.mode == "state" || m.mode == "jobs") {
 			return m, m.observeJobs()
 		}
 		if handled, cmd := m.browserKey(msg.String()); handled {
@@ -689,7 +710,9 @@ func (m *model) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 			if msg.String() == "shift+tab" {
 				step = -1
 			}
-			return m, m.switchMode(modes[(m.modeIndex()+step+len(modes))%len(modes)])
+			order := steps()
+			at := slices.Index(order, m.mode)
+			return m, m.switchMode(order[(at+step+len(order))%len(order)])
 		case "enter":
 			return m, m.start(true)
 		case "pgup", "pgdown":
@@ -720,6 +743,11 @@ func (m *model) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 	}
 	var cmd tea.Cmd
+	if m.overlay != nil {
+		m.overlay.query, cmd = m.overlay.query.Update(message)
+		m.overlay.filter()
+		return m, cmd
+	}
 	if m.intakeFocused {
 		m.intake, cmd = m.intake.Update(message)
 	} else if m.secondaryFocused {
@@ -754,11 +782,19 @@ func interactiveTerminal(in io.Reader, out io.Writer) bool {
 	return term.IsTerminal(inFile.Fd()) && term.IsTerminal(outFile.Fd())
 }
 
-func Run(ctx context.Context, service app.Service, in io.Reader, out io.Writer) error {
+// Options are presentation choices. Plain keeps the linear layout; TERM=dumb
+// selects it too.
+type Options struct {
+	Plain bool
+}
+
+func Run(ctx context.Context, service app.Service, in io.Reader, out io.Writer, options Options) error {
 	if !interactiveTerminal(in, out) {
 		return errors.New("tui requires an interactive terminal")
 	}
 	m := newModel(ctx, service)
+	m.plain = options.Plain || os.Getenv("TERM") == "dumb"
+	m.resize()
 	defer func() {
 		if m.cancel != nil {
 			m.cancel()

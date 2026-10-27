@@ -35,7 +35,7 @@ func TestNavigationPreservesScopedDraftsAndResults(t *testing.T) {
 	m.input.SetValue("catalog.json")
 	m.secondary.SetValue("Italian")
 	m.Update(tea.KeyPressMsg{Code: tea.KeyTab, Mod: tea.ModShift})
-	if m.mode != "snapshot" {
+	if m.mode != "evaluate" {
 		t.Fatal("reverse navigation ignored")
 	}
 	m.Update(tea.KeyPressMsg{Code: '1', Mod: tea.ModAlt})
@@ -265,7 +265,7 @@ func TestSearchOrderToggleIsArchiveOnly(t *testing.T) {
 	}
 	m.Update(key(tea.KeyF2))
 	m.Update(key(tea.KeyF3))
-	if m.searchOrder() != "downloads" || !strings.Contains(m.status, "downloads") || !strings.Contains(m.View().Content, "F3 order: downloads") {
+	if m.searchOrder() != "downloads" || !strings.Contains(m.status, "downloads") || !strings.Contains(m.View().Content, "order downloads") {
 		t.Fatal("order toggle", m.status)
 	}
 	m.input.SetValue("librivox frankenstein")

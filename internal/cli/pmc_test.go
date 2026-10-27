@@ -24,7 +24,7 @@ func TestPMCEvaluateCLIRoutesCanonicalIDs(t *testing.T) {
 	for _, id := range []string{"pmc:PMC13901", "pmc:PMC13901.2", "pmc:PMC13901.0"} {
 		calls := 0
 		var out, stderr bytes.Buffer
-		code := Execute(context.Background(), []string{"evaluate", id, "--json"}, &out, &stderr, app.Service{Providers: map[string]app.Searcher{"pmc": pmcCLI{&calls}}}, func(string) string { return "" }, func() (config.Paths, error) { return config.Paths{Config: filepath.Join(t.TempDir(), "missing")}, nil }, func(context.Context, app.Service) error { return nil })
+		code := Execute(context.Background(), []string{"evaluate", id, "--json"}, &out, &stderr, app.Service{Providers: map[string]app.Searcher{"pmc": pmcCLI{&calls}}}, func(string) string { return "" }, func() (config.Paths, error) { return config.Paths{Config: filepath.Join(t.TempDir(), "missing")}, nil }, func(context.Context, app.Service, TerminalOptions) error { return nil })
 		if strings.HasSuffix(id, ".0") {
 			if code != 2 || calls != 0 {
 				t.Fatal(code, calls)

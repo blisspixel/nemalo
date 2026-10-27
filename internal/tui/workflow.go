@@ -116,6 +116,9 @@ func (m *model) start(reset bool) tea.Cmd {
 	if m.mode == "read" {
 		return m.startRead(true, 0, "", false)
 	}
+	if m.mode == "jobs" {
+		return m.observeJobs()
+	}
 	if m.busy || m.input.Value() == "" {
 		return nil
 	}

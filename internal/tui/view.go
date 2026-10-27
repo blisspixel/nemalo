@@ -8,7 +8,6 @@ import (
 	"charm.land/bubbles/v2/textinput"
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
-	"github.com/blisspixel/nemalo/internal/discovery"
 	"github.com/blisspixel/nemalo/internal/present"
 )
 
@@ -23,6 +22,8 @@ const (
 	warning
 	danger
 	muted
+	// netRole marks an action that uses the network.
+	netRole
 )
 
 // paint styles text in a role. Without colour, text is plain; meaning never
@@ -43,29 +44,17 @@ func (m *model) paint(text string, r role, bold bool) string {
 		style = style.Foreground(lipgloss.Red)
 	case muted:
 		style = style.Faint(true)
+	case netRole:
+		style = style.Foreground(lipgloss.Cyan)
 	}
 	return style.Render(text)
 }
 
-// navigation lists the modes on one row. A mode's number and name stay
-// together: when every name does not fit, the other modes show their
-// numbers and the selected one keeps its name.
+// navigation is plain mode's location line: the section and its steps, the
+// current one bracketed, then where Tab and the palette lead.
 func (m *model) navigation() string {
-	width := max(1, m.width-2)
-	full, compact := make([]string, len(modes)), make([]string, len(modes))
-	for i, name := range modes {
-		number := modeShortcut(i)
-		label := number + " " + strings.ToUpper(name[:1]) + name[1:]
-		full[i], compact[i] = label, number
-		if name == m.mode {
-			full[i] = m.paint("["+label+"]", accent, true)
-			compact[i] = full[i]
-		}
-	}
-	if row := strings.Join(full, "  "); lipgloss.Width(row) <= width {
-		return row
-	}
-	return strings.Join(compact, " ")
+	s := sectionOf(m.mode)
+	return clipWords(s.name+": "+stepList(s, m.mode)+"   Tab next step, Ctrl+O actions", max(1, m.width-2))
 }
 
 // clipWords shortens one row of text to width cells at a word boundary,
@@ -92,64 +81,17 @@ func clipWords(text string, width int) string {
 	return strings.TrimRight(row, ";,:|") + "..."
 }
 
+// fields is plain mode's form: one field per row with a fixed label column.
 func (m *model) fields() string {
-	label, hint, second := "Query", "Search books (network on Enter)", ""
-	switch m.mode {
-	case "inspect":
-		label, hint = "Folder", "Explicit folder for read-only inventory"
-	case "check":
-		label, hint = "File", "Explicit file for local health checks"
-	case "scan":
-		label, hint = "File", "Recommended for a file you did not produce; scanner cloud/sample policy applies; not proof of safety"
-	case "snapshot":
-		label, hint, second = "Folder", "Explicit source folder", "New output"
-	case "holdings":
-		label, hint, second = "Catalog", "Existing catalog file", "Filter"
-	case "audit":
-		label, hint, second = "Catalog", "Catalog file, or a library folder to check", "Root"
-	case "evaluate":
-		label, hint, second = "Item ID", "archive:ITEM, gutenberg:NUMBER, or openlibrary:WORK/EDITION", "Intake"
-	case "state":
-		label, hint, second = "Folder", "Existing library folder; Enter reads status", "Source"
-	case "read":
-		label, hint, second = "Catalog", "Catalog selected from Holdings", "Root"
-	case "collections":
-		label, hint, second = "Collection", "Existing exact-selection JSON file", "Library"
-	case "revisions":
-		label, hint, second = "Before", "Earlier collection JSON file", "After"
+	fields := m.formFields()
+	m.fieldAt, m.fieldX = [3]int{-1, -1, -1}, [3]int{}
+	var rows []string
+	for i, f := range fields {
+		prefix := fmt.Sprintf("%s %-11s", fieldMarker(f.focused), f.label)
+		m.fieldAt[f.slot], m.fieldX[f.slot] = i, lipgloss.Width(prefix)
+		rows = append(rows, prefix+f.in.View())
 	}
-	if m.mode == "search" && m.source == "gutenberg" {
-		label, hint, second = "Query", "Title, author, subject, or text number", "Catalog"
-	}
-	m.input.Placeholder = clipWords(hint, max(1, m.width-16))
-	marker := " "
-	if !m.resultsFocused && !m.secondaryFocused && !m.intakeFocused {
-		marker = ">"
-	}
-	// Record where each value starts, for the real terminal cursor.
-	m.fieldAt, m.fieldX = [3]int{0, -1, -1}, [3]int{}
-	prefix := fmt.Sprintf("%s %-11s", marker, label)
-	m.fieldX[0] = lipgloss.Width(prefix)
-	s := prefix + m.input.View()
-	if second != "" {
-		marker = " "
-		if !m.resultsFocused && m.secondaryFocused {
-			marker = ">"
-		}
-		prefix = fmt.Sprintf("%s %-11s", marker, second)
-		m.fieldAt[1], m.fieldX[1] = 1, lipgloss.Width(prefix)
-		s += "\n" + prefix + m.secondary.View()
-	}
-	if m.mode == "collections" {
-		marker = " "
-		if !m.resultsFocused && m.intakeFocused {
-			marker = ">"
-		}
-		prefix = fmt.Sprintf("%s %-11s", marker, "Intake")
-		m.fieldAt[2], m.fieldX[2] = strings.Count(s, "\n")+1, lipgloss.Width(prefix)
-		s += "\n" + prefix + m.intake.View()
-	}
-	return s
+	return strings.Join(rows, "\n")
 }
 
 func (m *model) contextLine() string {
@@ -210,7 +152,7 @@ func (m *model) top() string {
 		brand += "   Knowledge is power."
 	}
 	head := brand + "\n" + m.navigation() + "\n\n" + m.paint(clipWords(m.contextLine(), max(1, m.width-2)), muted, false) + "\n"
-	m.fieldRow = strings.Count(head, "\n")
+	m.fieldRow, m.fieldCol = strings.Count(head, "\n"), 0
 	return head + m.fields()
 }
 
@@ -225,54 +167,23 @@ func (m *model) footer() string {
 		verb := map[string]string{"init": "initialize", "import": "import", "rescan": "rescan", "cleanup": "move to holding", "restore": "restore", "purge": "purge"}[m.confirmKind]
 		return lipgloss.Wrap(m.paint("Enter "+verb+"  Esc back  PgUp/PgDown review  Ctrl+C quit", warning, false), max(1, m.width-2), " ")
 	}
-	help := "Enter run  F6 browse  Ctrl+O actions  Tab modes  Ctrl+C quit"
-	if m.mode == "read" {
-		help += "  F2 citation  F4 excerpt evidence"
-	}
-	if m.resultsFocused {
-		help = "Up/Down select  Enter details  F6 edit  Ctrl+O actions  Esc back  Ctrl+C quit"
-		if m.mode == "search" && len(m.entries) > 0 && (strings.HasPrefix(m.entries[m.selected].sourceID, "archive:") || strings.HasPrefix(m.entries[m.selected].sourceID, "gutenberg:") || strings.HasPrefix(m.entries[m.selected].sourceID, "openlibrary:")) {
-			help += "  e evaluate"
-		}
-		if m.mode == "holdings" && len(m.entries) > 0 {
-			help += "  r source access"
-			if m.entries[m.selected].recording != "" {
-				help += "  t recording"
-			}
-		}
-		if m.mode == "evaluate" && len(m.entries) > 0 {
-			if discovery.ValidOpenLibraryEdition(m.entries[m.selected].sourceID) {
-				help += "  e select edition"
-			}
-			help += "  d acquire"
-			if m.recordingFor(m.entries[m.selected].sourceID) != nil {
-				help += "  a all tracks"
-			}
-		}
-		if m.mode == "read" {
-			help = "Enter unit  n next  r repeat  u units  c contents  g page labels  p pages  s speed  m save  ' restore  F2 citation  F4 evidence"
-		}
+	if m.overlay != nil {
+		return m.paint(clipWords("Up/Down choose  Enter run  Esc close  Ctrl+C quit", max(1, m.width-2)), muted, false)
 	}
 	if m.busy {
-		help = "Working...  Esc cancel  Ctrl+C quit"
-		return lipgloss.Wrap(m.paint(help, muted, false), max(1, m.width-2), " ")
+		return m.paint("Esc cancel  Ctrl+C quit", muted, false)
 	}
-	if m.form() {
-		help += "  Ctrl+N field"
+	// The registry's top actions for this focus; whole keys only, and the
+	// last (quit) kept when space is short.
+	keys := m.footerKeys()
+	parts := make([]string, len(keys))
+	for i, c := range keys {
+		parts[i] = footerKey(c) + " " + c.label
 	}
-	// F5 only does something once a report exists.
-	more := "PgUp/PgDn scroll  Alt+1..9/0/a/b jump"
-	if m.report != "" {
-		more = "F5 full report  " + more
+	for len(parts) > 1 && lipgloss.Width(strings.Join(parts, "  ")) > max(1, m.width-2) {
+		parts = append(parts[:len(parts)-2], parts[len(parts)-1])
 	}
-	if m.mode == "search" || m.mode == "holdings" {
-		more += "  Ctrl+Left/Right results page"
-	}
-	// One line when both fit; otherwise each wraps at whole key labels.
-	if lipgloss.Width(help+"  "+more) <= max(1, m.width-2) {
-		return m.paint(help+"  "+more, muted, false)
-	}
-	return lipgloss.Wrap(m.paint(help+"\n"+more, muted, false), max(1, m.width-2), " ")
+	return m.paint(clip(strings.Join(parts, "  "), max(1, m.width-2)), muted, false)
 }
 
 func (m *model) View() tea.View {
@@ -293,52 +204,44 @@ func (m *model) View() tea.View {
 		v.AltScreen = true
 		return v
 	}
-	state := m.statusText()
-	// The status colour is the state and outcome of the work, not its wording.
-	color := accent
-	switch {
-	case m.busy || m.confirmRoot != "" || m.reviewingDownload() || m.collectionReview != nil:
-		color = warning
-	case m.outcome == outcomeFailed:
-		color = danger
-	case m.outcome == outcomeAttention:
-		color = warning
-	case m.outcome == outcomeOK:
-		color = success
+	if !m.plain {
+		content, cursor := m.panelView()
+		v := tea.NewView(content)
+		v.AltScreen = true
+		v.Cursor = cursor
+		return v
 	}
-	if m.actions != nil {
-		state = "Actions for this view. Each runs its named key; reviews still ask for Enter."
-		color = accent
-	}
-	state = lipgloss.Wrap(m.paint(state, color, false), m.width-2, " ")
+	state := m.statusLine()
 	position := m.position()
 	content := m.browseView()
 	if m.viewport.GetContent() == "" && !m.busy {
 		lines := strings.Split(lipgloss.Wrap(m.emptyHelp(), m.width-2, " "), "\n")
 		content = lipgloss.NewStyle().Height(m.viewport.Height()).Render(strings.Join(lines[:min(len(lines), m.viewport.Height())], "\n"))
 	}
-	if m.actions != nil {
-		content = lipgloss.NewStyle().Height(m.viewport.Height()).Render(m.actionsView(m.viewport.Height()))
+	overlayRow := -1
+	if m.overlay != nil {
+		lines, row := m.overlayLines(m.width-2, m.viewport.Height())
+		overlayRow = row
+		content = lipgloss.NewStyle().Height(m.viewport.Height()).Render(strings.Join(lines, "\n"))
 	}
 	head := m.top() + "\n" + state + "\n\n" + m.paint(position, muted, false) + "\n" + m.paint(strings.Repeat("-", m.width-2), muted, false) + "\n"
 	v := tea.NewView(head + content + "\n" + m.footer())
 	v.AltScreen = true
-	v.Cursor = m.screenCursor(strings.Count(head, "\n"))
+	v.Cursor = m.screenCursor(strings.Count(head, "\n"), overlayRow)
 	return v
 }
 
-// screenCursor places the real terminal cursor at the chosen action or at the
-// focused field's edit position (decision 0094). contentRow is the first row
-// of the content area.
-func (m *model) screenCursor(contentRow int) *tea.Cursor {
-	if m.actions != nil {
-		row := contentRow + 1 + m.actions.selected
-		if m.actions.selected+1 >= m.viewport.Height() {
+// screenCursor places plain mode's real terminal cursor at the chosen list
+// item or at the focused field's edit position (decision 0094). contentRow is
+// the first row of the content area.
+func (m *model) screenCursor(contentRow, overlayRow int) *tea.Cursor {
+	if m.overlay != nil {
+		if overlayRow < 0 {
 			return nil
 		}
-		return tea.NewCursor(0, row)
+		return tea.NewCursor(0, contentRow+overlayRow)
 	}
-	if m.resultsFocused || m.collectionReview != nil || m.reviewingDownload() || m.confirmRoot != "" {
+	if m.resultsFocused || m.reviewing() {
 		return nil
 	}
 	for i, in := range []textinput.Model{m.input, m.secondary, m.intake} {
@@ -350,27 +253,17 @@ func (m *model) screenCursor(contentRow int) *tea.Cursor {
 }
 
 func (m *model) resize() {
-	m.input.SetWidth(max(1, m.width-16))
-	m.input.SetCursor(m.input.Position())
-	m.secondary.SetWidth(max(1, m.width-16))
-	m.secondary.SetCursor(m.secondary.Position())
-	m.intake.SetWidth(max(1, m.width-16))
-	m.intake.SetCursor(m.intake.Position())
-	m.intake.Placeholder = clipWords("Absolute outside-library intake; F8 previews without writing", max(1, m.width-16))
-	m.secondary.Placeholder = clipWords(map[string]string{"snapshot": "New catalog path outside the source folder", "holdings": "Optional title, language, filename, or hash", "audit": "Source directory for a catalog; leave empty to check a library", "read": "Explicit source directory (required)", "evaluate": "New untrusted intake directory, for d acquire", "state": "EPUB, PDF, MP3, M4B, M4A, or completed intake packet"}[m.mode], max(1, m.width-16))
-	if m.mode == "search" && m.source == "gutenberg" {
-		if m.catalog != "" {
-			m.secondary.Placeholder = m.catalog
-		} else {
-			m.secondary.Placeholder = "Absolute path of pg_catalog.csv"
-		}
+	if !m.plain {
+		m.resizePanel()
+		return
 	}
-	if m.mode == "collections" {
-		m.secondary.Placeholder = clipWords("Existing initialized library folder", max(1, m.width-16))
+	fields := m.formFields()
+	widths := make([]int, len(fields))
+	for i := range widths {
+		widths[i] = max(1, m.width-16)
 	}
-	if m.mode == "revisions" {
-		m.secondary.Placeholder = clipWords("Later collection JSON file", max(1, m.width-16))
-	}
+	m.setFieldWidths(fields, widths)
+	m.viewport.SetWidth(max(1, m.width-2))
 	// Layout height follows the actual wrapped navigation, context, and help.
 	reserved := lipgloss.Height(m.top()) + lipgloss.Height(m.footer()) + lipgloss.Height(m.statusText()) + lipgloss.Height(m.position()) + 2
 	m.viewport.SetHeight(max(1, m.height-reserved))
@@ -483,6 +376,8 @@ func (m *model) emptyHelp() string {
 		return "Read from exact source bytes.\n\nSelect an asset in Holdings and press r. Enter its explicit root, then Enter lists units.\nF6 browses units; Enter retrieves text. n continues, r repeats, u lists units.\nc lists the book's declared contents. Enter reads one entry and stops at its declared end.\ng lists the EPUB's declared page labels, such as iv or 42; Enter reads from one. They are the book's own markers, not screen pages.\nF2 shows recorded citation metadata. F4 shows source-bound evidence for the last successful excerpt; F3 explicitly replays it in that report.\np opens the selection as pages sized to the terminal; s opens it one word at a time.\nm saves a bookmark in an initialized library. ' restores that bookmark.\nDelivery does not record reading progress, and closing does not save a bookmark.\nNotes and image resources are available through content CLI references."
 	case "collections":
 		return "Resolve exact selections against your library.\n\nEnter a collection JSON file and an existing initialized library. Ctrl+N moves through collection, library and intake.\nEnter reads status offline. F6 browses declared items; F5 shows the full report.\nWith an absolute outside-library intake, F8 previews acquisition offline. A second Enter confirms the bound review before requests or writes.\nF3 chooses a 1 GiB or 5 GiB total transfer cap. Downloads remain untrusted intake; ingest is separate.\nAlt+B compares two explicit revisions without changing holdings or files."
+	case "jobs":
+		return "Observe recorded jobs for one library.\n\nEnter an existing initialized library folder, then Enter (or F10) reads its recorded jobs through the passive snapshot, as F10 in Manage does.\nNothing is reconciled, polled, started or cancelled. A recorded running job can be abandoned; ownership is not observed.\nF6 browses jobs; F5 shows observation scope, coverage and limits."
 	case "revisions":
 		return "Compare two collection declarations offline.\n\nEnter the before and after JSON files, using Ctrl+N to switch fields. Enter compares exact selections, notes, name and retained order.\nF6 browses changes; F5 shows both file hashes and all limitations.\nA removed selection never removes holdings or notes. This comparison grants no acquisition authority."
 	default:

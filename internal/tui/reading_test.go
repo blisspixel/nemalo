@@ -254,8 +254,8 @@ func TestHoldingsShowsATracksRecordingAndKeepsTheList(t *testing.T) {
 	if len(m.entries) != 1 {
 		t.Fatal("holdings", m.status, m.report)
 	}
-	if m.entries[0].recording != "archive:demo" || !strings.Contains(strings.Join(strings.Fields(m.footer()), " "), "t recording") {
-		t.Fatal("recording not offered", m.entries[0], m.footer())
+	if m.entries[0].recording != "archive:demo" || !offered(m, "t") {
+		t.Fatal("recording not offered", m.entries[0])
 	}
 	_, cmd := m.Update(tea.KeyPressMsg{Code: 't', Text: "t"})
 	if cmd == nil {

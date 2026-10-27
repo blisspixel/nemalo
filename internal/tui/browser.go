@@ -568,6 +568,8 @@ func clip(text string, width int) string {
 	return lipgloss.NewStyle().MaxWidth(max(1, width)).Render(text)
 }
 
+// browseView is plain mode's results area: the list, with the preview beside
+// it in wide terminals.
 func (m *model) browseView() string {
 	height, width := m.viewport.Height(), m.viewport.Width()
 	if m.evidence || len(m.entries) == 0 {
@@ -580,24 +582,7 @@ func (m *model) browseView() string {
 	if width >= 98 {
 		listWidth = width / 2
 	}
-	count := max(1, height/3)
-	start := (m.selected / count) * count
-	var rows []string
-	for i := start; i < min(len(m.entries), start+count); i++ {
-		e := m.entries[i]
-		marker := " "
-		if i == m.selected {
-			marker = ">"
-		}
-		title := fmt.Sprintf("%s %2d  %s", marker, m.offset+i+1, e.title)
-		if i == m.selected {
-			title = m.paint(clip(title, listWidth-2), accent, true)
-		} else {
-			title = clip(title, listWidth-2)
-		}
-		rows = append(rows, title, m.paint(clip("      "+e.summary, listWidth-2), muted, false), "")
-	}
-	list := lipgloss.NewStyle().Width(listWidth).Height(height).MaxHeight(height).Render(strings.Join(rows, "\n"))
+	list := lipgloss.NewStyle().Width(listWidth).Height(height).MaxHeight(height).Render(strings.Join(m.listRows(listWidth-2, height), "\n"))
 	if listWidth == width {
 		return list
 	}

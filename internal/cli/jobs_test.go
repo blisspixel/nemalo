@@ -33,7 +33,7 @@ func TestJobsSnapshotUsesSharedServiceWithoutOpeningWriterStore(t *testing.T) {
 		var out, errOut bytes.Buffer
 		code := Execute(context.Background(), args, &out, &errOut, service, func(string) string { return "" }, func() (config.Paths, error) {
 			return config.Paths{Config: filepath.Join(dir, "absent.json"), State: state, Cache: filepath.Join(dir, "cache")}, nil
-		}, func(context.Context, app.Service) error { return nil })
+		}, func(context.Context, app.Service, TerminalOptions) error { return nil })
 		return code, out.String(), errOut.String()
 	}
 	for _, args := range [][]string{{"jobs", "snapshot", libraryRoot, "--json"}, {"jobs", "snapshot", libraryRoot}} {
@@ -114,7 +114,7 @@ func TestJobsCommandsReadTheStateJournals(t *testing.T) {
 		var out, errOut bytes.Buffer
 		code := Execute(context.Background(), args, &out, &errOut, app.Service{}, func(string) string { return "" }, func() (config.Paths, error) {
 			return config.Paths{Config: filepath.Join(dir, "missing.json"), State: state, Cache: filepath.Join(dir, "cache")}, nil
-		}, func(context.Context, app.Service) error { return nil })
+		}, func(context.Context, app.Service, TerminalOptions) error { return nil })
 		return code, out.String(), errOut.String()
 	}
 	if code, out, _ := run("jobs", "list"); code != 0 || !strings.Contains(out, "Jobs: 0") {
@@ -154,7 +154,7 @@ func TestTerminalReceivesTheConfiguredPassiveJobsDirectoryWithoutCreatingIt(t *t
 		called := false
 		code := Execute(context.Background(), []string{"tui"}, &bytes.Buffer{}, &bytes.Buffer{}, app.Service{JobsDirectory: override}, func(string) string { return "" }, func() (config.Paths, error) {
 			return config.Paths{Config: filepath.Join(root, "missing.json"), State: state}, nil
-		}, func(_ context.Context, s app.Service) error {
+		}, func(_ context.Context, s app.Service, _ TerminalOptions) error {
 			called = true
 			want := override
 			if want == "" {

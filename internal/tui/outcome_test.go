@@ -48,8 +48,10 @@ func TestStatusColourFollowsTheOutcome(t *testing.T) {
 	m.Update(tea.WindowSizeMsg{Width: 100, Height: 30})
 	m.Update(tea.ColorProfileMsg{Profile: colorprofile.TrueColor})
 	status := func() string {
-		for _, line := range strings.Split(m.View().Content, "\n") {
-			if strings.Contains(line, m.status[:min(len(m.status), 10)]) {
+		// The status line sits below the panels; a report can repeat its words.
+		lines := strings.Split(m.View().Content, "\n")
+		for i := len(lines) - 1; i >= 0; i-- {
+			if line := lines[i]; strings.Contains(line, m.status[:min(len(m.status), 10)]) {
 				return line
 			}
 		}

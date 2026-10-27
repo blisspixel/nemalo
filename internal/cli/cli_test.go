@@ -153,7 +153,7 @@ func execute(t *testing.T, args []string, searchErr error) (int, string, string)
 	t.Cleanup(func() { stdinTerminal = saved })
 	dir := t.TempDir()
 	var out, errOut bytes.Buffer
-	code := Execute(context.Background(), args, &out, &errOut, app.Service{Providers: map[string]app.Searcher{"openlibrary": searcher{searchErr}, "archive": searcher{searchErr}}}, func(string) string { return "" }, func() (config.Paths, error) { return config.Paths{Config: filepath.Join(dir, "missing.json")}, nil }, func(context.Context, app.Service) error { return nil })
+	code := Execute(context.Background(), args, &out, &errOut, app.Service{Providers: map[string]app.Searcher{"openlibrary": searcher{searchErr}, "archive": searcher{searchErr}}}, func(string) string { return "" }, func() (config.Paths, error) { return config.Paths{Config: filepath.Join(dir, "missing.json")}, nil }, func(context.Context, app.Service, TerminalOptions) error { return nil })
 	return code, out.String(), errOut.String()
 }
 
@@ -282,12 +282,12 @@ func TestUsageAndConfigurationFailures(t *testing.T) {
 	dir := t.TempDir()
 	paths = func() (config.Paths, error) { return config.Paths{Config: filepath.Join(dir, "missing")}, nil }
 	stdinTerminal = func() bool { return true }
-	if code := Execute(context.Background(), []string{"tui"}, io.Discard, io.Discard, app.New(), func(string) string { return "" }, paths, func(context.Context, app.Service) error { return errors.New("no terminal") }); code != 1 {
+	if code := Execute(context.Background(), []string{"tui"}, io.Discard, io.Discard, app.New(), func(string) string { return "" }, paths, func(context.Context, app.Service, TerminalOptions) error { return errors.New("no terminal") }); code != 1 {
 		t.Fatal(code)
 	}
 	stdinTerminal = func() bool { return false }
 	var out, errOut bytes.Buffer
-	if code := Execute(context.Background(), []string{"tui"}, &out, &errOut, app.New(), func(string) string { return "" }, paths, func(context.Context, app.Service) error {
+	if code := Execute(context.Background(), []string{"tui"}, &out, &errOut, app.New(), func(string) string { return "" }, paths, func(context.Context, app.Service, TerminalOptions) error {
 		t.Fatal("tui started without a terminal")
 		return nil
 	}); code != 2 || !strings.Contains(errOut.String(), "tui requires an interactive terminal") {
@@ -335,7 +335,7 @@ func TestGutenbergCatalogCommands(t *testing.T) {
 	run := func(args ...string) (int, string, string) {
 		t.Helper()
 		var out, errOut bytes.Buffer
-		code := Execute(context.Background(), args, &out, &errOut, app.New(), env, paths, func(context.Context, app.Service) error { return nil })
+		code := Execute(context.Background(), args, &out, &errOut, app.New(), env, paths, func(context.Context, app.Service, TerminalOptions) error { return nil })
 		return code, out.String(), errOut.String()
 	}
 	code, out, stderr := run("search", "alice", "--source", "gutenberg", "--catalog", catalog)
@@ -399,7 +399,7 @@ func TestEvaluateFilesListsGutenbergOffers(t *testing.T) {
 		var out, errOut bytes.Buffer
 		code := Execute(context.Background(), args, &out, &errOut, app.Service{Providers: map[string]app.Searcher{"gutenberg": g, "archive": searcher{}}}, func(string) string { return "" }, func() (config.Paths, error) {
 			return config.Paths{Config: filepath.Join(dir, "missing.json")}, nil
-		}, func(context.Context, app.Service) error { return nil })
+		}, func(context.Context, app.Service, TerminalOptions) error { return nil })
 		return code, out.String(), errOut.String()
 	}
 	code, out, stderr := run("evaluate", "gutenberg:1342", "--files")

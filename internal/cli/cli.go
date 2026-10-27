@@ -39,11 +39,18 @@ type Envelope struct {
 }
 
 func Run(ctx context.Context, args []string, out, errOut io.Writer) int {
-	return Execute(ctx, args, out, errOut, app.New(), os.Getenv, config.DefaultPaths, func(ctx context.Context, s app.Service) error { return tui.Run(ctx, s, os.Stdin, out) })
+	return Execute(ctx, args, out, errOut, app.New(), os.Getenv, config.DefaultPaths, func(ctx context.Context, s app.Service, o TerminalOptions) error {
+		return tui.Run(ctx, s, os.Stdin, out, tui.Options(o))
+	})
 }
 
 // Execute exposes external boundaries for offline contract and cancellation tests.
-func Execute(ctx context.Context, args []string, out, errOut io.Writer, service app.Service, env func(string) string, paths func() (config.Paths, error), terminal func(context.Context, app.Service) error) int {
+// TerminalOptions are the terminal interface's presentation choices.
+type TerminalOptions struct {
+	Plain bool
+}
+
+func Execute(ctx context.Context, args []string, out, errOut io.Writer, service app.Service, env func(string) string, paths func() (config.Paths, error), terminal func(context.Context, app.Service, TerminalOptions) error) int {
 	if len(args) == 0 || args[0] == "help" || args[0] == "--help" || args[0] == "-h" {
 		text := overview
 		if len(args) > 1 && args[0] == "help" {
@@ -75,6 +82,7 @@ func Execute(ctx context.Context, args []string, out, errOut io.Writer, service 
 	flags := flag.NewFlagSet(command, flag.ContinueOnError)
 	flags.SetOutput(io.Discard)
 	jsonMode := flags.Bool("json", false, "structured output")
+	plain := flags.Bool("plain", false, "linear terminal layout without panels")
 	configFile := flags.String("config", env("NEMALO_CONFIG"), "configuration file")
 	libraryDir := flags.String("library", "", "explicit library directory")
 	review := flags.String("review", "", "explicit review directory")
@@ -914,7 +922,7 @@ func Execute(ctx context.Context, args []string, out, errOut io.Writer, service 
 		if !stdinTerminal() {
 			return write(nil, errors.New("tui requires an interactive terminal"), 2)
 		}
-		if err := terminal(ctx, service); err != nil {
+		if err := terminal(ctx, service, TerminalOptions{Plain: *plain}); err != nil {
 			return write(nil, err, 1)
 		}
 	case "mcp":
@@ -1117,7 +1125,7 @@ func flagApplies(command, action, name string) bool {
 	case "evaluate":
 		return name == "catalog" || name == "files" || name == "editions" || name == "limit" || name == "offset"
 	case "tui":
-		return name == "catalog"
+		return name == "catalog" || name == "plain"
 	case "catalog":
 		return action == "fetch" && name == "output"
 	case "check":

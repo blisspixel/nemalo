@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 
@@ -155,7 +156,7 @@ func TestTerminalWorkflow(t *testing.T) {
 		t.Fatal("missing initial view/focus")
 	}
 	m.Update(tea.WindowSizeMsg{Width: 40, Height: 12})
-	if m.viewport.Width() != 38 || m.viewport.Height() < 1 || !strings.Contains(m.View().Content, "Terminal too small") {
+	if m.viewport.Width() != 36 || m.viewport.Height() < 1 || !strings.Contains(m.View().Content, "Terminal too small") {
 		t.Fatal("resize ignored")
 	}
 	m.Update(tea.WindowSizeMsg{Width: 100, Height: 30})
@@ -180,7 +181,7 @@ func TestTerminalWorkflow(t *testing.T) {
 	if m.busy || !strings.Contains(m.viewport.GetContent(), "Jules Verne") {
 		t.Fatal("search result missing")
 	}
-	m.Update(key(tea.KeyTab))
+	m.Update(tea.KeyPressMsg{Code: '2', Mod: tea.ModAlt})
 	if m.mode != "inspect" {
 		t.Fatal("mode not changed")
 	}
@@ -255,7 +256,7 @@ func TestTerminalWorkflow(t *testing.T) {
 	if !strings.Contains(m.report, "File locations: 1") || !strings.Contains(m.report, "Saved: "+file+"\n") {
 		t.Fatal("snapshot missing", m.status, m.viewport.GetContent())
 	}
-	m.Update(key(tea.KeyTab))
+	m.Update(tea.KeyPressMsg{Code: '6', Mod: tea.ModAlt})
 	if m.mode != "holdings" || m.secondary.Value() != "" {
 		t.Fatal("holdings form unavailable")
 	}
@@ -267,7 +268,7 @@ func TestTerminalWorkflow(t *testing.T) {
 	if !strings.Contains(m.viewport.GetContent(), "paper.pdf") || !strings.Contains(m.viewport.GetContent(), "Recorded health") {
 		t.Fatal("holdings missing", m.status)
 	}
-	m.Update(key(tea.KeyTab))
+	m.Update(tea.KeyPressMsg{Code: '7', Mod: tea.ModAlt})
 	if m.mode != "audit" {
 		t.Fatal("audit form unavailable")
 	}
@@ -286,7 +287,7 @@ func TestTerminalWorkflow(t *testing.T) {
 	if !strings.Contains(m.viewport.GetContent(), "Unchanged file locations: 1") {
 		t.Fatal("audit missing", m.status)
 	}
-	m.Update(key(tea.KeyTab))
+	m.Update(tea.KeyPressMsg{Code: '8', Mod: tea.ModAlt})
 	if m.mode != "evaluate" {
 		t.Fatal("evaluation mode unavailable")
 	}
@@ -297,28 +298,20 @@ func TestTerminalWorkflow(t *testing.T) {
 	if !strings.Contains(m.viewport.GetContent(), "archive:demo") || !strings.Contains(m.viewport.GetContent(), "DRM and rights remain unverified") {
 		t.Fatal("evaluation evidence missing", m.status)
 	}
-	m.Update(key(tea.KeyTab))
-	if m.mode != "state" {
-		t.Fatal("library state operation unavailable")
+	// Tab walks every step in section order and wraps around.
+	order := steps()
+	for i := range order {
+		m.Update(key(tea.KeyTab))
+		if want := order[(slices.Index(order, "evaluate")+i+1)%len(order)]; m.mode != want {
+			t.Fatalf("Tab reached %s, want %s", m.mode, want)
+		}
 	}
-	m.Update(key(tea.KeyTab))
-	if m.mode != "read" {
-		t.Fatal("source access mode unavailable")
-	}
-	m.Update(key(tea.KeyTab))
-	if m.mode != "collections" {
-		t.Fatal("collection mode unavailable")
-	}
-	m.Update(key(tea.KeyTab))
-	if m.mode != "revisions" {
-		t.Fatal("collection revision mode unavailable")
-	}
-	m.Update(key(tea.KeyTab))
+	m.Update(tea.KeyPressMsg{Code: '1', Mod: tea.ModAlt})
 	if m.mode != "search" {
 		t.Fatal("mode not restored")
 	}
 	m.Update(key(tea.KeyF2))
-	if m.source != "archive" || !strings.Contains(m.View().Content, "archive; F2") {
+	if m.source != "archive" || !strings.Contains(m.View().Content, "Internet Archive, order relevance") {
 		t.Fatal("provider toggle unavailable")
 	}
 	m.input.SetValue("Archive query")

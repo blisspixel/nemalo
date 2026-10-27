@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 	"unicode"
+	"unicode/utf8"
 
 	"github.com/blisspixel/nemalo/internal/library"
 	"github.com/blisspixel/nemalo/internal/pdftext/pdftest"
@@ -372,7 +373,7 @@ loop:
 }
 
 func (d *terminalDriver) reference(lib, asset string) {
-	d.observe("startup", 0, containsScreen("Knowledge is power."))
+	d.observe("startup", 0, containsScreen("Nemalo", "[Discover]", "[Search]"))
 	d.send("\x1b6") // xterm Alt+6: Holdings.
 	d.send(lib)
 	d.send("\x0e") // Ctrl+N changes the field; Tab changes modes.
@@ -383,13 +384,22 @@ func (d *terminalDriver) reference(lib, asset string) {
 		if f.cursorHidden || f.cursorY < 0 || f.cursorY >= len(lines) {
 			return false
 		}
+		// A value wider than its field scrolls: the cursor follows the
+		// longest visible tail of the typed text.
 		line := lines[f.cursorY]
-		at := strings.Index(line, asset)
-		return strings.HasPrefix(line, "> Filter") && at >= 0 && f.cursorX == at+len(asset)
+		if !strings.Contains(line, "> Filter") {
+			return false
+		}
+		for k := len(asset); k >= 8; k-- {
+			if at := strings.Index(line, asset[len(asset)-k:]); at >= 0 {
+				return f.cursorX == utf8.RuneCountInString(line[:at])+k
+			}
+		}
+		return false
 	})
 	d.key("holdings", "\r", containsScreen("Native synthetic fixture"))
 	d.send("\x1b[17~") // F6, results focus.
-	d.key("read-staged", "r", containsScreen("[0 Read]", asset))
+	d.key("read-staged", "r", containsScreen("[Read]", "Asset "+asset[:19]))
 	d.key("no-excerpt-refusal", "\x1bOS", containsScreen("successful excerpt"))
 	d.key("units", "\r", containsScreen("Source units available"))
 	d.send("\x1b[17~")
@@ -421,9 +431,9 @@ func (d *terminalDriver) reference(lib, asset string) {
 	}
 	d.key("evidence-return", "\x1b", containsScreen("Bounded range delivered", "Knowledge is power."))
 	d.key("continuation", "n", containsScreen("Bounded range delivered", "bytes 4096..8192"))
-	// Ctrl+O reaches a function-key action without a function key.
-	d.key("actions", "\x0f", containsScreen("Actions (Read)", "F2", "Citation report"))
-	d.send("\x1b[B\x1b[B\x1b[B") // Down three times: F6, F5, Ctrl+N, then F2 in Read.
+	// Ctrl+O reaches a function-key action by name, without a function key.
+	d.key("actions", "\x0f", containsScreen("Actions", "Find:", "Show recorded citation metadata"))
+	d.send("citation")
 	d.key("actions-citation", "\r", containsScreen("Nemalo | Recorded citation metadata", "Unknown fields"))
 	d.key("actions-return", "\x1b", containsScreen("Bounded range delivered", "bytes 4096..8192"))
 	d.send("\x03")

@@ -11,7 +11,7 @@ import (
 // Existing result generations and cancellation own its lifetime; no timer, job
 // writer store or alternate relationship policy belongs in the terminal.
 func (m *model) observeJobs() tea.Cmd {
-	if m.busy || m.confirmRoot != "" || m.reviewingDownload() || m.mode != "state" {
+	if m.busy || m.confirmRoot != "" || m.reviewingDownload() || m.mode != "state" && m.mode != "jobs" {
 		return nil
 	}
 	if m.input.Value() == "" {

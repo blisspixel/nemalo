@@ -204,8 +204,8 @@ func TestTerminalRecordingRequiresReviewAndAcquiresEveryTrack(t *testing.T) {
 	m.secondary.SetValue(filepath.Join(t.TempDir(), "recording"))
 	m.resultsFocused = true
 	m.selectEntry(1)
-	if !strings.Contains(strings.Join(strings.Fields(m.footer()), " "), "a all tracks") {
-		t.Fatal("recording action not offered", m.footer())
+	if !offered(m, "a") {
+		t.Fatal("recording action not offered")
 	}
 	m.browserKey("a")
 	if m.recordingReview == nil || calls != 0 || !strings.Contains(m.report, "Acquire every track") || !strings.Contains(m.View().Content, "Review acquisition") {

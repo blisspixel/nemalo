@@ -16,154 +16,182 @@ import (
 
 func ctrlO() tea.KeyPressMsg { return tea.KeyPressMsg{Code: 'o', Mod: tea.ModCtrl} }
 
-func actionNames(m *model) []string {
-	var keys []string
-	for _, a := range m.actions.items {
-		keys = append(keys, a.key)
-	}
-	return keys
+// offered reports whether the registry offers key here, available now.
+func offered(m *model, key string) bool {
+	c, ok := m.lookup(key)
+	return ok && c.when(m) == ""
 }
 
-// chooseAction opens Actions, moves to key and presses Enter, returning the command.
-func chooseAction(t *testing.T, m *model, key string) tea.Cmd {
+func typeText(m *model, text string) {
+	for _, r := range text {
+		m.Update(tea.KeyPressMsg{Code: r, Text: string(r)})
+	}
+}
+
+func shownNames(m *model) []string {
+	var names []string
+	for _, it := range m.overlay.shown {
+		names = append(names, it.cmd.name)
+	}
+	return names
+}
+
+// pick opens the palette, filters by query and runs the first match.
+func pick(t *testing.T, m *model, query string) tea.Cmd {
 	t.Helper()
 	m.Update(ctrlO())
-	if m.actions == nil {
-		t.Fatal("Ctrl+O did not open Actions")
+	if m.overlay == nil || m.overlay.kind != palette {
+		t.Fatal("Ctrl+O did not open the palette")
 	}
-	i := slices.Index(actionNames(m), key)
-	if i < 0 {
-		t.Fatalf("%s not offered: %v", key, actionNames(m))
-	}
-	for range i {
-		m.Update(key2("down"))
+	typeText(m, query)
+	if len(m.overlay.shown) == 0 {
+		t.Fatalf("%q matched nothing", query)
 	}
 	_, cmd := m.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
-	if m.actions != nil {
-		t.Fatal("Actions stayed open after Enter")
-	}
 	return cmd
 }
 
-func key2(name string) tea.KeyPressMsg {
-	switch name {
-	case "down":
-		return tea.KeyPressMsg{Code: tea.KeyDown}
-	case "up":
-		return tea.KeyPressMsg{Code: tea.KeyUp}
-	}
-	return tea.KeyPressMsg{Code: rune(name[0]), Text: name}
-}
-
-func TestActionsListOnlyTheKeysEachViewAccepts(t *testing.T) {
+// Every function-key and control-key action of every step is reachable by
+// name from the palette (decision 0094's guarantee, kept by 0101).
+func TestPaletteReachesEveryKeyedActionByName(t *testing.T) {
 	m := newModel(context.Background(), app.Service{})
 	m.Update(tea.WindowSizeMsg{Width: 100, Height: 30})
-	for _, tc := range []struct {
-		mode, source string
-		want         []string
-	}{
-		{"search", "openlibrary", []string{"f6", "f2", "ctrl+right", "ctrl+left"}},
-		{"search", "archive", []string{"f6", "f2", "f3", "ctrl+right", "ctrl+left"}},
-		{"holdings", "", []string{"f6", "ctrl+n", "f4", "ctrl+right", "ctrl+left"}},
-		{"snapshot", "", []string{"f6", "ctrl+n", "f3", "ctrl+a"}},
-		{"state", "", []string{"f6", "ctrl+n", "f10", "f7", "f8", "f9", "ctrl+r", "ctrl+p"}},
-		{"read", "", []string{"f6", "ctrl+n", "f2", "f4"}},
-		{"collections", "", []string{"f6", "ctrl+n", "f8", "f3"}},
-		{"scan", "", []string{"f6"}},
-	} {
-		m.switchMode(tc.mode)
-		if tc.source != "" {
-			m.source = tc.source
+	m.Update(ctrlO())
+	listed := map[string]bool{}
+	for _, it := range m.overlay.all {
+		listed[it.cmd.key+"|"+it.cmd.name] = true
+	}
+	for _, c := range registry {
+		if c.key == "" || c.nav == m.mode || paletteHidden(c) || len(c.key) == 1 || c.key == "space" {
+			continue
 		}
-		m.Update(ctrlO())
-		if m.actions == nil || !slices.Equal(actionNames(m), tc.want) {
-			t.Fatalf("%s/%s: %v", tc.mode, tc.source, m.actions)
+		if c.key == "esc" || c.key == "f6" || c.key == "enter" && c.focus == listFocus {
+			continue // focus-dependent; listed for the focus that applies
 		}
-		for _, item := range m.actions.items {
-			if _, ok := actionKeys[item.key]; !ok || item.label == "" {
-				t.Fatalf("%s: unmapped or unlabelled %+v", tc.mode, item)
-			}
-			// The synthetic key must be the one the handlers compare.
-			if got := tea.KeyPressMsg(actionKeys[item.key]).String(); got != item.key {
-				t.Fatalf("%s sends %q", item.key, got)
-			}
-		}
-		content := m.View().Content
-		if !strings.Contains(content, "Actions (") || !strings.Contains(content, keyLabel(tc.want[len(tc.want)-1])) {
-			t.Fatalf("%s: Actions not shown: %s", tc.mode, content)
-		}
-		m.Update(key(tea.KeyEscape))
-		if m.actions != nil {
-			t.Fatal("Escape did not close Actions")
+		if !listed[c.key+"|"+c.name] {
+			t.Errorf("palette omits %s %q", c.key, c.name)
 		}
 	}
-	m.report = "a report"
-	m.switchMode("scan")
-	m.report = "a report"
+	m.Update(key(tea.KeyEscape))
+	if m.overlay != nil {
+		t.Fatal("Escape did not close the palette")
+	}
+}
+
+func TestPaletteSearchesAndExplainsUnavailableActions(t *testing.T) {
+	m := newModel(context.Background(), app.Service{})
+	m.Update(tea.WindowSizeMsg{Width: 120, Height: 36})
 	m.Update(ctrlO())
-	if !slices.Contains(actionNames(m), "f5") {
-		t.Fatal("full report missing while a report exists")
+	typeText(m, "acq")
+	if names := shownNames(m); len(names) == 0 || !strings.Contains(strings.ToLower(names[0]), "acquir") {
+		t.Fatalf("acq found %v", names)
+	}
+	view := m.View().Content
+	if !strings.Contains(view, "review") || !strings.Contains(view, "unavailable: Select an item") || !strings.Contains(view, "Unavailable: Select an item in Evaluate first.") {
+		t.Fatalf("tags or reasons missing:\n%s", view)
 	}
 	m.Update(ctrlO()) // Ctrl+O also closes.
-	if m.actions != nil {
-		t.Fatal("Ctrl+O did not close Actions")
+	if m.overlay != nil {
+		t.Fatal("Ctrl+O did not close the palette")
 	}
-}
-
-func TestActionsRunTheSameHandlerAsTheKey(t *testing.T) {
-	m := newModel(context.Background(), app.Service{})
-	m.Update(tea.WindowSizeMsg{Width: 100, Height: 30})
-	m.switchMode("holdings")
-	chooseAction(t, m, "f4")
-	viaMenu := m.format
-	m.Update(key(tea.KeyF4))
-	if viaMenu != "pdf" || m.format != "mp3" {
-		t.Fatalf("menu %q then key %q", viaMenu, m.format)
-	}
+	// An unavailable choice states why and changes nothing.
 	m.switchMode("search")
-	chooseAction(t, m, "f2")
-	if m.source != "archive" {
-		t.Fatal("provider did not change", m.source)
-	}
 	m.Update(ctrlO())
-	for range 20 {
-		m.Update(key2("down"))
+	typeText(m, "result order")
+	m.Update(key(tea.KeyEnter))
+	if m.overlay == nil || !strings.Contains(m.status, "Unavailable: Only Internet Archive and Gutenberg") || m.order != "" {
+		t.Fatal("unavailable action ran or gave no reason", m.status)
 	}
-	if m.actions.selected != len(m.actions.items)-1 {
+	m.Update(key(tea.KeyEscape))
+	// Up and Down stop at the ends; typing filters rather than moving.
+	m.Update(ctrlO())
+	for range 200 {
+		m.Update(key(tea.KeyDown))
+	}
+	if m.overlay.selected != len(m.overlay.shown)-1 {
 		t.Fatal("selection passed the last item")
 	}
-	for range 20 {
-		m.Update(key2("k"))
+	for range 200 {
+		m.Update(key(tea.KeyUp))
 	}
-	if m.actions.selected != 0 {
+	if m.overlay.selected != 0 {
 		t.Fatal("selection passed the first item")
+	}
+	typeText(m, "zzzzqqq")
+	if len(m.overlay.shown) != 0 || !strings.Contains(m.View().Content, "No action matches") {
+		t.Fatal("nonsense query matched", shownNames(m))
 	}
 	m.Update(key(tea.KeyEscape))
 }
 
-func TestActionsCannotOpenWhileBusyOrConfirmAReview(t *testing.T) {
+func TestPaletteRunsTheSameHandlerAsTheKey(t *testing.T) {
+	m := newModel(context.Background(), app.Service{})
+	m.Update(tea.WindowSizeMsg{Width: 100, Height: 30})
+	m.switchMode("holdings")
+	pick(t, m, "format filter")
+	viaPalette := m.format
+	m.Update(key(tea.KeyF4))
+	if viaPalette != "pdf" || m.format != "mp3" {
+		t.Fatalf("palette %q then key %q", viaPalette, m.format)
+	}
+	// An action of another step moves there first.
+	pick(t, m, "search provider")
+	if m.mode != "search" || m.source != "archive" {
+		t.Fatal("provider did not change", m.mode, m.source)
+	}
+	pick(t, m, "jobs: jobs")
+	if m.mode != "jobs" {
+		t.Fatal("palette did not open Jobs", m.mode)
+	}
+}
+
+// Enter, network actions and unreviewed writes are prepared, never run.
+func TestPalettePreparesInsteadOfRunning(t *testing.T) {
+	m := newModel(context.Background(), app.Service{})
+	m.Update(tea.WindowSizeMsg{Width: 100, Height: 30})
+	m.input.SetValue("frankenstein")
+	if cmd := pick(t, m, "search the selected provider"); cmd != nil && m.busy {
+		t.Fatal("network search ran from the palette")
+	}
+	if m.busy || !strings.Contains(m.status, "Press Enter to search the selected provider. It uses the network.") {
+		t.Fatal("search was not prepared", m.status)
+	}
+	m.switchMode("read")
+	pick(t, m, "save a bookmark")
+	if m.busy || !strings.Contains(m.status, "Press m to save a bookmark. It writes a file.") {
+		t.Fatal("bookmark was not prepared", m.status)
+	}
+	m.switchMode("scan")
+	m.input.SetValue("/x")
+	pick(t, m, "antivirus")
+	if m.busy || !strings.Contains(m.status, "cloud and sample policy") {
+		t.Fatal("scan was not prepared", m.status)
+	}
+}
+
+func TestPaletteCannotOpenWhileBusyOrConfirmAReview(t *testing.T) {
 	m := newModel(context.Background(), app.Service{})
 	m.Update(tea.WindowSizeMsg{Width: 100, Height: 30})
 	m.switchMode("state")
 	m.busy = true
 	m.Update(ctrlO())
-	if m.actions != nil {
-		t.Fatal("Actions opened while busy")
+	if m.overlay != nil {
+		t.Fatal("palette opened while busy")
 	}
 	m.busy = false
 	folder := t.TempDir()
 	m.input.SetValue(folder)
-	if cmd := chooseAction(t, m, "f7"); cmd != nil {
+	if cmd := pick(t, m, "review library initialization"); cmd != nil {
 		t.Fatal("choosing a review ran work", cmd)
 	}
 	if m.confirmKind != "init" || m.confirmRoot == "" {
 		t.Fatal("initialization review was not requested", m.status)
 	}
-	// Ctrl+O is not available during a review, and only the review's own
-	// physical Enter confirms it.
+	// The palette is not available during a review, and only the review's
+	// own physical Enter confirms it.
 	m.Update(ctrlO())
-	if m.actions != nil {
-		t.Fatal("Actions opened over a review")
+	if m.overlay != nil {
+		t.Fatal("palette opened over a review")
 	}
 	m.Update(tea.KeyPressMsg{Code: 'e', Text: "enter"})
 	if m.confirmRoot == "" {
@@ -175,18 +203,57 @@ func TestActionsCannotOpenWhileBusyOrConfirmAReview(t *testing.T) {
 	m.Update(key(tea.KeyEscape))
 }
 
-func TestActionsCtrlCCancelsAndQuits(t *testing.T) {
+func TestPaletteCtrlCCancelsAndQuits(t *testing.T) {
 	m := newModel(context.Background(), app.Service{})
 	m.Update(tea.WindowSizeMsg{Width: 100, Height: 30})
 	cancelled := false
 	m.cancel = func() { cancelled = true }
 	m.Update(ctrlO())
 	_, cmd := m.Update(tea.KeyPressMsg{Code: 'c', Mod: tea.ModCtrl})
-	if m.actions != nil || cmd == nil || !cancelled {
-		t.Fatal("Ctrl+C did not close Actions, cancel work and quit")
+	if m.overlay != nil || cmd == nil || !cancelled {
+		t.Fatal("Ctrl+C did not close the palette, cancel work and quit")
 	}
 	if _, ok := cmd().(tea.QuitMsg); !ok {
 		t.Fatal("Ctrl+C did not quit")
+	}
+}
+
+// Space, ? and : act only with results focused; in a field they are text.
+func TestListKeysNeverTakeTypedText(t *testing.T) {
+	m := newModel(context.Background(), app.Service{})
+	m.Update(tea.WindowSizeMsg{Width: 100, Height: 30})
+	m.Init()
+	m.entries = []entry{{title: "One", sourceID: "archive:one", detail: "d"}}
+	typeText(m, "a ?:")
+	m.Update(tea.KeyPressMsg{Code: tea.KeySpace, Text: " "})
+	if m.overlay != nil || m.input.Value() != "a ?: " {
+		t.Fatal("list keys took typed text", m.input.Value())
+	}
+	m.Update(key(tea.KeyF6))
+	m.Update(tea.KeyPressMsg{Code: tea.KeySpace, Text: " "})
+	if m.overlay == nil || m.overlay.kind != itemMenu || !slices.Contains(shownNames(m), "Prepare evaluation of the selected result") {
+		t.Fatal("Space did not list item actions", m.overlay)
+	}
+	m.Update(key(tea.KeyEscape))
+	m.Update(tea.KeyPressMsg{Code: '?', Text: "?"})
+	if m.overlay == nil || m.overlay.kind != helpView || !strings.Contains(m.View().Content, "Check files") {
+		t.Fatal("? did not open help")
+	}
+	m.Update(tea.KeyPressMsg{Code: '?', Text: "?"})
+	if m.overlay != nil {
+		t.Fatal("? did not close help")
+	}
+	m.Update(tea.KeyPressMsg{Code: ':', Text: ":"})
+	if m.overlay == nil || m.overlay.kind != palette {
+		t.Fatal(": did not open the palette")
+	}
+	// The item menu runs the item's key: e prepares an evaluation.
+	m.Update(key(tea.KeyEscape))
+	m.Update(tea.KeyPressMsg{Code: tea.KeySpace, Text: " "})
+	typeText(m, "evaluation")
+	m.Update(key(tea.KeyEnter))
+	if m.mode != "evaluate" || m.input.Value() != "archive:one" {
+		t.Fatal("item menu did not run e", m.mode, m.input.Value())
 	}
 }
 
@@ -210,10 +277,10 @@ func TestRealCursorFollowsTheFocusedField(t *testing.T) {
 			t.Fatal("no real cursor in the form")
 		}
 		row := lines[v.Cursor.Y]
-		if !strings.HasPrefix(row, "> ") {
+		if !strings.Contains(row, "> Query") {
 			t.Fatalf("cursor row %d is not the focused field: %q", v.Cursor.Y, row)
 		}
-		if want := m.fieldX[0] + lipgloss.Width(value); v.Cursor.X != want {
+		if want := m.fieldCol + m.fieldX[0] + lipgloss.Width(value); v.Cursor.X != want {
 			t.Fatalf("%q at %d: cursor x %d, want %d", tc.value, tc.pos, v.Cursor.X, want)
 		}
 	}
@@ -234,8 +301,9 @@ func TestRealCursorFollowsTheFocusedField(t *testing.T) {
 	}
 	m.Update(key(tea.KeyF6))
 	m.Update(ctrlO())
+	m.Update(key(tea.KeyDown))
 	v = m.View()
-	if v.Cursor == nil || !strings.HasPrefix(strings.Split(v.Content, "\n")[v.Cursor.Y], "> F6") {
+	if v.Cursor == nil || !strings.Contains(strings.Split(v.Content, "\n")[v.Cursor.Y], "> "+keyLabel(m.overlay.shown[1].cmd.key)) {
 		t.Fatal("cursor not on the chosen action", v.Cursor)
 	}
 }

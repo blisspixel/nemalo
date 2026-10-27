@@ -809,7 +809,7 @@ func TestReadAndTUIRefuseAPipe(t *testing.T) {
 	if _, err := Read(context.Background(), app.New(), in, out, ReadOptions{}); err == nil || err.Error() != "read requires an interactive terminal" {
 		t.Fatal(err)
 	}
-	if err := Run(context.Background(), app.New(), in, out); err == nil || err.Error() != "tui requires an interactive terminal" {
+	if err := Run(context.Background(), app.New(), in, out, Options{}); err == nil || err.Error() != "tui requires an interactive terminal" {
 		t.Fatal(err)
 	}
 }

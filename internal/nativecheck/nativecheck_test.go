@@ -69,7 +69,7 @@ func TestLifecycleThroughRealCLIWithOfflineAdapters(t *testing.T) {
 		}}
 		code := cli.Execute(ctx, in.args, &stdout, &stderr, service, func(k string) string { return env[k] }, func() (config.Paths, error) {
 			return config.Paths{Config: filepath.Join(in.directory, "unused-config"), State: filepath.Join(in.directory, "state"), Cache: filepath.Join(in.directory, "cache")}, nil
-		}, func(context.Context, app.Service) error {
+		}, func(context.Context, app.Service, cli.TerminalOptions) error {
 			t.Fatal("native lifecycle opened a terminal")
 			return errors.New("unexpected terminal")
 		})
