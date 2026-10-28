@@ -449,6 +449,29 @@ passed all six jobs at `dbd0470`, so all 55 terminal cases passed under a real
 macOS PTY and Windows ConPTY too. A person's screen reader, magnifier and
 keyboard-only review remains required.
 
+### Covers in real Kitty and Ghostty windows
+
+On 2026-10-27 the `0.1.0-alpha.22` executable (`8b550bf`) was run in real
+terminal windows on Linux 7.2 under Hyprland 0.56.2, against a library holding
+one synthetic EPUB whose package declares a 600 by 900 PNG `cover-image`
+([decision 0105](decisions/0105-local-epub-covers.md)). This was an agent-run
+session, not a person's review. A small PTY relay inside each window passed
+Nemalo's output to the terminal unchanged, sized the PTY to the window and sent
+scripted keys (Alt+6, Enter, F6, Enter, Escape, Ctrl+C) while ignoring local
+input; screenshots were taken after each key.
+
+| Terminal | Details open | After Escape | Exit |
+|---|---|---|---|
+| Ghostty 1.3.1 | Cover drawn in 13 by 10 cells at the image's aspect ratio, `Cover  declared PNG, 600 x 900` | Image gone, list and side panel redrawn with no residue | Alternate screen left, terminal restored |
+| Kitty 0.49.2 (official build) | Same | Same | Same |
+
+The output contained one transmission
+(`a=T,f=100,t=d,i=16,U=1,c=13,r=10,q=2`) and one deletion (`a=d,d=I,i=16`)
+in each terminal. In the split layout at about 120 columns the side Details
+panel is narrower than the 60-column minimum and shows no cover; the cover
+appears when Enter opens details at full width, as designed. A window resize
+while a cover is shown, WezTerm and mouse input were not observed here.
+
 ### Native runs on every shipped architecture
 
 [Decision 0099](decisions/0099-native-ci-for-every-shipped-architecture.md) added

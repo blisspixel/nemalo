@@ -102,6 +102,10 @@ decoding), malformed images, thumbnail bounds, the placeholder cells and
 transmission sequences, environment detection, the config switch, the title
 card at the same size, 500 holdings without any cover read, and deletion on
 close, step change, resize and exit. A program test checks that the Bubble Tea
-renderer emits the placeholder cells unchanged. Real-terminal observation in
-Kitty, Ghostty and WezTerm is recorded in issue 72 only when it actually
-happens.
+renderer emits the placeholder cells unchanged. On 2026-10-27 the released
+`0.1.0-alpha.22` executable drew a declared cover in real Ghostty 1.3.1 and
+Kitty 0.49.2 windows and removed it when the details closed
+([validation](../VALIDATION.md#covers-in-real-kitty-and-ghostty-windows)).
+WezTerm is not observed. It does not draw Kitty Unicode placeholders, so it
+shows the title card until a placement that survives the cell renderer is
+designed and observed there.

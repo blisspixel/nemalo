@@ -224,9 +224,11 @@ no format. Its increments, in order:
 5. Done in source for Kitty and Ghostty: EPUB covers
    ([72](https://github.com/blisspixel/nemalo/issues/72),
    [decision 0105](docs/decisions/0105-local-epub-covers.md)), prepared for
-   `0.1.0-alpha.22`. WezTerm, iTerm2 and Sixel terminals show the title card;
-   drawing there needs a placement that survives the cell renderer. Covers in
-   real Kitty, Ghostty and WezTerm windows are not yet observed.
+   `0.1.0-alpha.22`. Covers were
+   [observed](docs/VALIDATION.md#covers-in-real-kitty-and-ghostty-windows) in
+   real Ghostty and Kitty windows on 2026-10-27. WezTerm, iTerm2 and Sixel
+   terminals show the title card; drawing there needs a placement that
+   survives the cell renderer, and WezTerm is not yet observed.
 
 Increments 1 to 3 are prepared for the `0.1.0-alpha.20` prerelease; its receipts
 are recorded on those issues. The person-run sessions in 62 should now observe
@@ -281,27 +283,40 @@ The documentation was reviewed against behavior on 2026-10-25 and corrected.
 Every release gate is mapped to its enforcement below; the first hosted fuzz
 run found and fixed a navigation parser panic.
 
-Next, in order:
+The latest prerelease is
+[`0.1.0-alpha.22`](https://github.com/blisspixel/nemalo/releases/tag/v0.1.0-alpha.22)
+(`8b550bf`), with all twelve CI jobs, CodeQL, installed tools on three OSes,
+26 fuzz targets and the post-publication installers on all six targets passed.
+All source work planned before the candidate is done. What remains needs a
+person, a host this machine lacks, or a decision.
 
-1. Done: [`0.1.0-alpha.19`](https://github.com/blisspixel/nemalo/releases/tag/v0.1.0-alpha.19)
-   was published on 2026-10-25 from `57caee4` after all twelve CI jobs, CodeQL,
-   the full fuzz run (25 targets, zero failures), and installed-tool checks on
-   all three OSes passed. All six archive checksums and the published tag and
-   assets were verified. The Linux installer was checked unpinned, pinned,
-   replaced and uninstalled. Post-publication native installer evidence and
-   the final wave receipt are kept in [issue 64](https://github.com/blisspixel/nemalo/issues/64).
-2. Finish stage 6. The remaining format items are settled
-   ([decision 0098](docs/decisions/0098-settle-remaining-format-items.md)).
-   Every shipped architecture now runs native CI
+Next, in order, and why:
+
+1. **Finish the TUI wave's observations (65).** Mouse clicks and the wheel in
+   Ghostty, Kitty, WezTerm and Windows Terminal (70), and WezTerm covers (72),
+   need someone at those terminals: an automated session here can send keys
+   but not clicks, and WezTerm is not installed. Either draw WezTerm covers
+   with a placement observed to survive the cell renderer, or agree that
+   WezTerm keeps the title card and track iTerm2/Sixel drawing as a separate
+   post-1.0 issue. These come first because the candidate's PTY gates and
+   the sessions in 62 must observe the final layout.
+2. **Person-run accessibility and host checks (62).** Screen reader and
+   magnifier sessions on each OS, a keyboard-only session, the Agent Plugins
+   package in a consuming host, and Claude Code on macOS and Windows. They
+   change no format, but 1.0 cannot claim accessibility without them.
+3. **Cut the release candidate (63).** Repeat every release gate at the
+   candidate commit, review the documentation against behavior, declare
+   FORMATS.md frozen and choose the candidate label through
+   [RELEASING](docs/RELEASING.md). It is last because freezing formats should
+   follow every change the steps above could cause. The remaining format items
+   are settled ([decision 0098](docs/decisions/0098-settle-remaining-format-items.md))
+   and every shipped architecture runs native CI
    ([decision 0099](docs/decisions/0099-native-ci-for-every-shipped-architecture.md)).
-   The release candidate is tracked in
-   [issue 63](https://github.com/blisspixel/nemalo/issues/63), one item per
-   gate with its evidence; declare FORMATS.md frozen when it is cut.
-3. Done: the Windows library suite time comes from 24,821 real 7-Zip reader
-   processes per run, deliberate per-member and per-crash-point boundaries that
-   Windows starts slowly. Decision 0095's budget stays unless a separate
-   decision trades those boundaries for speed.
-4. The person-run items in issue 62, which do not change formats.
+
+Settled and not repeated: the Windows library suite time comes from 24,821
+real 7-Zip reader processes per run, deliberate boundaries that Windows starts
+slowly, so decision 0095's budget stays unless a separate decision trades them
+for speed.
 
 Milestone 7's remaining paper providers and DOI resolution may proceed
 alongside; they are not 1.0 gates. The PMC selected-version increment is
