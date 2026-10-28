@@ -470,7 +470,24 @@ The output contained one transmission
 in each terminal. In the split layout at about 120 columns the side Details
 panel is narrower than the 60-column minimum and shows no cover; the cover
 appears when Enter opens details at full width, as designed. A window resize
-while a cover is shown, WezTerm and mouse input were not observed here.
+while a cover is shown and mouse input were not observed here.
+
+On 2026-10-28 the same session continued in WezTerm nightly 20261026-082628
+(the official Ubuntu 24.04 build; the 20240203 release opens no window under
+this Hyprland). A probe showed that a Kitty graphics placement survives text
+written into its cells, that iTerm2 inline images are erased cell by cell, and
+that re-placing with `a=p` removes the image. A first direct placement in
+Nemalo then showed no image when details opened and only a two-cell strip after
+the Actions palette closed: the renderer's erase-character writes blanking the
+box reached the terminal after the placement. The fix places the image only
+after that frame
+([decision 0105 amendment](decisions/0105-local-epub-covers.md#amendment-2026-10-28-wezterm)).
+A replay checker run on the TUI's real output in a 120 by 41 PTY, with
+`TERM_PROGRAM=WezTerm` and the keys Alt+6, Enter, F6, Enter, Ctrl+O, Escape,
+PgDn, PgUp, Escape, Ctrl+C, counted writes into placed cells before their
+deletion: 20 with the wait disabled, 0 with it, across two placements and two
+deletions. The display slept before the fixed build could be photographed in
+WezTerm, so that visual check is still open.
 
 ### Native runs on every shipped architecture
 

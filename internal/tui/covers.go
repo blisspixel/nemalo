@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"fmt"
 	"strings"
+	"time"
 
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
@@ -18,7 +19,8 @@ import (
 
 // Covers (decision 0105): a held EPUB's declared cover, decoded under the
 // cover package's limits, drawn with Kitty graphics Unicode placeholders, or
-// a title card of the same size. Covers are read only when a holding's
+// in WezTerm, which does not draw placeholders, as a Kitty graphics placement
+// at the cover box's screen cell. Otherwise a title card of the same size. Covers are read only when a holding's
 // details open, kept in memory for the session, and deleted from the
 // terminal when the details close, the step changes, the window resizes and
 // at exit.
@@ -32,10 +34,14 @@ const (
 	// the basic colour codes.
 	firstImage, lastImage = 16, 255
 	cellAspect            = 2
+	// coverSettle is how long a direct placement waits for the frame that
+	// blanks its cells to reach the terminal.
+	coverSettle = 100 * time.Millisecond
 )
 
 type coverState struct {
-	// protocol is "kitty" where images are drawn; off says why not.
+	// protocol is "kitty" where placeholders are drawn, "kitty-direct" where
+	// the image is placed at a screen cell, and "" with off saying why not.
 	protocol, off string
 	cache         map[string]*coverItem
 	order         []string
@@ -43,6 +49,11 @@ type coverState struct {
 	// sent is the image number in the terminal and sentAsset its holding.
 	sent      int
 	sentAsset string
+	// sentRow and sentCol are a direct placement's 1-based screen cell.
+	sentRow, sentCol int
+	// waiting and ready name the asset and cell of a direct placement whose
+	// settle delay is running or has passed.
+	waiting, ready string
 	// resized deletes and resends the image after a window resize.
 	resized bool
 }
@@ -53,6 +64,9 @@ type coverItem struct {
 	thumb      *cover.Thumbnail
 	cols, rows int
 }
+
+// coverSettled says a direct placement's settle delay has passed.
+type coverSettled string
 
 type coverLoaded struct {
 	asset string
@@ -74,6 +88,8 @@ func coverProtocol(getenv func(string) string, plain, off bool) (string, string)
 		return "", "not drawn without colour"
 	case term == "xterm-kitty" || getenv("KITTY_WINDOW_ID") != "" || term == "xterm-ghostty" || getenv("TERM_PROGRAM") == "ghostty":
 		return "kitty", ""
+	case getenv("TERM_PROGRAM") == "WezTerm":
+		return "kitty-direct", ""
 	}
 	return "", "this terminal has no supported graphics protocol"
 }
@@ -104,17 +120,38 @@ func (m *model) syncCover() tea.Cmd {
 		item = m.covers.cache[want]
 		m.refreshPreview()
 	}
-	if m.covers.sent != 0 && (m.covers.sentAsset != want || item == nil || item.thumb == nil || resized) {
-		cmds = append(cmds, tea.Raw(deleteImage(m.covers.sent)))
-		m.covers.sent, m.covers.sentAsset = 0, ""
+	row, col, placed := 0, 0, true
+	if m.covers.protocol == "kitty-direct" && item != nil && item.thumb != nil {
+		row, col, placed = m.coverAnchor()
+		col += (coverCols - item.cols) / 2
 	}
-	if ok && item != nil && item.thumb != nil && m.covers.sent == 0 {
+	moved := row != m.covers.sentRow || col != m.covers.sentCol
+	if m.covers.sent != 0 && (m.covers.sentAsset != want || item == nil || item.thumb == nil || resized || !placed || moved) {
+		cmds = append(cmds, tea.Raw(deleteImage(m.covers.sent)))
+		m.covers.sent, m.covers.sentAsset, m.covers.sentRow, m.covers.sentCol = 0, "", 0, 0
+	}
+	if !ok || item == nil || item.thumb == nil || !placed {
+		m.covers.waiting, m.covers.ready = "", ""
+	}
+	if ok && item != nil && item.thumb != nil && m.covers.sent == 0 && placed {
+		// Raw writes reach the terminal before the next frame, and WezTerm
+		// erases an image under any cell the frame writes, so a direct
+		// placement waits until the frame that blanks its cells is out.
+		// Later frames leave unchanged cells alone.
+		if at := fmt.Sprintf("%s@%d,%d", want, row, col); m.covers.protocol == "kitty-direct" && m.covers.ready != at {
+			if m.covers.waiting != at {
+				m.covers.waiting = at
+				cmds = append(cmds, tea.Tick(coverSettle, func(time.Time) tea.Msg { return coverSettled(at) }))
+			}
+			return tea.Batch(cmds...)
+		}
+		m.covers.waiting, m.covers.ready = "", ""
 		m.covers.next++
 		if m.covers.next < firstImage || m.covers.next > lastImage {
 			m.covers.next = firstImage
 		}
-		m.covers.sent, m.covers.sentAsset = m.covers.next, want
-		cmds = append(cmds, tea.Raw(transmitImage(m.covers.sent, item)))
+		m.covers.sent, m.covers.sentAsset, m.covers.sentRow, m.covers.sentCol = m.covers.next, want, row, col
+		cmds = append(cmds, tea.Raw(transmitImage(m.covers.sent, item, row, col)))
 		m.refreshPreview()
 	}
 	return tea.Batch(cmds...)
@@ -174,6 +211,14 @@ func (m *model) keepCover(asset string, item *coverItem) {
 	}
 }
 
+// coverSettled lets the placement it names be sent, if it is still the one
+// awaited.
+func (m *model) coverSettled(at coverSettled) {
+	if string(at) == m.covers.waiting {
+		m.covers.waiting, m.covers.ready = "", string(at)
+	}
+}
+
 func (m *model) coverLoaded(msg coverLoaded) {
 	if m.covers.cache[msg.asset] == nil {
 		return
@@ -191,11 +236,34 @@ func coverCells(w, h int) (int, int) {
 	return max(1, min(coverCols, (coverRows*cellAspect*w+h/2)/h)), coverRows
 }
 
-// transmitImage sends the thumbnail once, directly and quietly, with a
-// virtual placement for Unicode placeholders.
-func transmitImage(id int, item *coverItem) string {
+// coverAnchor is the 1-based screen cell of the cover box in the details
+// panel, as panelView lays it out, and whether the whole box is on screen with
+// nothing drawn over it. A direct placement floats above the text, so it is
+// removed while an overlay, the message log or a review covers the panel, or
+// while the details are scrolled.
+func (m *model) coverAnchor() (int, int, bool) {
+	if m.overlay != nil || m.logOpen || m.reviewing() || m.preview.YOffset() > 0 || (m.busy && m.viewport.GetContent() == "") {
+		return 0, 0, false
+	}
+	f := m.layout()
+	if f.contentH < coverRows {
+		return 0, 0, false
+	}
+	return f.top + 2 + f.formRows, f.side + 3, true
+}
+
+// transmitImage sends the thumbnail once, directly and quietly: with a
+// virtual placement for Unicode placeholders when row is 0, or placed at that
+// screen cell without moving the cursor, which is saved and restored so the
+// renderer's own position stays true.
+func transmitImage(id int, item *coverItem, row, col int) string {
 	payload := base64.StdEncoding.EncodeToString(item.thumb.PNG)
 	var b strings.Builder
+	place := "U=1"
+	if row > 0 {
+		place = "C=1"
+		fmt.Fprintf(&b, "\x1b7\x1b[%d;%dH", row, col)
+	}
 	for first := true; first || payload != ""; first = false {
 		chunk := payload[:min(len(payload), kitty.MaxChunkSize)]
 		payload = payload[len(chunk):]
@@ -205,9 +273,12 @@ func transmitImage(id int, item *coverItem) string {
 		}
 		opts := []string{"q=2", "m=" + more}
 		if first {
-			opts = []string{"a=T", "f=100", "t=d", fmt.Sprintf("i=%d", id), "U=1", fmt.Sprintf("c=%d", item.cols), fmt.Sprintf("r=%d", item.rows), "q=2", "m=" + more}
+			opts = []string{"a=T", "f=100", "t=d", fmt.Sprintf("i=%d", id), place, fmt.Sprintf("c=%d", item.cols), fmt.Sprintf("r=%d", item.rows), "q=2", "m=" + more}
 		}
 		b.WriteString(ansi.KittyGraphics([]byte(chunk), opts...))
+	}
+	if row > 0 {
+		b.WriteString("\x1b8")
 	}
 	return b.String()
 }
@@ -220,6 +291,15 @@ func deleteImage(id int) string {
 // coverBox is the cover column: coverRows rows of coverCols cells, the image
 // placeholders where it is shown and the title card otherwise.
 func (m *model) coverBox(e entry, item *coverItem) []string {
+	if m.covers.protocol == "kitty-direct" && item != nil && item.thumb != nil {
+		// The placement covers these cells; they stay blank, also while it
+		// is lifted for an overlay or a scroll, so the layout never moves.
+		rows := make([]string, coverRows)
+		for r := range rows {
+			rows[r] = strings.Repeat(" ", coverCols)
+		}
+		return rows
+	}
 	if item != nil && item.thumb != nil && m.covers.sent != 0 && m.covers.sentAsset == e.sourceID {
 		rows := make([]string, coverRows)
 		left := (coverCols - item.cols) / 2

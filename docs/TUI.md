@@ -101,13 +101,15 @@ and change the busy line at most every five seconds
 ([decision 0104](decisions/0104-terminal-feedback.md)).
 
 The details of a held EPUB show its declared cover in a 14 by 10 column beside
-the card, in Kitty and Ghostty (Kitty graphics with Unicode placeholders). The
+the card, in Kitty and Ghostty (Kitty graphics with Unicode placeholders) and
+WezTerm (a Kitty graphics placement at the box's cell, lifted while the Actions
+palette, help, the log or a review covers it or the details scroll). The
 cover is read only when the details open, from the EPUB's own `cover-image` or
 EPUB 2 cover declaration, never from a provider and never by guessing a file.
 Only JPEG, PNG and GIF are decoded, and images over 4096 pixels a side or 8
 megapixels are refused from their header. Thumbnails stay in memory for the
 session, and the image is removed from the terminal when the details close, the
-step changes, the window resizes and at exit. Everywhere else, including WezTerm,
+step changes, the window resizes and at exit. Everywhere else, including
 iTerm2, foot, Windows Terminal, tmux, screen, `NO_COLOR` and fewer than 256
 colours, a title card of the same size stands in, and a `Cover` line says why.
 `"covers": "off"` in config.json or `NEMALO_COVERS=off` turns covers off; plain

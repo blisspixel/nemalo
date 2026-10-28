@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- WezTerm now shows EPUB covers in holding details, as a Kitty graphics
+  placement at the cover's cell. It waits for the frame that blanks those cells,
+  so the renderer cannot erase it, and it is lifted while a palette, help, the
+  log or a review covers the panel or the details scroll.
+
 ## 0.1.0-alpha.22
 
 - Holding details show an EPUB's declared cover in Kitty and Ghostty, through

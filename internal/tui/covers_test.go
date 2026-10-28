@@ -15,6 +15,7 @@ import (
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 	"github.com/charmbracelet/colorprofile"
+	"github.com/charmbracelet/x/ansi"
 	"github.com/charmbracelet/x/ansi/kitty"
 
 	"github.com/blisspixel/nemalo/internal/app"
@@ -85,7 +86,7 @@ func collect(m *model, cmd tea.Cmd) string {
 			}
 		case tea.RawMsg:
 			raw.WriteString(fmt.Sprint(msg.Msg))
-		case coverLoaded:
+		case coverLoaded, coverSettled:
 			_, next := m.Update(msg)
 			walk(next)
 		}
@@ -106,7 +107,8 @@ func TestCoverProtocolComesFromTheEnvironmentOnly(t *testing.T) {
 		{env: map[string]string{"TERM": "xterm-256color", "KITTY_WINDOW_ID": "1"}, protocol: "kitty"},
 		{env: map[string]string{"TERM": "xterm-ghostty"}, protocol: "kitty"},
 		{env: map[string]string{"TERM": "xterm-256color", "TERM_PROGRAM": "ghostty"}, protocol: "kitty"},
-		{env: map[string]string{"TERM": "xterm-256color", "TERM_PROGRAM": "WezTerm"}, offReason: "no supported graphics"},
+		{env: map[string]string{"TERM": "xterm-256color", "TERM_PROGRAM": "WezTerm"}, protocol: "kitty-direct"},
+		{env: map[string]string{"TERM": "xterm-256color", "TERM_PROGRAM": "WezTerm", "TMUX": "/tmp/tmux"}, offReason: "tmux"},
 		{env: map[string]string{"TERM": "foot"}, offReason: "no supported graphics"},
 		{env: map[string]string{"TERM": "xterm-kitty", "TMUX": "/tmp/tmux"}, offReason: "tmux"},
 		{env: map[string]string{"TERM": "screen-256color", "KITTY_WINDOW_ID": "1"}, offReason: "tmux"},
@@ -189,6 +191,69 @@ func TestCoverIsSentShownAndDeleted(t *testing.T) {
 	_, cmd = m.Update(key(tea.KeyTab))
 	if raw := collect(m, cmd); !strings.Contains(raw, "a=d,d=I,i=19,") || m.covers.sent != 0 {
 		t.Fatalf("step change %q", raw)
+	}
+}
+
+// WezTerm draws no placeholders, so the cover is placed at the box's screen
+// cell, over blank cells, and lifted while anything covers or scrolls it.
+func TestWezTermPlacesTheCoverAtItsCell(t *testing.T) {
+	m, ids := coverModel(t, coverEPUB(t, `<item id="k" href="art.png" media-type="image/png" properties="cover-image"/>`, coverPNG(t, 300, 450)))
+	m.covers.protocol = "kitty-direct"
+	_, cmd := m.Update(key(tea.KeyEnter))
+	card := m.preview.GetContent()
+	raw := collect(m, cmd)
+	row, col, ok := m.coverAnchor()
+	if !ok {
+		t.Fatal("no anchor with the details open")
+	}
+	left := (coverCols - m.covers.cache[ids[0]].cols) / 2
+	want := fmt.Sprintf("\x1b7\x1b[%d;%dH\x1b_Ga=T,f=100,t=d,i=16,C=1,c=13,r=10,q=2,", row, col+left)
+	if !strings.HasPrefix(raw, want) || !strings.HasSuffix(raw, "\x1b8") || strings.Contains(raw, "U=1") {
+		t.Fatalf("placement %.90q, want %q", raw, want)
+	}
+	shown := m.preview.GetContent()
+	if strings.Contains(shown, string(kitty.Placeholder)) || !strings.Contains(shown, "declared PNG, 300 x 450") || strings.Count(card, "\n") != strings.Count(shown, "\n") {
+		t.Fatalf("direct box:\n%s", shown)
+	}
+	// The anchor is where the frame draws the box: the title card's corner
+	// lands on that cell.
+	item := m.covers.cache[ids[0]]
+	m.covers.cache[ids[0]] = &coverItem{status: "off", note: "test"}
+	m.refreshPreview()
+	lines := strings.Split(m.View().Content, "\n")
+	line := ansi.Strip(lines[row-1])
+	if at := strings.Index(line, "╭"); at < 0 || lipgloss.Width(line[:at]) != col-1 {
+		t.Fatalf("card corner not at column %d of row %d: %q", col, row, line)
+	}
+	m.covers.cache[ids[0]] = item
+	m.refreshPreview()
+	// An overlay lifts the image; closing it places it again.
+	_, cmd = m.Update(ctrlO())
+	if raw := collect(m, cmd); raw != "\x1b_Ga=d,d=I,i=16,q=2\x1b\\" || m.covers.sent != 0 {
+		t.Fatalf("overlay %q", raw)
+	}
+	_, cmd = m.Update(key(tea.KeyEscape))
+	if m.covers.sent != 0 || m.covers.waiting == "" {
+		t.Fatal("placement did not wait for the frame that blanks its cells")
+	}
+	if raw := collect(m, cmd); !strings.HasPrefix(raw, want[:len(want)-len("i=16,C=1,c=13,r=10,q=2,")]) || !strings.Contains(raw, "i=17,C=1") {
+		t.Fatalf("after overlay %.90q", raw)
+	}
+	// Scrolling the details lifts it until they are back at the top.
+	_, cmd = m.Update(tea.WindowSizeMsg{Width: 100, Height: 18})
+	collect(m, cmd)
+	_, cmd = m.Update(key(tea.KeyPgDown))
+	collect(m, cmd)
+	if m.preview.YOffset() == 0 || m.covers.sent != 0 {
+		t.Fatalf("scrolled %d, sent %d", m.preview.YOffset(), m.covers.sent)
+	}
+	_, cmd = m.Update(key(tea.KeyPgUp))
+	if raw := collect(m, cmd); m.preview.YOffset() != 0 || !strings.Contains(raw, "C=1") {
+		t.Fatalf("back at the top %.60q", raw)
+	}
+	_, cmd = m.Update(key(tea.KeyEnter))
+	if raw := collect(m, cmd); !strings.HasPrefix(raw, "\x1b_Ga=d,d=I,") || m.covers.sent != 0 {
+		t.Fatalf("closing %q", raw)
 	}
 }
 

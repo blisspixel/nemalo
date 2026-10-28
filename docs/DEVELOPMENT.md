@@ -179,8 +179,9 @@ their columns, filter the loaded page locally with `/`, continue past either end
 typed outcomes, elapsed time, byte progress where counted, toasts and a session
 log, with `NEMALO_REDUCE_MOTION` for still output
 ([decision 0104](decisions/0104-terminal-feedback.md)).
-A held EPUB's declared cover appears in its details in Kitty and Ghostty, read
-and decoded under fixed limits and never fetched, with a title card elsewhere
+A held EPUB's declared cover appears in its details in Kitty, Ghostty and
+WezTerm, read and decoded under fixed limits and never fetched, with a title card
+elsewhere
 ([decision 0105](decisions/0105-local-epub-covers.md)).
 It makes no startup network request. Source text and paths are escaped; reports are wrapped
 at grapheme boundaries without discarding original evidence. Scopes and scanner

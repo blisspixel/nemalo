@@ -211,6 +211,9 @@ func (m *model) update(message tea.Msg) (tea.Model, tea.Cmd) {
 	case coverLoaded:
 		m.coverLoaded(msg)
 		return m, nil
+	case coverSettled:
+		m.coverSettled(msg)
+		return m, nil
 	case readAuxReply:
 		m.acceptReadAux(msg)
 		return m, nil

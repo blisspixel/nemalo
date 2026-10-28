@@ -67,16 +67,19 @@ review before any decoder runs on it.
    and column diacritics) whose 256-colour foreground is the image number, so the
    cell renderer, scrolling and clipping handle the image like text. Image
    numbers are 16 to 255; this colour is protocol data, not a meaning colour.
+   WezTerm does not draw placeholders. There the same transmission carries a
+   placement at the cover box's screen cell (`C=1`, cursor saved and restored
+   around it) over blank cells (amended 2026-10-28, below).
 7. **Detection by environment only.** Covers are drawn in Kitty
    (`TERM=xterm-kitty` or `KITTY_WINDOW_ID`) and Ghostty (`TERM=xterm-ghostty` or
    `TERM_PROGRAM=ghostty`). Nemalo sends no query, so no reply can arrive as
    input. Covers are off under tmux or screen (`TMUX`, `STY`, or a `screen` or
    `tmux` `TERM`), in plain mode, without colour (`NO_COLOR` or fewer than 256
    colours), and when `"covers": "off"` is in config.json or `NEMALO_COVERS=off`
-   is set. WezTerm, iTerm2, foot and Windows Terminal show the title card:
-   WezTerm does not draw Kitty placeholders, and iTerm2 inline images and Sixel
-   draw at the cursor, where the cell renderer would leave stale or overwritten
-   pixels. They are follow-up work in issue 72.
+   is set. WezTerm (`TERM_PROGRAM=WezTerm`) uses the direct placement in the
+   amendment below. iTerm2, foot and Windows Terminal show the title card:
+   iTerm2 inline images and Sixel attach pixels to the cells they are drawn in,
+   and the cell renderer's later writes erase them.
 8. **Title card.** A rounded box of the same size (14 columns by 10 rows), with
    the wrapped title and the format, stands in while the cover loads, when there
    is no cover, on any refusal or failure, and wherever images are not drawn. A
@@ -93,6 +96,30 @@ review before any decoder runs on it.
     Library, are never requested. Reading a cover takes no lock and writes
     nothing.
 
+## Amendment 2026-10-28: WezTerm
+
+A probe in a real WezTerm window (nightly 20261026) showed that a Kitty
+graphics placement survives text written into its cells, that iTerm2 inline
+images are erased cell by cell, that re-placing an image with `a=p` removes it,
+and that WezTerm's Kitty graphics are on by default (also in the 20240203
+release). In Nemalo itself the first WezTerm placement was missing or cut to a
+strip. The renderer writes queued raw sequences before the next frame, and that
+frame's erase-character writes (`ECH`) blanking the box cleared the image.
+
+So in WezTerm:
+
+- The cover box is blank cells while a thumbnail exists, so the layout never
+  depends on whether the image is placed.
+- The placement waits 100 ms after the state that needs it, so the frame that
+  blanks its cells has reached the terminal; later frames leave unchanged cells
+  alone. A wait is keyed to the asset and cell, and a stale wait is ignored.
+- The screen cell comes from the same frame layout the panel uses. The image is
+  deleted and placed again (`a=T`, never `a=p`) when that cell changes, and it is
+  deleted while the Actions palette, help, the message log or a review covers the
+  panel, or while the details are scrolled, because it floats above the text.
+- Everything else (limits, transmission, deletion, detection order, off
+  switches) is unchanged.
+
 ## Verification
 
 Tests cover both cover declarations, remote and missing declarations, media
@@ -106,6 +133,7 @@ renderer emits the placeholder cells unchanged. On 2026-10-27 the released
 `0.1.0-alpha.22` executable drew a declared cover in real Ghostty 1.3.1 and
 Kitty 0.49.2 windows and removed it when the details closed
 ([validation](../VALIDATION.md#covers-in-real-kitty-and-ghostty-windows)).
-WezTerm is not observed. It does not draw Kitty Unicode placeholders, so it
-shows the title card until a placement that survives the cell renderer is
-designed and observed there.
+For WezTerm, a test checks the placement's exact cell against the frame, its
+wait, and its removal for an overlay and a scroll. A replay of the TUI's real
+output found 20 writes into placed cells without the wait and none with it
+([validation](../VALIDATION.md#covers-in-real-kitty-and-ghostty-windows)).
