@@ -890,8 +890,8 @@ func Execute(ctx context.Context, args []string, out, errOut io.Writer, service 
 			}
 			return write(data, nil, 0)
 		}
-		if *source != "openlibrary" && *source != "archive" && *source != "gutenberg" {
-			return write(nil, errors.New("search source must be openlibrary, archive, gutenberg, or all"), 2)
+		if *source != "openlibrary" && *source != "archive" && *source != "gutenberg" && *source != "openalex" {
+			return write(nil, errors.New("search source must be openlibrary, archive, gutenberg, openalex, or all"), 2)
 		}
 		if *source == "gutenberg" {
 			if *sortOrder != discovery.OrderRelevance && *sortOrder != discovery.OrderIdentifier {
@@ -902,6 +902,9 @@ func Execute(ctx context.Context, args []string, out, errOut io.Writer, service 
 		}
 		if strings.TrimSpace(query) == "" || len(query) > 1000 || *limit < 1 || *limit > 50 || *offset < 0 || *offset > 10000 {
 			return write(nil, errors.New("search requires QUERY, limit 1-50, and offset 0-10000"), 2)
+		}
+		if *source == "openalex" && (*offset%*limit != 0 || *offset+*limit > 10000) {
+			return write(nil, errors.New("OpenAlex pages by page number: --offset must be a multiple of --limit within the first 10000 results"), 2)
 		}
 		data, err := service.SearchSourceOrdered(ctx, *source, query, *sortOrder, *limit, *offset)
 		if err != nil {

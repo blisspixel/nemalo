@@ -1501,12 +1501,17 @@ internal/discovery.Page query string
 internal/discovery.Page results []Result
 internal/discovery.Page results[].access_type string
 internal/discovery.Page results[].authors []string
+internal/discovery.Page results[].doi string ,omitempty
 internal/discovery.Page results[].id string
 internal/discovery.Page results[].issued string ,omitempty
 internal/discovery.Page results[].landing_page string
 internal/discovery.Page results[].languages []string
 internal/discovery.Page results[].media_type string ,omitempty
+internal/discovery.Page results[].pmcid string ,omitempty
+internal/discovery.Page results[].retracted bool ,omitempty
 internal/discovery.Page results[].title string
+internal/discovery.Page results[].work_type string ,omitempty
+internal/discovery.Page results[].year int ,omitempty
 internal/discovery.Page source string
 internal/discovery.Page total int
 internal/inventory.PAR2Report bytes_read int64

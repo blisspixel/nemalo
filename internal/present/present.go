@@ -43,6 +43,15 @@ func Search(page discovery.Page) string {
 		if claim := CatalogClaim(r); claim != "" {
 			fmt.Fprintf(&b, "   Catalog: %s\n", claim)
 		}
+		if r.Retracted {
+			b.WriteString("   Retracted: stated by the provider\n")
+		}
+		if v := Line(r.DOI); v != "" {
+			fmt.Fprintf(&b, "   DOI: %s\n", v)
+		}
+		if v := Line(r.PMCID); v != "" {
+			fmt.Fprintf(&b, "   PMCID: %s (evaluate pmc:%s)\n", v, v)
+		}
 		if v := Line(r.LandingPage); v != "" {
 			fmt.Fprintf(&b, "   Page: %s\n", v)
 		}
@@ -75,14 +84,20 @@ func MultiSearch(m app.MultiPage) string {
 // CatalogClaim is a catalog row's type and issue date as the catalog states
 // them, for example "Sound, issued 2007-02-03", or "" when it states neither.
 func CatalogClaim(r discovery.Result) string {
-	claim := Line(r.MediaType)
-	if issued := Line(r.Issued); issued != "" {
-		if claim != "" {
-			claim += ", "
-		}
-		claim += "issued " + issued
+	var parts []string
+	if v := Line(r.MediaType); v != "" {
+		parts = append(parts, v)
 	}
-	return claim
+	if v := Line(r.Issued); v != "" {
+		parts = append(parts, "issued "+v)
+	}
+	if v := Line(r.WorkType); v != "" {
+		parts = append(parts, v)
+	}
+	if r.Year > 0 {
+		parts = append(parts, fmt.Sprint(r.Year))
+	}
+	return strings.Join(parts, ", ")
 }
 
 // sourceName is a provider's display name.
@@ -94,6 +109,8 @@ func sourceName(source string) string {
 		return "Internet Archive"
 	case "gutenberg":
 		return "Project Gutenberg"
+	case "openalex":
+		return "OpenAlex"
 	}
 	return Line(source)
 }

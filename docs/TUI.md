@@ -153,7 +153,7 @@ item's other files for a new, deliberate review. See
 | / in results | Filter the loaded page as you type, offline; Enter keeps, Escape restores |
 | L in results | This session's messages, with times |
 | Down past the last item / Up past the first | Next / previous page: local pages load, network pages wait for Enter on their own row |
-| F2 in search | Switch Open Library / Internet Archive / local Gutenberg catalog |
+| F2 in search | Switch Open Library / Internet Archive / local Gutenberg catalog / OpenAlex works (keyless daily budget) |
 | F3 in Archive search | Cycle relevance / downloads / identifier order |
 | F3 in Gutenberg search | Cycle relevance / identifier. The website is not queried |
 | F3 in inspect, snapshot, audit | Select bounded 1 GiB / 5 GiB read budget |
@@ -167,7 +167,7 @@ item's other files for a new, deliberate review. See
 | Ctrl+N in two-field forms | Switch between fields, including the Gutenberg catalog and the Status source |
 | Ctrl+N in Collections | Cycle collection file, initialized library and absolute outside intake |
 | Ctrl+A in snapshot | Toggle historical health metadata |
-| e in Archive, Gutenberg, or Open Library results | Prepare selected-item evaluation, without requesting it. A Gutenberg catalog row lists no files. An Open Library work lists editions on Enter. e on an edition row selects that edition |
+| e in Archive, Gutenberg, Open Library or OpenAlex results | Prepare selected-item evaluation, without requesting it. An OpenAlex work prepares only its stated PMCID as `pmc:PMCID`. A Gutenberg catalog row lists no files. An Open Library work lists editions on Enter. e on an edition row selects that edition |
 | d in Evaluate results | Review selected-file acquisition into a new intake directory. An empty Intake field asks for a folder (Ctrl+N) and does not fetch. On a Gutenberg catalog row, d then requests that one bibliographic record and lists EPUB offers. After an Open Library edition names an Archive item, d reviews that Archive file |
 | F9 in Status | Preview moving the source folder's held files to the holding area; Enter applies that exact plan. With a cleanup ID in the source field (set after a cleanup), preview restoring it |
 | Ctrl+P in Status | With a cleanup ID in the source field, preview purging its held copies whose bytes the library holds and verifies; Enter removes exactly those. The library keeps its own copy |

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 
@@ -280,5 +281,56 @@ func TestSearchOrderToggleIsArchiveOnly(t *testing.T) {
 	m.Update(key(tea.KeyF2))
 	if m.searchOrder() != "relevance" || len(orders) != 1 || orders[0] != "downloads" {
 		t.Fatal("provider switch kept an Archive order, or a request used the wrong order", orders)
+	}
+}
+
+type openAlexCatalog struct{}
+
+func (openAlexCatalog) Search(_ context.Context, q string, _, _ int) (discovery.Page, error) {
+	return discovery.Page{Source: "openalex", Query: q, Order: discovery.OrderRelevance, Total: 2, Results: []discovery.Result{
+		{ID: "openalex:W1", Title: "Graphene sensors", Authors: []string{"A. Author"}, Languages: []string{"en"}, Access: "discovery_only", DOI: "10.1234/abc", PMCID: "PMC123", Year: 2021, WorkType: "article", Retracted: true, LandingPage: "https://openalex.org/W1"},
+		{ID: "openalex:W2", Title: "No PMC copy", Authors: []string{}, Languages: []string{}, Access: "discovery_only"},
+	}}, nil
+}
+
+// OpenAlex is the fourth provider; its works show their stated claims, and e
+// prepares only a stated PMCID as an explicit evaluation.
+func TestOpenAlexSearchInTheTUI(t *testing.T) {
+	m := newModel(context.Background(), app.Service{Providers: map[string]app.Searcher{"openalex": openAlexCatalog{}}})
+	m.switchMode("search")
+	m.Update(tea.WindowSizeMsg{Width: 120, Height: 40})
+	for range 3 {
+		m.Update(key(tea.KeyF2))
+	}
+	if m.source != "openalex" || !strings.Contains(m.View().Content, "OpenAlex works") {
+		t.Fatalf("provider %q", m.source)
+	}
+	m.input.SetValue("graphene")
+	_, cmd := m.Update(key(tea.KeyEnter))
+	m.Update(cmd())
+	m.Update(key(tea.KeyF6))
+	m.Update(key(tea.KeyEnter))
+	detail := m.preview.GetContent()
+	for _, want := range []string{"stated retracted", "10.1234/abc", "PMC123", "e prepares evaluate pmc:PMC123", "no file, rights or edition is resolved"} {
+		if !strings.Contains(detail, want) {
+			t.Fatalf("missing %q in\n%s", want, detail)
+		}
+	}
+	m.Update(key(tea.KeyEnter))
+	m.Update(key(tea.KeyDown))
+	for _, c := range registry {
+		if c.key == "e" && slices.Contains(c.steps, "search") && c.when(m) == "" {
+			t.Fatal("e offered for a work without a PMCID")
+		}
+	}
+	m.Update(key(tea.KeyUp))
+	m.Update(tea.KeyPressMsg{Code: 'e', Text: "e"})
+	if m.mode != "evaluate" || m.input.Value() != "pmc:PMC123" || !strings.Contains(m.status, "PMCID") {
+		t.Fatalf("e prepared %q in %s", m.input.Value(), m.mode)
+	}
+	m.switchMode("search")
+	m.Update(key(tea.KeyF2))
+	if m.source != "openlibrary" {
+		t.Fatalf("provider cycle did not return to Open Library: %q", m.source)
 	}
 }

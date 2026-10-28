@@ -45,6 +45,9 @@ type entry struct {
 	// or an explicit saved bookmark to open in Read.
 	step     string
 	bookmark *library.Bookmark
+	// pmc is the PMCID an OpenAlex work states, which e prepares as an
+	// explicit pmc: evaluation.
+	pmc string
 	// epub marks a held EPUB, whose details can show its declared cover.
 	epub bool
 }
@@ -140,15 +143,31 @@ func (m *model) populate(data any) {
 			if claim != "" {
 				c.chips = append(c.chips, chip{claim, muted})
 			}
+			if r.DOI != "" {
+				c.lists = append(c.lists, cardList{"DOI", []string{line(r.DOI)}})
+			}
+			if r.PMCID != "" {
+				c.lists = append(c.lists, cardList{"PMCID", []string{line(r.PMCID)}})
+			}
 			if r.LandingPage != "" {
 				c.lists = append(c.lists, cardList{"Source page", []string{line(r.LandingPage)}})
 			}
 			c.keys = "e prepares an evaluation; nothing is requested until Enter"
+			if r.Retracted {
+				c.chips = append(c.chips, chip{"stated retracted", warning})
+			}
+			if p.Source == "openalex" {
+				c.caveat = "OpenAlex work metadata only; no file, rights or edition is resolved."
+				c.keys = "OpenAlex works are discovery only"
+				if r.PMCID != "" {
+					c.keys = "e prepares evaluate pmc:" + line(r.PMCID) + "; nothing is requested until Enter"
+				}
+			}
 			m.entries = append(m.entries, entry{
 				title:    line(r.Title),
 				summary:  joinParts(list(r.Authors), list(r.Languages), claim),
 				detail:   m.render(c),
-				sourceID: r.ID, identity: r.ID,
+				sourceID: r.ID, identity: r.ID, pmc: r.PMCID,
 			})
 		}
 	case library.Page:
@@ -504,6 +523,13 @@ func (m *model) browserKey(key string) (bool, tea.Cmd) {
 		if len(m.entries) > 0 && m.mode == "search" {
 			id := m.entries[m.selected].sourceID
 			switch {
+			case m.entries[m.selected].pmc != "":
+				pmc := m.entries[m.selected].pmc
+				cmd := m.switchMode("evaluate")
+				m.input.SetValue("pmc:" + pmc)
+				m.status = "Selected the work's stated PMCID. Enter requests the PMC record; no download."
+				m.resize()
+				return true, cmd
 			case strings.HasPrefix(id, "archive:"):
 				cmd := m.switchMode("evaluate")
 				m.input.SetValue(id)

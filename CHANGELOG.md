@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- `search --source openalex` searches OpenAlex scholarly works, also in the TUI
+  Search step (F2) and the MCP `catalog_search` tool. It is keyless, so each
+  search counts against OpenAlex's daily budget. Results show a stated DOI,
+  PMCID, year, work type and retraction; a PMCID can be evaluated as
+  `pmc:PMCID`, and `e` in the TUI prepares that. Nothing is downloaded, and
+  `--source all` still searches only the book catalogs.
+
 - WezTerm now shows EPUB covers in holding details, as a Kitty graphics
   placement at the cover's cell. It waits for the frame that blanks those cells,
   so the renderer cannot erase it, and it is lifted while a palette, help, the

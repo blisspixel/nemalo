@@ -442,8 +442,8 @@ func (m *model) stepState() string {
 	}
 	switch m.mode {
 	case "search":
-		name := map[string]string{"openlibrary": "Open Library", "archive": "Internet Archive", "gutenberg": "Gutenberg catalog"}[m.source]
-		if m.source != "openlibrary" {
+		name := map[string]string{"openlibrary": "Open Library", "archive": "Internet Archive", "gutenberg": "Gutenberg catalog", "openalex": "OpenAlex works"}[m.source]
+		if m.source == "archive" || m.source == "gutenberg" {
 			name += ", order " + m.searchOrder()
 		}
 		return name

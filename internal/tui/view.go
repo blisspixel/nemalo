@@ -121,6 +121,9 @@ func (m *model) contextLine() string {
 		if m.source == "archive" {
 			return "archive; F2 provider | F3 order: " + m.searchOrder() + " | Explicit network search"
 		}
+		if m.source == "openalex" {
+			return "openalex; F2 changes provider | Explicit network search, keyless daily budget"
+		}
 		return m.source + "; F2 changes provider | Explicit network search"
 	}
 	if m.mode == "evaluate" {

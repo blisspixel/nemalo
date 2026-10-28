@@ -89,7 +89,9 @@ PCM and five minutes; no full waveform is stored. No player, consumption record,
 source/library mutation or network is introduced. See the
 [decoded contract](CONTENT-ACCESS.md#explicit-decoded-mp4-access-mp4-pcm1).
 `catalog_search` and `catalog_evaluate` exist only with
-`--allow-network`. They search Open Library and Internet Archive.
+`--allow-network`. They search Open Library, Internet Archive and OpenAlex
+works ([decision 0106](decisions/0106-openalex-work-search.md)); an OpenAlex
+search is keyless and counts against its daily budget.
 Gutenberg search, `evaluate --files`, and `acquire gutenberg:NUMBER` are CLI
 and TUI only. They are not MCP tools. arXiv and PMC evaluation/acquisition
 also remain CLI/TUI-only; network/write permission does not add their providers

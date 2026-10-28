@@ -736,6 +736,8 @@ func (m *model) update(message tea.Msg) (tea.Model, tea.Cmd) {
 					m.source = "archive"
 				case "archive":
 					m.source = "gutenberg"
+				case "gutenberg":
+					m.source = "openalex"
 				default:
 					m.source = "openlibrary"
 				}

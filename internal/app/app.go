@@ -219,6 +219,7 @@ func scannerName(kind string) string {
 func New() Service {
 	return Service{Providers: map[string]Searcher{
 		"openlibrary": discovery.NewOpenLibrary(),
+		"openalex":    discovery.NewOpenAlex(),
 		"archive":     archiveWithLibriVox(),
 		"gutenberg":   discovery.NewGutenberg(),
 		"arxiv":       arxivSearcher{discovery.NewArxiv()},

@@ -87,7 +87,12 @@ search nor a catalog row resolves a download. `evaluate arxiv:ID[vN]` resolves o
 paper version through arXiv's query API and its license through OAI-PMH, and
 `acquire arxiv:IDvN --file IDvN.pdf` downloads that PDF from export.arxiv.org,
 one request every three seconds
-([decision 0047](decisions/0047-arxiv-selected-versions.md)). `--source all` searches Open
+([decision 0047](decisions/0047-arxiv-selected-versions.md)). `--source openalex`
+searches OpenAlex works without a key, one request per search against the
+keyless daily budget, with `--offset` a multiple of `--limit` within the first
+10,000 results; a result states its DOI, PMCID, year, work type and any
+retraction, and a PMCID can be evaluated as `pmc:PMCID`
+([decision 0106](decisions/0106-openalex-work-search.md)). `--source all` searches Open
 Library and Archive at once, and Gutenberg's local catalog when one is
 configured, each by relevance in its own section with its own status; one
 source's failure does not hide another's results, results are not ranked
@@ -999,7 +1004,7 @@ nemalo mcp serve --scope /path/to/library
 holdings, audit, file checks without antivirus, and EPUB, PDF, MP3 and MP4 content,
 collection, citation and evidence reads, each
 over the same services and JSON data as the CLI. `--allow-network` adds catalog
-search and Archive evaluation. `--allow-write` adds `library_import_preview`
+search (Open Library, Archive and OpenAlex) and Archive evaluation. `--allow-write` adds `library_import_preview`
 and `library_import_apply`; an apply stores only the plan digest its preview
 returned and refuses a changed source, assessment, normalized provenance,
 proposed holding, or scan choice

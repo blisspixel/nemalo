@@ -116,7 +116,7 @@ func (s searcher) Evaluate(_ context.Context, id string) (discovery.Evaluation, 
 }
 
 func TestProviderSearchAndEvaluationCommands(t *testing.T) {
-	for _, args := range [][]string{{"search", "Verne", "--source", "archive", "--json"}, {"search", "Verne", "--source", "openlibrary"}, {"evaluate", "archive:demo"}, {"evaluate", "archive:demo", "--json"}} {
+	for _, args := range [][]string{{"search", "Verne", "--source", "archive", "--json"}, {"search", "Verne", "--source", "openlibrary"}, {"search", "graphene", "--source", "openalex", "--limit", "5", "--offset", "10"}, {"evaluate", "archive:demo"}, {"evaluate", "archive:demo", "--json"}} {
 		code, out, stderr := execute(t, args, nil)
 		if code != 0 || out == "" || stderr != "" {
 			t.Fatal(args, code, out, stderr)
@@ -135,7 +135,8 @@ func TestProviderSearchAndEvaluationCommands(t *testing.T) {
 		t.Fatal(code, out, stderr)
 	}
 	for _, args := range [][]string{{"evaluate"}, {"evaluate", "demo"}, {"evaluate", "archive:../x"}, {"evaluate", "openlibrary:OL1W"}, {"evaluate", "archive:demo", "--editions"}, {"evaluate", "openlibrary:OL1M", "--editions"}, {"evaluate", "gutenberg:11", "--editions"}, {"evaluate", "archive:demo", "--limit", "1"}, {"evaluate", "openlibrary:OL1W", "--files"}, {"evaluate", "archive:demo", "extra"}, {"evaluate", "archive:demo", "--source", "archive"}, {"search", "x", "--source", "missing"}, {"inspect", "x", "--source", "archive"},
-		{"search", "x", "--sort", "identifier"}, {"search", "x", "--source", "archive", "--sort", "popularity"}, {"search", "x", "--sort", "downloads"}, {"search", "x", "--source", "archive", "--sort", ""}, {"evaluate", "archive:demo", "--sort", "relevance"}} {
+		{"search", "x", "--sort", "identifier"}, {"search", "x", "--source", "archive", "--sort", "popularity"}, {"search", "x", "--sort", "downloads"}, {"search", "x", "--source", "archive", "--sort", ""}, {"evaluate", "archive:demo", "--sort", "relevance"},
+		{"search", "x", "--source", "openalex", "--sort", "identifier"}, {"search", "x", "--source", "openalex", "--limit", "10", "--offset", "5"}, {"search", "x", "--source", "openalex", "--limit", "50", "--offset", "9960"}} {
 		if code, _, _ := execute(t, args, nil); code != 2 {
 			t.Fatal("invalid provider usage accepted", args, code)
 		}
@@ -153,7 +154,7 @@ func execute(t *testing.T, args []string, searchErr error) (int, string, string)
 	t.Cleanup(func() { stdinTerminal = saved })
 	dir := t.TempDir()
 	var out, errOut bytes.Buffer
-	code := Execute(context.Background(), args, &out, &errOut, app.Service{Providers: map[string]app.Searcher{"openlibrary": searcher{searchErr}, "archive": searcher{searchErr}}}, func(string) string { return "" }, func() (config.Paths, error) { return config.Paths{Config: filepath.Join(dir, "missing.json")}, nil }, func(context.Context, app.Service, TerminalOptions) error { return nil })
+	code := Execute(context.Background(), args, &out, &errOut, app.Service{Providers: map[string]app.Searcher{"openlibrary": searcher{searchErr}, "archive": searcher{searchErr}, "openalex": searcher{searchErr}}}, func(string) string { return "" }, func() (config.Paths, error) { return config.Paths{Config: filepath.Join(dir, "missing.json")}, nil }, func(context.Context, app.Service, TerminalOptions) error { return nil })
 	return code, out.String(), errOut.String()
 }
 

@@ -144,9 +144,9 @@ func buildRegistry() []command {
 		{key: "enter", name: "Search the selected provider", label: "search", footer: 1, focus: formFocus, steps: []string{"search"}, effect: network, when: needs("Type a query first", hasInput)},
 		{key: "f2", name: "Change the search provider", label: "provider", footer: 2, steps: []string{"search"}, when: notBusy},
 		{key: "f3", name: "Change the result order", label: "order", footer: 3, steps: []string{"search"}, when: needs("Only Internet Archive and Gutenberg searches have an order", func(m *model) bool { return m.source == "archive" || m.source == "gutenberg" })},
-		{key: "e", name: "Prepare evaluation of the selected result", label: "evaluate", footer: 3, focus: listFocus, steps: []string{"search"}, when: needs("Select an Archive, Gutenberg or Open Library work result", func(m *model) bool {
+		{key: "e", name: "Prepare evaluation of the selected result", label: "evaluate", footer: 3, focus: listFocus, steps: []string{"search"}, when: needs("Select an Archive, Gutenberg or Open Library work result, or an OpenAlex work with a PMCID", func(m *model) bool {
 			id := selectedID(m)
-			return strings.HasPrefix(id, "archive:") || strings.HasPrefix(id, "gutenberg:") || discovery.ValidOpenLibraryWork(id)
+			return strings.HasPrefix(id, "archive:") || strings.HasPrefix(id, "gutenberg:") || discovery.ValidOpenLibraryWork(id) || (len(m.entries) > 0 && m.entries[m.selected].pmc != "")
 		})},
 		{key: "enter", name: "Evaluate the item", label: "evaluate", footer: 1, focus: formFocus, steps: []string{"evaluate"}, effect: network, when: needs("Enter an item ID first", hasInput)},
 		{key: "e", name: "Select this edition", label: "edition", footer: 3, focus: listFocus, steps: []string{"evaluate"}, when: needs("Select an Open Library edition", func(m *model) bool { return discovery.ValidOpenLibraryEdition(selectedID(m)) })},

@@ -52,16 +52,23 @@ var commandHelp = map[string]string{
   executed or installed, and tool availability is not scan evidence.
 `,
 	"search": `nemalo search QUERY [options]
-  Search a selected catalog. Open Library and Internet Archive use the
-  network. Gutenberg reads a local catalog file and does not query the
+  Search a selected catalog. Open Library, Internet Archive and OpenAlex use
+  the network. Gutenberg reads a local catalog file and does not query the
   website.
 
 Options:
-  --source openlibrary|archive|gutenberg|all (default openlibrary)
+  --source openlibrary|archive|gutenberg|openalex|all (default openlibrary)
   --limit 10, --offset 0
 
---source all searches every source at once by relevance, each in its own
-section; one source's failure does not hide the others', and Gutenberg is
+--source openalex searches scholarly works without a key, so each search
+counts against OpenAlex's keyless daily budget (about 100 searches a day,
+shared by every keyless caller on the same IP address).
+Its offset must be a multiple of --limit within the first 10000 results.
+Results state a DOI, PMCID, year, work type and retraction when OpenAlex
+does; a PMCID can be evaluated as pmc:PMCID. Nothing is downloaded.
+
+--source all searches the book catalogs (not OpenAlex) at once by relevance,
+each in its own section; one source's failure does not hide the others', and Gutenberg is
 searched only when a local catalog is configured. Results are not ranked
 against each other. Sort and page one source at a time.
   --sort relevance|identifier|downloads (identifier and downloads are Archive

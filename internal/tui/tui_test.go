@@ -329,6 +329,10 @@ func TestTerminalWorkflow(t *testing.T) {
 		t.Fatal("gutenberg provider unavailable", m.source)
 	}
 	m.Update(key(tea.KeyF2))
+	if m.source != "openalex" || !strings.Contains(m.contextLine(), "keyless daily budget") {
+		t.Fatal("OpenAlex provider unavailable", m.source)
+	}
+	m.Update(key(tea.KeyF2))
 	if m.source != "openlibrary" {
 		t.Fatal("provider not restored")
 	}

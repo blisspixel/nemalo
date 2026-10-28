@@ -27,6 +27,22 @@ func TestInventoryFindings(t *testing.T) {
 	}
 }
 
+func TestSearchShowsOpenAlexClaims(t *testing.T) {
+	page := discovery.Page{Source: "openalex", Query: "graphene", Order: discovery.OrderRelevance, Total: 2, Results: []discovery.Result{
+		{ID: "openalex:W1", Title: "Graphene sensors", DOI: "10.1234/abc", PMCID: "PMC123", Year: 2021, WorkType: "article", Retracted: true, LandingPage: "https://openalex.org/W1"},
+		{ID: "openalex:W2", Title: "Plain"},
+	}}
+	out := Search(page)
+	for _, want := range []string{"OpenAlex search for graphene", "   Catalog: article, 2021\n", "   Retracted: stated by the provider\n", "   DOI: 10.1234/abc\n", "   PMCID: PMC123 (evaluate pmc:PMC123)\n"} {
+		if !strings.Contains(out, want) {
+			t.Fatalf("missing %q in\n%s", want, out)
+		}
+	}
+	if strings.Count(out, "Retracted:") != 1 || strings.Count(out, "DOI:") != 1 || strings.Count(out, "Catalog:") != 1 {
+		t.Fatal(out)
+	}
+}
+
 func TestSearchShowsCatalogTypeAndIssued(t *testing.T) {
 	page := discovery.Page{Source: "gutenberg", Query: "pride", Order: discovery.OrderRelevance, Total: 2, Results: []discovery.Result{
 		{ID: "gutenberg:1342", Title: "Pride and Prejudice", MediaType: "Text", Issued: "1998-06-01"},

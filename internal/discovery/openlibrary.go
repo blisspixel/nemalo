@@ -21,6 +21,14 @@ type Result struct {
 	// Issued claims, such as Text or Sound; other sources leave them empty.
 	MediaType string `json:"media_type,omitempty"`
 	Issued    string `json:"issued,omitempty"`
+	// DOI, PMCID, Year, WorkType and Retracted are claims an OpenAlex work
+	// states (decision 0106); other sources leave them empty. A PMCID is an
+	// explicit pmc: identifier a user may evaluate.
+	DOI       string `json:"doi,omitempty"`
+	PMCID     string `json:"pmcid,omitempty"`
+	Year      int    `json:"year,omitempty"`
+	WorkType  string `json:"work_type,omitempty"`
+	Retracted bool   `json:"retracted,omitempty"`
 }
 
 // Result orders. Open Library and Archive relevance is that provider's ranking.

@@ -316,11 +316,11 @@ func New(service app.Service, opts Options) (*mcp.Server, error) {
 		addJobs(&r, service, opts, scopes)
 	}
 	if opts.Network {
-		add(&r, "catalog_search", "Search Open Library or Internet Archive. Sends the query to that provider. Results are discovery metadata, not download permission.", true,
+		add(&r, "catalog_search", "Search Open Library, Internet Archive or OpenAlex works. Sends the query to that provider; an OpenAlex search counts against its keyless daily budget. Results are discovery metadata, not download permission.", true,
 			func(ctx context.Context, in searchInput) (discovery.Page, error) {
 				source := defaultString(in.Source, "openlibrary")
-				if source != "openlibrary" && source != "archive" {
-					return discovery.Page{}, errors.New("source must be openlibrary or archive")
+				if source != "openlibrary" && source != "archive" && source != "openalex" {
+					return discovery.Page{}, errors.New("source must be openlibrary, archive or openalex")
 				}
 				return service.SearchSourceOrdered(ctx, source, in.Query, defaultString(in.Order, discovery.OrderRelevance), defaultInt(in.Limit, 10), in.Offset)
 			})
@@ -560,7 +560,7 @@ type contentInput struct {
 
 type searchInput struct {
 	Query  string `json:"query" jsonschema:"search text, 1-1000 bytes; sent to the selected provider"`
-	Source string `json:"source,omitempty" jsonschema:"openlibrary (default) or archive"`
+	Source string `json:"source,omitempty" jsonschema:"openlibrary (default), archive or openalex"`
 	Order  string `json:"order,omitempty" jsonschema:"relevance (default); identifier or downloads for archive"`
 	Limit  int    `json:"limit,omitempty" jsonschema:"page size 1-50, default 10"`
 	Offset int    `json:"offset,omitempty" jsonschema:"result offset 0-10000"`
