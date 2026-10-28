@@ -92,6 +92,35 @@ func TestTerminalProcessRoundTrip(t *testing.T) {
 	}
 }
 
+// Output a program writes just before it exits reaches the screen: the PTY is
+// drained before it is closed, as a reader's closing instructions require.
+func TestTerminalKeepsOutputWrittenAtExit(t *testing.T) {
+	for range 5 {
+		s, err := newTerminalSession(context.Background(), terminalHelperInvocation(t, "roundtrip"), terminalOutputLimit, startTerminal)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := s.waitScreen(0, containsScreen("native-terminal-ready")); err != nil {
+			_, _, _ = s.stop()
+			t.Fatal(err)
+		}
+		if _, err := s.send("z"); err != nil {
+			_, _, _ = s.stop()
+			t.Fatal(err)
+		}
+		if err := s.waitExit(); err != nil {
+			_, _, _ = s.stop()
+			t.Fatal(err)
+		}
+		if _, _, err := s.stop(); err != nil {
+			t.Fatal(err)
+		}
+		if f := s.screen(); f.alt || !strings.Contains(f.text, "native-terminal-drained-end") {
+			t.Fatalf("output written at exit was lost:\n%s", f.text)
+		}
+	}
+}
+
 func TestTerminalProcessFailureAndCancellation(t *testing.T) {
 	for _, mode := range []string{"failure", "cancel"} {
 		t.Run(mode, func(t *testing.T) {
@@ -197,6 +226,14 @@ func TestNativeTerminalHelper(t *testing.T) {
 				fmt.Fprint(os.Stdout, strings.Repeat("bounded-output ", 1000))
 			case 'r':
 				fmt.Fprint(os.Stdout, "\x1b[2J\x1b[Hnative-terminal-resized")
+			case 'z':
+				// A burst written just before exit stays in the PTY until read.
+				fmt.Fprint(os.Stdout, "\x1b[?1049l")
+				for i := range 800 {
+					fmt.Fprintf(os.Stdout, "drain line %04d ........................\r\n", i)
+				}
+				fmt.Fprint(os.Stdout, "native-terminal-drained-end\r\n")
+				return
 			case 'q':
 				fmt.Fprint(os.Stdout, "\x1b[?1049lnative-terminal-closed\r\n")
 				if mode == "failure" {

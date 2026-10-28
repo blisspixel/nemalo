@@ -13,6 +13,10 @@ import (
 	"golang.org/x/sys/windows"
 )
 
+// drainBeforeClose is false: ConPTY output ends only when the pseudoconsole
+// is closed, so the worker is joined after Close.
+const drainBeforeClose = false
+
 type windowsTerminal struct {
 	*conpty.ConPty
 	process *os.Process

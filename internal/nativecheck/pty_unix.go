@@ -12,6 +12,10 @@ import (
 	"github.com/creack/pty"
 )
 
+// drainBeforeClose: the master returns EIO once the exited program's output
+// is read, so the output worker ends by itself before the master closes.
+const drainBeforeClose = true
+
 type unixTerminal struct {
 	*os.File
 	cmd *exec.Cmd

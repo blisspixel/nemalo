@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- The native terminal harness now drains a Unix PTY before closing it. Closing
+  first could discard the last output a program wrote before exiting, which
+  intermittently failed the reader's closing-screen case on Linux. Nemalo itself
+  did not change.
+
 ## 0.1.0-alpha.23
 
 - `search --source openalex` searches OpenAlex scholarly works, also in the TUI

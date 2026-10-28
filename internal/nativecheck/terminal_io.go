@@ -379,6 +379,12 @@ func (s *terminalSession) stop() (raw []byte, read int, err error) {
 	}
 	if !join(s.exitReady) {
 		_ = s.process.Kill()
+	} else if drainBeforeClose {
+		// A Unix PTY keeps what the program wrote before exiting until it is
+		// read, and closing the master discards it, such as a reader's
+		// closing instructions. Its reads end once drained, so wait for that,
+		// still within the teardown allowance.
+		join(s.outputDone)
 	}
 	closed := make(chan struct{})
 	var closeErr error
