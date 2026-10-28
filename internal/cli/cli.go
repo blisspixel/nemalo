@@ -406,8 +406,9 @@ func Execute(ctx context.Context, args []string, out, errOut io.Writer, service 
 		editionID := discovery.ValidOpenLibraryEdition(id)
 		arxivID := discovery.ValidArxivID(id)
 		pmcID := discovery.ValidPMCID(id)
-		if flags.NArg() != 1 || (!archiveID && !gutenbergID && !workID && !editionID && !arxivID && !pmcID) {
-			return write(nil, errors.New("evaluate requires exactly one archive:ITEM, gutenberg:NUMBER, arxiv:ID[vN], pmc:PMCnumber[.version], or openlibrary:WORK or openlibrary:EDITION identifier"), 2)
+		workDOI := discovery.ValidOpenAlexWork(id) || discovery.ValidDOI(id)
+		if flags.NArg() != 1 || (!archiveID && !gutenbergID && !workID && !editionID && !arxivID && !pmcID && !workDOI) {
+			return write(nil, errors.New("evaluate requires exactly one archive:ITEM, gutenberg:NUMBER, arxiv:ID[vN], pmc:PMCnumber[.version], openalex:WORK, doi:DOI, or openlibrary:WORK or openlibrary:EDITION identifier"), 2)
 		}
 		if *listFiles && *listEditions {
 			return write(nil, errors.New("evaluate accepts either --files or --editions"), 2)

@@ -80,6 +80,19 @@ internal/acquisition.Intent selection.loc_classes []string ,omitempty
 internal/acquisition.Intent selection.media_types []string
 internal/acquisition.Intent selection.metadata_sha256 string
 internal/acquisition.Intent selection.metadata_url string
+internal/acquisition.Intent selection.open_access *OpenAccess ,omitempty
+internal/acquisition.Intent selection.open_access.location_count int
+internal/acquisition.Intent selection.open_access.locations []OpenLocation
+internal/acquisition.Intent selection.open_access.locations[].identifier string ,omitempty
+internal/acquisition.Intent selection.open_access.locations[].landing_page string ,omitempty
+internal/acquisition.Intent selection.open_access.locations[].license string ,omitempty
+internal/acquisition.Intent selection.open_access.locations[].open bool
+internal/acquisition.Intent selection.open_access.locations[].pdf_url string ,omitempty
+internal/acquisition.Intent selection.open_access.locations[].source string ,omitempty
+internal/acquisition.Intent selection.open_access.locations[].source_type string ,omitempty
+internal/acquisition.Intent selection.open_access.locations[].version string ,omitempty
+internal/acquisition.Intent selection.open_access.open bool
+internal/acquisition.Intent selection.open_access.status string ,omitempty
 internal/acquisition.Intent selection.openlibrary_edition string ,omitempty
 internal/acquisition.Intent selection.publishers []string
 internal/acquisition.Intent selection.recordings []Recording ,omitempty
@@ -270,6 +283,19 @@ internal/acquisition.Result intent.selection.loc_classes []string ,omitempty
 internal/acquisition.Result intent.selection.media_types []string
 internal/acquisition.Result intent.selection.metadata_sha256 string
 internal/acquisition.Result intent.selection.metadata_url string
+internal/acquisition.Result intent.selection.open_access *OpenAccess ,omitempty
+internal/acquisition.Result intent.selection.open_access.location_count int
+internal/acquisition.Result intent.selection.open_access.locations []OpenLocation
+internal/acquisition.Result intent.selection.open_access.locations[].identifier string ,omitempty
+internal/acquisition.Result intent.selection.open_access.locations[].landing_page string ,omitempty
+internal/acquisition.Result intent.selection.open_access.locations[].license string ,omitempty
+internal/acquisition.Result intent.selection.open_access.locations[].open bool
+internal/acquisition.Result intent.selection.open_access.locations[].pdf_url string ,omitempty
+internal/acquisition.Result intent.selection.open_access.locations[].source string ,omitempty
+internal/acquisition.Result intent.selection.open_access.locations[].source_type string ,omitempty
+internal/acquisition.Result intent.selection.open_access.locations[].version string ,omitempty
+internal/acquisition.Result intent.selection.open_access.open bool
+internal/acquisition.Result intent.selection.open_access.status string ,omitempty
 internal/acquisition.Result intent.selection.openlibrary_edition string ,omitempty
 internal/acquisition.Result intent.selection.publishers []string
 internal/acquisition.Result intent.selection.recordings []Recording ,omitempty
@@ -388,6 +414,19 @@ internal/acquisition.recordingIntent selection.loc_classes []string ,omitempty
 internal/acquisition.recordingIntent selection.media_types []string
 internal/acquisition.recordingIntent selection.metadata_sha256 string
 internal/acquisition.recordingIntent selection.metadata_url string
+internal/acquisition.recordingIntent selection.open_access *OpenAccess ,omitempty
+internal/acquisition.recordingIntent selection.open_access.location_count int
+internal/acquisition.recordingIntent selection.open_access.locations []OpenLocation
+internal/acquisition.recordingIntent selection.open_access.locations[].identifier string ,omitempty
+internal/acquisition.recordingIntent selection.open_access.locations[].landing_page string ,omitempty
+internal/acquisition.recordingIntent selection.open_access.locations[].license string ,omitempty
+internal/acquisition.recordingIntent selection.open_access.locations[].open bool
+internal/acquisition.recordingIntent selection.open_access.locations[].pdf_url string ,omitempty
+internal/acquisition.recordingIntent selection.open_access.locations[].source string ,omitempty
+internal/acquisition.recordingIntent selection.open_access.locations[].source_type string ,omitempty
+internal/acquisition.recordingIntent selection.open_access.locations[].version string ,omitempty
+internal/acquisition.recordingIntent selection.open_access.open bool
+internal/acquisition.recordingIntent selection.open_access.status string ,omitempty
 internal/acquisition.recordingIntent selection.openlibrary_edition string ,omitempty
 internal/acquisition.recordingIntent selection.publishers []string
 internal/acquisition.recordingIntent selection.recordings []Recording ,omitempty
@@ -1471,6 +1510,19 @@ internal/discovery.Evaluation loc_classes []string ,omitempty
 internal/discovery.Evaluation media_types []string
 internal/discovery.Evaluation metadata_sha256 string
 internal/discovery.Evaluation metadata_url string
+internal/discovery.Evaluation open_access *OpenAccess ,omitempty
+internal/discovery.Evaluation open_access.location_count int
+internal/discovery.Evaluation open_access.locations []OpenLocation
+internal/discovery.Evaluation open_access.locations[].identifier string ,omitempty
+internal/discovery.Evaluation open_access.locations[].landing_page string ,omitempty
+internal/discovery.Evaluation open_access.locations[].license string ,omitempty
+internal/discovery.Evaluation open_access.locations[].open bool
+internal/discovery.Evaluation open_access.locations[].pdf_url string ,omitempty
+internal/discovery.Evaluation open_access.locations[].source string ,omitempty
+internal/discovery.Evaluation open_access.locations[].source_type string ,omitempty
+internal/discovery.Evaluation open_access.locations[].version string ,omitempty
+internal/discovery.Evaluation open_access.open bool
+internal/discovery.Evaluation open_access.status string ,omitempty
 internal/discovery.Evaluation openlibrary_edition string ,omitempty
 internal/discovery.Evaluation publishers []string
 internal/discovery.Evaluation recordings []Recording ,omitempty

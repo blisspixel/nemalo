@@ -2,6 +2,7 @@ package discovery
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -112,5 +113,109 @@ func TestOpenAlexUsesItsFixedHost(t *testing.T) {
 	same, _ := http.NewRequest(http.MethodGet, "https://api.openalex.org/works?page=2", nil)
 	if redirect(other, []*http.Request{same}) == nil || redirect(same, []*http.Request{same}) != nil {
 		t.Fatal("redirect policy is not fixed to api.openalex.org")
+	}
+}
+
+func TestOpenAlexEvaluateWork(t *testing.T) {
+	p := openAlexProvider(t, func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/doi:10.7717/peerj.4375" || !strings.Contains(r.URL.Query().Get("select"), "locations") || r.URL.Query().Has("api_key") {
+			t.Errorf("request %s", r.URL)
+		}
+		_, _ = io.WriteString(w, `{"id":"https://openalex.org/W2741809807","display_name":"The state of OA","authorships":[{"author":{"display_name":"H. Piwowar"}}],"language":"en","doi":"https://doi.org/10.7717/peerj.4375",
+			"ids":{"pmcid":"https://www.ncbi.nlm.nih.gov/pmc/articles/5815332"},"publication_year":2018,"type":"article","is_retracted":true,
+			"open_access":{"is_oa":true,"oa_status":"gold"},"locations_count":7,"locations":[
+			{"is_oa":true,"landing_page_url":"https://doi.org/10.7717/peerj.4375","pdf_url":null,"source":{"display_name":"PeerJ","type":"journal"},"license":"cc-by","version":"publishedVersion"},
+			{"is_oa":true,"landing_page_url":"https://www.ncbi.nlm.nih.gov/pmc/articles/5815332","source":{"display_name":"PubMed Central","type":"repository"},"license":"cc-by","version":"publishedVersion"},
+			{"is_oa":true,"landing_page_url":"http://arxiv.org/abs/1706.03762","pdf_url":"https://arxiv.org/pdf/1706.03762v5","source":null},
+			{"is_oa":true,"landing_page_url":"https://doi.org/10.48550/arXiv.1706.03762v2"},
+			{"is_oa":false,"landing_page_url":"javascript:alert(1)","pdf_url":"https://user:pw@example.org/x.pdf"},
+			{"is_oa":true,"landing_page_url":"https://arxiv.org/abs/9999.99999"},
+			{"is_oa":true,"landing_page_url":"https://pmc.ncbi.nlm.nih.gov/articles/PMC7/"}
+		]}`)
+	})
+	e, err := p.Evaluate(context.Background(), "doi:10.7717/peerj.4375")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !e.Complete || e.Source != "openalex" || e.Access != "discovery_only" || len(e.Files) != 0 || e.Title[0] != "The state of OA" || e.LandingPage != "https://openalex.org/W2741809807" ||
+		e.Dates[0] != "2018" || e.MediaType[0] != "article" || e.MetadataSHA256 == "" {
+		t.Fatalf("evaluation %+v", e)
+	}
+	if got := fmt.Sprint(e.Identifiers); got != "[{openalex openalex:W2741809807} {doi 10.7717/peerj.4375} {pmcid PMC5815332}]" {
+		t.Fatalf("identifiers %s", got)
+	}
+	if !strings.Contains(e.Limitations[0], "retracted") {
+		t.Fatalf("retraction not stated first: %q", e.Limitations)
+	}
+	oa := e.OpenAccess
+	if oa == nil || !oa.Open || oa.Status != "gold" || oa.Count != 7 || len(oa.Locations) != 7 {
+		t.Fatalf("open access %+v", oa)
+	}
+	want := []string{"", "pmc:PMC5815332", "arxiv:1706.03762", "arxiv:1706.03762v2", "", "", "pmc:PMC7"}
+	for i, l := range oa.Locations {
+		if l.Identifier != want[i] {
+			t.Errorf("location %d identifier %q, want %q", i+1, l.Identifier, want[i])
+		}
+	}
+	if l := oa.Locations[0]; l.Source != "PeerJ" || l.SourceType != "journal" || l.License != "cc-by" || l.Version != "publishedVersion" || l.PDFURL != "" {
+		t.Fatalf("first location %+v", l)
+	}
+	// Unsafe URLs are dropped and counted, never shown.
+	if l := oa.Locations[4]; l.LandingPage != "" || l.PDFURL != "" || !strings.Contains(strings.Join(e.Limitations, " "), "1 location URL(s)") {
+		t.Fatalf("unsafe location kept: %+v %q", l, e.Limitations)
+	}
+}
+
+func TestOpenAlexEvaluateReportsResolutionAndTruncation(t *testing.T) {
+	p := openAlexProvider(t, func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/W2" {
+			t.Errorf("path %s", r.URL.Path)
+		}
+		_, _ = io.WriteString(w, `{"id":"https://openalex.org/W3","display_name":"Merged","doi":null,"open_access":{"is_oa":false,"oa_status":"closed"},"locations_count":250,"locations":[{"is_oa":false}]}`)
+	})
+	e, err := p.Evaluate(context.Background(), "openalex:W2")
+	if err != nil {
+		t.Fatal(err)
+	}
+	all := strings.Join(e.Limitations, " ")
+	if e.Complete || !strings.Contains(all, "returned openalex:W3 for openalex:W2") || !strings.Contains(all, "lists 1 of 250 locations") {
+		t.Fatalf("complete=%v %q", e.Complete, e.Limitations)
+	}
+	doi := openAlexProvider(t, func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = io.WriteString(w, `{"id":"https://openalex.org/W3","display_name":"Other","doi":"https://doi.org/10.5555/other","open_access":{"is_oa":false},"locations_count":0,"locations":[]}`)
+	})
+	e, err = doi.Evaluate(context.Background(), "doi:10.1234/X")
+	if err != nil || !strings.Contains(strings.Join(e.Limitations, " "), "resolved DOI 10.1234/X to openalex:W3, which states DOI 10.5555/other") {
+		t.Fatalf("%v %q", err, e.Limitations)
+	}
+	// The same DOI in another case is the same DOI.
+	same := openAlexProvider(t, func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = io.WriteString(w, `{"id":"https://openalex.org/W3","display_name":"Same","doi":"https://doi.org/10.1234/x","open_access":{"is_oa":false},"locations_count":0,"locations":[]}`)
+	})
+	if e, err = same.Evaluate(context.Background(), "doi:10.1234/X"); err != nil || strings.Contains(strings.Join(e.Limitations, " "), "resolved DOI") {
+		t.Fatalf("%v %q", err, e.Limitations)
+	}
+}
+
+func TestOpenAlexEvaluateRefusals(t *testing.T) {
+	p := openAlexProvider(t, func(http.ResponseWriter, *http.Request) { t.Error("request sent") })
+	for _, id := range []string{"openalex:W0", "openalex:A1", "openalex:", "doi:", "doi:11.1234/x", "doi:10.12/x", "doi:10.1234/a b", "doi:10.1234/%2e%2e", "doi:10.1234/..", "doi:10.1234/a/./b", "doi:10.1234/x?y", "doi:10.1234/x#y", "W1", "archive:x"} {
+		if _, err := p.Evaluate(context.Background(), id); err == nil {
+			t.Errorf("accepted %q", id)
+		}
+	}
+	for _, body := range []string{
+		`not json`, `{}`,
+		`{"id":"https://openalex.org/W1","display_name":"x","locations_count":0,"locations":[]}`,
+		`{"id":"https://openalex.org/W1","display_name":"x","open_access":{},"locations":[]}`,
+		`{"id":"https://openalex.org/W1","display_name":" ","open_access":{},"locations_count":0,"locations":[]}`,
+		`{"id":"https://example.org/W1","display_name":"x","open_access":{},"locations_count":0,"locations":[]}`,
+		`{"id":"https://openalex.org/W1","display_name":"x","open_access":{},"locations_count":0,"locations":[{}]}`,
+		`{"id":"https://openalex.org/W1","display_name":"x","open_access":{},"locations_count":101,"locations":[` + strings.TrimSuffix(strings.Repeat(`{},`, 101), ",") + `]}`,
+	} {
+		bad := openAlexProvider(t, func(w http.ResponseWriter, _ *http.Request) { _, _ = io.WriteString(w, body) })
+		if _, err := bad.Evaluate(context.Background(), "openalex:W1"); err == nil {
+			t.Errorf("accepted %s", body[:min(len(body), 60)])
+		}
 	}
 }

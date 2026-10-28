@@ -63,8 +63,9 @@ on 2026-10-28:
 `retracted` fields, recorded in the field contract. Other sources leave them
 empty. A malformed identifier, a missing title, a result count above the
 limit, or a page past 10,000 results fails the search instead of returning a
-partial page. Unpaywall DOI resolution remains the next milestone 7 provider,
-under its own decision.
+partial page. DOI resolution followed as an OpenAlex single-work lookup
+([decision 0107](0107-openalex-doi-resolution.md)), which also found that
+OpenAlex writes most PMCIDs without the `PMC` prefix; the parser accepts both.
 
 ## Verification
 

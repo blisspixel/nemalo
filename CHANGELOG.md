@@ -2,6 +2,20 @@
 
 ## Unreleased
 
+- `evaluate openalex:WORK` and `evaluate doi:DOI` read one OpenAlex work, free
+  and keyless, and list the open access locations OpenAlex states with their
+  source, license and version. Nemalo opens none of them. A location on PMC or
+  arXiv names its `pmc:` or `arxiv:` identifier to evaluate next. This replaces
+  the planned Unpaywall adapter, which needed a contact email; Unpaywall now
+  serves the same OpenAlex data. Also in the TUI (`e` on an OpenAlex result)
+  and MCP `catalog_evaluate`.
+- OpenAlex search now keeps PMCIDs written without the `PMC` prefix, the form
+  OpenAlex uses for most works; alpha.23 dropped them.
+- MCP `catalog_evaluate` returns a refused identifier as an error envelope
+  instead of failing its output schema.
+- Help no longer loops when a word is wider than the terminal. In alpha.23,
+  `nemalo help evaluate` in a terminal narrower than about 80 columns printed
+  blank lines without end; such a word now ends at its first space.
 - The native terminal harness now drains a Unix PTY before closing it. Closing
   first could discard the last output a program wrote before exiting, which
   intermittently failed the reader's closing-screen case on Linux. Nemalo itself

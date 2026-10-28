@@ -69,11 +69,20 @@ func isPlaceholder(w string) bool {
 // NextAfterEvaluation names the acquire command for the first eligible EPUB,
 // else the first eligible PDF, as acquire would accept it from this metadata.
 // A local Gutenberg catalog row lists no files, so it names the record
-// request. It is "" when no file is eligible.
+// request. An OpenAlex work names the evaluation of its first open location
+// that states a pmc: or arxiv: identifier. It is "" when no file is eligible.
 func NextAfterEvaluation(e discovery.Evaluation, eligible []acquisition.Alternative) string {
 	if e.Source == "gutenberg" && e.Access == "local_catalog" && len(e.Files) == 0 {
 		if c := command("nemalo", "evaluate", e.ID, "--files"); c != "" {
 			return "Next: " + c + "\n"
+		}
+		return ""
+	}
+	if oa := e.OpenAccess; oa != nil {
+		for _, l := range oa.Locations {
+			if c := command("nemalo", "evaluate", l.Identifier); l.Open && l.Identifier != "" && c != "" {
+				return "Next: " + c + "\n"
+			}
 		}
 		return ""
 	}

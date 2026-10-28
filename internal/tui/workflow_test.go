@@ -293,8 +293,17 @@ func (openAlexCatalog) Search(_ context.Context, q string, _, _ int) (discovery.
 	}}, nil
 }
 
-// OpenAlex is the fourth provider; its works show their stated claims, and e
-// prepares only a stated PMCID as an explicit evaluation.
+func (openAlexCatalog) Evaluate(_ context.Context, id string) (discovery.Evaluation, error) {
+	return discovery.Evaluation{Complete: true, ID: id, Source: "openalex", Title: []string{"Graphene sensors"}, Access: "discovery_only", Restrictions: map[string]string{}, Files: []discovery.OfferedFile{},
+		OpenAccess: &discovery.OpenAccess{Open: true, Status: "green", Count: 2, Locations: []discovery.OpenLocation{
+			{Open: true, Source: "A journal", SourceType: "journal", LandingPage: "https://doi.org/10.1234/abc", License: "cc-by", Version: "publishedVersion"},
+			{Open: true, Source: "PubMed Central", SourceType: "repository", LandingPage: "https://www.ncbi.nlm.nih.gov/pmc/articles/123", Version: "acceptedVersion", Identifier: "pmc:PMC123"},
+		}}}, nil
+}
+
+// OpenAlex is the fourth provider; its works show their stated claims. e
+// evaluates the work, which lists its stated locations, and only a location
+// stating a pmc: or arxiv: identifier can be prepared as the next evaluation.
 func TestOpenAlexSearchInTheTUI(t *testing.T) {
 	m := newModel(context.Background(), app.Service{Providers: map[string]app.Searcher{"openalex": openAlexCatalog{}}})
 	m.switchMode("search")
@@ -311,21 +320,43 @@ func TestOpenAlexSearchInTheTUI(t *testing.T) {
 	m.Update(key(tea.KeyF6))
 	m.Update(key(tea.KeyEnter))
 	detail := m.preview.GetContent()
-	for _, want := range []string{"stated retracted", "10.1234/abc", "PMC123", "e prepares evaluate pmc:PMC123", "no file, rights or edition is resolved"} {
+	for _, want := range []string{"stated retracted", "10.1234/abc", "PMC123", "e prepares this work's open access locations", "no file, rights or edition is resolved"} {
 		if !strings.Contains(detail, want) {
 			t.Fatalf("missing %q in\n%s", want, detail)
 		}
 	}
 	m.Update(key(tea.KeyEnter))
-	m.Update(key(tea.KeyDown))
+	m.Update(tea.KeyPressMsg{Code: 'e', Text: "e"})
+	if m.mode != "evaluate" || m.input.Value() != "openalex:W1" || !strings.Contains(m.status, "stated locations") {
+		t.Fatalf("e prepared %q in %s", m.input.Value(), m.mode)
+	}
+	_, cmd = m.Update(key(tea.KeyEnter))
+	if cmd == nil {
+		t.Fatal("Enter did not request the work")
+	}
+	m.Update(cmd())
+	if len(m.entries) != 2 || !strings.Contains(m.status, "2 locations stated by OpenAlex") {
+		t.Fatalf("entries %d, status %q", len(m.entries), m.status)
+	}
+	m.Update(key(tea.KeyF6))
+	m.Update(key(tea.KeyEnter))
+	if detail := m.preview.GetContent(); !strings.Contains(detail, "Nemalo opens none of these URLs") || !strings.Contains(detail, "no pmc: or arxiv: identifier") {
+		t.Fatalf("first location detail\n%s", detail)
+	}
+	m.Update(key(tea.KeyEnter))
 	for _, c := range registry {
-		if c.key == "e" && slices.Contains(c.steps, "search") && c.when(m) == "" {
-			t.Fatal("e offered for a work without a PMCID")
+		if c.key == "e" && slices.Contains(c.steps, "evaluate") && c.when(m) == "" {
+			t.Fatal("e offered for a location without an identifier")
 		}
 	}
-	m.Update(key(tea.KeyUp))
+	// d never treats an OpenAlex work as a file selection.
+	m.Update(tea.KeyPressMsg{Code: 'd', Text: "d"})
+	if !strings.Contains(m.status, "discovery only") {
+		t.Fatalf("d status %q", m.status)
+	}
+	m.Update(key(tea.KeyDown))
 	m.Update(tea.KeyPressMsg{Code: 'e', Text: "e"})
-	if m.mode != "evaluate" || m.input.Value() != "pmc:PMC123" || !strings.Contains(m.status, "PMCID") {
+	if m.mode != "evaluate" || m.input.Value() != "pmc:PMC123" || !strings.Contains(m.status, "stated identifier") {
 		t.Fatalf("e prepared %q in %s", m.input.Value(), m.mode)
 	}
 	m.switchMode("search")

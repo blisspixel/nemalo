@@ -327,11 +327,15 @@ and tracked in [issue 64](https://github.com/blisspixel/nemalo/issues/64); its
 acceptance receipt and alpha.19 release evidence are recorded there separately.
 OpenAlex work search is implemented keyless, discovery only
 ([decision 0106](docs/decisions/0106-openalex-work-search.md),
-[issue 73](https://github.com/blisspixel/nemalo/issues/73)). Next provider work
-is Unpaywall DOI resolution, which needs its own bounded decision and issue: it
-requires a contact email, and its result would be an open-copy location that
-still has to pass selected acquisition. A configured OpenAlex key is separate
-later work with its own secret-handling decision. Start each session with the
+[issue 73](https://github.com/blisspixel/nemalo/issues/73)), and DOI resolution
+is a free OpenAlex single-work lookup
+([decision 0107](docs/decisions/0107-openalex-doi-resolution.md)). No Unpaywall
+adapter is planned: Unpaywall now serves the same OpenAlex data and would need
+the person's email with each request. A location reaches a file only through
+an explicit `pmc:` or `arxiv:` evaluation. Next provider work is the
+DOAB/OAPEN, OpenStax and LibreTexts cohort, after their contracts and asset
+formats are verified. A configured OpenAlex key is separate later work with
+its own secret-handling decision. Start each session with the
 workspace check in `AGENTS.md`.
 
 ## Implementation status
@@ -887,12 +891,14 @@ evaluation and selected CC-licensed open-access PDF acquisition are implemented
 ([decision 0100](docs/decisions/0100-pmc-selected-article-versions.md),
 [issue 64](https://github.com/blisspixel/nemalo/issues/64)). OpenAlex work search
 is implemented keyless and discovery only
-([decision 0106](docs/decisions/0106-openalex-work-search.md)). Citation export was
-delivered with milestone 9. OCR, column reconstruction, Unpaywall DOI resolution
-and other providers remain. Depends on shared assessment/publication and recovery milestones.
+([decision 0106](docs/decisions/0106-openalex-work-search.md)), and DOI
+resolution as a free OpenAlex single-work lookup listing stated open access
+locations ([decision 0107](docs/decisions/0107-openalex-doi-resolution.md)).
+Citation export was delivered with milestone 9. OCR, column reconstruction and
+other providers remain. Depends on shared assessment/publication and recovery milestones.
 
 Deliver a PDF assessment policy, a separate paper collection, arXiv and Europe
-PMC/PMC resolution, then OpenAlex discovery and Unpaywall DOI resolution. Enable
+PMC/PMC resolution, then OpenAlex discovery and DOI resolution. Enable
 PDF ebooks/textbooks explicitly; PDF-to-EPUB conversion is unnecessary.
 
 Acceptance:

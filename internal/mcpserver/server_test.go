@@ -38,6 +38,17 @@ func (c catalog) Search(_ context.Context, q string, _, _ int) (discovery.Page, 
 	return discovery.Page{Query: q, Order: "relevance", Results: []discovery.Result{}}, nil
 }
 
+type works struct{ ids *[]string }
+
+func (w works) Search(context.Context, string, int, int) (discovery.Page, error) {
+	return discovery.Page{Results: []discovery.Result{}}, nil
+}
+
+func (w works) Evaluate(_ context.Context, id string) (discovery.Evaluation, error) {
+	*w.ids = append(*w.ids, id)
+	return discovery.Evaluation{ID: id, Source: "openalex", Restrictions: map[string]string{}, Files: []discovery.OfferedFile{}, OpenAccess: &discovery.OpenAccess{Locations: []discovery.OpenLocation{}}}, nil
+}
+
 func epub(t *testing.T, dir, body string) string {
 	t.Helper()
 	var buf bytes.Buffer
@@ -151,6 +162,22 @@ func TestToolsAreReadOnlyAndNetworkIsExplicit(t *testing.T) {
 	res, env := call(t, online, "catalog_search", map[string]any{"query": "Verne"})
 	if res.IsError || calls != 1 || env["tool"] != "catalog_search" {
 		t.Fatal(res, env)
+	}
+	var evaluated []string
+	works := connect(t, app.Service{Providers: map[string]app.Searcher{"openalex": works{&evaluated}}, Scanner: noScanner{t}}, Options{Scopes: []string{t.TempDir()}, Network: true, Version: "test"})
+	for _, id := range []string{"openalex:W1", "doi:10.1234/x"} {
+		if res, env := call(t, works, "catalog_evaluate", map[string]any{"id": id}); res.IsError || env["data"].(map[string]any)["open_access"] == nil {
+			t.Fatal(id, res, env)
+		}
+	}
+	// A refusal is an error envelope, not a protocol failure.
+	for _, id := range []string{"pmc:PMC1", "doi:10.1/x", "openalex:A1"} {
+		if res, env := call(t, works, "catalog_evaluate", map[string]any{"id": id}); !res.IsError || !strings.Contains(env["error"].(string), "id must be") {
+			t.Fatal("accepted", id, env)
+		}
+	}
+	if !slices.Equal(evaluated, []string{"openalex:W1", "doi:10.1234/x"}) {
+		t.Fatal("evaluated", evaluated)
 	}
 	_, env = call(t, online, "nemalo_capabilities", map[string]any{})
 	data := env["data"].(map[string]any)

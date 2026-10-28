@@ -91,13 +91,16 @@ source/library mutation or network is introduced. See the
 `catalog_search` and `catalog_evaluate` exist only with
 `--allow-network`. They search Open Library, Internet Archive and OpenAlex
 works ([decision 0106](decisions/0106-openalex-work-search.md)); an OpenAlex
-search is keyless and counts against its daily budget.
+search is keyless and counts against its daily budget. `catalog_evaluate`
+reads an Archive item, or one OpenAlex work by `openalex:WORK` or `doi:DOI`
+with its stated open access locations, free of that budget
+([decision 0107](decisions/0107-openalex-doi-resolution.md)).
 Gutenberg search, `evaluate --files`, and `acquire gutenberg:NUMBER` are CLI
 and TUI only. They are not MCP tools. arXiv and PMC evaluation/acquisition
 also remain CLI/TUI-only; network/write permission does not add their providers
 to the MCP acquisition tool. Open Library edition listing and
 edition-to-Archive resolution are CLI and TUI only. `catalog_search` still
-returns works, and `catalog_evaluate` still requires `archive:ITEM`. The MCP tools return the CLI's data in a
+returns works, and `catalog_evaluate` does not read Open Library editions. The MCP tools return the CLI's data in a
 `{schema_version, tool, data, error}` envelope; failures are tool errors that keep
 the service status. Paths must resolve inside a `--scope` directory or the
 configured library and review folders. At most four calls run at once, each with

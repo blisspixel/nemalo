@@ -45,9 +45,6 @@ type entry struct {
 	// or an explicit saved bookmark to open in Read.
 	step     string
 	bookmark *library.Bookmark
-	// pmc is the PMCID an OpenAlex work states, which e prepares as an
-	// explicit pmc: evaluation.
-	pmc string
 	// epub marks a held EPUB, whose details can show its declared cover.
 	epub bool
 }
@@ -105,6 +102,36 @@ func (m *model) populate(data any) {
 			m.selectEntry(0)
 			return
 		}
+		if oa := p.OpenAccess; oa != nil {
+			for i, l := range oa.Locations {
+				state := "not open"
+				if l.Open {
+					state = "open"
+				}
+				source := line(l.Source)
+				if source == "" {
+					source = "Unnamed source"
+				}
+				c := card{title: source, facts: nonEmpty(words(l.SourceType), line(l.Version)), chips: labelledChips("Stated", state, "License", line(l.License)), identity: line(l.Identifier)}
+				if l.LandingPage != "" {
+					c.lists = append(c.lists, cardList{"Page", []string{line(l.LandingPage)}})
+				}
+				if l.PDFURL != "" {
+					c.lists = append(c.lists, cardList{"PDF", []string{line(l.PDFURL)}})
+				}
+				c.caveat = "OpenAlex's claim about this copy. Nemalo opens none of these URLs."
+				c.keys = "Discovery only; no pmc: or arxiv: identifier is stated here"
+				if l.Identifier != "" {
+					c.keys = "e prepares evaluate " + line(l.Identifier) + "; nothing is requested until Enter"
+				}
+				m.entries = append(m.entries, entry{title: fmt.Sprintf("%d. %s", i+1, source), summary: joinParts(state, line(l.Version), line(l.License)), right: line(l.Identifier), detail: m.render(c), sourceID: l.Identifier})
+			}
+			if len(oa.Locations) == 0 {
+				m.entries = append(m.entries, entry{title: "No locations stated", summary: "OpenAlex lists no location for this work", detail: "OpenAlex lists no location for this work.\n\nNothing here can be evaluated or acquired.\n"})
+			}
+			m.selectEntry(0)
+			return
+		}
 		for _, f := range p.Files {
 			size := "size not declared"
 			if f.Bytes != nil {
@@ -158,16 +185,13 @@ func (m *model) populate(data any) {
 			}
 			if p.Source == "openalex" {
 				c.caveat = "OpenAlex work metadata only; no file, rights or edition is resolved."
-				c.keys = "OpenAlex works are discovery only"
-				if r.PMCID != "" {
-					c.keys = "e prepares evaluate pmc:" + line(r.PMCID) + "; nothing is requested until Enter"
-				}
+				c.keys = "e prepares this work's open access locations; nothing is requested until Enter"
 			}
 			m.entries = append(m.entries, entry{
 				title:    line(r.Title),
 				summary:  joinParts(list(r.Authors), list(r.Languages), claim),
 				detail:   m.render(c),
-				sourceID: r.ID, identity: r.ID, pmc: r.PMCID,
+				sourceID: r.ID, identity: r.ID,
 			})
 		}
 	case library.Page:
@@ -523,11 +547,10 @@ func (m *model) browserKey(key string) (bool, tea.Cmd) {
 		if len(m.entries) > 0 && m.mode == "search" {
 			id := m.entries[m.selected].sourceID
 			switch {
-			case m.entries[m.selected].pmc != "":
-				pmc := m.entries[m.selected].pmc
+			case discovery.ValidOpenAlexWork(id):
 				cmd := m.switchMode("evaluate")
-				m.input.SetValue("pmc:" + pmc)
-				m.status = "Selected the work's stated PMCID. Enter requests the PMC record; no download."
+				m.input.SetValue(id)
+				m.status = "Selected work. Enter reads its OpenAlex record and stated locations; no download."
 				m.resize()
 				return true, cmd
 			case strings.HasPrefix(id, "archive:"):
@@ -554,6 +577,13 @@ func (m *model) browserKey(key string) (bool, tea.Cmd) {
 				m.resize()
 				return true, cmd
 			}
+		}
+		if len(m.entries) > 0 && m.mode == "evaluate" && m.lastEvaluation != nil && m.lastEvaluation.OpenAccess != nil && locationIdentifier(m.entries[m.selected].sourceID) {
+			m.input.SetValue(m.entries[m.selected].sourceID)
+			m.offset, m.total = 0, 0
+			m.status = "Selected the location's stated identifier. Enter evaluates it; no download."
+			m.resize()
+			return true, nil
 		}
 		if len(m.entries) > 0 && m.mode == "evaluate" && discovery.ValidOpenLibraryEdition(m.entries[m.selected].sourceID) {
 			m.input.SetValue(m.entries[m.selected].sourceID)
@@ -698,4 +728,10 @@ func firstOf(values ...string) string {
 		}
 	}
 	return ""
+}
+
+// locationIdentifier reports a pmc: or arxiv: identifier an OpenAlex
+// location states, which e may prepare.
+func locationIdentifier(id string) bool {
+	return discovery.ValidPMCID(id) || discovery.ValidArxivID(id)
 }

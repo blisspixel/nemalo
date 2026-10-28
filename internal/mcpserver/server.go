@@ -324,12 +324,13 @@ func New(service app.Service, opts Options) (*mcp.Server, error) {
 				}
 				return service.SearchSourceOrdered(ctx, source, in.Query, defaultString(in.Order, discovery.OrderRelevance), defaultInt(in.Limit, 10), in.Offset)
 			})
-		add(&r, "catalog_evaluate", "Read Internet Archive item and file declarations: rights statements, restrictions, sizes, and checksums. Downloads nothing.", true,
+		add(&r, "catalog_evaluate", "Read Internet Archive item and file declarations: rights statements, restrictions, sizes, and checksums; or one OpenAlex work by openalex:WORK or doi:DOI with the open access locations OpenAlex states. Downloads and opens nothing.", true,
 			func(ctx context.Context, in evaluateInput) (discovery.Evaluation, error) {
-				if !discovery.ValidArchiveID(in.ID) {
-					return discovery.Evaluation{}, errors.New("id must be archive:ITEM")
+				if !discovery.ValidArchiveID(in.ID) && !discovery.ValidOpenAlexWork(in.ID) && !discovery.ValidDOI(in.ID) {
+					return evaluationShape(discovery.Evaluation{}), errors.New("id must be archive:ITEM, openalex:WORK or doi:DOI")
 				}
-				return service.Evaluate(ctx, in.ID)
+				e, err := service.Evaluate(ctx, in.ID)
+				return evaluationShape(e), err
 			})
 	}
 	caps.Tools = append([]string{"nemalo_capabilities"}, r.names...)
@@ -566,8 +567,25 @@ type searchInput struct {
 	Offset int    `json:"offset,omitempty" jsonschema:"result offset 0-10000"`
 }
 
+// evaluationShape fills the lists and map a refused or failed evaluation
+// leaves nil, so its error envelope still matches the output schema.
+func evaluationShape(e discovery.Evaluation) discovery.Evaluation {
+	for _, l := range []*[]string{&e.Title, &e.Creators, &e.Languages, &e.MediaType, &e.Dates, &e.Publishers, &e.Rights, &e.LicenseURLs, &e.Limitations} {
+		if *l == nil {
+			*l = []string{}
+		}
+	}
+	if e.Restrictions == nil {
+		e.Restrictions = map[string]string{}
+	}
+	if e.Files == nil {
+		e.Files = []discovery.OfferedFile{}
+	}
+	return e
+}
+
 type evaluateInput struct {
-	ID string `json:"id" jsonschema:"Internet Archive item as archive:ITEM"`
+	ID string `json:"id" jsonschema:"Internet Archive item as archive:ITEM, or an OpenAlex work as openalex:WORK or doi:DOI"`
 }
 
 func defaultString(v, d string) string {

@@ -19,6 +19,11 @@ func (m *model) requestDownload() tea.Cmd {
 		m.resize()
 		return nil
 	}
+	if m.lastEvaluation != nil && m.lastEvaluation.OpenAccess != nil {
+		m.status = "An OpenAlex work is discovery only. Press e on a location with a pmc: or arxiv: identifier, then Enter."
+		m.resize()
+		return nil
+	}
 	if strings.TrimSpace(m.secondary.Value()) == "" {
 		m.status = "Enter a new intake folder first (Ctrl+N)."
 		m.resize()

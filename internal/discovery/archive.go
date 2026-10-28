@@ -227,7 +227,10 @@ type Evaluation struct {
 	// Identifiers are bibliographic identifiers the source's own metadata
 	// declares, copied as stated. The library classifies and validates them.
 	Identifiers []DeclaredIdentifier `json:"declared_identifiers,omitempty"`
-	Limitations []string             `json:"limitations"`
+	// OpenAccess is the open access summary and stated locations of an
+	// OpenAlex work (decision 0107). It is discovery metadata only.
+	OpenAccess  *OpenAccess `json:"open_access,omitempty"`
+	Limitations []string    `json:"limitations"`
 }
 
 // DeclaredIdentifier is one value of a source metadata field that names an

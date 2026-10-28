@@ -65,7 +65,8 @@ counts against OpenAlex's keyless daily budget (about 100 searches a day,
 shared by every keyless caller on the same IP address).
 Its offset must be a multiple of --limit within the first 10000 results.
 Results state a DOI, PMCID, year, work type and retraction when OpenAlex
-does; a PMCID can be evaluated as pmc:PMCID. Nothing is downloaded.
+does; a PMCID can be evaluated as pmc:PMCID, and openalex:WORK lists the
+work's stated open access locations. Nothing is downloaded.
 
 --source all searches the book catalogs (not OpenAlex) at once by relevance,
 each in its own section; one source's failure does not hide the others', and Gutenberg is
@@ -77,7 +78,9 @@ against each other. Sort and page one source at a time.
                    and tui; also gutenberg_catalog in config, or
                    NEMALO_GUTENBERG_CATALOG
 `,
-	"evaluate": `nemalo evaluate archive:ITEM|gutenberg:NUMBER|arxiv:ID|pmc:PMCnumber[.version]|openlibrary:ID [--files|--editions]
+	"evaluate": `nemalo evaluate ID [--files|--editions]
+  ID is archive:ITEM, gutenberg:NUMBER, arxiv:ID, pmc:PMCnumber[.version],
+  openalex:WORK, doi:DOI or openlibrary:ID.
   Inspect source-declared files, rights, and access restrictions.
   gutenberg:NUMBER without --files is one local catalog row and lists no
   files. --files fetches one Gutenberg bibliographic record and lists EPUB
@@ -94,6 +97,12 @@ against each other. Sort and page one source at a time.
   identifier resolves to the latest. The license arXiv records for the latest
   version is applied only to that version. Requests keep arXiv's pace of one
   every three seconds.
+  openalex:WORK or doi:DOI reads one OpenAlex work, without a key and at no
+  cost to the keyless budget: its open access status and the locations
+  OpenAlex states, each with its source, license and version claims. Nemalo
+  opens none of them. A location on PMC or arXiv names its pmc: or arxiv:
+  identifier, which can then be evaluated. A DOI that resolves to a work
+  stating another DOI is reported.
 `,
 	"catalog": `nemalo catalog fetch gutenberg --output FILE
   Download the official Gutenberg catalog to a new file. Search does not do
@@ -457,16 +466,24 @@ func writeHelp(out io.Writer, text string) error {
 }
 
 // wrapHelp breaks a line wider than width at spaces, continuing it under its
-// own indent plus two.
+// own indent plus two. A word wider than the row is left whole.
 func wrapHelp(text string, width int) string {
 	var b strings.Builder
 	for _, line := range strings.SplitAfter(text, "\n") {
 		body := strings.TrimSuffix(line, "\n")
 		indent := body[:len(body)-len(strings.TrimLeft(body, " "))]
 		for len(body) > width {
+			// A space inside this row's own leading spaces cannot break it:
+			// a continuation's indent would only rebuild the same row. A
+			// word wider than the row instead ends at its first space.
+			lead := len(body) - len(strings.TrimLeft(body, " "))
 			cut := strings.LastIndex(body[:width+1], " ")
-			if cut <= len(indent) {
-				break
+			if cut < lead {
+				next := strings.IndexByte(body[lead:], ' ')
+				if next < 0 {
+					break
+				}
+				cut = lead + next
 			}
 			b.WriteString(strings.TrimRight(body[:cut], " ") + "\n")
 			body = indent + "  " + strings.TrimLeft(body[cut:], " ")

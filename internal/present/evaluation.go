@@ -62,6 +62,39 @@ func Evaluation(e discovery.Evaluation) string {
 			indent("Finding", words(finding))
 		}
 	}
+	if oa := e.OpenAccess; oa != nil {
+		status := "not open"
+		if oa.Open {
+			status = "open"
+		}
+		if oa.Status != "" {
+			status += ", " + Line(oa.Status)
+		}
+		fmt.Fprintf(&b, "Open access (stated by OpenAlex): %s; %d location(s) listed, %d declared\n", status, len(oa.Locations), oa.Count)
+		for i, l := range oa.Locations {
+			kind := "not open"
+			if l.Open {
+				kind = "open"
+			}
+			source := Line(l.Source)
+			if source == "" {
+				source = "unnamed source"
+			}
+			fmt.Fprintf(&b, "\nLocation %d. %s (%s)\n", i+1, source, joinSet(kind, words(l.SourceType)))
+			indent := func(label, value string) {
+				if value != "" {
+					fmt.Fprintf(&b, "   %s: %s\n", label, value)
+				}
+			}
+			indent("Page", Line(l.LandingPage))
+			indent("PDF", Line(l.PDFURL))
+			indent("License", Line(l.License))
+			indent("Version", Line(l.Version))
+			if c := command("nemalo", "evaluate", l.Identifier); l.Identifier != "" && c != "" {
+				indent("Evaluate", c)
+			}
+		}
+	}
 	field(&b, "Subject", list(e.Subjects))
 	field(&b, "Bookshelf", list(e.Bookshelves))
 	field(&b, "Library of Congress class", list(e.Classes))

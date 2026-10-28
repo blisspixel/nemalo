@@ -116,7 +116,7 @@ func (s searcher) Evaluate(_ context.Context, id string) (discovery.Evaluation, 
 }
 
 func TestProviderSearchAndEvaluationCommands(t *testing.T) {
-	for _, args := range [][]string{{"search", "Verne", "--source", "archive", "--json"}, {"search", "Verne", "--source", "openlibrary"}, {"search", "graphene", "--source", "openalex", "--limit", "5", "--offset", "10"}, {"evaluate", "archive:demo"}, {"evaluate", "archive:demo", "--json"}} {
+	for _, args := range [][]string{{"search", "Verne", "--source", "archive", "--json"}, {"search", "Verne", "--source", "openlibrary"}, {"search", "graphene", "--source", "openalex", "--limit", "5", "--offset", "10"}, {"evaluate", "archive:demo"}, {"evaluate", "archive:demo", "--json"}, {"evaluate", "openalex:W1"}, {"evaluate", "doi:10.1234/x(y)"}} {
 		code, out, stderr := execute(t, args, nil)
 		if code != 0 || out == "" || stderr != "" {
 			t.Fatal(args, code, out, stderr)
@@ -136,7 +136,8 @@ func TestProviderSearchAndEvaluationCommands(t *testing.T) {
 	}
 	for _, args := range [][]string{{"evaluate"}, {"evaluate", "demo"}, {"evaluate", "archive:../x"}, {"evaluate", "openlibrary:OL1W"}, {"evaluate", "archive:demo", "--editions"}, {"evaluate", "openlibrary:OL1M", "--editions"}, {"evaluate", "gutenberg:11", "--editions"}, {"evaluate", "archive:demo", "--limit", "1"}, {"evaluate", "openlibrary:OL1W", "--files"}, {"evaluate", "archive:demo", "extra"}, {"evaluate", "archive:demo", "--source", "archive"}, {"search", "x", "--source", "missing"}, {"inspect", "x", "--source", "archive"},
 		{"search", "x", "--sort", "identifier"}, {"search", "x", "--source", "archive", "--sort", "popularity"}, {"search", "x", "--sort", "downloads"}, {"search", "x", "--source", "archive", "--sort", ""}, {"evaluate", "archive:demo", "--sort", "relevance"},
-		{"search", "x", "--source", "openalex", "--sort", "identifier"}, {"search", "x", "--source", "openalex", "--limit", "10", "--offset", "5"}, {"search", "x", "--source", "openalex", "--limit", "50", "--offset", "9960"}} {
+		{"search", "x", "--source", "openalex", "--sort", "identifier"}, {"search", "x", "--source", "openalex", "--limit", "10", "--offset", "5"}, {"search", "x", "--source", "openalex", "--limit", "50", "--offset", "9960"},
+		{"evaluate", "doi:10.1/x"}, {"evaluate", "doi:10.1234/a b"}, {"evaluate", "openalex:A1"}, {"evaluate", "openalex:W1", "--files"}, {"evaluate", "doi:10.1234/x", "--editions"}} {
 		if code, _, _ := execute(t, args, nil); code != 2 {
 			t.Fatal("invalid provider usage accepted", args, code)
 		}
@@ -207,6 +208,10 @@ func TestHelpAndVersion(t *testing.T) {
 		}
 	}
 	if got := wrapHelp("  --scope DIRECTORY  repeatable; the configured library and review folders\n", 40); got != "  --scope DIRECTORY  repeatable; the\n    configured library and review\n    folders\n" {
+		t.Fatalf("%q", got)
+	}
+	// A word wider than the row is kept whole, on its own continuation row.
+	if got := wrapHelp("nemalo evaluate archive:ITEM|gutenberg:NUMBER [--files]\n", 20); got != "nemalo evaluate\n  archive:ITEM|gutenberg:NUMBER\n  [--files]\n" {
 		t.Fatalf("%q", got)
 	}
 	code, out, _ := execute(t, []string{"version"}, nil)

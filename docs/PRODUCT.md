@@ -145,7 +145,7 @@ agent must use the same validated plans and configured filesystem scope.
 | --- | --- |
 | Classics and multilingual ebooks | Project Gutenberg, Internet Archive, Open Library; then Standard Ebooks |
 | Open textbooks and scholarly books | OpenStax, LibreTexts, DOAB, OAPEN |
-| Research papers | arXiv, Europe PMC/PMC; OpenAlex search and Unpaywall DOI resolution |
+| Research papers | arXiv, Europe PMC/PMC; OpenAlex search and DOI resolution |
 | Audiobooks | LibriVox and permitted Internet Archive audio assets |
 | Broader discovery | Regional libraries, children's collections, institutional repositories, OPDS |
 

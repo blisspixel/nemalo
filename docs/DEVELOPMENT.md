@@ -92,7 +92,11 @@ searches OpenAlex works without a key, one request per search against the
 keyless daily budget, with `--offset` a multiple of `--limit` within the first
 10,000 results; a result states its DOI, PMCID, year, work type and any
 retraction, and a PMCID can be evaluated as `pmc:PMCID`
-([decision 0106](decisions/0106-openalex-work-search.md)). `--source all` searches Open
+([decision 0106](decisions/0106-openalex-work-search.md)). `evaluate openalex:WORK`
+or `evaluate doi:DOI` reads one work free of that budget and lists its stated
+open access locations, opening none; a PMC or arXiv location names the `pmc:`
+or `arxiv:` identifier to evaluate next
+([decision 0107](decisions/0107-openalex-doi-resolution.md)). `--source all` searches Open
 Library and Archive at once, and Gutenberg's local catalog when one is
 configured, each by relevance in its own section with its own status; one
 source's failure does not hide another's results, results are not ranked
@@ -1004,7 +1008,7 @@ nemalo mcp serve --scope /path/to/library
 holdings, audit, file checks without antivirus, and EPUB, PDF, MP3 and MP4 content,
 collection, citation and evidence reads, each
 over the same services and JSON data as the CLI. `--allow-network` adds catalog
-search (Open Library, Archive and OpenAlex) and Archive evaluation. `--allow-write` adds `library_import_preview`
+search (Open Library, Archive and OpenAlex) and Archive or OpenAlex work evaluation. `--allow-write` adds `library_import_preview`
 and `library_import_apply`; an apply stores only the plan digest its preview
 returned and refuses a changed source, assessment, normalized provenance,
 proposed holding, or scan choice

@@ -309,6 +309,9 @@ func summary(data any) string {
 	case discovery.Page:
 		return fmt.Sprintf("%d results of %d; discovery metadata only.", len(v.Results), v.Total)
 	case discovery.Evaluation:
+		if v.OpenAccess != nil {
+			return fmt.Sprintf("Evaluated %s: %d locations stated by OpenAlex; discovery only.", present.Line(v.ID), len(v.OpenAccess.Locations))
+		}
 		return fmt.Sprintf("Evaluated %s: %d files listed; declarations only.", present.Line(v.ID), len(v.Files))
 	case library.Page:
 		return fmt.Sprintf("%d matching assets.", v.Total)

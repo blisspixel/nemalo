@@ -374,6 +374,10 @@ func (s Service) Evaluate(ctx context.Context, id string) (discovery.Evaluation,
 	if !ok {
 		return discovery.Evaluation{}, errors.New("evaluation requires a namespaced item identifier")
 	}
+	// A DOI is resolved through OpenAlex (decision 0107).
+	if source == "doi" {
+		source = "openalex"
+	}
 	p, ok := s.Providers[source].(interface {
 		Evaluate(context.Context, string) (discovery.Evaluation, error)
 	})
