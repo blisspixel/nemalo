@@ -221,14 +221,16 @@ no format. Its increments, in order:
    ([71](https://github.com/blisspixel/nemalo/issues/71),
    [decision 0104](docs/decisions/0104-terminal-feedback.md)), prepared for
    `0.1.0-alpha.21`.
-5. Done in source for Kitty and Ghostty: EPUB covers
+5. Done in source: EPUB covers
    ([72](https://github.com/blisspixel/nemalo/issues/72),
-   [decision 0105](docs/decisions/0105-local-epub-covers.md)), prepared for
-   `0.1.0-alpha.22`. Covers were
+   [decision 0105](docs/decisions/0105-local-epub-covers.md)), in Kitty and
+   Ghostty since `0.1.0-alpha.22` and in WezTerm, by direct placement, for
+   `0.1.0-alpha.23`. Covers were
    [observed](docs/VALIDATION.md#covers-in-real-kitty-and-ghostty-windows) in
-   real Ghostty and Kitty windows on 2026-10-27. WezTerm, iTerm2 and Sixel
-   terminals show the title card; drawing there needs a placement that
-   survives the cell renderer, and WezTerm is not yet observed.
+   real Ghostty and Kitty windows on 2026-10-27. In WezTerm the first placement
+   was observed failing and its fix is verified by a replay of real output; a
+   screenshot of the fixed build is still needed. iTerm2, foot and Windows
+   Terminal show the title card.
 
 Increments 1 to 3 are prepared for the `0.1.0-alpha.20` prerelease; its receipts
 are recorded on those issues. The person-run sessions in 62 should now observe
@@ -283,23 +285,23 @@ The documentation was reviewed against behavior on 2026-10-25 and corrected.
 Every release gate is mapped to its enforcement below; the first hosted fuzz
 run found and fixed a navigation parser panic.
 
-The latest prerelease is
-[`0.1.0-alpha.22`](https://github.com/blisspixel/nemalo/releases/tag/v0.1.0-alpha.22)
-(`8b550bf`), with all twelve CI jobs, CodeQL, installed tools on three OSes,
-26 fuzz targets and the post-publication installers on all six targets passed.
+The latest prerelease is `0.1.0-alpha.23`, which adds WezTerm covers and
+OpenAlex work search to
+[`0.1.0-alpha.22`](https://github.com/blisspixel/nemalo/releases/tag/v0.1.0-alpha.22);
+its release gates and post-publication installer evidence are recorded on
+[72](https://github.com/blisspixel/nemalo/issues/72) and
+[73](https://github.com/blisspixel/nemalo/issues/73).
 All source work planned before the candidate is done. What remains needs a
 person, a host this machine lacks, or a decision.
 
 Next, in order, and why:
 
 1. **Finish the TUI wave's observations (65).** Mouse clicks and the wheel in
-   Ghostty, Kitty, WezTerm and Windows Terminal (70), and WezTerm covers (72),
-   need someone at those terminals: an automated session here can send keys
-   but not clicks, and WezTerm is not installed. Either draw WezTerm covers
-   with a placement observed to survive the cell renderer, or agree that
-   WezTerm keeps the title card and track iTerm2/Sixel drawing as a separate
-   post-1.0 issue. These come first because the candidate's PTY gates and
-   the sessions in 62 must observe the final layout.
+   Ghostty, Kitty, WezTerm and Windows Terminal (70) need someone at those
+   terminals: an automated session here can send keys but not clicks. WezTerm
+   covers (72) need one screenshot of the fixed build in a real, awake
+   WezTerm window. These come first because the candidate's PTY gates and the
+   sessions in 62 must observe the final layout.
 2. **Person-run accessibility and host checks (62).** Screen reader and
    magnifier sessions on each OS, a keyboard-only session, the Agent Plugins
    package in a consuming host, and Claude Code on macOS and Windows. They
