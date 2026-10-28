@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.1.0-alpha.24
+
 - `evaluate openalex:WORK` and `evaluate doi:DOI` read one OpenAlex work, free
   and keyless, and list the open access locations OpenAlex states with their
   source, license and version. Nemalo opens none of them. A location on PMC or

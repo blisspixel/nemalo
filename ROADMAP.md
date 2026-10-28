@@ -285,12 +285,12 @@ The documentation was reviewed against behavior on 2026-10-25 and corrected.
 Every release gate is mapped to its enforcement below; the first hosted fuzz
 run found and fixed a navigation parser panic.
 
-The latest prerelease is `0.1.0-alpha.23`, which adds WezTerm covers and
-OpenAlex work search to
-[`0.1.0-alpha.22`](https://github.com/blisspixel/nemalo/releases/tag/v0.1.0-alpha.22);
+The latest prerelease is `0.1.0-alpha.24`, which adds DOI resolution through
+a free OpenAlex work lookup, and fixes dropped OpenAlex PMCIDs and a help loop
+in narrow terminals, over
+[`0.1.0-alpha.23`](https://github.com/blisspixel/nemalo/releases/tag/v0.1.0-alpha.23);
 its release gates and post-publication installer evidence are recorded on
-[72](https://github.com/blisspixel/nemalo/issues/72) and
-[73](https://github.com/blisspixel/nemalo/issues/73).
+[74](https://github.com/blisspixel/nemalo/issues/74).
 All source work planned before the candidate is done. What remains needs a
 person, a host this machine lacks, or a decision.
 
