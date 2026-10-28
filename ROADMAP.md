@@ -329,7 +329,8 @@ OpenAlex work search is implemented keyless, discovery only
 ([decision 0106](docs/decisions/0106-openalex-work-search.md),
 [issue 73](https://github.com/blisspixel/nemalo/issues/73)), and DOI resolution
 is a free OpenAlex single-work lookup
-([decision 0107](docs/decisions/0107-openalex-doi-resolution.md)). No Unpaywall
+([decision 0107](docs/decisions/0107-openalex-doi-resolution.md),
+[issue 74](https://github.com/blisspixel/nemalo/issues/74)). No Unpaywall
 adapter is planned: Unpaywall now serves the same OpenAlex data and would need
 the person's email with each request. A location reaches a file only through
 an explicit `pmc:` or `arxiv:` evaluation. Next provider work is the

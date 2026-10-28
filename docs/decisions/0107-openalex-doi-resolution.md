@@ -1,8 +1,9 @@
 # 0107: DOI resolution through OpenAlex work lookup
 
-Status: accepted and implemented, 2026-10-28. Milestone 7, after OpenAlex work
-search ([decision 0106](0106-openalex-work-search.md)). Discovery only; not a
-1.0 gate.
+Status: accepted and implemented, 2026-10-28
+([issue 74](https://github.com/blisspixel/nemalo/issues/74)). Milestone 7, after
+OpenAlex work search ([decision 0106](0106-openalex-work-search.md)). Discovery
+only; not a 1.0 gate.
 
 ## Context
 
