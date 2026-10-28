@@ -320,8 +320,15 @@ real 7-Zip reader processes per run, deliberate boundaries that Windows starts
 slowly, so decision 0095's budget stays unless a separate decision trades them
 for speed.
 
-Milestone 7's remaining paper providers and DOI resolution may proceed
-alongside; they are not 1.0 gates. The PMC selected-version increment is
+Agent-doable alongside, before the candidate:
+[issue 75](https://github.com/blisspixel/nemalo/issues/75), acquisition output
+locks that accumulate in the system temporary folder (thousands per test run).
+It needs a decision because removing a lock file can break exclusion; the
+smallest option changes only the tests. It comes before the candidate so the
+candidate's gates leave no litter.
+
+Milestone 7's remaining paper providers may proceed alongside; they are not
+1.0 gates. The PMC selected-version increment is
 accepted under [decision 0100](docs/decisions/0100-pmc-selected-article-versions.md)
 and tracked in [issue 64](https://github.com/blisspixel/nemalo/issues/64); its
 acceptance receipt and alpha.19 release evidence are recorded there separately.
