@@ -320,12 +320,11 @@ real 7-Zip reader processes per run, deliberate boundaries that Windows starts
 slowly, so decision 0095's budget stays unless a separate decision trades them
 for speed.
 
-Agent-doable alongside, before the candidate:
-[issue 75](https://github.com/blisspixel/nemalo/issues/75), acquisition output
-locks that accumulate in the system temporary folder (thousands per test run).
-It needs a decision because removing a lock file can break exclusion; the
-smallest option changes only the tests. It comes before the candidate so the
-candidate's gates leave no litter.
+Acquisition output locks no longer accumulate from test runs: each acquiring
+test binary uses its own temporary folder
+([decision 0108](docs/decisions/0108-acquisition-lock-files.md),
+[issue 75](https://github.com/blisspixel/nemalo/issues/75)). Production
+locking is unchanged.
 
 Milestone 7's remaining paper providers may proceed alongside; they are not
 1.0 gates. The PMC selected-version increment is

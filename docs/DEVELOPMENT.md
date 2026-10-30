@@ -1223,6 +1223,11 @@ Real child processes, production durability operations, every recovery case and
 the default test timeout remain in place. Other packages may continue to use
 their test executable for the same handler.
 
+Acquisition leaves its output lock in the temporary folder by design. Every
+test package that acquires calls `tempdirtest.Run` from `TestMain`, which gives
+the binary its own temporary folder and removes it
+([decision 0108](decisions/0108-acquisition-lock-files.md)).
+
 After required counters have been merged and published, caller-owned coverage
 scratch is walked without following links, its files removed with `os.Remove`,
 then its directories removed in reverse order. Cleanup errors fail verification.

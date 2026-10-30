@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Test runs no longer leave acquisition output lock files in the system
+  temporary folder; each acquiring test package uses its own folder and
+  removes it (decision 0108). Acquisition locking is unchanged.
+
 ## 0.1.0-alpha.24
 
 - `evaluate openalex:WORK` and `evaluate doi:DOI` read one OpenAlex work, free

@@ -708,6 +708,8 @@ func sameContent(root *os.Root, name string, file *os.File) error {
 // one acquisition, so two acquisitions, from jobs or terminals, never write
 // one packet at once. The lock lives in the temporary folder, not in or
 // beside the packet, and the system releases it however the process ends.
+// The file is never removed, so every acquisition into one folder locks the
+// same file (decision 0108).
 func lockOutput(output string) (func(), error) {
 	abs, err := filepath.Abs(output)
 	if err != nil {
