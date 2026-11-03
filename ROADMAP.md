@@ -157,9 +157,9 @@ verified, not when code exists. No stage has a time estimate.
    The shared passive `jobs snapshot` prerequisite for
    [issue 59](https://github.com/blisspixel/nemalo/issues/59) is implemented in
    source under [decision 0088](docs/decisions/0088-non-mutating-library-job-snapshot.md).
-   The issue records verification. Its optional panel, explicit reader handoff
-   and native lifecycle acceptance were deferred past 1.0 by the user on
-   2026-10-24; the panel needs a recorded non-Go adapter decision first.
+   The issue records verification. The owner closed that issue as not planned
+   on 2026-10-30: an Omarchy desktop panel is outside the stated direction of
+   CLI, JSON, MCP and TUI. The snapshot and the TUI Jobs view stay.
    State's explicit F10 Jobs view consumes the same passive service. Collections
    now has offline status, revision comparison and a bound acquisition review in
    source ([decision 0089](docs/decisions/0089-collection-acquisition-review.md));
@@ -237,10 +237,11 @@ are recorded on those issues. The person-run sessions in 62 should now observe
 this layout and plain mode.
 The 1.0 release candidate remains tracked in
 [63](https://github.com/blisspixel/nemalo/issues/63), person-run checks in
-[62](https://github.com/blisspixel/nemalo/issues/62). Post-1.0 issues are:
-[59](https://github.com/blisspixel/nemalo/issues/59) (optional desktop panel,
-deferred 2026-10-24), [37](https://github.com/blisspixel/nemalo/issues/37) and
+[62](https://github.com/blisspixel/nemalo/issues/62). Post-1.0 issues still
+open are [37](https://github.com/blisspixel/nemalo/issues/37) and
 [38](https://github.com/blisspixel/nemalo/issues/38).
+[Issue 59](https://github.com/blisspixel/nemalo/issues/59) (optional desktop
+panel) was closed as not planned on 2026-10-30.
 
 Remaining stage 5 work, in order:
 

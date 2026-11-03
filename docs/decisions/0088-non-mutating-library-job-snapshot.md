@@ -2,12 +2,14 @@
 
 Status: decision recorded before Go implementation, 2026-10-23; the shared Go
 prerequisite is now implemented in source. Full acceptance is recorded separately
-in the issue receipt; the optional consumer, stage 5 and a release remain unfinished.
-This is the shared prerequisite in
-[issue 59](https://github.com/blisspixel/nemalo/issues/59), after milestone 9's
+in the issue receipt. The owner closed
+[issue 59](https://github.com/blisspixel/nemalo/issues/59) as not planned on
+2026-10-30, so the optional Omarchy consumer is not remaining work. Stage 5's
+person-run checks and the 1.0 release remain unfinished. This is the shared
+prerequisite filed on that issue, after milestone 9's
 [exact acceptance receipt](https://github.com/blisspixel/nemalo/issues/39#issuecomment-6376290156)
-at `51bb249`. The optional Omarchy consumer remains separate work. This decision
-adds no QML, new language exception, runtime, module, scanner or network request.
+at `51bb249`. This decision adds no QML, new language exception, runtime,
+module, scanner or network request.
 
 ## Observe without opening a writer
 
@@ -153,6 +155,7 @@ The observer itself checks lock identity and takes no lock-file body read.
 
 Run full canonical verification, native cgo race and actual all-six hosted checks,
 including exact Windows boundary cases. Publish an issue receipt against the
-implemented prerequisite. Keep issue 59 open until its separate consumer,
-explicit handoff, race/generation, disabled-bookmark and native lifecycle criteria
-are met. A passing prerequisite alone does not complete that issue or stage 5.
+implemented prerequisite. The owner closed issue 59 as not planned on
+2026-10-30. That close retires the optional panel. It does not change this
+prerequisite, and a passing prerequisite does not implement a panel or finish
+stage 5.

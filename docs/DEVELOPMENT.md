@@ -1063,8 +1063,8 @@ stall. Incomplete observations return their bounded valid observations and exit
 nonzero; cancellation, library identity changes and capability/close failures
 invalidate scoped output. Complete lines are validated strictly; a torn trailing
 line remains untouched and supplies no committed fact. This prerequisite does
-not implement a panel or complete issue 59; see
-[decision 0088](decisions/0088-non-mutating-library-job-snapshot.md).
+not implement a panel. Issue 59 was closed as not planned on 2026-10-30;
+see [decision 0088](decisions/0088-non-mutating-library-job-snapshot.md).
 The TUI's explicit F10 action in State uses this same service and configured
 jobs directory, with selectable recorded summaries and coverage details.
 It refreshes only on F10 and preserves the existing cancellation/generation
