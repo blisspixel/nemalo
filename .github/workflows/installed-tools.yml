@@ -10,10 +10,6 @@ on:
 permissions:
   contents: read
 
-concurrency:
-  group: installed-tools-${{ github.ref }}
-  cancel-in-progress: true
-
 jobs:
   installed:
     strategy:
