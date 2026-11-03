@@ -339,11 +339,15 @@ is a free OpenAlex single-work lookup
 [issue 74](https://github.com/blisspixel/nemalo/issues/74)). No Unpaywall
 adapter is planned: Unpaywall now serves the same OpenAlex data and would need
 the person's email with each request. A location reaches a file only through
-an explicit `pmc:` or `arxiv:` evaluation. Next provider work is the
-DOAB/OAPEN, OpenStax and LibreTexts cohort, after their contracts and asset
-formats are verified. A configured OpenAlex key is separate later work with
-its own secret-handling decision. Start each session with the
-workspace check in `AGENTS.md`.
+an explicit `pmc:` or `arxiv:` evaluation. The OAPEN Library explicit-handle
+contract was reconfirmed on 2026-11-03
+([decision 0109](docs/decisions/0109-oapen-library-handle.md),
+[issue 77](https://github.com/blisspixel/nemalo/issues/77)). It allows a
+later adapter to read one `oapen:20.500.12657/N` item and its ORIGINAL
+bitstream, on `library.oapen.org` only. No adapter is implemented. Keyword
+search, DOAB file access, OpenStax and LibreTexts stay unverified. A configured OpenAlex
+key is separate later work with its own secret-handling decision. Start each
+session with the workspace check in `AGENTS.md`.
 
 ## Implementation status
 
@@ -925,8 +929,11 @@ Acceptance:
   and never silently replaces exact original text. Use the shared access contract.
 - Use approved retrieval channels, per-asset rights, quotas, and configured usage
   budgets. Retired Unpaywall search is not an implementation target.
-- Add DOAB/OAPEN, OpenStax, and LibreTexts as a separate textbook/scholarly-book
-  cohort after stable contracts and actual asset formats are verified.
+- Add the textbook cohort only after each contract and asset format is
+  verified. OAPEN's explicit-handle contract is recorded
+  ([decision 0109](docs/decisions/0109-oapen-library-handle.md)); the adapter
+  is not implemented. DOAB file access, OpenStax and LibreTexts remain
+  unverified.
 - LibreTexts exposes offered web/PDF assets and book licenses without implying EPUB support.
 - Test different paper versions, annotated files, poor scans, and metadata
   conflicts. Never merge on title, DOI, or extracted text alone.

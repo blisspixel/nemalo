@@ -1322,6 +1322,11 @@ inside Nemalo and model/harness integrations remain post-1.0. Issues 1 and 2 are
 closed; remaining OCR and column reconstruction are milestone 7 work, while the
 separate stage 3 receipt governs acceptance of explicit decoded audio.
 Selected PMC versions are accepted in alpha.19 under
-[decision 0100](decisions/0100-pmc-selected-article-versions.md). Further paper
-providers and DOI resolution remain separately scoped milestone 7 work; no new
-provider wave has started.
+[decision 0100](decisions/0100-pmc-selected-article-versions.md). OpenAlex work
+search and DOI resolution are accepted under
+[decision 0106](decisions/0106-openalex-work-search.md) and
+[decision 0107](decisions/0107-openalex-doi-resolution.md). The OAPEN Library
+explicit-handle contract was reconfirmed on 2026-11-03
+([decision 0109](decisions/0109-oapen-library-handle.md)); no adapter is
+implemented. OpenStax, LibreTexts, DOAB file access, OCR and column
+reconstruction remain separately scoped milestone 7 work.

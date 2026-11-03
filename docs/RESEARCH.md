@@ -198,6 +198,31 @@ Installed-reader experiments with generated stored books and known metadata
 verify cleanup, byte-exact restore and purge while retaining hidden records and
 unsupported metadata. This does not establish volume or nested RAR coverage.
 
+## OAPEN Library and DOAB, rechecked 2026-11-03
+
+Observations for [decision 0109](decisions/0109-oapen-library-handle.md). They
+are not an adapter and not a permanent pin.
+
+The metadata article at `https://oapen.org/article/metadata` is current and
+says the feeds are CC0. `https://oapen.org/article/8185269-search-using-a-rest-api`
+returns 404. `GET https://library.oapen.org/rest` is a DSpace REST index that
+documents bitstream retrieve and does not list search or handle. Identify
+reports `deletedRecord` transient and the sample handle prefix `20.500.12657`.
+Handle `20.500.12657/25287` returned a book whose `archived` and `withdrawn`
+values are the strings `true` and `false`, with one ORIGINAL PDF. Retrieving
+that bitstream returned `application/pdf` and a linearized length equal to the
+declared 9593943 bytes. `oai_dc` for the same handle carries
+`info:eu-repo/semantics/openAccess` and no file URL. One handle-scoped
+`/rest/search` call returned `x-total-count`, `x-limit` and `x-offset`. One
+`dc.type:chapter` search returned HTTP 503, so no chapter bitstream was
+observed.
+
+DOAB handle `20.500.12854/26303` is the directory record of that book. Its
+REST search, documented by the August 2026 guide on `s3.cern.ch`, returned
+thumbnail and export bitstreams and a download URL on `library.oapen.org`.
+The two thumbnail rights URIs named CC BY-NC 4.0 and 3.0. No rate-limit header
+was observed. The full JSON catalog was not measured.
+
 ## Terminal interaction reviewed on 2026-10-08
 
 The later [reader and paced-reading review](READER-REVIEW.md), checked against
