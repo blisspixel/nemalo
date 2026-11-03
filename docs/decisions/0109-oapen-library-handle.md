@@ -1,8 +1,9 @@
 # 0109: OAPEN Library explicit handle
 
-Status: accepted as a contract record, 2026-11-03
+Status: accepted, 2026-11-03
 ([issue 77](https://github.com/blisspixel/nemalo/issues/77)). Milestone 7.
-No adapter is implemented by this decision. Not a 1.0 gate.
+Not a 1.0 gate. The adapter that follows this contract is implemented.
+This record remains the contract.
 
 ## Context
 
@@ -110,3 +111,9 @@ adopted from an unread page.
 Metadata CC0 does not license a book. A chapter export exists on the metadata
 page; chapter bitstream shape was not observed, so the adapter keeps `dc.type`
 and still selects files by the `ORIGINAL` bundle alone.
+
+The adapter is `internal/discovery`. `evaluate oapen:20.500.12657/N` and
+`acquire oapen:20.500.12657/N --file NAME` use this contract through the
+shared services, including TUI review and MCP `catalog_evaluate`.
+`catalog_search` and MCP acquisition do not gain OAPEN. Keyword search,
+DOAB, OpenStax, and LibreTexts stay out.

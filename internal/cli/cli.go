@@ -274,7 +274,7 @@ func Execute(ctx context.Context, args []string, out, errOut io.Writer, service 
 	switch command {
 	case "acquire":
 		if flags.NArg() != 1 {
-			return write(nil, errors.New("use acquire archive:ITEM or gutenberg:NUMBER --file NAME --output NEW_DIRECTORY"), 2)
+			return write(nil, errors.New("use acquire archive:ITEM, gutenberg:NUMBER, arxiv:IDvN, pmc:PMCnumber.version, or oapen:20.500.12657/N --file NAME --output NEW_DIRECTORY"), 2)
 		}
 		detection := c.OnDetection
 		flags.Visit(func(f *flag.Flag) {
@@ -406,9 +406,10 @@ func Execute(ctx context.Context, args []string, out, errOut io.Writer, service 
 		editionID := discovery.ValidOpenLibraryEdition(id)
 		arxivID := discovery.ValidArxivID(id)
 		pmcID := discovery.ValidPMCID(id)
+		oapenID := discovery.ValidOAPENID(id)
 		workDOI := discovery.ValidOpenAlexWork(id) || discovery.ValidDOI(id)
-		if flags.NArg() != 1 || (!archiveID && !gutenbergID && !workID && !editionID && !arxivID && !pmcID && !workDOI) {
-			return write(nil, errors.New("evaluate requires exactly one archive:ITEM, gutenberg:NUMBER, arxiv:ID[vN], pmc:PMCnumber[.version], openalex:WORK, doi:DOI, or openlibrary:WORK or openlibrary:EDITION identifier"), 2)
+		if flags.NArg() != 1 || (!archiveID && !gutenbergID && !workID && !editionID && !arxivID && !pmcID && !oapenID && !workDOI) {
+			return write(nil, errors.New("evaluate requires exactly one archive:ITEM, gutenberg:NUMBER, arxiv:ID[vN], pmc:PMCnumber[.version], oapen:20.500.12657/N, openalex:WORK, doi:DOI, or openlibrary:WORK or openlibrary:EDITION identifier"), 2)
 		}
 		if *listFiles && *listEditions {
 			return write(nil, errors.New("evaluate accepts either --files or --editions"), 2)

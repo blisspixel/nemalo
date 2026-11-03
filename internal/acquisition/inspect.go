@@ -69,6 +69,9 @@ func InspectPacket(dir string) PacketState {
 	if discovery.ValidArxivID(intent.Request.SourceID) {
 		return retained("an arXiv transfer cannot be resumed")
 	}
+	if discovery.ValidOAPENID(intent.Request.SourceID) {
+		return retained("an OAPEN transfer cannot be resumed")
+	}
 	if !resumable(root, file) {
 		return retained("its transfer has no strong validator or no partial content, so it cannot be resumed")
 	}

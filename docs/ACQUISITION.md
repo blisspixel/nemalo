@@ -248,3 +248,22 @@ retained, and flags/citation/DOI/PMID remain in the receipt. Missing or unknown
 rights do not enable acquisition. An interrupted packet cannot resume and stays
 retained for review; a new acquisition requires new output. No collection or MCP
 selection is added. See [decision 0100](decisions/0100-pmc-selected-article-versions.md).
+
+## OAPEN Library handles
+
+`evaluate oapen:20.500.12657/N` reads one item from `library.oapen.org`.
+`N` is 1 to 10 digits. Any other prefix, including DOAB `20.500.12854`, is
+refused. The evaluation lists ORIGINAL bitstreams only. `withdrawn` must be
+the JSON string `false`, and `archived` the JSON string `true`, before a
+file URL is offered. A JSON boolean is not that string. Bitstream `code` and
+`dc.rights.uri` are file declarations, separate from item rights and from an
+open access statement. The language string is kept as returned.
+
+`acquire oapen:20.500.12657/N --file NAME` downloads one selected ORIGINAL
+EPUB, PDF, MP3, M4B, or M4A from
+`/rest/bitstreams/<uuid>/retrieve` on the same host. The UUID comes from
+that evaluation. Size and MD5 stay source claims until the transfer measures
+the bytes. Redirects are refused. An interrupted packet cannot be resumed.
+There is no OAPEN search and no MCP acquisition. `catalog_evaluate` can read
+the handle when network tools are enabled. See
+[decision 0109](decisions/0109-oapen-library-handle.md).

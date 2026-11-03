@@ -324,10 +324,10 @@ func New(service app.Service, opts Options) (*mcp.Server, error) {
 				}
 				return service.SearchSourceOrdered(ctx, source, in.Query, defaultString(in.Order, discovery.OrderRelevance), defaultInt(in.Limit, 10), in.Offset)
 			})
-		add(&r, "catalog_evaluate", "Read Internet Archive item and file declarations: rights statements, restrictions, sizes, and checksums; or one OpenAlex work by openalex:WORK or doi:DOI with the open access locations OpenAlex states. Downloads and opens nothing.", true,
+		add(&r, "catalog_evaluate", "Read Internet Archive item and file declarations: rights statements, restrictions, sizes, and checksums; one OpenAlex work by openalex:WORK or doi:DOI with the open access locations OpenAlex states; or one OAPEN Library handle oapen:20.500.12657/N and its ORIGINAL bitstream declarations. Downloads and opens nothing.", true,
 			func(ctx context.Context, in evaluateInput) (discovery.Evaluation, error) {
-				if !discovery.ValidArchiveID(in.ID) && !discovery.ValidOpenAlexWork(in.ID) && !discovery.ValidDOI(in.ID) {
-					return evaluationShape(discovery.Evaluation{}), errors.New("id must be archive:ITEM, openalex:WORK or doi:DOI")
+				if !discovery.ValidArchiveID(in.ID) && !discovery.ValidOpenAlexWork(in.ID) && !discovery.ValidDOI(in.ID) && !discovery.ValidOAPENID(in.ID) {
+					return evaluationShape(discovery.Evaluation{}), errors.New("id must be archive:ITEM, openalex:WORK, doi:DOI, or oapen:20.500.12657/N")
 				}
 				e, err := service.Evaluate(ctx, in.ID)
 				return evaluationShape(e), err
@@ -585,7 +585,7 @@ func evaluationShape(e discovery.Evaluation) discovery.Evaluation {
 }
 
 type evaluateInput struct {
-	ID string `json:"id" jsonschema:"Internet Archive item as archive:ITEM, or an OpenAlex work as openalex:WORK or doi:DOI"`
+	ID string `json:"id" jsonschema:"Internet Archive item as archive:ITEM, an OpenAlex work as openalex:WORK or doi:DOI, or an OAPEN Library handle as oapen:20.500.12657/N"`
 }
 
 func defaultString(v, d string) string {

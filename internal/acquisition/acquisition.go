@@ -75,10 +75,11 @@ func (r Request) Validate() error {
 	gutenbergID := discovery.ValidGutenbergID(r.SourceID)
 	arxivID := discovery.ValidArxivID(r.SourceID)
 	pmcID := discovery.ValidPMCID(r.SourceID)
-	if (!archiveID && !gutenbergID && !arxivID && !pmcID) || r.File == "." || !fs.ValidPath(r.File) || len(r.File) > 1000 || strings.ContainsAny(r.File, "\\:\x00\r\n") || r.Output == "" || r.MaxBytes < 1 || r.MaxBytes > DefaultMaxBytes(r.File) {
-		return errors.New("acquire requires archive:ITEM, gutenberg:NUMBER, arxiv:IDvN, or pmc:PMCnumber.version, an exact source filename, a new output directory, and a byte budget of 1 through 268435456, or 2147483648 for an M4B or M4A")
+	oapenID := discovery.ValidOAPENID(r.SourceID)
+	if (!archiveID && !gutenbergID && !arxivID && !pmcID && !oapenID) || r.File == "." || !fs.ValidPath(r.File) || len(r.File) > 1000 || strings.ContainsAny(r.File, "\\:\x00\r\n") || r.Output == "" || r.MaxBytes < 1 || r.MaxBytes > DefaultMaxBytes(r.File) {
+		return errors.New("acquire requires archive:ITEM, gutenberg:NUMBER, arxiv:IDvN, pmc:PMCnumber.version, or oapen:20.500.12657/N, an exact source filename, a new output directory, and a byte budget of 1 through 268435456, or 2147483648 for an M4B or M4A")
 	}
-	if archiveID && format(r.File) == "" {
+	if (archiveID || oapenID) && format(r.File) == "" {
 		return errors.New("acquisition currently supports selected EPUB, PDF, MP3, M4B, and M4A files")
 	}
 	if pmcID {
@@ -632,6 +633,10 @@ func selectFile(e discovery.Evaluation, request Request) (discovery.OfferedFile,
 	case e.Source == "gutenberg" && e.Access == discovery.GutenbergMirrorAccess:
 		if f.Access != discovery.GutenbergEPUBAccess || f.DownloadURL == "" || f.Bytes == nil || *f.Bytes < 1 || *f.Bytes > request.MaxBytes || contentFormat(f) != "epub" {
 			return f, errors.New("selected file is not an offered Gutenberg EPUB with a positive declared extent within budget")
+		}
+	case e.Source == "oapen" && e.Access == discovery.OAPENAccess:
+		if !discovery.ValidOAPENOffer(f) || f.Bytes == nil || *f.Bytes > request.MaxBytes || contentFormat(f) == "" {
+			return f, errors.New("selected file needs an OAPEN ORIGINAL bitstream, a supported type, declared size within budget and MD5")
 		}
 	default:
 		return f, errors.New("source evaluation is incomplete, restricted, uncertain, or mismatched")

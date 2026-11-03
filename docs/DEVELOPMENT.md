@@ -96,7 +96,12 @@ retraction, and a PMCID can be evaluated as `pmc:PMCID`
 or `evaluate doi:DOI` reads one work free of that budget and lists its stated
 open access locations, opening none; a PMC or arXiv location names the `pmc:`
 or `arxiv:` identifier to evaluate next
-([decision 0107](decisions/0107-openalex-doi-resolution.md)). `--source all` searches Open
+([decision 0107](decisions/0107-openalex-doi-resolution.md)).
+`evaluate oapen:20.500.12657/N` reads one OAPEN Library item from
+library.oapen.org and lists ORIGINAL bitstreams. `acquire` downloads one
+selected ORIGINAL file by its UUID. `N` is 1 to 10 digits. Other prefixes
+are refused. There is no OAPEN search
+([decision 0109](decisions/0109-oapen-library-handle.md)). `--source all` searches Open
 Library and Archive at once, and Gutenberg's local catalog when one is
 configured, each by relevance in its own section with its own status; one
 source's failure does not hide another's results, results are not ranked
@@ -1121,6 +1126,40 @@ bibliographic identities or infer authors from a citation string. Ordinary
 PDF content access remains source-bound and offline. See
 [decision 0100](decisions/0100-pmc-selected-article-versions.md).
 
+## OAPEN Library handles
+
+```sh
+nemalo evaluate oapen:20.500.12657/25287
+nemalo acquire oapen:20.500.12657/25287 --file 9789085551201_OA_version.pdf --output /path/to/new-packet
+```
+
+Evaluation reads `GET /rest/handle/20.500.12657/N?expand=metadata,bitstreams`
+through the shared metadata client. The suffix is the only caller-supplied
+path segment. The response is at most 2 MiB, with the existing one-request
+per second pace, 30-second deadline, and at most two retries after HTTP
+429, 500, 502, 503, or 504. `archived` and `withdrawn` must be the JSON
+strings `true` and `false` before any file URL is offered. `archived`
+`true` is the observed state of a retrievable book and does not itself
+suppress a URL. A missing flag or a JSON boolean does. Only bitstreams
+whose bundle name is `ORIGINAL` are listed. `TEXT`, `THUMBNAIL`, `EXPORT`,
+and any other bundle are omitted. An item with no ORIGINAL bitstream is a
+complete evaluation that lists no file. Duplicate ORIGINAL names or UUIDs
+are refused.
+
+The language string is kept as returned. `dc.type`, issued year, ISBN, DOI,
+and publisher are declarations. Item rights and an open access statement
+stay separate from a bitstream's `code` and `dc.rights.uri`. Publisher
+sites, DOAB URLs, and paths built from file names are not opened.
+
+Acquisition downloads `https://library.oapen.org/rest/bitstreams/<uuid>/retrieve`
+for one selected EPUB, PDF, MP3, M4B, or M4A. The UUID is one the fresh
+evaluation listed. Redirects are refused. Declared size and MD5 are checked
+by the transfer, which records the measured SHA-256. An interrupted packet
+stays retained and cannot be resumed. There is no search, no DOAB file
+access, and no MCP acquisition. TUI review and MCP `catalog_evaluate` use
+the same evaluation. See
+[decision 0109](decisions/0109-oapen-library-handle.md).
+
 ## Configuration
 
 Configuration is an optional strict JSON object with an optional `schema_version`
@@ -1325,8 +1364,8 @@ Selected PMC versions are accepted in alpha.19 under
 [decision 0100](decisions/0100-pmc-selected-article-versions.md). OpenAlex work
 search and DOI resolution are accepted under
 [decision 0106](decisions/0106-openalex-work-search.md) and
-[decision 0107](decisions/0107-openalex-doi-resolution.md). The OAPEN Library
-explicit-handle contract was reconfirmed on 2026-11-03
-([decision 0109](decisions/0109-oapen-library-handle.md)); no adapter is
-implemented. OpenStax, LibreTexts, DOAB file access, OCR and column
+[decision 0107](decisions/0107-openalex-doi-resolution.md). The OAPEN Library explicit handle is implemented
+([decision 0109](decisions/0109-oapen-library-handle.md)): one
+`oapen:20.500.12657/N` item and its ORIGINAL file on `library.oapen.org`.
+OpenStax, LibreTexts, DOAB file access, OCR and column
 reconstruction remain separately scoped milestone 7 work.

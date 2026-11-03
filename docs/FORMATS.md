@@ -85,6 +85,7 @@ refusal, gates compatibility there.
 | Acceptance reports | `nemalo-native-check/1`, `nemalo-terminal-check/1`, `nemalo-installed-tools-check/1` (tooling only) |
 | State IDs | `library:`, `operation:`, `cleanup:`, `bookmark:`, `job:` followed by 32 hex digits |
 | Selected PMC sources | `pmc:PMCnumber.N` binds the explicitly selected distributed version; the file is `PMCnumber.N.pdf`. Existing receipt and holding source fields carry these values. Version objects can change, so the source ID is not byte identity. No new record schema or collection selection is introduced ([0100](decisions/0100-pmc-selected-article-versions.md)). |
+| Selected OAPEN sources | `oapen:20.500.12657/N` binds one Library handle. The selected ORIGINAL file keeps its declared name. Existing receipt and holding source fields carry these values. No new record schema is introduced ([0109](decisions/0109-oapen-library-handle.md)). |
 
 ## Freeze status
 

@@ -110,6 +110,14 @@ func TestNextStepsFollowTheFirstBookPath(t *testing.T) {
 	}
 }
 
+func TestNextAfterOAPENEvaluationNamesTheOriginalPDF(t *testing.T) {
+	e := discovery.Evaluation{ID: "oapen:20.500.12657/25287", Source: "oapen"}
+	got := NextAfterEvaluation(e, []acquisition.Alternative{{File: "notes.txt", Format: "txt"}, {File: "9789085551201_OA_version.pdf", Format: "pdf"}})
+	if got != "Next: nemalo acquire oapen:20.500.12657/25287 --file 9789085551201_OA_version.pdf --output NEW_DIRECTORY\n" {
+		t.Fatal(got)
+	}
+}
+
 func TestSuggestedCommandsNeverExpandProviderNames(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		t.Skip("POSIX quoting")

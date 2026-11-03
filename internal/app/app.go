@@ -72,6 +72,13 @@ func (s Service) acquireProvider(id string) (acquisition.Provider, error) {
 		}
 		return discovery.Files{Gutenberg: g}, nil
 	}
+	if discovery.ValidOAPENID(id) {
+		p, ok := s.Providers["oapen"].(acquisition.Provider)
+		if !ok {
+			return nil, errors.New("OAPEN acquisition is unavailable")
+		}
+		return p, nil
+	}
 	provider, ok := s.Providers["archive"].(acquisition.Provider)
 	if !ok {
 		return nil, errors.New("archive acquisition is unavailable")
@@ -224,6 +231,7 @@ func New() Service {
 		"gutenberg":   discovery.NewGutenberg(),
 		"arxiv":       arxivSearcher{discovery.NewArxiv()},
 		"pmc":         pmcSearcher{discovery.NewPMC()},
+		"oapen":       oapenSearcher{discovery.NewOAPEN()},
 	}}
 }
 
@@ -232,6 +240,13 @@ type pmcSearcher struct{ *discovery.PMC }
 
 func (pmcSearcher) Search(context.Context, string, int, int) (discovery.Page, error) {
 	return discovery.Page{}, errors.New("PMC requires an explicit identifier with evaluate pmc:PMCnumber; it has no search here")
+}
+
+// oapenSearcher registers one explicit OAPEN handle without enabling search.
+type oapenSearcher struct{ *discovery.OAPEN }
+
+func (oapenSearcher) Search(context.Context, string, int, int) (discovery.Page, error) {
+	return discovery.Page{}, errors.New("OAPEN requires an explicit handle with evaluate oapen:20.500.12657/N; it has no search here")
 }
 
 // arxivSearcher registers explicit arXiv evaluation without enabling search.

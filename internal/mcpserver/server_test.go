@@ -186,6 +186,23 @@ func TestToolsAreReadOnlyAndNetworkIsExplicit(t *testing.T) {
 	}
 }
 
+func TestCatalogEvaluateAcceptsOneOAPENHandle(t *testing.T) {
+	var ids []string
+	s := connect(t, app.Service{Providers: map[string]app.Searcher{"oapen": works{&ids}}, Scanner: noScanner{t}}, Options{Scopes: []string{t.TempDir()}, Network: true, Version: "test"})
+	res, env := call(t, s, "catalog_evaluate", map[string]any{"id": "oapen:20.500.12657/25287"})
+	if res.IsError || len(ids) != 1 || ids[0] != "oapen:20.500.12657/25287" {
+		t.Fatal(res, env, ids)
+	}
+	res, env = call(t, s, "catalog_evaluate", map[string]any{"id": "oapen:20.500.12854/26303"})
+	if !res.IsError || len(ids) != 1 || !strings.Contains(env["error"].(string), "oapen:20.500.12657/N") {
+		t.Fatal(res, env, ids)
+	}
+	res, env = call(t, s, "catalog_search", map[string]any{"query": "books", "source": "oapen"})
+	if !res.IsError || len(ids) != 1 {
+		t.Fatal("search accepted OAPEN", res, env, ids)
+	}
+}
+
 func TestRecordingByteIdentitiesThroughReadOnlyMCP(t *testing.T) {
 	ctx := context.Background()
 	// MCP scopes resolve parent aliases, including macOS /var -> /private/var.

@@ -186,4 +186,9 @@ so confirm the exact source and file first:
   `--recording FORMAT` for every track of a declared audiobook recording
 
 Network catalog tools (`catalog_search`, `catalog_evaluate`) exist only when the
-server was started with `--allow-network`.
+server was started with `--allow-network`. `catalog_evaluate` can read one
+OAPEN Library handle, `oapen:20.500.12657/N`. It lists ORIGINAL file
+declarations and does not download. There is no OAPEN search. To acquire
+one of those files, suggest
+`nemalo acquire oapen:20.500.12657/N --file NAME --output NEW_DIRECTORY`
+and let the user run it. `acquisition_start` does not accept that handle.

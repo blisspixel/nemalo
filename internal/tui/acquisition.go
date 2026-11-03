@@ -77,7 +77,7 @@ func (m *model) requestDownload() tea.Cmd {
 	// An existing packet for this file with intent and no receipt is an
 	// interrupted transfer: d reviews resuming it instead of a new download.
 	request.Resume = interruptedPacket(abs)
-	if request.Resume && (discovery.ValidPMCID(sourceID) || discovery.ValidArxivID(sourceID)) {
+	if request.Resume && (discovery.ValidPMCID(sourceID) || discovery.ValidArxivID(sourceID) || discovery.ValidOAPENID(sourceID)) {
 		m.status = "This provider cannot resume. The interrupted packet is retained; choose a new intake directory."
 		m.outcome = outcomeFailed
 		m.resize()
@@ -98,7 +98,9 @@ func (m *model) requestDownload() tea.Cmd {
 		m.resize()
 		return nil
 	}
-	if discovery.ValidPMCID(request.SourceID) {
+	if discovery.ValidOAPENID(request.SourceID) {
+		m.setReport(fmt.Sprintf("Acquire one OAPEN Library file\n\nSource: %s\nSelected file: %s\nNew intake directory: %s\nMaximum transfer: %d bytes\n\nReads this handle again from library.oapen.org and downloads the selected ORIGINAL bitstream by its UUID. TEXT, THUMBNAIL, EXPORT and other bundles are not acquired. Size and MD5 are source claims; the transfer checks them and records measured SHA-256. The bitstream code and rights URI are declarations, separate from item rights. An interrupted packet is retained and cannot be resumed.\n\nRuns local assessment and the installed scanner. This is untrusted intake, not checked publication. Existing output is refused.\n\nEnter acquires this exact selection. Escape returns without writing.\n", request.SourceID, request.File, request.Output, request.MaxBytes))
+	} else if discovery.ValidPMCID(request.SourceID) {
 		m.setReport(fmt.Sprintf("Acquire one PMC article version\n\nSource: %s\nSelected file: %s\nNew intake directory: %s\nMaximum transfer: %d bytes\n\nReads fresh version metadata from pmc-oa-opendata.s3.amazonaws.com, then checks the exact PDF size and MD5 and records measured SHA-256. Open-access and known Creative Commons declarations are required. NLM is the source of the data and does not endorse Nemalo. Version objects can change; this observation may not reflect current NLM data.\n\nRuns local assessment and the installed scanner. This is untrusted intake, not checked publication. Existing output is refused. Interrupted packets are retained and cannot be resumed.\n\nEnter acquires this exact selection. Escape returns without writing.\n", request.SourceID, request.File, request.Output, request.MaxBytes))
 	} else if discovery.ValidArxivID(request.SourceID) {
 		m.setReport(fmt.Sprintf("Acquire one arXiv paper version\n\nSource: %s\nSelected file: %s\nNew intake directory: %s\nMaximum transfer: %d bytes\n\nReads the paper's arXiv record again, then downloads this version's PDF from export.arxiv.org at one request every three seconds. arXiv publishes no checksum: the transfer must be exactly the length the host declares, and Nemalo records the SHA-256 it measures. An interrupted transfer cannot be resumed.\n\nCreates intent.json, transfer.json, content.pdf, and receipt.json on success. Existing output is refused. An interrupted packet is kept.\n\nRuns local structure checks without rendering or execution, then scans the downloaded bytes once with the installed scanner, if one is installed. A detection moves the file to the Nemalo quarantine instead of intake. This is untrusted intake, not checked publication. The license applies only when this is the latest version.\n\nEnter acquires this exact selection. Escape returns without writing.\n", request.SourceID, request.File, request.Output, request.MaxBytes))

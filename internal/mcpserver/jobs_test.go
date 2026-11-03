@@ -91,6 +91,7 @@ func TestJobToolsRunAcquisitionAndRescanDurably(t *testing.T) {
 		"both kinds":    {"source_id": "archive:demo", "file": "paper.pdf", "recording_format": "64Kbps MP3", "output": filepath.Join(intake, "packet")},
 		"no name":       {"source_id": "archive:demo", "file": "paper.pdf", "output": intake + string(filepath.Separator) + ".."},
 		"gutenberg":     {"source_id": "gutenberg:1342", "file": "1342.epub.noimages", "output": filepath.Join(intake, "gutenberg")},
+		"oapen":         {"source_id": "oapen:20.500.12657/25287", "file": "book.pdf", "output": filepath.Join(intake, "oapen")},
 	} {
 		if res, _ := call(t, s, "acquisition_start", args); !res.IsError {
 			t.Fatal(name, "started")

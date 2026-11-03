@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+- `evaluate oapen:20.500.12657/N` reads one OAPEN Library item from
+  library.oapen.org and lists its ORIGINAL files. `acquire` downloads one
+  selected EPUB, PDF, MP3, M4B, or M4A by that bitstream's UUID. `withdrawn`
+  must be the string false, and `archived` the string true, before a file
+  URL is offered. Bitstream code and rights URI stay declarations. There is
+  no OAPEN search, and an interrupted packet cannot be resumed. The same
+  evaluation is in the TUI and MCP `catalog_evaluate`. MCP does not acquire
+  it (decision 0109).
 - Test runs no longer leave acquisition output lock files in the system
   temporary folder; each acquiring test package uses its own folder and
   removes it (decision 0108). Acquisition locking is unchanged.

@@ -762,6 +762,10 @@ seconds, with no search
 PMC uses the same selected-acquisition services for explicit version PDFs, with
 exact-version CC/open-access declarations, size and MD5 checks, one checked host
 and shared request pacing ([decision 0100](decisions/0100-pmc-selected-article-versions.md)).
+OAPEN evaluation and acquisition accept only `oapen:20.500.12657/N` on
+`library.oapen.org`, listing ORIGINAL bitstreams and downloading one selected
+UUID. There is no OAPEN search
+([decision 0109](decisions/0109-oapen-library-handle.md)).
 Website search and the wider provider behavior below remain planned.
 
 Provider capabilities distinguish search, lookup, asset resolution, download,

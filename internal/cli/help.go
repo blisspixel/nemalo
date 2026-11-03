@@ -80,7 +80,7 @@ against each other. Sort and page one source at a time.
 `,
 	"evaluate": `nemalo evaluate ID [--files|--editions]
   ID is archive:ITEM, gutenberg:NUMBER, arxiv:ID, pmc:PMCnumber[.version],
-  openalex:WORK, doi:DOI or openlibrary:ID.
+  oapen:20.500.12657/N, openalex:WORK, doi:DOI or openlibrary:ID.
   Inspect source-declared files, rights, and access restrictions.
   gutenberg:NUMBER without --files is one local catalog row and lists no
   files. --files fetches one Gutenberg bibliographic record and lists EPUB
@@ -103,6 +103,12 @@ against each other. Sort and page one source at a time.
   opens none of them. A location on PMC or arXiv names its pmc: or arxiv:
   identifier, which can then be evaluated. A DOI that resolves to a work
   stating another DOI is reported.
+  oapen:20.500.12657/N reads one OAPEN Library item from library.oapen.org
+  and lists ORIGINAL bitstreams only. N is 1 to 10 digits. Any other prefix,
+  including DOAB 20.500.12854, is refused. withdrawn must be the string false,
+  and archived the string true, before a file URL is offered. Bitstream code
+  and dc.rights.uri are declarations, separate from item rights. There is no
+  OAPEN search.
 `,
 	"catalog": `nemalo catalog fetch gutenberg --output FILE
   Download the official Gutenberg catalog to a new file. Search does not do
@@ -116,7 +122,12 @@ nemalo acquire gutenberg:NUMBER --file NAME --output NEW_DIRECTORY
   1342.epub.noimages, into untrusted intake.
 nemalo acquire arxiv:IDvN --file IDvN.pdf --output NEW_DIRECTORY
 nemalo acquire pmc:PMCnumber.N --file PMCnumber.N.pdf --output NEW_DIRECTORY
-  Download one arXiv paper version's PDF; the version must be explicit.
+  Download one arXiv paper version's PDF, or one PMC version's PDF. The
+  version must be explicit. An interrupted packet cannot be resumed.
+nemalo acquire oapen:20.500.12657/N --file NAME --output NEW_DIRECTORY
+  Download one ORIGINAL file that handle lists. The name must be an EPUB,
+  PDF, MP3, M4B, or M4A. Size and MD5 are source claims checked by the
+  transfer. An interrupted packet cannot be resumed.
 nemalo acquire archive:ITEM --recording FORMAT --output NEW_DIRECTORY [--resume]
   Download every track of a declared recording, in order.
 

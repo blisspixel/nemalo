@@ -58,7 +58,7 @@ func (m *model) formFields() []formField {
 	case "audit":
 		label, hint, second = "Catalog", "Catalog file, or a library folder to check", "Root"
 	case "evaluate":
-		label, hint, second = "Item ID", "archive:ITEM, gutenberg:NUMBER, or openlibrary:WORK/EDITION", "Intake"
+		label, hint, second = "Item ID", "archive:ITEM, gutenberg:NUMBER, arxiv:ID, pmc:PMCnumber, oapen:20.500.12657/N, or openlibrary:WORK/EDITION", "Intake"
 	case "state":
 		label, hint, second = "Folder", "Existing library folder; Enter reads status", "Source"
 	case "jobs":
