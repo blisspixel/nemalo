@@ -8,10 +8,6 @@ on:
 permissions:
   contents: read
 
-concurrency:
-  group: ci-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
-
 jobs:
   # Every architecture a release ships runs natively (decision 0099): Linux
   # amd64/arm64, macOS arm64/Intel and Windows amd64/arm64.

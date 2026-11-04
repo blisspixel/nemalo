@@ -14,10 +14,6 @@ on:
 permissions:
   contents: read
 
-concurrency:
-  group: fuzz-${{ github.ref }}
-  cancel-in-progress: true
-
 jobs:
   fuzz:
     runs-on: ubuntu-latest
