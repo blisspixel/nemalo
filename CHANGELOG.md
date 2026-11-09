@@ -23,6 +23,11 @@
 - Test runs no longer leave acquisition output lock files in the system
   temporary folder; each acquiring test package uses its own folder and
   removes it (decision 0108). Acquisition locking is unchanged.
+- On macOS, the installed-tools job still installs the current Homebrew
+  ClamAV first. If that build rejects the downloaded virus database, the job
+  installs the last Homebrew formula built against OpenSSL 3 and updates
+  signatures with that freshclam. Linux keeps the distribution package
+  (decision 0093).
 
 ## 0.1.0-alpha.24
 

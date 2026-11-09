@@ -107,6 +107,15 @@ versions float with the runner images and are recorded in each report rather
 than pinned. Acceptance requires a dispatched run at the exact head on all
 three OSes.
 
+On 2026-11-09 the current Homebrew ClamAV bottle (1.5.4 revision 2, built
+against OpenSSL 4) rejected a downloaded `daily.cvd` during freshclam's
+database test (`cli_loadinfo: Incorrect digital signature`, malformed
+database), twice. The macOS job still installs that current bottle first. Only
+when freshclam's database test fails does it install the last Homebrew formula
+built against OpenSSL 3 (homebrew-core `54a49eff`, ClamAV 1.5.2) and update
+signatures with that freshclam. Linux keeps the distribution package. The
+report records the ClamAV that actually ran.
+
 ## Doctor and 7-Zip naming
 
 Homebrew's current `sevenzip` formula installs only `7zz`. Doctor looked up an

@@ -43,12 +43,35 @@ jobs:
       - name: Install ClamAV, 7-Zip and FFmpeg (macOS)
         if: runner.os == 'macOS'
         run: |
+          # The current Homebrew bottle is tried first, so a fixed bottle is
+          # used without a pin. On 2026-11-09 that bottle (ClamAV 1.5.4
+          # revision 2, OpenSSL 4) rejected daily.cvd in freshclam's database
+          # test. The fallback is the last Homebrew formula built against
+          # OpenSSL 3 (homebrew-core 54a49eff, ClamAV 1.5.2). Decision 0093.
           brew install clamav sevenzip ffmpeg
-          prefix="$(brew --prefix)"
-          config="$prefix/etc/clamav/freshclam.conf"
-          [ -f "$config" ] || sed -e 's/^Example/#Example/' "$config.sample" > "$config"
-          mkdir -p "$prefix/var/lib/clamav"
-          freshclam || { sleep 60; freshclam; }
+          prepare_freshclam() {
+            prefix="$(brew --prefix)"
+            config="$prefix/etc/clamav/freshclam.conf"
+            [ -f "$config" ] || sed -e 's/^Example/#Example/' "$config.sample" > "$config"
+            mkdir -p "$prefix/var/lib/clamav"
+            certs="$prefix/etc/clamav/certs"
+            if [ -d "$certs" ] && ! grep -q '^CVDCertsDirectory ' "$config"; then
+              printf '\nCVDCertsDirectory %s\n' "$certs" >> "$config"
+            fi
+          }
+          prepare_freshclam
+          clamscan --version
+          if ! freshclam && ! { sleep 60; freshclam; }; then
+            echo "Current Homebrew clamav failed freshclam. Installing the OpenSSL 3 formula."
+            brew uninstall --ignore-dependencies clamav
+            curl -fsSL -o "$RUNNER_TEMP/clamav-openssl3.rb" \
+              https://raw.githubusercontent.com/Homebrew/homebrew-core/54a49eff1d882a9e8441726a35cdbc4bbbb2d647/Formula/c/clamav.rb
+            HOMEBREW_NO_INSTALL_FROM_API=1 HOMEBREW_NO_AUTO_UPDATE=1 \
+              brew install --formula "$RUNNER_TEMP/clamav-openssl3.rb"
+            prepare_freshclam
+            freshclam || { sleep 60; freshclam; }
+          fi
+          clamscan --version
       - name: Install FFmpeg (Windows; 7-Zip and Defender are preinstalled)
         if: runner.os == 'Windows'
         run: choco install ffmpeg -y --no-progress
