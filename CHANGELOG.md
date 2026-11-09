@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.1.0-alpha.25
+
 - MCP `job_list` returns the newest 100 jobs inside the server's scopes.
   Newer jobs outside those scopes no longer push an older in-scope job off
   the list. `job_get` of a known ID is unchanged (decision 0045).

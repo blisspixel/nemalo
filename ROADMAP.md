@@ -231,6 +231,11 @@ no format. Its increments, in order:
    was observed failing and its fix is verified by a replay of real output; a
    screenshot of the fixed build is still needed. iTerm2, foot and Windows
    Terminal show the title card.
+6. Done in source: the status line and the selected row name the next action,
+   and `Ctrl+\` cycles the sidebar and the side details
+   ([decision 0110](docs/decisions/0110-next-action-and-panes.md)), in
+   `0.1.0-alpha.25`. Plain mode stays linear. Mouse and WezTerm observation
+   remain on 70 and 72.
 
 Increments 1 to 3 are prepared for the `0.1.0-alpha.20` prerelease; its receipts
 are recorded on those issues. The person-run sessions in 62 should now observe
@@ -286,20 +291,15 @@ The documentation was reviewed against behavior on 2026-10-25 and corrected.
 Every release gate is mapped to its enforcement below; the first hosted fuzz
 run found and fixed a navigation parser panic.
 
-The latest prerelease is `0.1.0-alpha.24`, which adds DOI resolution through
-a free OpenAlex work lookup, and fixes dropped OpenAlex PMCIDs and a help loop
-in narrow terminals, over
-[`0.1.0-alpha.23`](https://github.com/blisspixel/nemalo/releases/tag/v0.1.0-alpha.23);
+The latest prerelease is `0.1.0-alpha.25`, which evaluates and acquires one
+OAPEN Library handle, names the next terminal action from search through
+one-word reading, and lists in-scope durable jobs before the 100-job limit,
+over
+[`0.1.0-alpha.24`](https://github.com/blisspixel/nemalo/releases/tag/v0.1.0-alpha.24);
 its release gates and post-publication installer evidence are recorded on
-[74](https://github.com/blisspixel/nemalo/issues/74).
-The terminal names the next action from search through one-word reading, on
-the status line and the selected row, and `Ctrl+\` cycles the sidebar and the
-side details
-([decision 0110](docs/decisions/0110-next-action-and-panes.md)).
-MCP `job_list` keeps an older in-scope job when newer jobs belong to other
-scopes ([78](https://github.com/blisspixel/nemalo/issues/78)). What remains
-before the candidate needs a person, a host this machine lacks, or a decision.
-Those observations apply to this layout.
+[78](https://github.com/blisspixel/nemalo/issues/78).
+What remains before the candidate needs a person, a host this machine lacks,
+or a decision. Those observations apply to this layout.
 
 Next, in order, and why:
 
