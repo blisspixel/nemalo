@@ -610,13 +610,20 @@ func (m *model) browserKey(key string) (bool, tea.Cmd) {
 			m.reader = readerState{asset: selected.sourceID, representation: representation}
 			m.input.SetValue(catalog)
 			m.secondary.SetValue("")
+			m.status = "Enter a root, then Enter. F6, p for pages, s for words."
+			if selected.audio || selected.mp4 {
+				m.status = "Enter a root, then Enter. Audio is not played here."
+			}
 			if selected.managed {
 				// The explicit library directory is both catalog and root.
 				m.secondary.SetValue(catalog)
+				m.status = "Root is set. Enter lists parts. Then F6, p for pages, s for words."
+				if selected.audio || selected.mp4 {
+					m.status = "Root is set. Enter lists the track. Audio is not played here."
+				}
 			}
 			m.setReport("")
 			m.populate(nil)
-			m.status = "Selected asset. Enter an explicit root, then Enter lists source units."
 			m.resize()
 			return true, cmd
 		}

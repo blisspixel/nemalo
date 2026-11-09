@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+- MCP `job_list` returns the newest 100 jobs inside the server's scopes.
+  Newer jobs outside those scopes no longer push an older in-scope job off
+  the list. `job_get` of a known ID is unchanged (decision 0045).
+- The terminal names the next action from search through download, import,
+  reading and one-word reading, on the status line and on the selected row.
+  A finished download says to import it from Manage. One-word reading opens
+  paused and says that Space plays. `Ctrl+\` cycles the sidebar and the side
+  details. Plain mode stays linear (decision 0110).
 - `evaluate oapen:20.500.12657/N` reads one OAPEN Library item from
   library.oapen.org and lists its ORIGINAL files. `acquire` downloads one
   selected EPUB, PDF, MP3, M4B, or M4A by that bitstream's UUID. `withdrawn`

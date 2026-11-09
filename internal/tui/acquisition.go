@@ -94,6 +94,7 @@ func (m *model) requestDownload() tea.Cmd {
 		} else {
 			m.setReport(fmt.Sprintf("Resume an interrupted transfer\n\nSource: %s\nSelected file: %s\nIntake packet: %s\n\nRequests fresh Archive metadata, then only the missing bytes, on condition that the source still serves the same file (If-Range with the strong validator recorded before the first transfer). A different reply, a weak validator, or changed declarations leave the packet untouched.\n\nThe whole file is then verified against the declared size and checksums, inspected, scanned, and receipted as one transfer.\n\nEnter resumes. Escape returns without downloading.\n", request.SourceID, request.File, request.Output))
 		}
+		m.appendGuide(guideResumeReview)
 		m.viewport.GotoTop()
 		m.resize()
 		return nil
@@ -109,6 +110,7 @@ func (m *model) requestDownload() tea.Cmd {
 	} else {
 		m.setReport(fmt.Sprintf("Acquire one source file\n\nSource: %s\nSelected file: %s\nNew intake directory: %s\nMaximum transfer: %d bytes\n\nRequests fresh Archive metadata and one permitted file, with checked HTTPS delivery destinations. Requires declared size and checksum. The selected source statements remain unverified rights evidence.\n\nCreates intent.json, transfer.json, content with its format suffix, and receipt.json on success. Existing output is refused. An interrupted packet is kept; choosing it again with d reviews resuming it.\n\nRuns local structure checks without rendering or execution, then scans the downloaded bytes once with the installed scanner, if one is installed. A detection moves the file to the Nemalo quarantine instead of intake and offers the item's other files. This is untrusted intake, not checked publication.\n\nEnter acquires this exact selection. Escape returns without writing.\n", request.SourceID, request.File, request.Output, request.MaxBytes))
 	}
+	m.appendGuide(guideDownloadReview)
 	m.viewport.GotoTop()
 	m.resize()
 	return nil
@@ -211,6 +213,7 @@ func (m *model) requestRecording() {
 	m.evidence = true
 	m.status = "Review acquisition. Enter confirms; Escape returns without downloading."
 	m.setReport(fmt.Sprintf("Acquire every track of one recording\n\nSource: %s\nRecording: %s, %d track(s), %d declared bytes\nTrack order from: %s\nNew recording directory: %s\nBudget: the declared total, at most 16 GiB\n\nRequests fresh Archive metadata, then each track in declared order as its own intake packet (0001, 0002, ...), with the same checks, scan, and quarantine as a single file. A detection stops the recording. recording.json is written only when every track has a receipt.\n\nAn interrupted recording is retained; acquire --recording with --resume keeps completed tracks. Track order and titles are source declarations. This is untrusted intake, not checked publication.\n\nEnter acquires this recording. Escape returns without writing.\n", present.Exact(request.SourceID), present.Exact(recording.Format), len(recording.Tracks), recording.Bytes, present.Words(recording.OrderSource), present.Exact(request.Output)))
+	m.appendGuide(guideRecordingReview)
 	m.viewport.GotoTop()
 	m.resize()
 }

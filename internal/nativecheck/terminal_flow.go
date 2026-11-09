@@ -402,7 +402,7 @@ func (d *terminalDriver) reference(lib, asset string) {
 	d.send("\x1b[17~") // F6, results focus.
 	d.key("read-staged", "r", containsScreen("[Read]", "Asset "+asset[:19]))
 	d.key("no-excerpt-refusal", "\x1bOS", containsScreen("successful excerpt"))
-	d.key("units", "\r", containsScreen("Source units available"))
+	d.key("units", "\r", containsScreen("Parts listed", "p for pages"))
 	d.send("\x1b[17~")
 	ordinary := d.key("excerpt", "\r", containsScreen("Bounded range delivered", "Knowledge is power."))
 	d.key("citation", "\x1bOQ", containsScreen("Nemalo | Recorded citation metadata", "Unknown fields"))

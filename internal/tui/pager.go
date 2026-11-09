@@ -775,8 +775,12 @@ func (m *model) pagerView() string {
 	if p.failure != "" && m.pagerAtEnd() && !p.help {
 		notice = p.failure
 	}
-	if p.speed && !p.help && p.rate > reader.SkimRate && notice == "" {
-		notice = "Above 350 words per minute, studies found comprehension falls; treat this as skimming."
+	if p.speed && !p.help && notice == "" {
+		if p.rate > reader.SkimRate {
+			notice = "Above 350 words per minute, studies found comprehension falls; treat this as skimming."
+		} else if !p.playing {
+			notice = "Paused. Space plays. Closing saves nothing."
+		}
 	}
 	keys := readerKeys(p.speed, p.chapter, max(1, m.width-2))
 	if (p.chooser != nil || p.finder != nil) && p.help {

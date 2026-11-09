@@ -184,6 +184,9 @@ steps in named sections (Discover, Library, Collections, Check files, Manage,
 Jobs), and one action registry drives the footer, the `Ctrl+O` palette, the Space
 item menu and `?` help. `nemalo tui --plain`, or `TERM=dumb`, keeps a linear
 layout without panels ([decision 0101](decisions/0101-task-sections-and-action-registry.md)).
+The status line and the selected row name the next action from search through
+one-word reading, and `Ctrl+\` cycles the sidebar and the side details
+([decision 0110](decisions/0110-next-action-and-panes.md)).
 It opens on Home, an offline read-only overview of the configured library, and
 shows items as cards with typed status chips and a copyable short identity
 ([decision 0102](decisions/0102-home-overview-and-detail-cards.md)). Lists align
@@ -1024,6 +1027,9 @@ proposed holding, or scan choice
 in the state folder, which outlives the call and the connection; the server
 finishes running jobs before it exits, and a job whose process ended is
 recorded as interrupted ([decision 0045](decisions/0045-durable-mcp-jobs.md)).
+`job_list` returns the newest 100 jobs that name a path inside the server's
+scopes. That selection happens before the limit, so newer jobs outside the
+scopes cannot hide an older job inside them.
 `nemalo jobs list`, `jobs get ID`, and `jobs cancel ID` read and cancel the
 same jobs from a terminal. Opening their store can reconcile abandoned owners
 and prune old history. They are not passive polling APIs.

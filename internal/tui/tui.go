@@ -105,14 +105,17 @@ type model struct {
 	resultsFocused        bool
 	details               bool
 	evidence              bool
-	confirmKind           string
-	confirmRoot           string
-	confirmSource         string
-	confirmReport         string
-	confirmStatus         string
-	initializeAction      bool
-	importAction          bool
-	rescanAction          bool
+	// panes cycles the wide layout: 0 follows the width, 1 hides the sidebar,
+	// 2 hides the side details, 3 hides both (decision 0110).
+	panes            int
+	confirmKind      string
+	confirmRoot      string
+	confirmSource    string
+	confirmReport    string
+	confirmStatus    string
+	initializeAction bool
+	importAction     bool
+	rescanAction     bool
 	// cleanupPlan runs a cleanup preview; cleanupDigest, once reviewed, applies it.
 	cleanupPlan   bool
 	cleanupDigest string
@@ -204,6 +207,42 @@ func (m *model) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 		cmd = tea.Batch(cmd, sync)
 	}
 	return model, cmd
+}
+
+// noteNext adds the following action when the result's own summary still fits
+// on the status line. A summary that is already long keeps its words.
+func (m *model) noteNext(data any) {
+	hint := ""
+	switch v := data.(type) {
+	case library.ImportResult:
+		if v.Applied {
+			hint = " Open Holdings, then r."
+		}
+	case discovery.Page:
+		if len(v.Results) > 0 {
+			hint = " F6, then e evaluates."
+		}
+	case discovery.Evaluation:
+		if v.OpenAccess == nil && v.Access != discovery.OpenLibraryEditionList && len(v.Files) > 0 {
+			word := "files"
+			if len(v.Files) == 1 {
+				word = "file"
+			}
+			short := fmt.Sprintf("%d %s. F6, then d reviews a download.", len(v.Files), word)
+			if fitsStatus(m.status + " F6, then d reviews a download.") {
+				hint = " F6, then d reviews a download."
+			} else if fitsStatus(short) {
+				m.status = short
+			}
+		}
+	case library.ManagedPage:
+		if v.Total > 0 {
+			hint = " F6, then r reads or o opens."
+		}
+	}
+	if hint != "" && fitsStatus(m.status+hint) {
+		m.status += hint
+	}
 }
 
 func (m *model) update(message tea.Msg) (tea.Model, tea.Cmd) {
@@ -300,6 +339,9 @@ func (m *model) update(message tea.Msg) (tea.Model, tea.Cmd) {
 			m.cancel = nil
 		}
 		m.status = summary(msg.data)
+		if msg.err == nil {
+			m.noteNext(msg.data)
+		}
 		m.outcome = resultOutcome(msg.data, msg.err)
 		if o, ok := msg.data.(homeOverview); ok {
 			m.showOverview(o)
@@ -454,7 +496,10 @@ func (m *model) update(message tea.Msg) (tea.Model, tea.Cmd) {
 				m.reader.boundCatalog, m.reader.boundRoot = m.reader.last.Catalog, m.reader.last.Root
 				switch value.Status {
 				case "units_available":
-					m.status = "Source units available. Select deliberately; no progress is recorded."
+					m.status = "Parts listed. F6, then p for pages or s for one word at a time."
+					if value.Representation == "mpeg-audio/1" || value.Representation == "mp4-audio/1" {
+						m.status = "Track listed. Enter reads a range. Audio is not played here."
+					}
 					if value.Representation == "epub-nav/1" {
 						m.status = "Declared navigation. Enter reads one entry and stops at its declared end. Nothing is recorded."
 					}
@@ -504,8 +549,14 @@ func (m *model) update(message tea.Msg) (tea.Model, tea.Cmd) {
 		switch value := msg.data.(type) {
 		case acquisition.Result:
 			data = []byte(present.Acquisition(value))
+			if msg.err == nil && value.Complete && !strings.HasPrefix(value.Status, "detected_") {
+				data = append(data, []byte("\n\n"+guideAfterDownload+"\n")...)
+			}
 		case acquisition.RecordingResult:
 			data = []byte(present.Recording(value))
+			if msg.err == nil && value.Complete {
+				data = append(data, []byte("\n\n"+guideAfterDownload+"\n")...)
+			}
 		case library.State:
 			data = []byte(present.LibraryState(value))
 		case app.JobSnapshotResult:
@@ -560,6 +611,9 @@ func (m *model) update(message tea.Msg) (tea.Model, tea.Cmd) {
 			data = []byte(present.Audit(value))
 		case library.ImportResult:
 			data = []byte(present.Import(value))
+			if msg.err == nil && value.Applied {
+				data = append(data, []byte("\n\n"+guideAfterImport+"\n")...)
+			}
 		case library.ManagedAudit:
 			data = []byte(present.ManagedAudit(value))
 		case library.RescanResult:
@@ -605,6 +659,10 @@ func (m *model) update(message tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		if m.overlay != nil {
 			return m, m.overlayKey(msg)
+		}
+		if msg.Keystroke() == "ctrl+\\" {
+			m.cyclePanes()
+			return m, nil
 		}
 		if m.filter != nil && m.filter.editing && !m.busy {
 			return m, m.filterKey(msg)

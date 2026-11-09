@@ -16,6 +16,19 @@ startup. Operations are steps grouped into sections named for what you come to d
 Fill a step's fields and press Enter to run it. Results and form drafts remain
 with each step for the current session.
 
+A book you find follows one path, and the status line names the next key. Enter
+in Search sends the query and downloads nothing. `e` prepares Evaluate. Enter
+there reads the record. `d` reviews one download into a new intake folder, and
+a second Enter fetches it; the file stays untrusted. In Manage, F8 reviews an
+import and a second Enter copies it into the library. In Holdings, F6 moves to
+the list, `r` reads the book here and `o` opens a verified copy in another
+application. In Read, F6 moves to the parts, `p` reads pages and `s` reads one
+word at a time, paused at 250 words per minute. The selected row repeats that
+next key, so it stays on screen when the status line is the result. A download
+review and a finished download say that the file is not in the library until
+Manage, F8, reviews the import. Space plays and pauses one-word reading, which
+opens paused and says so. Closing the reader saves nothing.
+
 Nemalo opens on Home. The library resolved as for the CLI (`--library`,
 `NEMALO_LIBRARY`, then `library` in `config.json`) prefills Home, Holdings, Read,
 Status, Jobs, Audit and the Collections library field; every field stays
@@ -39,6 +52,14 @@ are bracketed, so location never depends on colour. Panels have titled borders;
 the focused panel's border is heavy, and `>` marks the focused field or row. The
 footer shows at most six keys for the focused part of the screen
 ([decision 0101](decisions/0101-task-sections-and-action-registry.md)).
+
+`Ctrl+\` cycles four layouts on a wide terminal: follow the width, hide the
+Sections sidebar, hide the side Details panel, or hide both. Below 100 columns
+the sidebar is already hidden and the section names stay on the header. Hiding
+Details leaves Enter as the way to open a book. Plain mode does not cycle. The
+key does nothing while work runs, during a review, or while the palette, help
+or the message log is open
+([decision 0110](decisions/0110-next-action-and-panes.md)).
 
 `Ctrl+O` opens a palette of every action in every section, searchable as you
 type: `acq` finds the acquisition reviews and `jobs` the Jobs step. The current
@@ -140,6 +161,7 @@ item's other files for a new, deliberate review. See
 | Alt+1..9, Alt+0 | Search, Inspect, Check, Scan, Snapshot, Holdings, Audit, Evaluate, Status, Read |
 | Alt+A / Alt+B | Collections / collection Revisions. Jobs has no Alt key; use Tab or the palette |
 | Ctrl+O | Searchable palette of every action |
+| Ctrl+\ | Cycle the sidebar and the side details: width, no sidebar, no side details, neither |
 | Space / ? / : in results | Selected item's actions / every key / the palette |
 | y in results | Copy the selected item's full identity (OSC 52) |
 | Enter in Home results | Go to the selected section, or open the selected bookmark in Read |

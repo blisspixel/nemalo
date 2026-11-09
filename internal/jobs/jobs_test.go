@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -320,5 +321,68 @@ func TestJournalLinesWithUnknownFieldsAreRefused(t *testing.T) {
 			t.Errorf("%s: %v", name, err)
 		}
 		s.Close()
+	}
+}
+
+// An older matching job stays visible when newer jobs do not match, and the
+// limit then keeps the newest matches rather than the oldest.
+func TestListMatchingAppliesThePredicateBeforeTheLimit(t *testing.T) {
+	s, dir := open(t, 1, 1)
+	base := time.Date(2026, 11, 8, 12, 0, 0, 0, time.UTC)
+	write := func(n int, kind string, at time.Time) string {
+		t.Helper()
+		id := fmt.Sprintf("job:%032x", n)
+		req, err := json.Marshal(map[string]string{"kind": kind})
+		if err != nil {
+			t.Fatal(err)
+		}
+		queued, err := json.Marshal(record{SchemaVersion: 1, Event: Queued, At: at.Format(time.RFC3339Nano), Kind: kind, Request: req})
+		if err != nil {
+			t.Fatal(err)
+		}
+		done, err := json.Marshal(record{SchemaVersion: 1, Event: "finished", At: at.Add(time.Second).Format(time.RFC3339Nano), Status: Succeeded})
+		if err != nil {
+			t.Fatal(err)
+		}
+		body := append(append(queued, '\n'), done...)
+		body = append(body, '\n')
+		if err := os.WriteFile(filepath.Join(dir, fileID(id)+".jsonl"), body, 0o600); err != nil {
+			t.Fatal(err)
+		}
+		return id
+	}
+	keep := write(1, "keep", base)
+	for n := 2; n <= 101; n++ {
+		write(n, "drop", base.Add(time.Duration(n)*time.Minute))
+	}
+	match := func(j Job) bool { return j.Kind == "keep" }
+	got, err := s.ListMatching(match)
+	if err != nil || len(got) != 1 || got[0].ID != keep {
+		t.Fatalf("older match hidden: %+v %v", got, err)
+	}
+	plain, err := s.List()
+	if err != nil || len(plain) != maxListed {
+		t.Fatal(len(plain), err)
+	}
+	for _, j := range plain {
+		if j.ID == keep || j.Kind != "drop" {
+			t.Fatalf("unfiltered list hid a newer job for the old match: %+v", j)
+		}
+	}
+	for n := 102; n <= 221; n++ {
+		write(n, "keep", base.Add(time.Duration(n)*time.Minute))
+	}
+	got, err = s.ListMatching(match)
+	if err != nil || len(got) != maxListed || got[len(got)-1].ID == keep {
+		t.Fatalf("newest matches: %d %v", len(got), err)
+	}
+	for i := 1; i < len(got); i++ {
+		if got[i].Created > got[i-1].Created {
+			t.Fatalf("order %s then %s", got[i-1].Created, got[i].Created)
+		}
+	}
+	none, err := s.ListMatching(func(Job) bool { return false })
+	if err != nil || none == nil || len(none) != 0 {
+		t.Fatalf("empty match: %#v %v", none, err)
 	}
 }

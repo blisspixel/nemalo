@@ -164,7 +164,7 @@ func (m *model) footer() string {
 		return lipgloss.Wrap(m.paint("Enter acquire  Esc preview  PgUp/PgDown review  Ctrl+C quit", warning, false), max(1, m.width-2), " ")
 	}
 	if m.reviewingDownload() {
-		return lipgloss.Wrap(m.paint("Enter acquire  Esc back  PgUp/PgDown review  Ctrl+C quit", warning, false), max(1, m.width-2), " ")
+		return lipgloss.Wrap(m.paint("Enter download  Esc back  PgUp/PgDown review  Ctrl+C quit", warning, false), max(1, m.width-2), " ")
 	}
 	if m.confirmRoot != "" {
 		verb := map[string]string{"init": "initialize", "import": "import", "rescan": "rescan", "cleanup": "move to holding", "restore": "restore", "purge": "purge"}[m.confirmKind]
@@ -387,11 +387,11 @@ func (m *model) emptyHelp() string {
 	case "home":
 		return "Start here.\n\nEnter an existing library folder and press Enter for an offline overview: its status, holdings, scanner, saved bookmarks and recorded jobs. Nothing is written.\nScripts and agents: nemalo COMMAND --json, or nemalo mcp serve. See nemalo help."
 	case "search":
-		return "Find something worth keeping.\n\nEnter a title, author, or topic. F2 selects Open Library, Internet Archive, or a local Project Gutenberg catalog.\nEnter searches that provider. Gutenberg reads the catalog file and does not contact gutenberg.org.\nDiscovery does not download files."
+		return "Find something worth keeping.\n\nEnter a title, author, or topic. F2 selects Open Library, Internet Archive, or a local Project Gutenberg catalog.\nEnter searches that provider. Gutenberg reads the catalog file and does not contact gutenberg.org.\ne on a result prepares Evaluate. It does not download. d there reviews a download into a new folder.\nThe download is not in the library until Manage, F8, imports it."
 	case "scan":
 		return "Scan one file with the installed antivirus.\n\nRecommended for a file you did not produce. Windows uses Microsoft Defender; Linux and macOS use ClamAV.\nThe scanner's own cloud and sample-submission settings apply. Nothing is remediated.\nA missing, failed, or incomplete scan is not clean, and no detection is not proof of safety."
 	case "holdings":
-		return "Browse your collection.\n\nChoose a saved catalog and optionally filter by title or language.\nEPUB filenames are selected by default; F4 changes the format."
+		return "Browse your collection.\n\nEnter lists this library. Enter on a book shows it. r reads it here. o opens a verified copy.\nIn Read, p reads pages and s reads one word at a time, paused at 250 words per minute.\nChoose a saved catalog and optionally filter by title or language.\nEPUB filenames are selected by default; F4 changes the format."
 	case "evaluate":
 		return "Look before acquiring.\n\nEnter archive:ITEM, gutenberg:NUMBER, arxiv:ID, pmc:PMCnumber, oapen:20.500.12657/N, or an Open Library work or edition. Select a search result and press e.\nEnter retrieves metadata only. A Gutenberg catalog row lists no files.\nAn OAPEN handle reads one item from library.oapen.org and lists ORIGINAL files only.\nWith an intake folder, d on a Gutenberg catalog row requests one bibliographic record and then lists EPUB offers.\nF6 browses source files when the evaluation lists any.\nEnter a new intake folder with Ctrl+N; select a file and press d to review acquisition.\nDownloads remain untrusted; existing intake is never overwritten."
 	case "state":

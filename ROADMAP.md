@@ -190,7 +190,7 @@ all of these.
 
 ## Current position and next steps
 
-As of 2026-10-27, stages 1 to 4 are accepted, stage 5 is complete except for
+As of 2026-11-08, stages 1 to 4 are accepted, stage 5 is complete except for
 person-run checks and the TUI design wave below, and stage 6 is in progress. `main`
 is the only branch and passes hosted CI on all six shipped targets. The bounded
 PMC provider wave is delivered in
@@ -292,8 +292,14 @@ in narrow terminals, over
 [`0.1.0-alpha.23`](https://github.com/blisspixel/nemalo/releases/tag/v0.1.0-alpha.23);
 its release gates and post-publication installer evidence are recorded on
 [74](https://github.com/blisspixel/nemalo/issues/74).
-All source work planned before the candidate is done. What remains needs a
-person, a host this machine lacks, or a decision.
+The terminal names the next action from search through one-word reading, on
+the status line and the selected row, and `Ctrl+\` cycles the sidebar and the
+side details
+([decision 0110](docs/decisions/0110-next-action-and-panes.md)).
+MCP `job_list` keeps an older in-scope job when newer jobs belong to other
+scopes ([78](https://github.com/blisspixel/nemalo/issues/78)). What remains
+before the candidate needs a person, a host this machine lacks, or a decision.
+Those observations apply to this layout.
 
 Next, in order, and why:
 

@@ -54,10 +54,6 @@ func (m *model) switchMode(name string) tea.Cmd {
 	m.secondaryFocused = false
 	m.offset, m.total = d.offset, d.total
 	m.submittedInput, m.submittedSecond = d.submittedInput, d.submittedSecond
-	m.status = d.status
-	if m.status == "" {
-		m.status = "Ready."
-	}
 	m.setReport(d.content)
 	m.entries, m.details, m.evidence = d.entries, d.details, d.evidence
 	m.resultsFocused = false
@@ -65,9 +61,135 @@ func (m *model) switchMode(name string) tea.Cmd {
 	if name == "home" && len(m.entries) == 0 && m.report == "" && m.input.Value() == "" {
 		m.homeWelcome()
 	}
+	m.status = d.status
+	if m.status == "" {
+		m.status = m.arrival()
+	}
 	m.viewport.GotoTop()
 	m.resize()
 	return m.input.Focus()
+}
+
+// Sentences the screens add when a result summary has already taken the status
+// line. They name the keys in this terminal, and they do not run anything.
+const (
+	guideDownloadReview  = "Enter downloads this one file into the folder above. It is not in the library until Manage, F8, reviews the import."
+	guideResumeReview    = "Enter continues this download. It is not in the library until Manage, F8, reviews the import."
+	guideRecordingReview = "Enter downloads every track into the folder above. They are not in the library until Manage, F8, reviews the import."
+	guideImportReview    = "After that, open Holdings and press r to read it here. In Read, p is pages and s is one word at a time, paused at 250 words per minute."
+	guideAfterDownload   = "In this screen: open Manage, press F8, then Enter. That copies this folder into the library. It is not in the library yet."
+	guideAfterImport     = "In this screen: open Holdings, press F6, then r. That reads it here. o opens a verified copy. In Read, p is pages and s is one word at a time, paused at 250 words per minute. Closing saves nothing."
+)
+
+// appendGuide adds one next-step sentence to the report on screen.
+func (m *model) appendGuide(text string) {
+	if text == "" || strings.Contains(m.report, text) {
+		return
+	}
+	m.setReport(strings.TrimRight(m.report, "\n") + "\n\n" + text + "\n")
+}
+
+// nextCue is the next key for the selected row. It uses the blank line under
+// that row, so it stays visible when the status line is the result itself
+// (decision 0110).
+func (m *model) nextCue() string {
+	if m.busy || m.reviewing() || len(m.entries) == 0 {
+		return ""
+	}
+	lead := "F6, then "
+	if m.resultsFocused {
+		lead = ""
+	}
+	switch m.mode {
+	case "home":
+		return "Enter opens this."
+	case "search":
+		id := selectedID(m)
+		if strings.HasPrefix(id, "archive:") || strings.HasPrefix(id, "gutenberg:") || discovery.ValidOpenLibraryWork(id) || discovery.ValidOpenAlexWork(id) {
+			return lead + "e prepares Evaluate. It does not download."
+		}
+		return "Enter shows this item. Nothing is downloaded."
+	case "evaluate":
+		if m.lastEvaluation != nil && m.lastEvaluation.OpenAccess != nil {
+			if locationIdentifier(selectedID(m)) {
+				return lead + "e prepares that identifier. It does not download."
+			}
+			return "This list does not download."
+		}
+		if m.lastEvaluation != nil && m.lastEvaluation.Access == discovery.OpenLibraryEditionList {
+			return lead + "e selects this edition. It does not download."
+		}
+		if m.lastEvaluation != nil && m.lastEvaluation.Source == "gutenberg" && m.lastEvaluation.Access == "local_catalog" && len(m.lastEvaluation.Files) == 0 {
+			return lead + "d requests the record. It does not download an ebook."
+		}
+		return lead + "d reviews one download into a new folder."
+	case "holdings":
+		e := m.entries[m.selected]
+		if e.audio || e.mp4 {
+			if e.managed {
+				return lead + "o opens a verified copy in a player."
+			}
+			return lead + "r lists this track. It is not played here."
+		}
+		if e.managed {
+			return lead + "r reads here. o opens a verified copy."
+		}
+		return lead + "r reads this here."
+	case "read":
+		switch m.reader.representation {
+		case "mpeg-audio/1":
+			return lead + "Enter retrieves frame ranges. Audio is not played here."
+		case "mp4-audio/1":
+			return lead + "u lists chapters. Audio is not played here."
+		default:
+			return lead + "p reads pages. s reads one word at a time, paused."
+		}
+	default:
+		return ""
+	}
+}
+
+// arrival is the first status of a step: the next action. It stays within two
+// lines at 40 columns, where a longer status is replaced by a truncation
+// notice (decision 0110).
+func (m *model) arrival() string {
+	switch m.mode {
+	case "home":
+		return "Enter opens a start. Then search, evaluate and download."
+	case "search":
+		if len(m.entries) > 0 {
+			return "F6, then e prepares Evaluate. It does not download."
+		}
+		return "Enter searches. Nothing is downloaded."
+	case "evaluate":
+		if len(m.entries) > 0 {
+			if m.lastEvaluation != nil && m.lastEvaluation.OpenAccess != nil {
+				return "F6, then e prepares a pmc: or arxiv: identifier."
+			}
+			if m.lastEvaluation != nil && m.lastEvaluation.Access == discovery.OpenLibraryEditionList {
+				return "F6, then e selects this edition. It does not download."
+			}
+			return "F6, then d reviews a download into a new folder."
+		}
+		return "Enter evaluates. d reviews a download. Nothing is fetched yet."
+	case "holdings":
+		if len(m.entries) > 0 {
+			return "F6, then r reads here and o opens a verified copy."
+		}
+		return "Enter lists this library. Import from Manage with F8."
+	case "read":
+		if len(m.entries) > 0 {
+			return "F6, then p reads pages and s reads one word at a time."
+		}
+		if m.reader.asset != "" {
+			return "Enter lists parts. Then F6, p for pages, s for words."
+		}
+		return "In Holdings, r opens Read. p is pages. s is one word at a time."
+	case "state":
+		return "F7 reviews a new library. F8 reviews an import. Each needs Enter."
+	default:
+		return "Ready."
+	}
 }
 
 func (m *model) seedLibraryForms(catalog, root string) {

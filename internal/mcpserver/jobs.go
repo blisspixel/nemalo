@@ -129,16 +129,9 @@ func addJobs(r *registrar, service app.Service, opts Options, scopes scope) {
 			}
 			return j, err
 		})
-	addJob(r, "job_list", false, "List up to 100 durable jobs within this server's scopes, newest first, with their status.",
+	addJob(r, "job_list", false, "List up to 100 durable jobs within this server's scopes, newest first, with their status. Scope is applied before that limit.",
 		func(ctx context.Context, _ emptyInput) ([]jobs.Job, error) {
-			all, err := store.List()
-			out := []jobs.Job{}
-			for _, j := range all {
-				if visible(j) {
-					out = append(out, j)
-				}
-			}
-			return out, err
+			return store.ListMatching(visible)
 		})
 	addJob(r, "job_cancel", false, "Ask a job to stop, whichever server runs it. It stops at its next cancellation check and records cancelled; an interrupted acquisition keeps its packet for resume.",
 		func(ctx context.Context, in jobInput) (jobs.Job, error) {

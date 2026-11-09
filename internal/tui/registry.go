@@ -105,6 +105,18 @@ func buildRegistry() []command {
 	cmds := []command{
 		// Everywhere.
 		{key: "ctrl+o", name: "Open the action palette", label: "actions", footer: 7, when: notBusy},
+		{key: "ctrl+\\", name: "Cycle the sidebar and the side details", label: "panes", when: func(m *model) string {
+			if m.busy {
+				return reasonBusy
+			}
+			if m.plain {
+				return "Plain layout has no panes"
+			}
+			if m.reviewing() || m.overlay != nil || m.logOpen {
+				return "Close this view first"
+			}
+			return ""
+		}},
 		{key: "ctrl+c", name: "Quit Nemalo", label: "quit", footer: 99, when: func(*model) string { return "" }},
 		{key: "esc", name: "Go back, or cancel running work", label: "back", footer: 6, focus: listFocus, when: func(*model) string { return "" }},
 		{key: "esc", name: "Cancel running work", label: "cancel", focus: formFocus, when: func(*model) string { return "" }},
@@ -153,7 +165,7 @@ func buildRegistry() []command {
 		{key: "e", name: "Select this location's identifier", label: "identifier", footer: 3, focus: listFocus, steps: []string{"evaluate"}, when: needs("Select an OpenAlex location stating a pmc: or arxiv: identifier", func(m *model) bool {
 			return m.lastEvaluation != nil && m.lastEvaluation.OpenAccess != nil && locationIdentifier(selectedID(m))
 		})},
-		{key: "d", name: "Review acquiring the selected file", label: "acquire", footer: 3, focus: listFocus, steps: []string{"evaluate"}, effect: review, when: func(m *model) string {
+		{key: "d", name: "Acquire one file as a download", label: "download", footer: 3, focus: listFocus, steps: []string{"evaluate"}, effect: review, when: func(m *model) string {
 			if m.lastEvaluation != nil && m.lastEvaluation.OpenAccess != nil {
 				return "An OpenAlex work is discovery only; evaluate a location's pmc: or arxiv: identifier first"
 			}
@@ -165,7 +177,7 @@ func buildRegistry() []command {
 		{key: "enter", name: "Load holdings", label: "load", footer: 1, focus: formFocus, steps: []string{"holdings"}, when: needs("Enter a catalog or library folder first", hasInput)},
 		{key: "f4", name: "Change the format filter", label: "format", footer: 2, steps: []string{"holdings"}, when: notBusy},
 		{key: "r", name: "Read the selected asset", label: "read", footer: 3, focus: listFocus, steps: []string{"holdings"}, when: needs(reasonNoItem, hasEntries)},
-		{key: "o", name: "Open a verified copy in the default application", label: "open", focus: listFocus, steps: []string{"holdings"}, when: needs("Select a holding of a library folder", func(m *model) bool { return hasEntries(m) && m.entries[m.selected].managed })},
+		{key: "o", name: "Open a verified copy in the default application", label: "open", footer: 3, focus: listFocus, steps: []string{"holdings"}, when: needs("Select a holding of a library folder", func(m *model) bool { return hasEntries(m) && m.entries[m.selected].managed })},
 		{key: "t", name: "Show the recording that holds this track", focus: listFocus, steps: []string{"holdings"}, when: needs("Select a track of a recording", func(m *model) bool { return hasEntries(m) && m.entries[m.selected].recording != "" })},
 		{key: "enter", name: "List the asset's source units", label: "units", footer: 1, focus: formFocus, steps: read, when: notBusy},
 		{key: "f2", name: "Show recorded citation metadata", label: "citation", footer: 2, steps: read, when: notBusy},
@@ -175,8 +187,8 @@ func buildRegistry() []command {
 		{key: "u", name: "List source units", focus: listFocus, steps: read, when: notBusy},
 		{key: "c", name: "List the declared contents", focus: listFocus, steps: read, when: notBusy},
 		{key: "g", name: "List the declared page labels", focus: listFocus, steps: read, when: notBusy},
-		{key: "p", name: "Open as pages", focus: listFocus, steps: read, when: notBusy},
-		{key: "s", name: "Open one word at a time", focus: listFocus, steps: read, when: notBusy},
+		{key: "p", name: "Read the selection as pages", label: "pages", footer: 3, focus: listFocus, steps: read, when: notBusy},
+		{key: "s", name: "Read one word at a time, paused at 250 words per minute", label: "words", footer: 3, focus: listFocus, steps: read, when: notBusy},
 		{key: "m", name: "Save a bookmark", focus: listFocus, steps: read, effect: writes, when: notBusy},
 		{key: "'", name: "Restore the saved bookmark", focus: listFocus, steps: read, when: notBusy},
 

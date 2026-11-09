@@ -477,6 +477,15 @@ func (s *Store) interrupt(id string, j Job) (Job, error) {
 
 // List returns up to 100 jobs, newest first.
 func (s *Store) List() ([]Job, error) {
+	return s.ListMatching(nil)
+}
+
+// ListMatching returns up to 100 jobs for which match reports true, newest
+// first. A nil match accepts every job. The predicate runs after every
+// readable journal is ordered and before the result limit, so a newer job
+// that does not match cannot hide an older one that does. Queue limits,
+// retention and reconciliation are unchanged.
+func (s *Store) ListMatching(match func(Job) bool) ([]Job, error) {
 	ids, err := s.ids()
 	if err != nil {
 		return nil, err
@@ -489,6 +498,15 @@ func (s *Store) List() ([]Job, error) {
 	}
 	created := func(j Job) time.Time { t, _ := time.Parse(time.RFC3339Nano, j.Created); return t }
 	sort.Slice(out, func(i, k int) bool { return created(out[i]).After(created(out[k])) })
+	if match != nil {
+		kept := out[:0]
+		for _, j := range out {
+			if match(j) {
+				kept = append(kept, j)
+			}
+		}
+		out = kept
+	}
 	if len(out) > maxListed {
 		out = out[:maxListed]
 	}

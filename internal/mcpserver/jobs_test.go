@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/md5"
 	"encoding/hex"
+	"fmt"
 	"io"
 	"net/http"
 	"os"
@@ -210,4 +211,89 @@ func writeToolNames(t *testing.T, s interface {
 		names = append(names, tool.Name)
 	}
 	return names
+}
+
+func listedJobIDs(t *testing.T, s *mcp.ClientSession) []string {
+	t.Helper()
+	_, env := call(t, s, "job_list", map[string]any{})
+	raw, ok := env["data"].([]any)
+	if !ok {
+		t.Fatalf("job_list data %#v", env["data"])
+	}
+	ids := make([]string, 0, len(raw))
+	for _, item := range raw {
+		ids = append(ids, item.(map[string]any)["id"].(string))
+	}
+	return ids
+}
+
+// Scope selection happens before the 100-job limit. An older in-scope job
+// remains listed when 100 newer jobs are outside the server's scopes.
+func TestJobListSelectsScopeBeforeTheLimit(t *testing.T) {
+	service := app.Service{Scanner: cleanScanner{}}
+	now := time.Now().UTC()
+	write := func(t *testing.T, dir string, n int, output string, at time.Time) string {
+		t.Helper()
+		id := fmt.Sprintf("job:%032x", n)
+		stamp := at.Format(time.RFC3339Nano)
+		body := fmt.Sprintf("{\"schema_version\":1,\"event\":\"queued\",\"at\":%q,\"kind\":\"acquire\",\"request\":{\"output\":%q}}\n{\"schema_version\":1,\"event\":\"finished\",\"at\":%q,\"status\":\"succeeded\"}\n", stamp, output, stamp)
+		if err := os.WriteFile(filepath.Join(dir, id[len("job:"):]+".jsonl"), []byte(body), 0o600); err != nil {
+			t.Fatal(err)
+		}
+		return id
+	}
+	singleRoot := t.TempDir()
+	singleDir := filepath.Join(t.TempDir(), "jobs")
+	single, err := jobs.Open(singleDir, 1, 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { single.Close() })
+	one := write(t, singleDir, 1, filepath.Join(singleRoot, "one"), now)
+	two := write(t, singleDir, 2, filepath.Join(singleRoot, "two"), now.Add(-time.Minute))
+	session := connect(t, service, Options{Scopes: []string{singleRoot}, Write: true, Jobs: single, Version: "test"})
+	if ids := listedJobIDs(t, session); len(ids) != 2 || !slices.Contains(ids, one) || !slices.Contains(ids, two) {
+		t.Fatal("single scope", ids)
+	}
+
+	inRoot := t.TempDir()
+	outRoot := t.TempDir()
+	dir := filepath.Join(t.TempDir(), "jobs")
+	store, err := jobs.Open(dir, 1, 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { store.Close() })
+	older := write(t, dir, 1, filepath.Join(inRoot, "older"), now.Add(-4*time.Hour))
+	outside := make([]string, 0, 100)
+	for i := 1; i <= 100; i++ {
+		outside = append(outside, write(t, dir, 100+i, filepath.Join(outRoot, fmt.Sprintf("out-%d", i)), now.Add(time.Duration(-3*time.Hour)+time.Duration(i)*time.Minute)))
+	}
+	scoped := connect(t, service, Options{Scopes: []string{inRoot}, Write: true, Jobs: store, Version: "test"})
+	if ids := listedJobIDs(t, scoped); len(ids) != 1 || ids[0] != older {
+		t.Fatalf("older in-scope job = %v, want %s", ids, older)
+	}
+	elsewhere := connect(t, service, Options{Scopes: []string{t.TempDir()}, Write: true, Jobs: store, Version: "test"})
+	if ids := listedJobIDs(t, elsewhere); len(ids) != 0 {
+		t.Fatal("empty eligible set", ids)
+	}
+	if res, _ := call(t, scoped, "job_get", map[string]any{"id": outside[0]}); !res.IsError {
+		t.Fatal("out-of-scope job was readable")
+	}
+	newest := map[string]bool{}
+	for i := 1; i <= 101; i++ {
+		id := write(t, dir, 200+i, filepath.Join(inRoot, fmt.Sprintf("in-%d", i)), now.Add(time.Duration(-2*time.Hour)+time.Duration(i)*time.Minute))
+		if i > 1 {
+			newest[id] = true
+		}
+	}
+	ids := listedJobIDs(t, scoped)
+	if len(ids) != 100 {
+		t.Fatal(len(ids))
+	}
+	for _, id := range ids {
+		if !newest[id] {
+			t.Fatal("listed a job outside the newest 100 in-scope jobs", id)
+		}
+	}
 }

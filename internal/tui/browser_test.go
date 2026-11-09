@@ -31,9 +31,10 @@ func TestBrowserFocusSelectionAndEvidence(t *testing.T) {
 	m.input.SetValue("original query")
 	m.Update(result{id: m.id, data: browseFixture()})
 	full := m.viewport.GetContent()
+	status := m.status
 	m.Update(key(tea.KeyF5))
 	m.Update(key(tea.KeyEscape))
-	if m.evidence || m.status != "10 results of 12; discovery metadata only." {
+	if m.evidence || m.status != status || !strings.Contains(status, "discovery metadata only") {
 		t.Fatal("report back action changed operation status")
 	}
 	m.Update(key(tea.KeyDown))

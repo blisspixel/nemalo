@@ -81,7 +81,7 @@ func (m *model) homeWelcome() {
 }
 
 func (m *model) welcomeText() string {
-	text := "Welcome to Nemalo. Knowledge is power.\n\nNo library is configured. Enter an existing library folder above and press Enter for its overview, or choose a start below. Set \"library\" in config.json, NEMALO_LIBRARY or --library to open it here next time.\n"
+	text := "Welcome to Nemalo. Knowledge is power.\n\nNo library is configured. Enter an existing library folder above and press Enter for its overview, or choose a start below. A book you find is evaluated, downloaded into a new folder, then imported. r reads it here. o opens a verified copy. s reads one word at a time, paused at 250 words per minute. Ctrl+\\ shows or hides the sidebar and the side details. Set \"library\" in config.json, NEMALO_LIBRARY or --library to open it here next time.\n"
 	return text + "\n" + m.scannerLine() + "\n"
 }
 

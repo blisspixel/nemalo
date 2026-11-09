@@ -16,9 +16,18 @@ import (
 // The panel frame (decision 0101): one header row, a sections sidebar at 100
 // columns and wider or section names on the header row below that, titled
 // panels with the form inside, then the status line and a one-line footer.
-// Plain mode keeps the linear layout in view.go.
+// Ctrl+\ cycles that sidebar and the side details (decision 0110). Plain mode
+// keeps the linear layout in view.go.
 
 const sidebarWidth = 22
+
+// Pane layouts. Zero follows the terminal width.
+const (
+	panesAuto = iota
+	panesNoSidebar
+	panesNoDetails
+	panesNeither
+)
 
 // frame is the panel geometry for the current size and state.
 type frame struct {
@@ -106,7 +115,7 @@ func (m *model) setFieldWidths(fields []formField, widths []int) {
 func (m *model) applyHints(width func(slot int) int) {
 	m.input.Placeholder = clipWords(m.inputHint, max(1, width(0)))
 	m.intake.Placeholder = clipWords("Absolute outside-library intake; F8 previews without writing", max(1, width(2)))
-	hint := map[string]string{"snapshot": "New catalog path outside the source folder", "holdings": "Optional title, language, filename, or hash", "audit": "Source directory for a catalog; leave empty to check a library", "read": "Explicit source directory (required)", "evaluate": "New untrusted intake directory, for d acquire", "state": "EPUB, PDF, MP3, M4B, M4A, or completed intake packet", "collections": "Existing initialized library folder", "revisions": "Later collection JSON file"}[m.mode]
+	hint := map[string]string{"snapshot": "New catalog path outside the source folder", "holdings": "Optional title, language, filename, or hash", "audit": "Source directory for a catalog; leave empty to check a library", "read": "Explicit source directory (required)", "evaluate": "New folder. d reviews a download into it", "state": "EPUB, PDF, MP3, M4B, M4A, or completed intake packet", "collections": "Existing initialized library folder", "revisions": "Later collection JSON file"}[m.mode]
 	if m.mode == "search" && m.source == "gutenberg" {
 		hint = "Absolute path of pg_catalog.csv"
 		if m.catalog != "" {
@@ -171,8 +180,60 @@ func fieldMarker(focused bool) string {
 	return " "
 }
 
+// showSidebar is the sections column. It follows the width unless the user
+// hid it. Plain mode never draws it.
+func (m *model) showSidebar() bool {
+	if m.plain || m.width < 100 {
+		return false
+	}
+	return m.panes != panesNoSidebar && m.panes != panesNeither
+}
+
+// cyclePanes walks the wide layouts. Plain mode stays linear. A review, the
+// palette, help, the message log and running work keep the layout they opened.
+func (m *model) cyclePanes() {
+	if m.busy || m.reviewing() || m.overlay != nil || m.logOpen {
+		return
+	}
+	if m.plain {
+		m.status = "Plain layout has no panes. It stays linear for screen readers."
+		m.outcome = outcomeNone
+		return
+	}
+	m.panes = (m.panes + 1) % 4
+	m.outcome = outcomeNone
+	m.status = m.paneStatus()
+	m.resize()
+}
+
+// paneStatus names the layout Ctrl+\ just selected.
+func (m *model) paneStatus() string {
+	switch m.panes {
+	case panesNoSidebar:
+		return "Sections sidebar hidden. Names stay on the header."
+	case panesNoDetails:
+		return "Side details hidden. Enter still opens a book."
+	case panesNeither:
+		return "Sidebar and side details hidden."
+	default:
+		if m.width < 100 {
+			return "Panes follow the width. The sidebar needs 100 columns."
+		}
+		return "Panes follow the width of the terminal."
+	}
+}
+
+// fitsStatus reports whether a status stays within two lines at the minimum
+// terminal width. A third line is replaced by a truncation notice.
+func fitsStatus(s string) bool {
+	return len(strings.Split(lipgloss.Wrap(s, 38, " "), "\n")) <= 2
+}
+
 // split reports whether results sit beside a detail panel.
 func (m *model) split(width int) bool {
+	if m.panes == panesNoDetails || m.panes == panesNeither {
+		return false
+	}
 	return width >= 100 && m.overlay == nil && len(m.entries) > 0 && !m.details && !m.evidence && !m.reviewing()
 }
 
@@ -183,7 +244,7 @@ func (m *model) reviewing() bool {
 // layout computes the frame and sizes the inputs, report and preview to it.
 func (m *model) layout() frame {
 	f := frame{}
-	if m.width >= 100 {
+	if m.showSidebar() {
 		f.side = sidebarWidth
 		left := "Nemalo  " + sectionOf(m.mode).name
 		if stepTitle(m.mode) != sectionOf(m.mode).name {
@@ -611,7 +672,13 @@ func (m *model) listRows(width, height int) []string {
 		} else {
 			row = m.highlight(clip(row, width))
 		}
-		rows = append(rows, row, m.paint(clip("      "+e.summary, width), muted, false), "")
+		gap := ""
+		if i == m.selected {
+			if cue := m.nextCue(); cue != "" {
+				gap = m.paint(clip("      "+cue, width), accent, false)
+			}
+		}
+		rows = append(rows, row, m.paint(clip("      "+e.summary, width), muted, false), gap)
 		m.rowEntries = append(m.rowEntries, i, i, -1)
 	}
 	return rows
