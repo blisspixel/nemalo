@@ -63,11 +63,14 @@ jobs:
           clamscan --version
           if ! freshclam && ! { sleep 60; freshclam; }; then
             echo "Current Homebrew clamav failed freshclam. Installing the OpenSSL 3 formula."
-            brew uninstall --ignore-dependencies clamav
-            curl -fsSL -o "$RUNNER_TEMP/clamav-openssl3.rb" \
+            brew tap-new nemalo/old
+            tap="$(brew --repository nemalo/old)"
+            mkdir -p "$tap/Formula"
+            curl -fsSL -o "$tap/Formula/clamav.rb" \
               https://raw.githubusercontent.com/Homebrew/homebrew-core/54a49eff1d882a9e8441726a35cdbc4bbbb2d647/Formula/c/clamav.rb
+            brew uninstall --ignore-dependencies clamav
             HOMEBREW_NO_INSTALL_FROM_API=1 HOMEBREW_NO_AUTO_UPDATE=1 \
-              brew install --formula "$RUNNER_TEMP/clamav-openssl3.rb"
+              brew install nemalo/old/clamav
             prepare_freshclam
             freshclam || { sleep 60; freshclam; }
           fi
