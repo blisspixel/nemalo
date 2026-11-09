@@ -223,6 +223,33 @@ thumbnail and export bitstreams and a download URL on `library.oapen.org`.
 The two thumbnail rights URIs named CC BY-NC 4.0 and 3.0. No rate-limit header
 was observed. The full JSON catalog was not measured.
 
+## Textbook cohort rechecked 2026-11-09
+
+Observations for [decision 0109](decisions/0109-oapen-library-handle.md).
+They are not an adapter. This recheck read the public metadata pages. It did
+not repeat the 2026-11-03 handle queries, so bitstream shape is unchanged.
+
+The OAPEN metadata page at `https://oapen.org/article/metadata` still
+documents CC0 feeds and OAI-PMH at `https://library.oapen.org/oai/request`.
+It does not document REST search.
+`https://oapen.org/article/8185269-search-using-a-rest-api` still returns
+404.
+
+The DOAB metadata page at `https://doabooks.org/en/librarians/doab-metadata`
+still documents CC0 feeds, OAI-PMH at
+`https://directory.doabooks.org/oai/request`, selective export, and the PRISM
+peer-review API on `widget.doabooks.org`. It does not document REST search or
+a file-download API. One KBART feed is described as listing books that have
+download URLs; this recheck did not open that feed. Its GetRecord example is
+metadata (`identifier=oai:doabooks.org:20.500.12854/26303`,
+`metadataPrefix=xoai`). PRISM answers a DOI or ISBN with peer-review
+metadata, not a file.
+
+Keyword search and DOAB file access stay unverified. Neither metadata page
+names one EPUB or PDF on a fixed host. The OpenStax format article did not
+render on this recheck, so its EPUB sentence was not re-read. LibreTexts was
+not rechecked.
+
 ## Terminal interaction reviewed on 2026-10-08
 
 The later [reader and paced-reading review](READER-REVIEW.md), checked against

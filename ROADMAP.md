@@ -351,8 +351,12 @@ one `oapen:20.500.12657/N` item and can acquire one ORIGINAL bitstream, on
 `library.oapen.org` only
 ([decision 0109](docs/decisions/0109-oapen-library-handle.md),
 [issue 77](https://github.com/blisspixel/nemalo/issues/77)). Keyword
-search, DOAB file access, OpenStax and LibreTexts stay unverified. A configured OpenAlex
-key is separate later work with its own secret-handling decision. Start each
+search, DOAB file access, OpenStax and LibreTexts stay unverified. The OAPEN
+and DOAB metadata pages were rechecked on 2026-11-09 and still offer neither
+keyword search nor a DOAB file
+([research note](docs/RESEARCH.md#textbook-cohort-rechecked-2026-11-09)).
+A configured OpenAlex key is separate later work with its own
+secret-handling decision. Start each
 session with the workspace check in `AGENTS.md`.
 
 ## Implementation status
@@ -1074,8 +1078,9 @@ govulncheck in the verifier on all three OSes; race tests on all three; the
 cgo-free executable smoke, the 39-case lifecycle harness and 55 terminal cases
 in native CI; installers against the published release; hostile archive,
 scanner skip/timeout and cleanup crash/fault tests in the ordinary suites.
-Parser fuzzing has 24 targets: ordinary tests replay their seeds, and the
-dispatched `fuzz.yml` workflow fuzzes each for real. Installed tools use the
+Parser fuzzing covers every `Fuzz*` test, 26 on 2026-11-09: ordinary tests
+replay their seeds, and the dispatched `fuzz.yml` workflow discovers and
+fuzzes each one. Installed tools use the
 dispatched `installed-tools.yml`. Both dispatched workflows are release steps
 in [releasing](docs/RELEASING.md).
 

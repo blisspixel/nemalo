@@ -113,8 +113,12 @@ database test (`cli_loadinfo: Incorrect digital signature`, malformed
 database), twice. The macOS job still installs that current bottle first. Only
 when freshclam's database test fails does it install the last Homebrew formula
 built against OpenSSL 3 (homebrew-core `54a49eff`, ClamAV 1.5.2) and update
-signatures with that freshclam. Linux keeps the distribution package. The
-report records the ClamAV that actually ran.
+signatures with that freshclam. Homebrew rejects a formula file that is not
+in a tap, so the job creates a local tap, copies that formula into it, and
+installs `nemalo/old/clamav`. On the dispatched run at `7a94735` that
+freshclam still printed `ERROR: NULL X509 store`, and the daily, main and
+bytecode database tests passed. Linux keeps the distribution package. The
+database test stays enabled. The report records the ClamAV that actually ran.
 
 ## Doctor and 7-Zip naming
 
