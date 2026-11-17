@@ -29,7 +29,7 @@ See [the installer decision](decisions/0013-release-installer-scripts.md).
 
 ## Build from source
 
-With Go 1.27.3 or a compatible supported toolchain, from the repository root:
+With Go 1.27.4 or a compatible supported toolchain, from the repository root:
 
 ```sh
 go build -trimpath -o bin/ ./cmd/nemalo
