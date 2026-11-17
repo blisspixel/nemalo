@@ -124,7 +124,7 @@ func addJobs(r *registrar, service app.Service, opts Options, scopes scope) {
 	addJob(r, "job_get", false, "Read one durable job: its kind, status (queued, running, succeeded, failed, cancelled, or interrupted), last progress, and, once finished, its result or error. An interrupted job's process ended before it finished; start it again, with resume for an acquisition.",
 		func(ctx context.Context, in jobInput) (jobs.Job, error) {
 			j, err := store.Get(in.ID)
-			if err == nil && !visible(j) {
+			if !visible(j) {
 				return jobs.Job{}, jobs.ErrNotFound
 			}
 			return j, err
