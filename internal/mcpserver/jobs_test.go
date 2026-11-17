@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/md5"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -294,6 +295,26 @@ func TestJobListSelectsScopeBeforeTheLimit(t *testing.T) {
 	for _, id := range ids {
 		if !newest[id] {
 			t.Fatal("listed a job outside the newest 100 in-scope jobs", id)
+		}
+	}
+}
+
+func TestJobResultScopesRecoveryDiagnostics(t *testing.T) {
+	root := t.TempDir()
+	scopes := scope{roots: []string{root}}
+	failure := errors.New("recovery unavailable")
+	for _, key := range []string{"library", "output"} {
+		job := jobs.Job{ID: "fixture", Request: map[string]any{key: t.TempDir()}}
+		for _, err := range []error{nil, failure} {
+			got, diagnostic := scopes.jobResult(job, err)
+			if got.ID != "" || got.Request != nil || diagnostic != jobs.ErrNotFound {
+				t.Fatal("unscoped result carried job data or diagnostics")
+			}
+		}
+		job.Request = map[string]any{key: root}
+		got, diagnostic := scopes.jobResult(job, failure)
+		if got.ID != job.ID || diagnostic != failure {
+			t.Fatal("lost in-scope recovery details")
 		}
 	}
 }

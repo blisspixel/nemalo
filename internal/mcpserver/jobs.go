@@ -123,11 +123,7 @@ func addJobs(r *registrar, service app.Service, opts Options, scopes scope) {
 	visible := func(j jobs.Job) bool { return jobInScope(scopes, j) }
 	addJob(r, "job_get", false, "Read one durable job: its kind, status (queued, running, succeeded, failed, cancelled, or interrupted), last progress, and, once finished, its result or error. An interrupted job's process ended before it finished; start it again, with resume for an acquisition.",
 		func(ctx context.Context, in jobInput) (jobs.Job, error) {
-			j, err := store.Get(in.ID)
-			if !visible(j) {
-				return jobs.Job{}, jobs.ErrNotFound
-			}
-			return j, err
+			return scopes.jobResult(store.Get(in.ID))
 		})
 	addJob(r, "job_list", false, "List up to 100 durable jobs within this server's scopes, newest first, with their status. Scope is applied before that limit.",
 		func(ctx context.Context, _ emptyInput) ([]jobs.Job, error) {
@@ -140,6 +136,14 @@ func addJobs(r *registrar, service app.Service, opts Options, scopes scope) {
 			}
 			return store.Cancel(in.ID)
 		})
+}
+
+// jobResult preserves recovery diagnostics only for a job visible in this scope.
+func (s scope) jobResult(j jobs.Job, err error) (jobs.Job, error) {
+	if !jobInScope(s, j) {
+		return jobs.Job{}, jobs.ErrNotFound
+	}
+	return j, err
 }
 
 // jobInScope shows a job only to a server whose scopes hold the paths it

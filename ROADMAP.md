@@ -291,7 +291,7 @@ The documentation was reviewed against behavior on 2026-10-25 and corrected.
 Every release gate is mapped to its enforcement below; the first hosted fuzz
 run found and fixed a navigation parser panic.
 
-The latest prerelease is `0.1.0-alpha.25`, which evaluates and acquires one
+The next prerelease candidate, `0.1.0-alpha.26`, keeps durable job recovery diagnostics within the configured MCP scope. The preceding prerelease is `0.1.0-alpha.25`, which evaluates and acquires one
 OAPEN Library handle, names the next terminal action from search through
 one-word reading, and lists in-scope durable jobs before the 100-job limit,
 over

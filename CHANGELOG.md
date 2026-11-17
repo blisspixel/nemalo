@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+## 0.1.0-alpha.26
+
+- MCP job reads apply the configured scope to recovery diagnostics as well as normal results.
+
 ## 0.1.0-alpha.25
 
 - MCP `job_list` returns the newest 100 jobs inside the server's scopes.
